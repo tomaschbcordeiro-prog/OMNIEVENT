@@ -29,7 +29,7 @@ export default async function DestinationsPage() {
               <Link href="/?view=globe" className="btn btn-secondary">Explore on the globe</Link>
             </div>
           </div>
-          <ClusterMap params="" initial={{ lat: 25, lng: 10, alt: 2.6 }} className="h-72" />
+          <ClusterMap params="" initial={{ lat: 25, lng: 10, zoom: 0.6 }} className="h-72" />
         </div>
 
         <div className="mt-14 grid gap-10">

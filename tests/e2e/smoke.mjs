@@ -47,18 +47,31 @@ await step("autocomplete suggests destinations", async () => {
   await box.press("Escape");
 });
 
-await step("2D map: cluster opens list, event opens preview with offers", async () => {
-  await page.goto(BASE + "/?view=map&v=38.72,-9.14,0.3");
-  const marker = page.getByRole("application").locator("button[aria-label$='events'], button[aria-label$='event']").first();
-  await marker.waitFor({ timeout: 20000 });
-  // Keyboard activation: markers are real buttons, reachable without a mouse.
-  await marker.focus();
-  await page.keyboard.press("Enter");
+/** Screen position of the biggest event marker currently rendered on the WebGL map. */
+async function markerPoint() {
+  return page.evaluate(() => {
+    const m = window.__omniMaps?.at(-1);
+    if (!m) return null;
+    const f = m.queryRenderedFeatures({ layers: ["event-markers"] }).sort((a, b) => b.properties.count - a.properties.count)[0];
+    if (!f) return null;
+    const p = m.project(f.geometry.coordinates);
+    const r = m.getCanvas().getBoundingClientRect();
+    return { x: r.left + p.x, y: r.top + p.y, count: f.properties.count };
+  });
+}
+const mapIdle = () => page.waitForFunction(() => { const m = window.__omniMaps?.at(-1); return m && m.loaded() && !m.isMoving(); }, null, { timeout: 45000 });
+
+await step("map: event cluster click opens the place's events, then an event preview", async () => {
+  await page.goto(BASE + "/?at=38.72,-9.14,11,0,0");
+  await mapIdle();
+  await page.waitForTimeout(1500);
+  const pt = await markerPoint();
+  assert.ok(pt, "no event markers rendered");
+  await page.mouse.click(pt.x, pt.y);
   const panel = page.getByRole("complementary", { name: /Events here|Event preview/ });
   await panel.waitFor();
   if (await page.getByRole("complementary", { name: "Events here" }).count()) {
-    await panel.locator("li button").first().focus();
-    await page.keyboard.press("Enter");
+    await panel.locator("li button").first().click();
   }
   await page.getByRole("complementary", { name: "Event preview" }).waitFor();
   await page.getByRole("link", { name: "View details" }).waitFor();
@@ -92,6 +105,51 @@ await step("My World shows the saved event; trip planner creates a trip with it"
   await page.getByRole("button", { name: "Create trip" }).click();
   await page.getByRole("button", { name: "Add" }).first().click();
   await page.getByRole("link", { name: "Tickets" }).first().waitFor();
+});
+
+await step("place search: a real street address flies the map there and shows the place", async () => {
+  await page.goto(BASE + "/?at=30,-10,1.8,0,0"); // a shared view link: no auto-rotation
+  await mapIdle();
+  const box = page.getByRole("combobox").first();
+  await box.fill("Rua Augusta, Lisboa");
+  const opt = page.getByRole("option", { name: /^Rua Augusta Baixa/ }).first();
+  await opt.waitFor({ timeout: 20000 });
+  await opt.click();
+  await page.getByRole("complementary", { name: "Selected place" }).waitFor();
+  await page.waitForFunction(() => { const m = window.__omniMaps?.at(-1); const c = m?.getCenter(); return c && Math.abs(c.lat - 38.71) < 0.05 && Math.abs(c.lng + 9.14) < 0.05 && m.getZoom() > 14; }, null, { timeout: 30000 });
+});
+
+await step("clicking the map identifies the place (reverse geocoding)", async () => {
+  await mapIdle();
+  const r = await page.evaluate(() => window.__omniMaps.at(-1).getCanvas().getBoundingClientRect());
+  await page.getByRole("button", { name: "Clear selected place" }).click();
+  await page.mouse.click(r.left + r.width * 0.35, r.top + r.height * 0.6);
+  const panel = page.getByRole("complementary", { name: "Selected place" });
+  await panel.waitFor();
+  await panel.getByText(/Lisboa|Lisbon/).first().waitFor({ timeout: 20000 });
+});
+
+await step("2D/3D switch keeps the same place and zoom", async () => {
+  const before = await page.evaluate(() => { const m = window.__omniMaps.at(-1); return { c: m.getCenter(), z: m.getZoom(), p: m.getProjection().type }; });
+  await mapIdle();
+  await page.getByRole("radio", { name: "2D map" }).click();
+  await page.waitForFunction(() => window.__omniMaps.at(-1).getProjection().type === "mercator");
+  const after = await page.evaluate(() => { const m = window.__omniMaps.at(-1); return { c: m.getCenter(), z: m.getZoom() }; });
+  assert.equal(before.p, "globe");
+  assert.ok(Math.abs(before.c.lat - after.c.lat) < 0.01 && Math.abs(before.c.lng - after.c.lng) < 0.01, "center moved");
+  assert.ok(Math.abs(before.z - after.z) < 0.6, "zoom changed");
+  await page.getByRole("radio", { name: "3D globe" }).click();
+  await page.waitForFunction(() => window.__omniMaps.at(-1).getProjection().type === "globe");
+});
+
+await step("layers: map style and toggles change what is drawn", async () => {
+  await page.getByRole("button", { name: /Layers/ }).click();
+  await page.getByRole("radio", { name: "Map", exact: true }).click();
+  await page.waitForFunction(() => window.__omniMaps.at(-1).getLayoutProperty("satellite", "visibility") === "none");
+  await page.getByLabel("3D buildings").uncheck();
+  await page.waitForFunction(() => window.__omniMaps.at(-1).getLayoutProperty("buildings-3d", "visibility") === "none");
+  await page.getByRole("radio", { name: "Satellite", exact: true }).click();
+  await page.getByLabel("3D buildings").check();
 });
 
 await step("events page: category chip updates URL and results", async () => {

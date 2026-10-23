@@ -145,7 +145,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
               </div>
             )}
           </div>
-          <ClusterMap params={mapParams} initial={{ lat: 25, lng: 10, alt: 2.6 }} className="h-72 lg:h-80" />
+          <ClusterMap params={mapParams} initial={{ lat: 25, lng: 10, zoom: 0.4 }} className="h-72 lg:h-80" />
         </div>
 
         {isSports && sm && (

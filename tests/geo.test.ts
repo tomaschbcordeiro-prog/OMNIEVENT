@@ -27,3 +27,29 @@ describe("geo", () => {
     expect(subsolarPoint(new Date("2026-06-21T12:00:00Z")).lat).toBeGreaterThan(23);
   });
 });
+
+import { nightGeoJSON } from "@/lib/map/night";
+describe("day/night bands", () => {
+  const inPoly = (lng: number, lat: number, ring: number[][]) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  for (const iso of ["2026-03-20T12:00:00Z", "2026-06-21T12:00:00Z", "2026-12-21T00:00:00Z"]) {
+    it(`marks the antisolar point as night and the subsolar point as day (${iso.slice(0, 10)})`, () => {
+      const night = nightGeoJSON(new Date(iso)).features[0].geometry.coordinates[0];
+      const noonLng = iso.endsWith("12:00:00Z") ? 0 : 180;
+      const midnightLng = noonLng === 0 ? 179 : 1;
+      expect(inPoly(noonLng === 180 ? 179 : 1, 0, night)).toBe(false);
+      expect(inPoly(midnightLng, 0, night)).toBe(true);
+    });
+  }
+  it("puts the winter pole in night and the summer pole in day in June", () => {
+    const night = nightGeoJSON(new Date("2026-06-21T12:00:00Z")).features[0].geometry.coordinates[0];
+    expect(inPoly(10, -85, night)).toBe(true);
+    expect(inPoly(10, 85, night)).toBe(false);
+  });
+});

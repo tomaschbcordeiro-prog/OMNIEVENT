@@ -343,3 +343,52 @@ select.field {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------- map chrome */
+.maplibregl-map {
+  font-family: var(--font-sans);
+}
+.maplibregl-ctrl-attrib {
+  background: rgb(5 7 11 / 0.72) !important;
+  color: var(--text-3);
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--text-2);
+}
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+/* Hover tooltips must never intercept the click on the marker beneath them. */
+.omni-popup,
+.omni-popup * {
+  pointer-events: none !important;
+}
+.omni-popup .maplibregl-popup-content {
+  background: var(--panel);
+  color: var(--text-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.8);
+}
+.omni-popup .maplibregl-popup-content strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.omni-popup .maplibregl-popup-tip {
+  display: none;
+}
+.omni-pin {
+  width: 22px;
+  height: 30px;
+  background: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 30'%3E%3Cpath d='M11 29s9-9.6 9-17A9 9 0 0 0 2 12c0 7.4 9 17 9 17z' fill='%2342DFFF' stroke='%2305070B' stroke-width='2'/%3E%3Ccircle cx='11' cy='11.5' r='3.4' fill='%2305070B'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.5));
+}
+.maplibregl-cooperative-gesture-screen {
+  background: rgb(5 7 11 / 0.7);
+  color: var(--text);
+  font-size: 14px;
+}

@@ -72,23 +72,6 @@ export function gridKey(lat: number, lng: number, cellDeg: number): string {
   return `${latCell}:${lngCell}`;
 }
 
-/** Pick a cluster cell size from camera altitude (globe radii above surface). */
-export function cellForAltitude(alt: number): number {
-  if (alt > 2.2) return 12;
-  if (alt > 1.4) return 7;
-  if (alt > 0.8) return 3.5;
-  if (alt > 0.4) return 1.2;
-  if (alt > 0.18) return 0.25;
-  return 0; // venue level
-}
-
-/** Visible great-circle radius (km) for a camera at `alt` globe-radii above the surface. */
-export function visibleRadiusKm(alt: number): number {
-  const d = 1 + alt;
-  const horizonAngle = Math.acos(1 / d); // radians from sub-camera point to horizon
-  return Math.min(Math.PI / 2, horizonAngle * 1.05) * EARTH_RADIUS_KM;
-}
-
 export function bboxContains(
   b: { north: number; south: number; east: number; west: number },
   lat: number,

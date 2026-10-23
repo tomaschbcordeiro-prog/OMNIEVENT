@@ -14,6 +14,27 @@ npm run dev                     # http://localhost:3000
 
 Production: `npm run build && npm start`.
 
+## The map
+
+One MapLibre GL engine renders both views from the same camera, so switching keeps your place:
+
+- **3D**: a globe with atmosphere, a live day/night terminator (three twilight bands computed from the sun's real position), 3D terrain and tilt/rotate.
+- **2D**: Web Mercator street map.
+- **Styles**: *Satellite* (real imagery with roads, borders and labels on top) or *Map* (a clean dark street map). Layer toggles: events, event density, place names, roads, borders, points of interest, 3D buildings, terrain, day/night.
+- **Detail on demand**: tiles stream in for the current view only, getting sharper as you zoom; 3D buildings appear from zoom 14 where OpenStreetMap has them.
+- **Click anything**: event clusters open their events; country/city/street/building labels fly there; any other point is identified by reverse geocoding (street → neighbourhood → city → country, each one-click to fly to).
+- **Place search**: addresses, streets, postcodes, landmarks, cities and "lat, lng" in the main search box; ambiguous names list every match with context.
+- Shareable view links (`?at=lat,lng,zoom,bearing,pitch&pin=lat,lng`), previous-view history, full screen, reduced-motion support, WebGL-loss recovery.
+
+| Data | Without keys (default) | With `NEXT_PUBLIC_MAPTILER_KEY` |
+|---|---|---|
+| Satellite imagery | Sentinel-2 cloudless 2016 by EOX (CC BY 4.0, ≈10 m/pixel, sharp to city scale) | MapTiler Satellite (sub-metre in many cities) |
+| Streets, buildings, labels | OpenFreeMap (OpenStreetMap, OpenMapTiles schema) | same |
+| Terrain | AWS Open Data Terrain Tiles (Mapzen) | MapTiler Terrain RGB |
+| Place search | Photon by Komoot (OpenStreetMap, fair use) | MapTiler Geocoding |
+
+Not included (would need separate providers and licences): photorealistic 3D city meshes (e.g. Google Photorealistic 3D Tiles via Cesium) and street-level photography.
+
 ## Pages
 
 | Route | What it does |
@@ -66,7 +87,8 @@ node tests/e2e/smoke.mjs                   # 11 end-to-end browser flows (Playwr
 
 | Area | State |
 |---|---|
-| 3D globe, clustering, map/list views, search, filters, all pages, ticket comparison UI, trip planner, calendar | Working, tested |
+| 3D globe and 2D map (MapLibre), satellite/map styles, terrain, 3D buildings, day/night, place search and reverse geocoding, clustering, list view, all pages, ticket comparison, trip planner, calendar | Working, tested |
+| Satellite detail | Free imagery is ≈10 m/pixel (city scale). Street-level satellite detail needs a MapTiler key |
 | Event data | **Fictional demo data** until a provider key is set. Every demo item carries a Demo badge and is `noindex` |
 | Ticketmaster adapter | Implemented and unit-tested against fixtures; **not yet run against the live API** (no key in the build environment) |
 | Ticket purchase | Links out to sellers. No checkout, no payments, no purchase confirmation |

@@ -66,7 +66,7 @@ export default async function DestinationPage({ params, searchParams }: { params
   const stats = cityStats();
   const childCities = d.kind !== "city" ? citiesIn(d).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0)) : [];
   const nowLocal = d.timeZone ? new Intl.DateTimeFormat("en-GB", { timeZone: d.timeZone, hour: "2-digit", minute: "2-digit", weekday: "short" }).format(new Date()) : null;
-  const alt = d.kind === "city" ? 0.22 : d.kind === "country" ? 0.8 : 1.6;
+  const zoom = d.kind === "city" ? 10.5 : d.kind === "country" ? 4.6 : 2;
   const parent = d.kind === "city" ? getDestination(d.parentId!) : d.kind === "country" ? CONTINENTS.find((c) => c.id === d.continent) : undefined;
 
   return (
@@ -106,7 +106,7 @@ export default async function DestinationPage({ params, searchParams }: { params
               <button className="btn btn-primary col-span-full sm:col-span-1">Show events</button>
             </form>
           </div>
-          <ClusterMap params={filtersToParams(base).toString()} initial={{ lat: d.lat, lng: d.lng, alt }} className="h-80" />
+          <ClusterMap params={filtersToParams(base).toString()} initial={{ lat: d.lat, lng: d.lng, zoom }} className="h-80" />
         </div>
 
         <section className="mt-10" aria-labelledby="cal">

@@ -2,31 +2,34 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import { GLOBE_MODES, GROUPS } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
-import { cellForAltitude, visibleRadiusKm } from "@/lib/geo";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
 import { useUser, userActions } from "@/lib/user/store";
-import { SearchBox } from "../search-box";
+import { DEFAULT_LAYERS, type BaseStyle, type LayerState } from "@/lib/map/style";
+import { HOME, altToZoom, cellForZoom, viewRadiusKm, zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
+import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
 import { CategoryIcon, categoryLabel, DemoBadge, EmptyState, ErrorState, Poster, Price, SaveButton, ShapeGlyph, StatusBadge, Notice } from "../ui";
 import { FilterForm, ActiveFilters, datePresets } from "./filters";
-import { MapView } from "../globe/map-view";
-import type { GlobeView, FlyTarget } from "../globe/globe-scene";
+import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
+import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
+import { LayersPanel } from "../earth/layers-panel";
 
-const GlobeScene = dynamic(() => import("../globe/globe-scene"), { ssr: false, loading: () => null });
+// MapLibre touches `window` on import, so the map only loads in the browser.
+const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
 type Selection = { kind: "cluster"; cluster: Cluster } | { kind: "event"; card: EventCard; from?: Cluster } | null;
 
-const HOME: GlobeView = { lat: 30, lng: -10, alt: 2.15 };
+const PREFS_KEY = "omnievent:map:v1";
 
 function hasWebGL(): boolean {
   try {
@@ -49,69 +52,102 @@ function useReducedMotion(): boolean {
   return r;
 }
 
+const num = (s: string | null) => (s ?? "").split(",").map(Number);
+
 export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; live: number } }) {
   const user = useUser();
   const reduced = useReducedMotion();
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [mode, setMode] = useState<ViewMode>("globe");
   const [filters, setFilters] = useState<SearchFilters>({});
-  const [view, setView] = useState<GlobeView>(HOME);
-  const [initialView, setInitialView] = useState<GlobeView | null>(null);
-  const [flyTo, setFlyTo] = useState<FlyTarget>();
+  const [view, setView] = useState<ViewState>(HOME);
+  const [initialView, setInitialView] = useState<CameraState | null>(null);
+  const [flyTo, setFlyTo] = useState<FlyRequest>();
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [counts, setCounts] = useState<{ total: number; inView: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
+  const [place, setPlace] = useState<SelectedPlace | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [density, setDensity] = useState(false);
+  const [showLayers, setShowLayers] = useState(false);
+  const [base, setBase] = useState<BaseStyle>("satellite");
+  const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
   const [autoRotate, setAutoRotate] = useState(true);
-  const [globeReady, setGlobeReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapFailure, setMapFailure] = useState<string | null>(null);
+  const [mapKey, setMapKey] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
   const [interp, setInterp] = useState<ParsedQuery | null>(null);
   const [retry, setRetry] = useState(0);
-  const [globeNotice, setGlobeNotice] = useState(false);
   const flyKey = useRef(0);
+  const history = useRef<CameraState[]>([]);
+  const mapApi = useRef<EarthMapHandle>(null);
+  const root = useRef<HTMLDivElement>(null);
 
-  // ---- boot: read URL state once, detect WebGL ----
+  // ---- boot: read URL + saved map preferences once, detect WebGL ----
   useEffect(() => {
     const ok = hasWebGL();
     setWebgl(ok);
     const sp = new URLSearchParams(window.location.search);
-    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "view", "sel"].includes(k))));
+    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style"].includes(k))));
     if (p.ok) setFilters(p.filters);
-    const v = sp.get("v")?.split(",").map(Number);
     const narrow = window.innerWidth < 640;
-    const iv = v && v.length === 3 && v.every(Number.isFinite) ? { lat: v[0], lng: v[1], alt: v[2] } : { ...HOME, alt: narrow ? 3.3 : HOME.alt };
+    let iv: CameraState = { ...HOME, zoom: narrow ? 1 : HOME.zoom };
+    const at = num(sp.get("at"));
+    const v = num(sp.get("v"));
+    if (at.length >= 3 && at.slice(0, 3).every(Number.isFinite)) iv = { lat: at[0], lng: at[1], zoom: at[2], bearing: at[3] || 0, pitch: at[4] || 0 };
+    else if (v.length === 3 && v.every(Number.isFinite)) iv = { lat: v[0], lng: v[1], zoom: altToZoom(v[2]), pitch: 0, bearing: 0 }; // legacy links
     setInitialView(iv);
     setView(iv);
+    const pin = num(sp.get("pin"));
+    if (pin.length === 2 && pin.every(Number.isFinite)) setPlace({ lat: pin[0], lng: pin[1] });
+    try {
+      const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
+      if (saved?.base === "map" || saved?.base === "satellite") setBase(saved.base);
+      if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(narrow ? { terrain: false } : {}) });
+      else if (narrow) setLayers({ ...DEFAULT_LAYERS, terrain: false });
+    } catch {
+      // storage unavailable
+    }
+    if (sp.get("style") === "map" || sp.get("style") === "satellite") setBase(sp.get("style") as BaseStyle);
     const m = sp.get("view") as ViewMode | null;
-    setMode(m === "map" || m === "list" ? m : ok ? "globe" : "map");
-    if (sp.get("v")) setAutoRotate(false);
+    setMode(!ok ? "list" : m === "map" || m === "list" ? m : "globe");
+    if (sp.get("at") || sp.get("v") || sp.get("pin")) setAutoRotate(false);
   }, []);
 
-  // ---- keep URL shareable ----
-  // Debounced: trackpad pinches emit hundreds of view changes, and Safari throws a
-  // SecurityError after 100 replaceState calls in 10 seconds.
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers }));
+    } catch {
+      // storage unavailable
+    }
+  }, [base, layers]);
+
+  // ---- keep URL shareable (debounced: Safari throws after 100 replaceState calls in 10 s) ----
   useEffect(() => {
     if (!initialView) return;
     const t = setTimeout(() => {
       const p = filtersToParams(filters);
-      p.set("v", `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${view.alt.toFixed(2)}`);
+      p.set("at", [view.lat.toFixed(4), view.lng.toFixed(4), view.zoom.toFixed(2), Math.round(view.bearing), Math.round(view.pitch)].join(","));
       if (mode !== "globe") p.set("view", mode);
+      if (base !== "satellite") p.set("style", base);
+      if (place) p.set("pin", `${place.lat.toFixed(5)},${place.lng.toFixed(5)}`);
       const next = `/?${p.toString()}`;
       if (next === `${window.location.pathname}${window.location.search}`) return;
       try {
         window.history.replaceState(window.history.state, "", next);
       } catch {
-        // Browser rate limit hit: the URL is a convenience, never worth a crash.
+        // Rate limited by the browser: the URL is a convenience, never worth a crash.
       }
     }, 500);
     return () => clearTimeout(t);
-  }, [filters, view, mode, initialView]);
+  }, [filters, view, mode, base, place, initialView]);
 
-  // ---- viewport-based cluster loading (debounced + cancellable) ----
-  const cell = cellForAltitude(view.alt);
-  const viewKey = view.alt > 1.4 ? `global:${cell}` : `${view.lat.toFixed(1)},${view.lng.toFixed(1)},${cell},${Math.round(visibleRadiusKm(view.alt))}`;
+  // ---- viewport-based event clusters (debounced + cancellable) ----
+  const cell = cellForZoom(view.zoom);
+  const radius = viewRadiusKm(view);
+  const viewKey = radius == null ? `global:${cell}` : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${cell},${Math.round(radius)}`;
   const filterKey = filtersToParams({ ...filters, page: undefined, sort: undefined }).toString();
   useEffect(() => {
     if (!initialView || mode === "list") return;
@@ -121,10 +157,10 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       try {
         const p = new URLSearchParams(filterKey);
         p.set("cell", String(cell));
-        if (view.alt <= 1.4) {
-          p.set("vlat", view.lat.toFixed(3));
-          p.set("vlng", view.lng.toFixed(3));
-          p.set("vr", String(Math.round(visibleRadiusKm(view.alt) * (mode === "map" ? 1.6 : 1))));
+        if (radius != null) {
+          p.set("vlat", view.lat.toFixed(4));
+          p.set("vlng", view.lng.toFixed(4));
+          p.set("vr", String(Math.ceil(radius)));
         }
         const res = await fetch(`/api/geo?${p}`, { signal: ctrl.signal });
         if (!res.ok) {
@@ -140,7 +176,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       } finally {
         if (!ctrl.signal.aborted) setLoading(false);
       }
-    }, 220);
+    }, 200);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -148,34 +184,78 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewKey, filterKey, mode, initialView, retry]);
 
-  const fly = useCallback((lat: number, lng: number, alt: number) => {
+  /** Programmatic camera move. The current view is remembered so "Previous view" can return to it. */
+  const fly = useCallback((target: Omit<FlyRequest, "key">) => {
+    const cam = mapApi.current?.getCamera();
+    if (cam) history.current = [...history.current.slice(-19), cam];
     flyKey.current++;
     setAutoRotate(false);
-    setFlyTo({ lat, lng, alt, key: flyKey.current });
-    setView({ lat, lng, alt });
+    setFlyTo({ ...target, key: flyKey.current });
   }, []);
+
+  const goBack = () => {
+    const prev = history.current.pop();
+    if (!prev) return;
+    flyKey.current++;
+    setFlyTo({ ...prev, key: flyKey.current });
+  };
 
   const onClusterClick = useCallback(
     (c: Cluster) => {
       setAutoRotate(false);
-      const small = c.count <= 8 || !!c.venueId || view.alt < 0.3;
+      setPlace(null);
+      const small = c.count <= 8 || !!c.venueId || view.zoom >= 11;
       if (small) {
         setSelection(c.count === 1 && c.sample[0] ? { kind: "event", card: c.sample[0] } : { kind: "cluster", cluster: c });
         return;
       }
       setSelection({ kind: "cluster", cluster: c });
-      fly(c.lat, c.lng, Math.max(0.12, view.alt / 2.6));
+      fly({ lat: c.lat, lng: c.lng, zoom: Math.min(14, Math.max(3.5, view.zoom + 2.5)) });
     },
-    [view.alt, fly],
+    [view.zoom, fly],
   );
+
+  const onMapClick = useCallback(
+    (c: MapClick) => {
+      setSelection(null);
+      setAutoRotate(false);
+      if (c.feature) {
+        setPlace({ lat: c.lat, lng: c.lng, name: c.feature.name, kind: c.feature.kind, zoom: c.feature.zoom });
+        fly({ lat: c.lat, lng: c.lng, zoom: c.feature.zoom });
+      } else {
+        setPlace({ lat: c.lat, lng: c.lng });
+      }
+    },
+    [fly],
+  );
+
+  const goToGeoPlace = useCallback(
+    (g: GeoPlace) => {
+      setSelection(null);
+      setPlace({ lat: g.lat, lng: g.lng, name: g.name, kind: g.kind, context: g.context, zoom: zoomForKind(g.kind) });
+      fly({ lat: g.lat, lng: g.lng, zoom: zoomForKind(g.kind), bbox: g.bbox });
+    },
+    [fly],
+  );
+
+  const flyToQuery = async (q: string, kind: string) => {
+    try {
+      const r = await fetch(`/api/geocode?q=${encodeURIComponent(q)}&limit=1`);
+      const j = await r.json();
+      const g = j.results?.[0];
+      if (g) goToGeoPlace({ ...g, kind: g.kind || kind });
+    } catch {
+      setError("Couldn't find that place right now.");
+    }
+  };
 
   const applyParsed = (p: ParsedQuery) => {
     setInterp(p);
     setFilters({ ...p.filters });
     setSelection(null);
-    const place = p.filters.city ?? p.filters.country?.toLowerCase() ?? p.filters.continent;
-    const d = place ? getDestination(place) : undefined;
-    if (d) fly(d.lat, d.lng, d.kind === "city" ? 0.35 : d.kind === "country" ? 0.9 : 1.5);
+    const id = p.filters.city ?? p.filters.country?.toLowerCase() ?? p.filters.continent;
+    const d = id ? getDestination(id) : undefined;
+    if (d) fly({ lat: d.lat, lng: d.lng, zoom: d.kind === "city" ? 10.5 : d.kind === "country" ? 5 : 2.8 });
   };
 
   const modeId = useMemo(() => {
@@ -192,60 +272,87 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setFilters((f) => ({ ...f, near: { lat, lng, radiusKm: 50 }, sort: "distance" }));
-        fly(lat, lng, 0.3);
+        setPlace({ lat, lng, name: "Your location", kind: "place" });
+        fly({ lat, lng, zoom: 11 });
       },
       () => setError("Location permission was not granted. You can still search by city."),
       { maximumAge: 600000, timeout: 10000 },
     );
   };
 
+  useEffect(() => {
+    const on = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await root.current?.requestFullscreen();
+    } catch {
+      // fullscreen not allowed (e.g. iOS Safari on iPhone)
+    }
+  };
+
+  const projection = mode === "map" ? "mercator" : "globe";
+  const showMap = mode !== "list" && webgl && initialView && !mapFailure;
+  const tilted = view.pitch > 10;
+
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-bg">
-      {/* ---------- Stage ---------- */}
+    <div ref={root} className="relative h-[100dvh] w-full overflow-hidden bg-bg">
+      {/* ---------- Stage: one map engine, two projections ---------- */}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
-        {mode === "globe" && webgl && initialView && (
-          <div className="absolute inset-0" role="region" aria-label="Interactive 3D globe of events. Drag to rotate, scroll or pinch to zoom. Use the map or list view for keyboard access to every event.">
-            <GlobeErrorBoundary onError={() => (setMode("map"), setGlobeNotice(true))}>
-              <GlobeScene
-                clusters={clusters}
-                selectedId={selectedId}
-                density={density}
-                autoRotate={autoRotate && !selection}
-                reducedMotion={reduced}
-                flyTo={flyTo}
-                initialView={initialView}
-                onViewChange={setView}
-                onUserInteract={() => setAutoRotate(false)}
-                onClusterClick={onClusterClick}
-                onReady={() => setGlobeReady(true)}
-                onContextLost={() => (setMode("map"), setGlobeNotice(true))}
-              />
-            </GlobeErrorBoundary>
-            {!globeReady && (
-              <div className="absolute inset-0 grid place-items-center pointer-events-none">
-                <div className="flex items-center gap-2 text-text-2 t-small">
-                  <Loader2 size={16} className="animate-spin" aria-hidden /> Loading Earth
-                </div>
-              </div>
-            )}
-          </div>
+        {showMap && (
+          <EarthMap
+            key={mapKey}
+            ref={mapApi}
+            className="absolute inset-0"
+            ariaLabel="Interactive map of Earth with events. Drag to move, scroll or pinch to zoom, right-drag or two fingers to tilt and rotate. Arrow keys pan and plus or minus zoom when the map is focused. Use the list view for full keyboard access to every event."
+            initial={initialView!}
+            projection={projection}
+            base={base}
+            layers={layers}
+            clusters={clusters}
+            selectedClusterId={selectedId}
+            place={place}
+            flyTo={flyTo}
+            autoRotate={autoRotate && !selection && !place && mode === "globe"}
+            reducedMotion={reduced}
+            onView={setView}
+            onClusterClick={onClusterClick}
+            onMapClick={onMapClick}
+            onUserInteract={() => setAutoRotate(false)}
+            onReady={() => setMapReady(true)}
+            onFatal={(r) => setMapFailure(r)}
+          />
         )}
-        {mode === "map" && initialView && (
-          <MapView className="absolute inset-0 pt-[var(--header-h)]" clusters={clusters} initialView={view} flyTo={flyTo} selectedId={selectedId} onViewChange={setView} onClusterClick={onClusterClick} />
+        {showMap && !mapReady && (
+          <div className="absolute inset-0 grid place-items-center pointer-events-none">
+            <div className="flex items-center gap-2 text-text-2 t-small">
+              <Loader2 size={16} className="animate-spin" aria-hidden /> Loading Earth
+            </div>
+          </div>
         )}
       </div>
 
       {/* ---------- Top: purpose + search + modes ---------- */}
-      <div className="pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[380px]">
+      <div className="pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px]">
         <div className="max-w-[1220px]">
           <div className="pointer-events-auto max-w-xl">
-            <h1 className="t-h1 text-balance">
+            <h1 className={`t-h1 text-balance transition-opacity ${view.zoom > 4 || place ? "sr-only" : ""}`}>
               One planet. Every experience.
               <span className="block text-text-2 font-normal text-[0.55em] tracking-normal mt-1.5 leading-snug">
-                Spin the Earth or ask for anything, from a match in London to an exhibition in Tokyo.
+                Spin the Earth, zoom to any street, or ask for anything, from a match in London to an exhibition in Tokyo.
               </span>
             </h1>
-            <SearchBox className="mt-4" size="lg" onQuery={(p) => applyParsed(p)} onPlace={(d) => (setSelection(null), fly(d.lat, d.lng, d.kind === "city" ? 0.35 : d.kind === "country" ? 0.9 : 1.5))} />
+            <SearchBox
+              className="mt-4"
+              size="lg"
+              mapCenter={{ lat: view.lat, lng: view.lng }}
+              onQuery={(p) => applyParsed(p)}
+              onPlace={(d) => (setSelection(null), fly({ lat: d.lat, lng: d.lng, zoom: d.kind === "city" ? 10.5 : d.kind === "country" ? 5 : 2.8 }))}
+              onGeoPlace={goToGeoPlace}
+            />
             {interp && (interp.interpretation.length > 0 || interp.ambiguities.length > 0) && (
               <div className="mt-2 surface-float rounded-[var(--radius-m)] px-3 py-2 t-small text-text-2 panel-in">
                 <div className="flex items-start gap-2">
@@ -268,12 +375,12 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
             )}
           </div>
 
-          <div className="pointer-events-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" role="group" aria-label="Globe modes">
+          <div className="pointer-events-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" role="group" aria-label="Event categories">
             {GLOBE_MODES.map((m) => (
               <button
                 key={m.id}
                 type="button"
-                className="chip bg-bg/60 backdrop-blur"
+                className="chip bg-bg/70 backdrop-blur"
                 aria-pressed={modeId === m.id}
                 onClick={() => setFilters((f) => ({ ...f, categories: m.groups.length ? m.groups : undefined }))}
               >
@@ -282,15 +389,15 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
               </button>
             ))}
             {modeId === "custom" && (
-              <span className="chip bg-bg/60" data-active="true">Custom mix</span>
+              <span className="chip bg-bg/70" data-active="true">Custom mix</span>
             )}
             <span className="w-px h-5 bg-line-strong mx-1 shrink-0" aria-hidden />
             {datePresets().slice(0, 2).map((p) => (
-              <button key={p.id} type="button" className="chip bg-bg/60 backdrop-blur" aria-pressed={filters.from === p.from && filters.to === p.to} onClick={() => setFilters((f) => (f.from === p.from && f.to === p.to ? { ...f, from: undefined, to: undefined } : { ...f, from: p.from, to: p.to }))}>
+              <button key={p.id} type="button" className="chip bg-bg/70 backdrop-blur" aria-pressed={filters.from === p.from && filters.to === p.to} onClick={() => setFilters((f) => (f.from === p.from && f.to === p.to ? { ...f, from: undefined, to: undefined } : { ...f, from: p.from, to: p.to }))}>
                 {p.label}
               </button>
             ))}
-            <button type="button" className="chip bg-bg/60 backdrop-blur" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+            <button type="button" className="chip bg-bg/70 backdrop-blur" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
               <SlidersHorizontal size={14} aria-hidden />
               Filters{nFilters ? <span className="tnum text-cyan">{nFilters}</span> : null}
             </button>
@@ -329,12 +436,15 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         <ListMode filters={filters} view={view} onSelect={(c) => setSelection({ kind: "event", card: c })} />
       )}
 
-      {/* ---------- Bottom-left: view switch, controls, legend ---------- */}
-      <div className="absolute z-20 left-4 sm:left-6 bottom-4 sm:bottom-6 flex flex-col gap-2 items-start">
+      {/* ---------- Bottom-left: view switch and map controls ---------- */}
+      <div className="absolute z-20 left-4 sm:left-6 bottom-8 sm:bottom-8 flex flex-col gap-2 items-start">
+        {showLayers && mode !== "list" && (
+          <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} />
+        )}
         <div className="surface-float rounded-[var(--radius-m)] p-1 flex gap-0.5" role="radiogroup" aria-label="View">
           {([
-            ["globe", Globe2, "3D globe"],
-            ["map", MapIcon, "2D map"],
+            ["globe", Globe2, "3D"],
+            ["map", MapIcon, "2D"],
             ["list", List, "List"],
           ] as const).map(([m, Icon, label]) => (
             <button
@@ -342,60 +452,76 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
               type="button"
               role="radio"
               aria-checked={mode === m}
-              disabled={m === "globe" && webgl === false}
-              title={m === "globe" && webgl === false ? "3D isn't supported on this device" : label}
+              aria-label={m === "globe" ? "3D globe" : m === "map" ? "2D map" : "List"}
+              disabled={m !== "list" && webgl === false}
+              title={m !== "list" && webgl === false ? "Maps need WebGL, which isn't available on this device" : undefined}
               onClick={() => setMode(m)}
               className={`btn btn-sm ${mode === m ? "bg-white/10 text-text" : "btn-ghost"}`}
             >
               <Icon size={15} aria-hidden />
-              <span className="hidden sm:inline">{label}</span>
+              {label}
             </button>
           ))}
         </div>
         {mode !== "list" && (
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5 max-w-[calc(100vw-2rem)]">
+            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom in" onClick={() => mapApi.current?.zoomBy(1)}>
+              <Plus size={15} aria-hidden />
+            </button>
+            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom out" onClick={() => mapApi.current?.zoomBy(-1)}>
+              <Minus size={15} aria-hidden />
+            </button>
+            <button className={`btn btn-secondary btn-icon btn-sm ${tilted ? "text-cyan" : ""}`} aria-label={tilted ? "Look straight down" : "Tilt for a 3D perspective"} aria-pressed={tilted} onClick={() => mapApi.current?.setPitch(tilted ? 0 : 60)}>
+              <Mountain size={15} aria-hidden />
+            </button>
+            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Point north" title={`Heading ${Math.round(view.bearing)}°`} onClick={() => mapApi.current?.resetNorth()}>
+              <Compass size={15} aria-hidden style={{ transform: `rotate(${-view.bearing}deg)` }} />
+            </button>
             {mode === "globe" && (
-              <>
-                <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom in" onClick={() => fly(view.lat, view.lng, Math.max(0.06, view.alt / 1.8))}>
-                  <Plus size={15} aria-hidden />
-                </button>
-                <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom out" onClick={() => fly(view.lat, view.lng, Math.min(3.1, view.alt * 1.8))}>
-                  <Minus size={15} aria-hidden />
-                </button>
-                <button className="btn btn-secondary btn-icon btn-sm" aria-label={autoRotate ? "Stop auto-rotation" : "Start auto-rotation"} aria-pressed={autoRotate} onClick={() => setAutoRotate((a) => !a)} disabled={reduced}>
-                  {autoRotate && !reduced ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
-                </button>
-              </>
+              <button className="btn btn-secondary btn-icon btn-sm" aria-label={autoRotate ? "Stop auto-rotation" : "Start auto-rotation"} aria-pressed={autoRotate} onClick={() => (setAutoRotate((a) => !a), autoRotate ? null : (setPlace(null), setSelection(null)))} disabled={reduced}>
+                {autoRotate && !reduced ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
+              </button>
             )}
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Reset to whole-planet view" onClick={() => (setSelection(null), fly(HOME.lat, HOME.lng, HOME.alt))}>
+            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Reset to whole-planet view" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME }))}>
               <RotateCcw size={14} aria-hidden />
             </button>
             <button className="btn btn-secondary btn-icon btn-sm" aria-label="Show events near me" title="Use my location (optional, not stored)" onClick={locate}>
               <LocateFixed size={15} aria-hidden />
             </button>
-            <button className={`btn btn-secondary btn-sm ${density ? "text-cyan border-cyan/50" : ""}`} aria-pressed={density} onClick={() => setDensity((d) => !d)} disabled={mode !== "globe"}>
-              <Layers size={14} aria-hidden /> Density
+            <button className={`btn btn-secondary btn-sm ${showLayers ? "text-cyan border-cyan/50" : ""}`} aria-expanded={showLayers} onClick={() => setShowLayers((s) => !s)}>
+              <Layers size={14} aria-hidden /> Layers
+            </button>
+            <button className="btn btn-secondary btn-icon btn-sm hidden sm:inline-flex" aria-label={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
+              {fullscreen ? <Minimize size={14} aria-hidden /> : <Maximize size={14} aria-hidden />}
             </button>
           </div>
         )}
-        {mode !== "list" && <Legend />}
+        {mode !== "list" && !showLayers && <Legend />}
       </div>
 
       {/* ---------- Status line ---------- */}
-      <div className="absolute z-10 right-4 sm:right-6 bottom-4 sm:bottom-6 text-right t-micro text-text-3 tnum pointer-events-none hidden md:block" aria-live="polite">
+      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-text-3 tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
+        <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
         {dataSummary.live === 0 && <div className="mt-0.5 text-amber/80">Demo mode: all events shown are fictional</div>}
       </div>
 
-      {globeNotice && mode === "map" && (
-        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-24 w-[min(92vw,460px)] surface-float rounded-[var(--radius-m)] p-3 t-small text-text-2 flex items-start gap-3 panel-in" role="status">
-          <span className="flex-1">Your browser ran out of graphics memory for the 3D globe, so we switched to the 2D map. Everything else works the same.</span>
-          <button className="btn btn-secondary btn-sm" onClick={() => (setGlobeNotice(false), setGlobeReady(false), setMode("globe"))}>Try 3D again</button>
-          <button className="text-text-3 hover:text-text" aria-label="Dismiss" onClick={() => setGlobeNotice(false)}><X size={14} aria-hidden /></button>
+      {(mapFailure || webgl === false) && (
+        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-28 w-[min(92vw,460px)] surface-float rounded-[var(--radius-m)] p-3 t-small text-text-2 flex items-start gap-3 panel-in" role="status">
+          <span className="flex-1">
+            {webgl === false
+              ? "This browser can't show the interactive map (WebGL is off or unsupported). Every event is still available in the list."
+              : "The map stopped because your browser ran low on graphics memory. Your place and filters are kept."}
+          </span>
+          {mapFailure && (
+            <button className="btn btn-secondary btn-sm" onClick={() => (setMapFailure(null), setMapReady(false), setInitialView(mapApi.current?.getCamera() ?? view), setMapKey((k) => k + 1))}>
+              Reload map
+            </button>
+          )}
         </div>
       )}
       {error && (
-        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-24 w-[min(92vw,420px)]">
+        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-28 w-[min(92vw,420px)]">
           <ErrorState title="Couldn't load events for this view" body={error} onRetry={() => (setError(null), setRetry((r) => r + 1))} />
         </div>
       )}
@@ -407,7 +533,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         </div>
       )}
 
-      {/* ---------- Right: discovery or selection ---------- */}
+      {/* ---------- Right: selection, place, or discovery ---------- */}
       {selection ? (
         <SelectionPanel
           selection={selection}
@@ -415,14 +541,28 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           onClose={() => setSelection(null)}
           onSelectEvent={(c) => {
             setSelection({ kind: "event", card: c, from: selection.kind === "cluster" ? selection.cluster : undefined });
-            if (view.alt > 0.5) fly(c.lat, c.lng, 0.25);
+            if (view.zoom < 9) fly({ lat: c.lat, lng: c.lng, zoom: 13 });
           }}
           onBack={selection.kind === "event" && selection.from ? () => setSelection({ kind: "cluster", cluster: selection.from! }) : undefined}
         />
+      ) : place && mode !== "list" ? (
+        <PlacePanel
+          place={place}
+          canGoBack={history.current.length > 0}
+          onClose={() => setPlace(null)}
+          onBack={goBack}
+          onZoom={() => fly({ lat: place.lat, lng: place.lng, zoom: Math.min(19, Math.max(view.zoom + 2, (place.zoom ?? 0) + 1)) })}
+          onEventsNear={() => {
+            const r = view.zoom >= 13 ? 5 : view.zoom >= 10 ? 25 : view.zoom >= 6 ? 100 : 300;
+            setFilters((f) => ({ ...f, city: undefined, country: undefined, continent: undefined, near: { lat: place.lat, lng: place.lng, radiusKm: r }, sort: "distance" }));
+            setMode("list");
+          }}
+          onLevel={(q, kind) => flyToQuery(q, kind)}
+        />
       ) : (
-        mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onPick={(c) => (setSelection({ kind: "event", card: c }), fly(c.lat, c.lng, 0.25))} onCity={(id) => {
+        mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onPick={(c) => (setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
           const d = getDestination(id);
-          if (d) fly(d.lat, d.lng, 0.35);
+          if (d) fly({ lat: d.lat, lng: d.lng, zoom: 10.5 });
           setFilters((f) => ({ ...f, city: id, country: undefined, continent: undefined }));
         }} />
       )}
@@ -758,15 +898,16 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
   );
 }
 
-function ListMode({ filters, view, onSelect }: { filters: SearchFilters; view: GlobeView; onSelect: (c: EventCard) => void }) {
+function ListMode({ filters, view, onSelect }: { filters: SearchFilters; view: ViewState; onSelect: (c: EventCard) => void }) {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<EventCard[]>([]);
-  const zoomed = view.alt <= 1.4;
+  const radius = viewRadiusKm(view);
+  const zoomed = radius != null;
   const p = filtersToParams({ ...filters, page, pageSize: 30 });
-  if (zoomed && !filters.near && !filters.city && !filters.country) {
+  if (zoomed && !filters.near && !filters.city && !filters.country && !filters.continent) {
     p.set("lat", view.lat.toFixed(3));
     p.set("lng", view.lng.toFixed(3));
-    p.set("radius", String(Math.round(visibleRadiusKm(view.alt))));
+    p.set("radius", String(Math.ceil(radius)));
   }
   const key = p.toString();
   const { items: pageItems, total, loading, error } = useEvents(key);
@@ -801,17 +942,4 @@ function ListMode({ filters, view, onSelect }: { filters: SearchFilters; view: G
       </div>
     </div>
   );
-}
-
-class GlobeErrorBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch() {
-    this.props.onError();
-  }
-  render() {
-    return this.state.failed ? null : this.props.children;
-  }
 }

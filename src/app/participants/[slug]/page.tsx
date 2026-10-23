@@ -51,7 +51,7 @@ export default async function ParticipantPage({ params }: { params: P }) {
             </div>
             <p className="t-micro text-text-3 mt-2">Following saves this to My World. Alerts need a notification service, which isn&apos;t connected yet.</p>
           </div>
-          {res.total > 0 && <ClusterMap params={`participant=${encodeURIComponent(p.slug)}`} initial={{ lat: res.items[0].lat, lng: res.items[0].lng, alt: 1.8 }} className="h-64" />}
+          {res.total > 0 && <ClusterMap params={`participant=${encodeURIComponent(p.slug)}`} initial={{ lat: res.items[0].lat, lng: res.items[0].lng, zoom: 1.2 }} className="h-64" />}
         </div>
         <section className="mt-10" aria-labelledby="up">
           <h2 id="up" className="t-h2">Upcoming</h2>

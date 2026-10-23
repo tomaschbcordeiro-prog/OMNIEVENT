@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, Tag, User, Building2, CalendarDays, History, Loader2, X } from "lucide-react";
+import { Search, MapPin, Tag, User, Building2, CalendarDays, History, Loader2, X, Navigation } from "lucide-react";
+import { zoomForKind } from "@/lib/map/view";
 import { parseQuery } from "@/lib/search/parse";
 import { filtersToParams } from "@/lib/search/params";
 import { userActions, useUser } from "@/lib/user/store";
@@ -18,12 +19,27 @@ interface Suggest {
   events: { slug: string; title: string; city: string; start: string; timeZone: string; isDemo: boolean }[];
 }
 
-type Item = { key: string; label: string; sub?: string; icon: React.ReactNode; demo?: boolean; run: () => void };
+type Item = { key: string; label: string; sub?: string; icon: React.ReactNode; demo?: boolean; run: () => void; section?: string };
+
+/** A real place from the geocoder (address, street, landmark, city, country, coordinates). */
+export interface GeoPlace {
+  id: string;
+  name: string;
+  context: string;
+  kind: string;
+  lat: number;
+  lng: number;
+  bbox?: [number, number, number, number];
+}
 
 export interface SearchBoxProps {
   /** When provided, the parsed query is handed to the caller (e.g. the globe) instead of navigating. */
   onQuery?: (parsed: ParsedQuery, raw: string) => void;
   onPlace?: (d: { id: string; name: string; kind: string; lat: number; lng: number }) => void;
+  /** Real-world place picked from geocoder results. Without it, the home map opens at that place. */
+  onGeoPlace?: (g: GeoPlace) => void;
+  /** Bias place results towards what the person is looking at. */
+  mapCenter?: { lat: number; lng: number };
   placeholder?: string;
   size?: "md" | "lg";
   autoFocus?: boolean;
@@ -31,7 +47,7 @@ export interface SearchBoxProps {
   className?: string;
 }
 
-export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocus, initial = "", className = "" }: SearchBoxProps) {
+export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder, size = "md", autoFocus, initial = "", className = "" }: SearchBoxProps) {
   const router = useRouter();
   const user = useUser();
   const [q, setQ] = useState(initial);
@@ -40,6 +56,9 @@ export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocu
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(-1);
+  const [geo, setGeo] = useState<{ results: GeoPlace[]; loading: boolean; failed: boolean }>({ results: [], loading: false, failed: false });
+  const centerRef = useRef(mapCenter);
+  centerRef.current = mapCenter;
   const listId = useId();
   const wrap = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -66,6 +85,33 @@ export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocu
         if (!ctrl.signal.aborted) setLoading(false);
       }
     }, 180);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [q]);
+
+  // Real places (debounced separately: the geocoder is slower and rate limited).
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 3) {
+      setGeo({ results: [], loading: false, failed: false });
+      return;
+    }
+    const ctrl = new AbortController();
+    setGeo((g) => ({ ...g, loading: true }));
+    const t = setTimeout(async () => {
+      try {
+        const c = centerRef.current;
+        const bias = c ? `&lat=${c.lat.toFixed(2)}&lng=${c.lng.toFixed(2)}` : "";
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(term)}&limit=5${bias}`, { signal: ctrl.signal });
+        if (!res.ok) throw new Error(String(res.status));
+        const j = await res.json();
+        setGeo({ results: j.results, loading: false, failed: false });
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setGeo({ results: [], loading: false, failed: true });
+      }
+    }, 350);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -104,6 +150,21 @@ export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocu
       icon: <Search size={15} aria-hidden />,
       run: () => submit(),
     });
+    geo.results.forEach((g) =>
+      items.push({
+        key: `g-${g.id}`,
+        label: g.name,
+        sub: g.context || g.kind,
+        section: "Places and addresses",
+        icon: <Navigation size={15} aria-hidden />,
+        run: () => {
+          setOpen(false);
+          userActions.searched(g.name);
+          if (onGeoPlace) onGeoPlace(g);
+          else router.push(`/?at=${g.lat.toFixed(5)},${g.lng.toFixed(5)},${zoomForKind(g.kind)}&pin=${g.lat.toFixed(5)},${g.lng.toFixed(5)}`);
+        },
+      }),
+    );
     data?.destinations.forEach((d) =>
       items.push({
         key: `d-${d.id}`,
@@ -204,7 +265,12 @@ export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocu
                   </button>
                 </li>
               )}
-              {items.map((it, i) => (
+              {items.map((it, i) => [
+                it.section && it.section !== items[i - 1]?.section ? (
+                  <li key={`h-${it.section}`} role="presentation" className="px-3 pt-2 pb-0.5 text-[11px] text-text-3">{it.section}</li>
+                ) : it.section === undefined && items[i - 1]?.section ? (
+                  <li key={`h-events-${i}`} role="presentation" className="px-3 pt-2 pb-0.5 text-[11px] text-text-3">Events, people and venues</li>
+                ) : null,
                 <li
                   key={it.key}
                   id={`${listId}-${i}`}
@@ -221,14 +287,16 @@ export function SearchBox({ onQuery, onPlace, placeholder, size = "md", autoFocu
                     {it.sub && <span className="block truncate text-[12px] text-text-3 capitalize-first">{it.sub}</span>}
                   </span>
                   {it.demo && <DemoBadge />}
-                </li>
-              ))}
+                </li>,
+              ])}
             </ul>
           )}
           {term.length >= 2 && !loading && data && items.length === 1 && (
             <p className="px-3 pb-2 text-[12px] text-text-3">No matching places, people or venues. Press Enter to search all events.</p>
           )}
           {failed && <p className="px-3 pb-2 text-[12px] text-bad">Suggestions are unavailable right now. Press Enter to search anyway.</p>}
+          {geo.failed && term.length >= 3 && <p className="px-3 pb-2 text-[12px] text-text-3">Address search is unavailable right now.</p>}
+          {geo.loading && term.length >= 3 && !geo.results.length && <p className="px-3 pb-2 text-[12px] text-text-3">Looking up places</p>}
           {term.length < 2 && (
             <div className="px-3 py-2.5 border-t border-line">
               <p className="text-[12px] text-text-3 mb-2">Try asking in plain words</p>

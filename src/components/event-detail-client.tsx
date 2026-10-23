@@ -7,7 +7,7 @@ import type { EventCard, TicketOffer, Cluster } from "@/lib/types";
 import { formatMoney, relativeTime, AVAILABILITY_META, TICKET_CATEGORY_LABEL } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import { userActions, useUser } from "@/lib/user/store";
-import { MapView } from "./globe/map-view";
+import { ClusterMap } from "./cluster-map";
 import { Tone } from "./ui";
 
 export function ViewTracker({ id }: { id: string }) {
@@ -213,14 +213,5 @@ export function TicketComparison({ offers, eventStatus }: { offers: TicketOffer[
 
 export function LocationMap({ lat, lng, label, group }: { lat: number; lng: number; label: string; group: string }) {
   const c: Cluster = { id: "venue", lat, lng, count: 1, groups: { [group]: 1 }, dominant: group, label, sample: [] as EventCard[] };
-  return (
-    <MapView
-      className="h-56 rounded-[var(--radius-m)] border border-line"
-      clusters={[c]}
-      selectedId="venue"
-      initialView={{ lat, lng, alt: 0.06 }}
-      onViewChange={() => {}}
-      onClusterClick={() => {}}
-    />
-  );
+  return <ClusterMap className="h-64" clusters={[c]} initial={{ lat, lng, zoom: 15 }} onClusterClick={() => {}} />;
 }

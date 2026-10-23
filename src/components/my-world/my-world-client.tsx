@@ -16,7 +16,7 @@ import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { formatEventDate, formatEventTime, localDateKey, tzAbbrev } from "@/lib/format";
 import { EventRow } from "../event-card";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
-import { MapView } from "../globe/map-view";
+import { ClusterMap } from "../cluster-map";
 
 type Tab = "overview" | "saved" | "calendar" | "trips" | "following" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
@@ -512,7 +512,7 @@ function TripDetail({ trip, cards }: { trip: Trip; cards: Map<string, EventCard>
 
         <aside className="grid gap-4 content-start">
           {events.length > 0 && (
-            <MapView compact className="h-64 rounded-[var(--radius-l)] border border-line" clusters={clusters} initialView={{ ...center, alt: spread > 30 ? 2.2 : spread > 8 ? 1 : spread > 1 ? 0.4 : 0.12 }} onViewChange={() => {}} onClusterClick={(c) => c.sample[0] && window.location.assign(`/events/${c.sample[0].slug}`)} />
+            <ClusterMap className="h-64" clusters={clusters} initial={{ ...center, zoom: spread > 30 ? 1 : spread > 8 ? 3.5 : spread > 1 ? 6 : 11 }} onClusterClick={(c) => c.sample[0] && window.location.assign(`/events/${c.sample[0].slug}`)} />
           )}
           {cities.length > 0 && (
             <div className="rounded-[var(--radius-l)] border border-line p-4">

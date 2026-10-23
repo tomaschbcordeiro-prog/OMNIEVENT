@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ensureFresh, providerStatuses, dataSummary } from "@/lib/store";
 import { FX_SOURCE } from "@/lib/currency";
+import { PROVIDER_INFO } from "@/lib/map/style";
+import { GEOCODER } from "@/lib/geocode";
 import { relativeTime } from "@/lib/format";
 import { Footer } from "@/components/footer";
 import { Tone } from "@/components/ui";
@@ -43,6 +45,16 @@ export default async function DataPage() {
             </li>
           ))}
         </ul>
+
+        <h2 className="t-h2 mt-10">Map data</h2>
+        <ul className="t-body text-text-2 mt-2 measure grid gap-1 list-disc pl-5">
+          <li>Satellite imagery: {PROVIDER_INFO.satellite.name}. {PROVIDER_INFO.satellite.note}</li>
+          <li>Streets, buildings and place names: {PROVIDER_INFO.vector}, © OpenStreetMap contributors.</li>
+          <li>Terrain: {PROVIDER_INFO.terrain}.</li>
+          <li>Place search: {GEOCODER}.</li>
+          <li>Day and night shading: calculated from the sun&apos;s position at the current time.</li>
+        </ul>
+        <p className="t-small text-text-3 mt-2 measure">3D buildings only appear where they are mapped in OpenStreetMap. We never draw buildings, streets or imagery that the data doesn&apos;t contain.</p>
 
         <h2 className="t-h2 mt-10">Currency estimates</h2>
         <p className="t-body text-text-2 mt-2 measure">
