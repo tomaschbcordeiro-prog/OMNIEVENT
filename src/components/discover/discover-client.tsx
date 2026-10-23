@@ -90,12 +90,23 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   }, []);
 
   // ---- keep URL shareable ----
+  // Debounced: trackpad pinches emit hundreds of view changes, and Safari throws a
+  // SecurityError after 100 replaceState calls in 10 seconds.
   useEffect(() => {
     if (!initialView) return;
-    const p = filtersToParams(filters);
-    p.set("v", `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${view.alt.toFixed(2)}`);
-    if (mode !== "globe") p.set("view", mode);
-    window.history.replaceState(null, "", `/?${p.toString()}`);
+    const t = setTimeout(() => {
+      const p = filtersToParams(filters);
+      p.set("v", `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${view.alt.toFixed(2)}`);
+      if (mode !== "globe") p.set("view", mode);
+      const next = `/?${p.toString()}`;
+      if (next === `${window.location.pathname}${window.location.search}`) return;
+      try {
+        window.history.replaceState(window.history.state, "", next);
+      } catch {
+        // Browser rate limit hit: the URL is a convenience, never worth a crash.
+      }
+    }, 500);
+    return () => clearTimeout(t);
   }, [filters, view, mode, initialView]);
 
   // ---- viewport-based cluster loading (debounced + cancellable) ----
