@@ -37,7 +37,7 @@ Filter params: `q, cat, from, to, city, country, continent, lat, lng, radius, mi
 
 ## Automatic updates and real data
 
-Providers are adapters (`src/lib/providers/`). The store re-syncs each provider on its refresh interval (stale-while-revalidate), and `/api/sync` lets a scheduler force a run (`vercel.json` runs it hourly on Vercel).
+Providers are adapters (`src/lib/providers/`). The store re-syncs each provider on its refresh interval (stale-while-revalidate), and `/api/sync` lets a scheduler force a run (`vercel.json` runs it daily, the limit on Vercel's free Hobby plan; the store also refreshes stale providers on incoming requests).
 
 **Enable real events:**
 1. Get a free key at <https://developer.ticketmaster.com>.
