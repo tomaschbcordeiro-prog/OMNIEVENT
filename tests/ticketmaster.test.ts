@@ -38,6 +38,13 @@ describe("ticketmaster adapter", () => {
     expect(incl.totalPrice).toBe(52.5);
     expect(plain.availability).toBe("unknown");
   });
+  it("lists the official link without inventing a price when no price ranges exist", () => {
+    const b2 = normalizeTmEvents([{ ...fixture[0], id: "NOPRICE", priceRanges: undefined }], "2026-10-22T00:00:00Z");
+    expect(b2.offers).toHaveLength(1);
+    expect(b2.offers[0].purchaseUrl).toBe("https://www.ticketmaster.com/event/FIXTURE1");
+    expect(b2.offers[0].basePrice).toBeUndefined();
+    expect(b2.offers[0].totalPrice).toBeUndefined();
+  });
   it("maps classifications and statuses", () => {
     expect(mapCategory({ segment: { name: "Sports" }, genre: { name: "Soccer" } })).toBe("football");
     expect(mapCategory({ segment: { name: "Arts & Theatre" }, genre: { name: "Musical" } })).toBe("musicals");

@@ -177,8 +177,25 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
       provenance: { provider: "ticketmaster", externalId: e.id, sourceUrl: e.url, lastSyncedAt: syncedAt, lastVerifiedAt: syncedAt, isDemo: false },
     });
 
-    (e.priceRanges ?? []).forEach((pr, i) => {
-      if (pr.min == null || !pr.currency) return;
+    const priced = (e.priceRanges ?? []).filter((pr) => pr.min != null && pr.currency);
+    // Most Discovery API events carry no price ranges. We still list the official
+    // purchase link, with no price, rather than leaving the event without a ticket option.
+    if (!priced.length && e.url && status !== "cancelled") {
+      offers.push({
+        id: `${id}-link`,
+        eventId: id,
+        provider: "Ticketmaster",
+        providerType: "primary",
+        providerEventId: e.id,
+        ticketCategory: "standard",
+        label: "Prices shown on Ticketmaster",
+        currency: "",
+        availability: status === "on_sale" ? "unknown" : "not_on_sale",
+        purchaseUrl: e.url,
+        isDemo: false,
+      });
+    }
+    priced.forEach((pr, i) => {
       const inclFees = /including fees/i.test(pr.type ?? "");
       offers.push({
         id: `${id}-pr${i}`,
@@ -192,7 +209,7 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
         maxPrice: pr.max,
         feesIncluded: inclFees ? true : undefined,
         totalPrice: inclFees ? pr.min : undefined,
-        currency: pr.currency,
+        currency: pr.currency!,
         availability: status === "cancelled" ? "not_on_sale" : status === "on_sale" ? "unknown" : "not_on_sale",
         purchaseUrl: e.url,
         priceObservedAt: syncedAt,
@@ -211,7 +228,10 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", key);
-  const res = await fetch(url, { signal: ctx.signal, cache: "no-store" });
+  // Cached in the platform data cache for an hour so cold server instances don't
+  // re-download everything (and don't spend API quota). The key excludes nothing
+  // secret-dependent beyond the URL, which never leaves the server.
+  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 3600 } } as RequestInit);
   if (res.status === 429) {
     if (attempt >= 3) throw new ProviderError("ticketmaster", "rate limited", 429, true);
     const wait = Number(res.headers.get("retry-after") ?? 2) * 1000 * (attempt + 1);
@@ -238,28 +258,45 @@ export const ticketmasterProvider: ProviderAdapter = {
     let failures = 0;
     let rateLimited = false;
     const perCountry = Math.max(200, Math.floor(ctx.maxEvents / countries.length));
-    for (const cc of countries) {
-      for (let page = 0; page * 200 < Math.min(perCountry, 1000); page++) {
-        try {
-          const json = (await tmFetch("/events.json", {
-            countryCode: cc,
-            size: "200",
-            page: String(page),
-            sort: "date,asc",
-            startDateTime: syncedAt.replace(/\.\d{3}Z$/, "Z"),
-          }, ctx)) as { _embedded?: { events?: TmEvent[] }; page?: { totalPages?: number } };
-          const list = json._embedded?.events ?? [];
-          raw.push(...list);
-          await sleep(220); // stay under 5 req/s
-          if (!list.length || page + 1 >= (json.page?.totalPages ?? 0)) break;
-        } catch (err) {
-          failures++;
-          if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
-          ctx.log("ticketmaster page failed", { cc, page, err: String(err) });
-          break;
+    // Round the window start to the hour so identical requests hit the data cache.
+    const windowStart = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    // A small worker pool: ~4 requests in flight, paced to stay under 5 req/s.
+    const queue = [...countries];
+    const worker = async () => {
+      while (queue.length && !rateLimited) {
+        const cc = queue.shift()!;
+        for (let page = 0; page * 200 < Math.min(perCountry, 1000); page++) {
+          const t0 = Date.now();
+          try {
+            const json = (await tmFetch("/events.json", {
+              countryCode: cc,
+              size: "200",
+              page: String(page),
+              sort: "date,asc",
+              startDateTime: windowStart,
+            }, ctx)) as { _embedded?: { events?: TmEvent[] }; page?: { totalPages?: number } };
+            const list = json._embedded?.events ?? [];
+            raw.push(...list);
+            const elapsed = Date.now() - t0;
+            if (elapsed > 60) await sleep(Math.max(0, 850 - elapsed)); // cache hits skip the wait
+            if (!list.length || page + 1 >= (json.page?.totalPages ?? 0)) break;
+          } catch (err) {
+            failures++;
+            if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
+            ctx.log("ticketmaster page failed", { cc, page, err: String(err) });
+            break;
+          }
         }
       }
-      if (rateLimited) break;
+    };
+    await Promise.all(Array.from({ length: 4 }, worker));
+    // Past events can appear when the window start was rounded down.
+    const cutoff = Date.now() - 6 * 3600000;
+    const seen = new Set<string>();
+    for (let i = raw.length - 1; i >= 0; i--) {
+      const r = raw[i];
+      if (seen.has(r.id) || (r.dates?.start?.dateTime && Date.parse(r.dates.start.dateTime) < cutoff)) raw.splice(i, 1);
+      else seen.add(r.id);
     }
     const batch = normalizeTmEvents(raw, syncedAt);
     return {
