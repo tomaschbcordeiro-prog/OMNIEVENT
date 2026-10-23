@@ -29,7 +29,9 @@ export interface ReversePlace {
   label: string;
 }
 
-const KEY = process.env.MAPTILER_KEY || process.env.NEXT_PUBLIC_MAPTILER_KEY || "";
+// Server-side key only. The public browser key is usually locked to the site's domain
+// (allowed HTTP origins), so MapTiler refuses it from the server; using it here would break search.
+const KEY = process.env.MAPTILER_KEY || "";
 export const GEOCODER = KEY ? "MapTiler Geocoding" : "Photon (OpenStreetMap)";
 const UA = "OMNIEVENT/1.0 (event discovery; https://omnievent.vercel.app)";
 
@@ -110,8 +112,9 @@ export async function geocode(q: string, opts: { lat?: number; lng?: number; lim
   const key = `f|${q.toLowerCase()}|${bias}|${limit}|${opts.lang ?? ""}`;
   const hit = cached<Place[]>(key);
   if (hit) return hit;
-  let places: Place[];
+  let places: Place[] | undefined;
   if (KEY) {
+    try {
     const u = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json`);
     u.searchParams.set("key", KEY);
     u.searchParams.set("limit", String(limit));
@@ -120,7 +123,11 @@ export async function geocode(q: string, opts: { lat?: number; lng?: number; lim
     if (bias) u.searchParams.set("proximity", `${opts.lng},${opts.lat}`);
     const j = (await getJson(u.toString())) as { features: MtFeature[] };
     places = j.features.map(mtPlace);
-  } else {
+    } catch (err) {
+      geocodeError(err); // fall back to Photon below
+    }
+  }
+  if (!places) {
     const u = new URL("https://photon.komoot.io/api/");
     u.searchParams.set("q", q);
     u.searchParams.set("limit", String(limit));
@@ -149,7 +156,9 @@ export async function reverseGeocode(lat: number, lng: number, lang?: string): P
   const hit = cached<ReversePlace>(key);
   if (hit) return hit;
   const hierarchy: { kind: string; name: string }[] = [];
+  let usedKey = false;
   if (KEY) {
+    try {
     const u = new URL(`https://api.maptiler.com/geocoding/${lng},${lat}.json`);
     u.searchParams.set("key", KEY);
     if (lang) u.searchParams.set("language", lang);
@@ -158,7 +167,12 @@ export async function reverseGeocode(lat: number, lng: number, lang?: string): P
       const k = f.place_type?.[0] ?? "place";
       hierarchy.push({ kind: k === "municipality" ? "city" : k, name: f.text });
     }
-  } else {
+    usedKey = true;
+    } catch (err) {
+      geocodeError(err); // fall back to Photon below
+    }
+  }
+  if (!usedKey) {
     const u = new URL("https://photon.komoot.io/reverse");
     u.searchParams.set("lat", String(lat));
     u.searchParams.set("lon", String(lng));
