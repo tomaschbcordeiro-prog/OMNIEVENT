@@ -215,6 +215,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
                 flyTo={flyTo}
                 initialView={initialView}
                 onViewChange={setView}
+                onUserInteract={() => setAutoRotate(false)}
                 onClusterClick={onClusterClick}
                 onReady={() => setGlobeReady(true)}
                 onContextLost={() => (setMode("map"), setGlobeNotice(true))}

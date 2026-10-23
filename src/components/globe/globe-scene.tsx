@@ -29,6 +29,8 @@ export interface GlobeSceneProps {
   flyTo?: FlyTarget;
   initialView: GlobeView;
   onViewChange: (v: GlobeView) => void;
+  /** First time the person touches, drags, scrolls or pinches the globe. */
+  onUserInteract?: () => void;
   onClusterClick: (c: Cluster) => void;
   onReady?: () => void;
   /** Called when the browser drops the WebGL context (e.g. GPU memory pressure on Safari). */
@@ -301,7 +303,7 @@ function MarkerLayer({
 // ------------------------------------------------------------------ Camera
 
 function CameraRig({
-  flyTo, initialView, autoRotate, reducedMotion, onViewChange, onAlt,
+  flyTo, initialView, autoRotate, reducedMotion, onViewChange, onAlt, onUserInteract,
 }: {
   flyTo?: FlyTarget;
   initialView: GlobeView;
@@ -309,6 +311,7 @@ function CameraRig({
   reducedMotion: boolean;
   onViewChange: (v: GlobeView) => void;
   onAlt: (alt: number) => void;
+  onUserInteract?: () => void;
 }) {
   const controls = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera);
@@ -390,6 +393,7 @@ function CameraRig({
       autoRotateSpeed={0.35}
       onStart={() => {
         interacting.current = true;
+        onUserInteract?.();
         anim.current = null;
       }}
       onEnd={() => {
@@ -449,7 +453,7 @@ export default function GlobeScene(props: GlobeSceneProps) {
           </div>
         </Html>
       )}
-      <CameraRig flyTo={props.flyTo} initialView={props.initialView} autoRotate={props.autoRotate} reducedMotion={props.reducedMotion} onViewChange={props.onViewChange} onAlt={setAlt} />
+      <CameraRig flyTo={props.flyTo} initialView={props.initialView} autoRotate={props.autoRotate} reducedMotion={props.reducedMotion} onViewChange={props.onViewChange} onAlt={setAlt} onUserInteract={props.onUserInteract} />
     </Canvas>
   );
 }
