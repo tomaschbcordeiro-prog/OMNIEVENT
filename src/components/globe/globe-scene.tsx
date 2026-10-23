@@ -31,6 +31,8 @@ export interface GlobeSceneProps {
   onViewChange: (v: GlobeView) => void;
   onClusterClick: (c: Cluster) => void;
   onReady?: () => void;
+  /** Called when the browser drops the WebGL context (e.g. GPU memory pressure on Safari). */
+  onContextLost?: () => void;
 }
 
 const MIN_DIST = 1.06;
@@ -419,10 +421,17 @@ export default function GlobeScene(props: GlobeSceneProps) {
   return (
     <Canvas
       flat
-      dpr={[1, 2]}
+      // Cap pixel ratio: large Retina canvases are the main cause of GPU memory pressure.
+      dpr={[1, typeof window !== "undefined" && window.innerWidth * (window.devicePixelRatio || 1) > 2600 ? 1.5 : 2]}
       camera={{ fov: 42, near: 0.01, far: 100, position: [0, 0, 1 + props.initialView.alt] }}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
-      onCreated={({ gl }) => gl.setClearColor("#05070B")}
+      onCreated={({ gl }) => {
+        gl.setClearColor("#05070B");
+        gl.domElement.addEventListener("webglcontextlost", (e) => {
+          e.preventDefault();
+          props.onContextLost?.();
+        });
+      }}
       onPointerMissed={() => setHover(null)}
     >
       <Stars radius={60} depth={30} count={2500} factor={2.2} saturation={0} fade speed={0} />

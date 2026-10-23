@@ -69,6 +69,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   const [globeReady, setGlobeReady] = useState(false);
   const [interp, setInterp] = useState<ParsedQuery | null>(null);
   const [retry, setRetry] = useState(0);
+  const [globeNotice, setGlobeNotice] = useState(false);
   const flyKey = useRef(0);
 
   // ---- boot: read URL state once, detect WebGL ----
@@ -193,7 +194,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {mode === "globe" && webgl && initialView && (
           <div className="absolute inset-0" role="region" aria-label="Interactive 3D globe of events. Drag to rotate, scroll or pinch to zoom. Use the map or list view for keyboard access to every event.">
-            <GlobeErrorBoundary onError={() => setMode("map")}>
+            <GlobeErrorBoundary onError={() => (setMode("map"), setGlobeNotice(true))}>
               <GlobeScene
                 clusters={clusters}
                 selectedId={selectedId}
@@ -205,6 +206,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
                 onViewChange={setView}
                 onClusterClick={onClusterClick}
                 onReady={() => setGlobeReady(true)}
+                onContextLost={() => (setMode("map"), setGlobeNotice(true))}
               />
             </GlobeErrorBoundary>
             {!globeReady && (
@@ -373,6 +375,13 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         {dataSummary.live === 0 && <div className="mt-0.5 text-amber/80">Demo mode: all events shown are fictional</div>}
       </div>
 
+      {globeNotice && mode === "map" && (
+        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-24 w-[min(92vw,460px)] surface-float rounded-[var(--radius-m)] p-3 t-small text-text-2 flex items-start gap-3 panel-in" role="status">
+          <span className="flex-1">Your browser ran out of graphics memory for the 3D globe, so we switched to the 2D map. Everything else works the same.</span>
+          <button className="btn btn-secondary btn-sm" onClick={() => (setGlobeNotice(false), setGlobeReady(false), setMode("globe"))}>Try 3D again</button>
+          <button className="text-text-3 hover:text-text" aria-label="Dismiss" onClick={() => setGlobeNotice(false)}><X size={14} aria-hidden /></button>
+        </div>
+      )}
       {error && (
         <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-24 w-[min(92vw,420px)]">
           <ErrorState title="Couldn't load events for this view" body={error} onRetry={() => (setError(null), setRetry((r) => r + 1))} />
