@@ -64,11 +64,10 @@ await step("2D map: cluster opens list, event opens preview with offers", async 
   await page.getByRole("link", { name: "View details" }).waitFor();
 });
 
-let eventUrl;
 await step("event detail page: save, ticket table, demo checkout explained", async () => {
   await page.getByRole("link", { name: "View details" }).click();
   await page.waitForURL(/\/events\//);
-  eventUrl = page.url();
+
   await page.getByRole("heading", { level: 1 }).waitFor();
   await page.getByText("This is a fictional demo event.").waitFor();
   const save = page.getByRole("button", { name: /^Save / }).first();
