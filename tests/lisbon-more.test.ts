@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { normalizeTribe, SOURCES, mapTribeCategory, type TribeEvent } from "@/lib/providers/venue-calendars";
-import { normalizeFootball, groundFor, type FdMatch } from "@/lib/providers/football";
+import { normalizeFootball, type FdMatch } from "@/lib/providers/football";
 import { normalizeLisbon } from "@/lib/providers/lisbon";
 
 // Hand-written fixtures in each source's response shape (not real data).
@@ -34,16 +34,30 @@ describe("venue calendars (The Events Calendar API)", () => {
 });
 
 describe("football fixtures", () => {
-  const m = (id: number, home: string, away: string, status = "TIMED"): FdMatch => ({ id, utcDate: "2026-11-08T20:30:00Z", status, matchday: 10, stage: "REGULAR_SEASON", competition: { code: "PPL", name: "Primeira Liga" }, homeTeam: { id: id * 10, name: home }, awayTeam: { id: id * 10 + 1, name: away } });
-  it("places matches at the home ground and skips unknown grounds", () => {
-    const b = normalizeFootball([m(1, "Sport Lisboa e Benfica", "FC Porto"), m(2, "Sporting Clube de Braga", "Sporting Clube de Portugal", "SCHEDULED"), m(3, "Unknown FC", "Benfica")], SYNC);
-    expect(b.events.map((e) => e.title)).toEqual(["Sport Lisboa e Benfica vs FC Porto", "Sporting Clube de Braga vs Sporting Clube de Portugal"]);
-    expect(b.venues.map((v) => v.name)).toEqual(["Estádio da Luz", "Estádio Municipal de Braga"]);
+  const grounds = {
+    "10": { venue: "Estádio da Luz", lat: 38.75269, lng: -9.18469, city: "Lisboa", country: "PT", website: "https://www.slbenfica.pt" },
+    "20": { venue: "Estádio do Dragão", lat: 41.16182, lng: -8.58375, city: "Porto", country: "PT" },
+  };
+  const m = (id: number, home: number, away: number, extra: Partial<FdMatch> = {}): FdMatch => ({ id, utcDate: "2026-11-08T20:30:00Z", status: "TIMED", matchday: 10, stage: "REGULAR_SEASON", competition: { code: "PPL", name: "Primeira Liga" }, homeTeam: { id: home, name: `Team ${home}`, shortName: `T${home}` }, awayTeam: { id: away, name: `Team ${away}`, shortName: `T${away}` }, ...extra });
+  const b = normalizeFootball([
+    m(1, 10, 20),
+    m(2, 20, 10, { status: "SCHEDULED", utcDate: "2026-11-15T00:00:00Z" }),
+    m(3, 99, 10),
+    m(4, 10, 20, { stage: "FINAL", competition: { code: "CL", name: "UEFA Champions League" } }),
+    m(5, 10, 20, { utcDate: "2026-10-01T20:00:00Z" }),
+  ], SYNC, grounds, NOW);
+  it("places matches at the home ground and skips unknown grounds, neutral finals and past games", () => {
+    expect(b.events.map((e) => e.title)).toEqual(["T10 vs T20", "T20 vs T10"]);
+    expect(b.skipped).toBe(2);
+    expect(b.venues.map((v) => [v.name, v.countryCode, v.timeZone])).toEqual([["Estádio da Luz", "PT", "Europe/Lisbon"], ["Estádio do Dragão", "PT", "Europe/Lisbon"]]);
     expect(b.events[0].sports).toMatchObject({ competition: "Primeira Liga", stage: "Matchday 10" });
     expect(b.events[0].participants.map((p) => p.role)).toEqual(["team_home", "team_away"]);
-    expect(b.events[1].statusNote).toMatch(/to be confirmed/);
-    expect(groundFor("Sporting Clube de Portugal")?.name).toBe("Estádio José Alvalade");
-    expect(groundFor("Vitória SC")?.city).toBe("Guimarães");
+  });
+  it("marks date-only fixtures and links the home club's official site without a price", () => {
+    expect(b.events[1]).toMatchObject({ hoursUnknown: true, statusNote: "Kick-off time to be confirmed." });
+    expect(b.offers).toHaveLength(1);
+    expect(b.offers[0]).toMatchObject({ purchaseUrl: "https://www.slbenfica.pt", providerType: "primary", currency: "" });
+    expect(b.offers[0].basePrice).toBeUndefined();
   });
 });
 

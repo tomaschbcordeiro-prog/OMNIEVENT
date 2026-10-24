@@ -1,0 +1,1667 @@
+{
+"1": {
+"team": "1. FC Köln",
+"venue": "RheinEnergieSTADION",
+"lat": 50.933506,
+"lng": 6.875117,
+"city": "Köln",
+"country": "DE",
+"website": "http://www.fc-koeln.de"
+},
+"10": {
+"team": "Stuttgart",
+"venue": "MHPArena",
+"lat": 48.79225,
+"lng": 9.23209,
+"city": "Stuttgart",
+"country": "DE",
+"website": "http://www.vfb.de"
+},
+"100": {
+"team": "Roma",
+"venue": "Stadio Olimpico",
+"lat": 41.93399,
+"lng": 12.4547,
+"city": "Roma",
+"country": "IT",
+"website": "http://www.asroma.it"
+},
+"102": {
+"team": "Atalanta",
+"venue": "Gewiss Stadium",
+"lat": 45.70921,
+"lng": 9.68083,
+"city": "Bergamo",
+"country": "IT",
+"website": "http://www.atalanta.it"
+},
+"10233": {
+"team": "Sabah FK",
+"venue": "Bank Respublika Arena",
+"lat": 40.48617,
+"lng": 49.76636,
+"city": "Masazır",
+"country": "AZ",
+"website": null
+},
+"103": {
+"team": "Bologna",
+"venue": "Stadio Renato Dall'Ara",
+"lat": 44.492317,
+"lng": 11.309997,
+"city": "Bologna",
+"country": "IT",
+"website": "http://www.bolognafc.it"
+},
+"104": {
+"team": "Cagliari",
+"venue": "Unipol Domus",
+"lat": 39.19919,
+"lng": 9.13743,
+"city": "Casteddu/Cagliari",
+"country": "IT",
+"website": "http://www.cagliaricalcio.net"
+},
+"1044": {
+"team": "Bournemouth",
+"venue": "Vitality Stadium",
+"lat": 50.735182,
+"lng": -1.838328,
+"city": "Bournemouth",
+"country": "GB",
+"website": "http://www.afcb.co.uk"
+},
+"1045": {
+"team": "Paris FC",
+"venue": "Stade Sébastien Charléty",
+"lat": 48.81805,
+"lng": 2.346142,
+"city": "Paris",
+"country": "FR",
+"website": "http://www.parisfootballclub.com"
+},
+"107": {
+"team": "Genoa",
+"venue": "Stadio Comunale Luigi Ferraris",
+"lat": 44.416475,
+"lng": 8.952534,
+"city": "Genova",
+"country": "IT",
+"website": "http://www.genoacfc.it"
+},
+"1076": {
+"team": "Coventry City",
+"venue": "Coventry Building Society Arena",
+"lat": 52.448158,
+"lng": -1.497017,
+"city": "Coventry",
+"country": "GB",
+"website": "http://www.ccfc.co.uk"
+},
+"108": {
+"team": "Inter",
+"venue": "Stadio Giuseppe Meazza",
+"lat": 45.4782,
+"lng": 9.123964,
+"city": "Milano",
+"country": "IT",
+"website": "http://www.inter.it"
+},
+"1081": {
+"team": "Preston NE",
+"venue": "Deepdale Stadium",
+"lat": 53.772215,
+"lng": -2.688561,
+"city": "Preston",
+"country": "GB",
+"website": "http://www.pnefc.net"
+},
+"109": {
+"team": "Juventus",
+"venue": "Allianz Stadium",
+"lat": 45.109576,
+"lng": 7.642134,
+"city": "Torino",
+"country": "IT",
+"website": "http://www.juventus.com"
+},
+"110": {
+"team": "Lazio",
+"venue": "Stadio Olimpico",
+"lat": 41.93399,
+"lng": 12.4547,
+"city": "Roma",
+"country": "IT",
+"website": "http://www.sslazio.it"
+},
+"112": {
+"team": "Parma",
+"venue": "Stadio Ennio Tardini",
+"lat": 44.794758,
+"lng": 10.338373,
+"city": "Parma",
+"country": "IT",
+"website": "http://www.parmacalcio1913.com"
+},
+"1126": {
+"team": "Lincoln City",
+"venue": "LNER Stadium",
+"lat": 53.218216,
+"lng": -0.540833,
+"city": "Lincoln",
+"country": "GB",
+"website": "http://www.redimps.com"
+},
+"113": {
+"team": "Napoli",
+"venue": "Stadio Diego Armando Maradona",
+"lat": 40.82798,
+"lng": 14.19289,
+"city": "Napoli",
+"country": "IT",
+"website": "http://www.sscnapoli.it"
+},
+"115": {
+"team": "Udinese",
+"venue": "Bluenergy Stadium",
+"lat": 46.081402,
+"lng": 13.199741,
+"city": "Udine",
+"country": "IT",
+"website": "http://www.udinese.it"
+},
+"12": {
+"team": "Bremen",
+"venue": "Weserstadion",
+"lat": 53.066448,
+"lng": 8.837672,
+"city": "Bremen",
+"country": "DE",
+"website": "http://www.werder.de"
+},
+"15": {
+"team": "Mainz",
+"venue": "Mewa Arena",
+"lat": 49.98395,
+"lng": 8.22447,
+"city": "Mainz",
+"country": "DE",
+"website": "http://www.mainz05.de"
+},
+"16": {
+"team": "Augsburg",
+"venue": "WWK Arena",
+"lat": 48.323118,
+"lng": 10.885879,
+"city": "Augsburg",
+"country": "DE",
+"website": "http://www.fcaugsburg.de"
+},
+"17": {
+"team": "Freiburg",
+"venue": "Europa-Park Stadion",
+"lat": 48.02138,
+"lng": 7.82982,
+"city": "Freiburg im Breisgau",
+"country": "DE",
+"website": "http://www.scfreiburg.com"
+},
+"1765": {
+"team": "Fluminense",
+"venue": "Estadio Jornalista Mário Filho",
+"lat": -22.912162,
+"lng": -43.231186,
+"city": "Rio de Janeiro",
+"country": "BR",
+"website": "http://www.fluminense.com.br"
+},
+"1766": {
+"team": "Mineiro",
+"venue": "Arena MRV",
+"lat": -19.93001,
+"lng": -44.01388,
+"city": "Belo Horizonte",
+"country": "BR",
+"website": "http://www.atletico.com.br"
+},
+"1767": {
+"team": "Grêmio",
+"venue": "Arena do Grêmio",
+"lat": -29.974043,
+"lng": -51.195107,
+"city": "Porto Alegre",
+"country": "BR",
+"website": "http://www.gremio.net"
+},
+"1768": {
+"team": "Paranaense",
+"venue": "Ligga Arena",
+"lat": -25.44835,
+"lng": -49.27688,
+"city": "Curitiba",
+"country": "BR",
+"website": "http://www.atleticoparanaense.com"
+},
+"1769": {
+"team": "Palmeiras",
+"venue": "Allianz Parque",
+"lat": -23.527497,
+"lng": -46.678528,
+"city": "São Paulo",
+"country": "BR",
+"website": "http://www.palmeiras.com.br"
+},
+"1770": {
+"team": "Botafogo",
+"venue": "Estádio Nilton Santos",
+"lat": -22.893194,
+"lng": -43.293569,
+"city": "Rio de Janeiro",
+"country": "BR",
+"website": "http://www.botafogo.com.br"
+},
+"1771": {
+"team": "Cruzeiro",
+"venue": "Estádio Governador Magalhães Pinto",
+"lat": -19.865962,
+"lng": -43.971124,
+"city": "Belo Horizonte",
+"country": "BR",
+"website": "http://www.cruzeiro.com.br"
+},
+"1772": {
+"team": "Chapecoense",
+"venue": "Arena Condá",
+"lat": -27.104093,
+"lng": -52.606982,
+"city": "Chapecó",
+"country": "BR",
+"website": "http://www.chapecoense.com"
+},
+"1776": {
+"team": "São Paulo",
+"venue": "Estádio do Morumbi",
+"lat": -23.6001,
+"lng": -46.72013,
+"city": "São Paulo",
+"country": "BR",
+"website": "http://www.saopaulofc.net"
+},
+"1777": {
+"team": "Bahia",
+"venue": "Arena Fonte Nova",
+"lat": -12.9789,
+"lng": -38.505,
+"city": "Salvador",
+"country": "BR",
+"website": "http://www.esporteclubebahia.com.br"
+},
+"1779": {
+"team": "Corinthians",
+"venue": "Neo Química Arena",
+"lat": -23.545307,
+"lng": -46.474338,
+"city": "São Paulo",
+"country": "BR",
+"website": "http://www.corinthians.com.br"
+},
+"1780": {
+"team": "Vasco da Gama",
+"venue": "Estádio São Januário",
+"lat": -22.8908,
+"lng": -43.22827,
+"city": "Rio de Janeiro",
+"country": "BR",
+"website": "http://www.vasco.com.br"
+},
+"1782": {
+"team": "Vitória",
+"venue": "Estádio Manoel Barradas",
+"lat": -12.919096,
+"lng": -38.427132,
+"city": "Salvador",
+"country": "BR",
+"website": "http://www.ecvitoria.com.br"
+},
+"1783": {
+"team": "Flamengo",
+"venue": "Maracanã",
+"lat": -22.912162,
+"lng": -43.231186,
+"city": "Rio de Janeiro",
+"country": "BR",
+"website": "https://www.flamengo.com.br/pagina-inicial-basquete"
+},
+"18": {
+"team": "M'gladbach",
+"venue": "Stadion im Borussia-Park",
+"lat": 51.174625,
+"lng": 6.385409,
+"city": "Mönchengladbach",
+"country": "DE",
+"website": "http://www.borussia.de"
+},
+"1899": {
+"team": "PAE AEK",
+"venue": "OPAP Arena",
+"lat": 38.03719,
+"lng": 23.74093,
+"city": "Δημοτική Ενότητα Νέας Φιλαδέλφειας",
+"country": "GR",
+"website": "http://www.aekfc.gr"
+},
+"19": {
+"team": "Frankfurt",
+"venue": "Deutsche Bank Park",
+"lat": 50.06861,
+"lng": 8.645415,
+"city": "Frankfurt am Main",
+"country": "DE",
+"website": "http://www.eintracht.de"
+},
+"1903": {
+"team": "SL Benfica",
+"venue": "Estádio da Luz",
+"lat": 38.75269,
+"lng": -9.18469,
+"city": "Lisboa",
+"country": "PT",
+"website": "https://www.slbenfica.pt"
+},
+"1909": {
+"team": "Cambuur",
+"venue": "Kooi Stadion",
+"lat": 53.200476,
+"lng": 5.768363,
+"city": "Leeuwarden",
+"country": "NL",
+"website": "http://www.cambuur.nl"
+},
+"1912": {
+"team": "Telstar",
+"venue": "BUKO Stadion",
+"lat": 52.45518,
+"lng": 4.63493,
+"city": "Velsen-Zuid",
+"country": "NL",
+"website": "http://www.sctelstar.nl"
+},
+"1915": {
+"team": "NEC",
+"venue": "Goffertstadion",
+"lat": 51.822485,
+"lng": 5.837156,
+"city": "Nijmegen",
+"country": "NL",
+"website": "http://www.nec-nijmegen.nl"
+},
+"1920": {
+"team": "Sittard",
+"venue": "Fortuna Sittard Stadion",
+"lat": 50.992305,
+"lng": 5.843337,
+"city": "Sittard",
+"country": "NL",
+"website": "http://www.fortuna-sittard.nl"
+},
+"2": {
+"team": "Hoffenheim",
+"venue": "PreZero Arena",
+"lat": 49.23806,
+"lng": 8.88764,
+"city": "Sinsheim",
+"country": "DE",
+"website": "http://www.achtzehn99.de"
+},
+"2016": {
+"team": "LASK",
+"venue": "Raiffeisen Arena",
+"lat": 48.293574,
+"lng": 14.276555,
+"city": "Linz",
+"country": "AT",
+"website": "http://www.lask.at"
+},
+"263": {
+"team": "Alavés",
+"venue": "Mendizorrotza",
+"lat": 42.837054,
+"lng": -2.688263,
+"city": "Vitoria-Gasteiz",
+"country": "ES",
+"website": "http://www.alaves.com"
+},
+"28": {
+"team": "Union Berlin",
+"venue": "Stadion An der Alten Försterei",
+"lat": 52.456974,
+"lng": 13.568079,
+"city": "Berlin",
+"country": "DE",
+"website": "http://www.fc-union-berlin.de"
+},
+"285": {
+"team": "Elche",
+"venue": "Estadio Manuel Martínez Valero",
+"lat": 38.267044,
+"lng": -0.663305,
+"city": "Elx / Elche",
+"country": "ES",
+"website": "http://www.elchecf.es"
+},
+"29": {
+"team": "SC Paderborn",
+"venue": "Home Deluxe Arena",
+"lat": 51.730897,
+"lng": 8.710963,
+"city": "Paderborn",
+"country": "DE",
+"website": "http://www.scpaderborn07.de"
+},
+"3": {
+"team": "Leverkusen",
+"venue": "BayArena",
+"lat": 51.038144,
+"lng": 7.003096,
+"city": "Leverkusen",
+"country": "DE",
+"website": "http://www.bayer04.de"
+},
+"322": {
+"team": "Hull City",
+"venue": "MKM Stadium",
+"lat": 53.74623,
+"lng": -0.36782,
+"city": "Kingston upon Hull",
+"country": "GB",
+"website": "http://www.hullcitytigers.com"
+},
+"325": {
+"team": "Portsmouth",
+"venue": "Fratton Park",
+"lat": 50.796324,
+"lng": -1.063884,
+"city": "Portsmouth",
+"country": "GB",
+"website": "http://www.portsmouthfc.co.uk"
+},
+"328": {
+"team": "Burnley",
+"venue": "Turf Moor",
+"lat": 53.789361,
+"lng": -2.229855,
+"city": "Burnley",
+"country": "GB",
+"website": "http://www.burnleyfootballclub.com"
+},
+"332": {
+"team": "Birmingham",
+"venue": "St Andrew's",
+"lat": 52.47557,
+"lng": -1.86804,
+"city": "Birmingham",
+"country": "GB",
+"website": "http://www.bcfc.com"
+},
+"340": {
+"team": "Southampton",
+"venue": "St. Mary's Stadium",
+"lat": 50.905862,
+"lng": -1.390877,
+"city": "Southampton",
+"country": "GB",
+"website": "http://www.saintsfc.co.uk"
+},
+"341": {
+"team": "Leeds United",
+"venue": "Elland Road",
+"lat": 53.777861,
+"lng": -1.572178,
+"city": "Leeds",
+"country": "GB",
+"website": "http://www.leedsunited.com"
+},
+"342": {
+"team": "Derby County",
+"venue": "Pride Park Stadium",
+"lat": 52.914945,
+"lng": -1.447319,
+"city": "Derby",
+"country": "GB",
+"website": "http://www.dcfc.co.uk"
+},
+"343": {
+"team": "Middlesbrough",
+"venue": "Riverside Stadium",
+"lat": 54.578313,
+"lng": -1.216915,
+"city": "Middlesbrough",
+"country": "GB",
+"website": "http://www.mfc.co.uk"
+},
+"346": {
+"team": "Watford",
+"venue": "Vicarage Road Stadium",
+"lat": 51.649759,
+"lng": -0.401349,
+"city": "Watford",
+"country": "GB",
+"website": "http://www.watfordfc.com"
+},
+"348": {
+"team": "Charlton",
+"venue": "The Valley",
+"lat": 51.486392,
+"lng": 0.036159,
+"city": "London",
+"country": "GB",
+"website": "http://www.cafc.co.uk"
+},
+"349": {
+"team": "Ipswich Town",
+"venue": "Portman Road Stadium",
+"lat": 52.054952,
+"lng": 1.145285,
+"city": "Ipswich",
+"country": "GB",
+"website": "http://www.itfc.co.uk"
+},
+"351": {
+"team": "Nottingham",
+"venue": "The City Ground",
+"lat": 52.939939,
+"lng": -1.132895,
+"city": "Nottingham",
+"country": "GB",
+"website": "http://www.nottinghamforest.co.uk"
+},
+"354": {
+"team": "Crystal Palace",
+"venue": "Selhurst Park",
+"lat": 51.398243,
+"lng": -0.085255,
+"city": "London Borough of Croydon",
+"country": "GB",
+"website": "http://www.cpfc.co.uk"
+},
+"356": {
+"team": "Sheffield Utd",
+"venue": "Bramall Lane",
+"lat": 53.370343,
+"lng": -1.470714,
+"city": "Sheffield",
+"country": "GB",
+"website": "http://www.sufc.co.uk"
+},
+"384": {
+"team": "Millwall",
+"venue": "The Den",
+"lat": 51.485966,
+"lng": -0.05091,
+"city": "London",
+"country": "GB",
+"website": "http://www.millwallfc.co.uk"
+},
+"387": {
+"team": "Bristol City",
+"venue": "Ashton Gate Stadium",
+"lat": 51.439869,
+"lng": -2.620341,
+"city": "Bristol",
+"country": "GB",
+"website": "http://www.bcfc.co.uk"
+},
+"397": {
+"team": "Brighton Hove",
+"venue": "The American Express Community Stadium",
+"lat": 50.861547,
+"lng": -0.083693,
+"city": "Brighton & Hove",
+"country": "GB",
+"website": "http://www.seagulls.co.uk"
+},
+"4": {
+"team": "Dortmund",
+"venue": "Signal Iduna Park",
+"lat": 51.492492,
+"lng": 7.451855,
+"city": "Dortmund",
+"country": "DE",
+"website": "http://www.bvb.de"
+},
+"402": {
+"team": "Brentford",
+"venue": "Gtech Community Stadium",
+"lat": 51.49071,
+"lng": -0.28898,
+"city": "Brentford",
+"country": "GB",
+"website": "http://www.brentfordfc.co.uk"
+},
+"404": {
+"team": "Wrexham",
+"venue": "Racecourse Ground",
+"lat": 53.051824,
+"lng": -3.003664,
+"city": "Wrexham",
+"country": "GB",
+"website": "http://www.wrexhamafc.co.uk"
+},
+"4241": {
+"team": "Coritiba",
+"venue": "Estádio Major Antônio Couto Pereira",
+"lat": -25.421438,
+"lng": -49.259757,
+"city": "Curitiba",
+"country": "BR",
+"website": "http://www.coritiba.com.br"
+},
+"4286": {
+"team": "Bragantino",
+"venue": "Estádio Nabi Abi Chedid",
+"lat": -22.96539,
+"lng": -46.536885,
+"city": "Bragança Paulista",
+"country": "BR",
+"website": "http://www.bragantino.net"
+},
+"4287": {
+"team": "Clube do Remo",
+"venue": "Estádio Estadual Jornalista Edgar Augusto Proença",
+"lat": -1.381173,
+"lng": -48.443932,
+"city": "Entroncamento",
+"country": "BR",
+"website": "http://www.clubedoremo.com.br"
+},
+"4364": {
+"team": "Mirassol",
+"venue": "Estádio José Maria de Campos Maia",
+"lat": -20.82237,
+"lng": -49.50689,
+"city": "Mirassol",
+"country": "BR",
+"website": "http://www.mirassolfc.com.br"
+},
+"454": {
+"team": "Venezia FC",
+"venue": "Stadio Pierluigi Penzo",
+"lat": 45.427714,
+"lng": 12.36402,
+"city": "Venezia",
+"country": "IT",
+"website": "http://www.veneziafc.club"
+},
+"470": {
+"team": "Frosinone",
+"venue": "Stadio Benito Stirpe",
+"lat": 41.634011,
+"lng": 13.321798,
+"city": "Frosinone",
+"country": "IT",
+"website": "http://www.frosinonecalcio.com"
+},
+"471": {
+"team": "Sassuolo",
+"venue": "Mapei Stadium - Città del Tricolore",
+"lat": 44.714546,
+"lng": 10.649731,
+"city": "Reggio Emilia",
+"country": "IT",
+"website": "http://www.sassuolocalcio.it"
+},
+"496": {
+"team": "Rio Ave",
+"venue": "Estádio do Rio Ave Futebol Clube",
+"lat": 41.36275,
+"lng": -8.740146,
+"city": "Vila do Conde",
+"country": "PT",
+"website": "http://www.rioave-fc.pt"
+},
+"498": {
+"team": "Sporting CP",
+"venue": "Estádio José Alvalade",
+"lat": 38.761202,
+"lng": -9.160783,
+"city": "Lisboa",
+"country": "PT",
+"website": "http://www.sporting.pt"
+},
+"5": {
+"team": "Bayern",
+"venue": "Allianz Arena",
+"lat": 48.21879,
+"lng": 11.623623,
+"city": "München",
+"country": "DE",
+"website": "http://www.fcbayern.de"
+},
+"503": {
+"team": "Porto",
+"venue": "Estádio Do Dragão",
+"lat": 41.161823,
+"lng": -8.583749,
+"city": "Porto",
+"country": "PT",
+"website": "http://www.fcporto.pt"
+},
+"511": {
+"team": "Toulouse",
+"venue": "Stadium de Toulouse",
+"lat": 43.583226,
+"lng": 1.434064,
+"city": "Toulouse",
+"country": "FR",
+"website": "http://www.tfc.info"
+},
+"512": {
+"team": "Brest",
+"venue": "Stade Francis-Le Blé",
+"lat": 48.403042,
+"lng": -4.46136,
+"city": "Brest",
+"country": "FR",
+"website": "http://www.stade-brestois.com"
+},
+"516": {
+"team": "Marseille",
+"venue": "Orange Vélodrome",
+"lat": 43.26985,
+"lng": 5.39591,
+"city": "Marseille",
+"country": "FR",
+"website": "http://www.om.net"
+},
+"519": {
+"team": "Auxerre",
+"venue": "Stade de l'Abbé Deschamps",
+"lat": 47.786785,
+"lng": 3.588624,
+"city": "Auxerre",
+"country": "FR",
+"website": "http://www.aja.fr"
+},
+"521": {
+"team": "Lille",
+"venue": "Stade Pierre-Mauroy",
+"lat": 50.611904,
+"lng": 3.130508,
+"city": "Villeneuve-d'Ascq",
+"country": "FR",
+"website": "http://www.losc.fr"
+},
+"522": {
+"team": "Nice",
+"venue": "Allianz Riviera",
+"lat": 43.705148,
+"lng": 7.192603,
+"city": "Nice",
+"country": "FR",
+"website": "http://www.ogcnice.com"
+},
+"523": {
+"team": "Olympique Lyon",
+"venue": "Groupama Stadium",
+"lat": 45.765362,
+"lng": 4.982054,
+"city": "Décines-Charpieu",
+"country": "FR",
+"website": "http://www.olweb.fr"
+},
+"524": {
+"team": "PSG",
+"venue": "Parc des Princes",
+"lat": 48.841363,
+"lng": 2.253069,
+"city": "Paris",
+"country": "FR",
+"website": "http://www.psg.fr"
+},
+"525": {
+"team": "Lorient",
+"venue": "Stade Yves Allainmat - Le Moustoir",
+"lat": 47.748802,
+"lng": -3.369541,
+"city": "Lorient",
+"country": "FR",
+"website": "http://www.fclweb.fr"
+},
+"529": {
+"team": "Stade Rennais",
+"venue": "Roazhon Park",
+"lat": 48.107565,
+"lng": -1.712654,
+"city": "Rennes",
+"country": "FR",
+"website": "http://www.staderennais.com"
+},
+"531": {
+"team": "Troyes",
+"venue": "Stade de l'Aube",
+"lat": 48.30752,
+"lng": 4.09852,
+"city": "Troyes",
+"country": "FR",
+"website": "http://www.estac.fr"
+},
+"532": {
+"team": "Angers SCO",
+"venue": "Stade Raymond Kopa",
+"lat": 47.460552,
+"lng": -0.530695,
+"city": "Angers",
+"country": "FR",
+"website": "http://www.angers-sco.fr"
+},
+"533": {
+"team": "Le Havre",
+"venue": "Stade Océane",
+"lat": 49.498751,
+"lng": 0.169464,
+"city": "Le Havre",
+"country": "FR",
+"website": "http://www.hac-foot.com"
+},
+"5335": {
+"team": "Santander",
+"venue": "Campos de Sport de El Sardinero",
+"lat": 43.47669,
+"lng": -3.791569,
+"city": "Santander",
+"country": "ES",
+"website": "http://www.realracingclub.com"
+},
+"535": {
+"team": "Le Mans",
+"venue": "MMArena",
+"lat": 47.95917,
+"lng": 0.22311,
+"city": "Le Mans",
+"country": "FR",
+"website": "http://www.lemansfc.fr/"
+},
+"546": {
+"team": "RC Lens",
+"venue": "Stade Bollaert-Delelis",
+"lat": 50.432824,
+"lng": 2.814986,
+"city": "Lens",
+"country": "FR",
+"website": "http://www.rclens.fr"
+},
+"548": {
+"team": "Monaco",
+"venue": "Stade Louis II.",
+"lat": 43.727571,
+"lng": 7.415458,
+"city": "Fontvieille",
+"country": "MC",
+"website": "http://www.asmonaco.com"
+},
+"5527": {
+"team": "Acad. Viseu",
+"venue": "Estádio Municipal do Fontelo",
+"lat": 40.659542,
+"lng": -7.90045,
+"city": "Viseu",
+"country": "PT",
+"website": "http://www.academicodeviseufc.com"
+},
+"5529": {
+"team": "CD Nacional",
+"venue": "Estádio da Madeira",
+"lat": 32.670623,
+"lng": -16.883564,
+"city": "Funchal",
+"country": "PT",
+"website": "http://www.cdnacional.pt"
+},
+"5530": {
+"team": "Santa Clara",
+"venue": "Estádio de São Miguel",
+"lat": 37.76386,
+"lng": -25.62259,
+"city": "Ponta Delgada",
+"country": "PT",
+"website": "http://www.cdsantaclara.pt"
+},
+"5531": {
+"team": "Famalicão",
+"venue": "Estádio Municipal 22 de Junho",
+"lat": 41.401253,
+"lng": -8.52244,
+"city": "Calendário",
+"country": "PT",
+"website": "http://www.fcfamalicao.pt"
+},
+"5533": {
+"team": "Gil Vicente",
+"venue": "Estádio Cidade de Barcelos",
+"lat": 41.551096,
+"lng": -8.623086,
+"city": "Barcelos",
+"country": "PT",
+"website": "http://www.gilvicentefc.pt"
+},
+"5543": {
+"team": "Vitória SC",
+"venue": "Estádio Dom Afonso Henriques",
+"lat": 37.652548,
+"lng": -8.229507,
+"city": "Ourique",
+"country": "PT",
+"website": "http://www.vitoriasc.pt"
+},
+"5575": {
+"team": "Marítimo",
+"venue": "Estádio do Marítimo",
+"lat": 32.64557,
+"lng": -16.92839,
+"city": "Funchal",
+"country": "PT",
+"website": "http://www.csmaritimo.org.pt"
+},
+"558": {
+"team": "Celta",
+"venue": "Estadio de Balaídos",
+"lat": 42.21112,
+"lng": -8.73923,
+"city": "Vigo",
+"country": "ES",
+"website": "http://www.celtavigo.net"
+},
+"559": {
+"team": "Sevilla FC",
+"venue": "Estadio Ramón Sánchez Pizjuán",
+"lat": 37.384088,
+"lng": -5.970631,
+"city": "Sevilla",
+"country": "ES",
+"website": "http://www.sevillafc.es"
+},
+"560": {
+"team": "Deportivo",
+"venue": "Estadio Abanca-Riazor",
+"lat": 43.368716,
+"lng": -8.41751,
+"city": "A Coruña",
+"country": "ES",
+"website": "http://www.rcdeportivo.es"
+},
+"5613": {
+"team": "Braga",
+"venue": "Estádio Municipal de Braga",
+"lat": 41.5625,
+"lng": -8.429868,
+"city": "Braga",
+"country": "PT",
+"website": "http://www.scbraga.pt"
+},
+"563": {
+"team": "West Ham",
+"venue": "London Stadium",
+"lat": 51.538621,
+"lng": -0.016624,
+"city": "London",
+"country": "GB",
+"website": "http://www.whufc.com"
+},
+"57": {
+"team": "Arsenal",
+"venue": "Emirates Stadium",
+"lat": 51.55504,
+"lng": -0.1084,
+"city": "London",
+"country": "GB",
+"website": "http://www.arsenal.com"
+},
+"5720": {
+"team": "Viking",
+"venue": "Lyse Arena",
+"lat": 58.9146,
+"lng": 5.731,
+"city": "Stavanger",
+"country": "NO",
+"website": "http://www.viking-fk.no"
+},
+"5721": {
+"team": "Bodø/Glimt",
+"venue": "Aspmyra Stadion",
+"lat": 67.276648,
+"lng": 14.384434,
+"city": "Bodø",
+"country": "NO",
+"website": "http://www.glimt.no"
+},
+"576": {
+"team": "Strasbourg",
+"venue": "Stade de la Meinau",
+"lat": 48.559948,
+"lng": 7.755122,
+"city": "Strasbourg",
+"country": "FR",
+"website": "http://www.rcstrasbourgalsace.fr"
+},
+"58": {
+"team": "Aston Villa",
+"venue": "Villa Park",
+"lat": 52.509126,
+"lng": -1.885035,
+"city": "Birmingham",
+"country": "GB",
+"website": "http://www.avfc.co.uk"
+},
+"582": {
+"team": "Estoril Praia",
+"venue": "Estádio António Coimbra da Mota",
+"lat": 38.715862,
+"lng": -9.406409,
+"city": "Cascais",
+"country": "PT",
+"website": "http://www.estorilpraia.pt"
+},
+"583": {
+"team": "Moreirense",
+"venue": "P.D. Comendador Joaquim de Almeida Freitas",
+"lat": 41.378032,
+"lng": -8.354995,
+"city": "Guimarães",
+"country": "PT",
+"website": "http://www.moreirensefc.pt"
+},
+"586": {
+"team": "Torino",
+"venue": "Stadio Olimpico di Torino",
+"lat": 45.041743,
+"lng": 7.650018,
+"city": "Torino",
+"country": "IT",
+"website": "http://www.torinofc.it"
+},
+"5890": {
+"team": "Lecce",
+"venue": "Stadio Comunale Via Del Mare",
+"lat": 40.365114,
+"lng": 18.208918,
+"city": "Lecce",
+"country": "IT",
+"website": "http://www.uslecce.it"
+},
+"59": {
+"team": "Blackburn",
+"venue": "Ewood Park",
+"lat": 53.728528,
+"lng": -2.489225,
+"city": "Blackburn",
+"country": "GB",
+"website": "http://www.rovers.co.uk"
+},
+"5911": {
+"team": "Monza",
+"venue": "Stadio Comunale Brianteo",
+"lat": 45.583112,
+"lng": 9.307928,
+"city": "Monza",
+"country": "IT",
+"website": "http://www.monza1912.it"
+},
+"6": {
+"team": "Schalke",
+"venue": "Veltins-Arena",
+"lat": 51.554594,
+"lng": 7.0676,
+"city": "Gelsenkirchen",
+"country": "DE",
+"website": "http://www.schalke04.de"
+},
+"60": {
+"team": "Bolton",
+"venue": "Toughsheet Community Stadium",
+"lat": 53.58054,
+"lng": -2.53566,
+"city": "Bolton",
+"country": "GB",
+"website": "http://www.bwfc.co.uk"
+},
+"61": {
+"team": "Chelsea",
+"venue": "Stamford Bridge",
+"lat": 51.481687,
+"lng": -0.191034,
+"city": "London",
+"country": "GB",
+"website": "http://www.chelseafc.com"
+},
+"610": {
+"team": "Galatasaray",
+"venue": "RAMS Park",
+"lat": 41.10337,
+"lng": 28.99095,
+"city": "Sarıyer",
+"country": "TR",
+"website": "http://www.galatasaray.org"
+},
+"613": {
+"team": "Fenerbahçe",
+"venue": "Ülker Stadyumu Fenerbahçe Şükrü Saracoğlu Spor Kompleksi",
+"lat": 40.987581,
+"lng": 29.03778,
+"city": "Istanbul",
+"country": "TR",
+"website": "http://www.fenerbahce.org"
+},
+"62": {
+"team": "Everton",
+"venue": "Hill Dickinson Stadium",
+"lat": 53.425,
+"lng": -3.00271,
+"city": "Liverpool",
+"country": "GB",
+"website": "http://www.evertonfc.com"
+},
+"63": {
+"team": "Fulham",
+"venue": "Craven Cottage",
+"lat": 51.474922,
+"lng": -0.221745,
+"city": "London",
+"country": "GB",
+"website": "http://www.fulhamfc.com"
+},
+"64": {
+"team": "Liverpool",
+"venue": "Anfield",
+"lat": 53.430901,
+"lng": -2.960972,
+"city": "Liverpool",
+"country": "GB",
+"website": "http://www.liverpoolfc.tv"
+},
+"65": {
+"team": "Man City",
+"venue": "Etihad Stadium",
+"lat": 53.483145,
+"lng": -2.200527,
+"city": "Manchester",
+"country": "GB",
+"website": "https://www.mancity.com"
+},
+"66": {
+"team": "Man United",
+"venue": "Old Trafford",
+"lat": 53.46311,
+"lng": -2.291387,
+"city": "Trafford",
+"country": "GB",
+"website": "http://www.manutd.com"
+},
+"666": {
+"team": "Twente",
+"venue": "De Grolsch Veste",
+"lat": 52.236443,
+"lng": 6.83776,
+"city": "Enschede",
+"country": "NL",
+"website": "http://www.fctwente.nl"
+},
+"6684": {
+"team": "Internacional",
+"venue": "Estádio Beira-Rio",
+"lat": -30.06549,
+"lng": -51.234918,
+"city": "Porto Alegre",
+"country": "BR",
+"website": "http://www.internacional.com.br"
+},
+"6685": {
+"team": "Santos",
+"venue": "Estádio Urbano Caldeira",
+"lat": -23.951116,
+"lng": -46.338991,
+"city": "Santos",
+"country": "BR",
+"website": "http://santosfc.com.br"
+},
+"67": {
+"team": "Newcastle",
+"venue": "St. James' Park",
+"lat": 54.975469,
+"lng": -1.621874,
+"city": "Newcastle upon Tyne",
+"country": "GB",
+"website": "http://www.nufc.co.uk"
+},
+"670": {
+"team": "Excelsior",
+"venue": "Stadion Woudestein",
+"lat": 51.917,
+"lng": 4.52044,
+"city": "Rotterdam",
+"country": "NL",
+"website": "http://www.sbvexcelsior.nl"
+},
+"672": {
+"team": "Willem II",
+"venue": "Koning Willem II Stadion",
+"lat": 51.542692,
+"lng": 5.066807,
+"city": "Tilburg",
+"country": "NL",
+"website": "http://www.willem-II.nl"
+},
+"673": {
+"team": "Heerenveen",
+"venue": "Abe Lenstra Stadion",
+"lat": 52.958673,
+"lng": 5.936167,
+"city": "Heerenveen",
+"country": "NL",
+"website": "http://www.sc-heerenveen.nl"
+},
+"674": {
+"team": "PSV",
+"venue": "Philips Stadion",
+"lat": 51.441708,
+"lng": 5.467426,
+"city": "Eindhoven",
+"country": "NL",
+"website": "http://www.psv.nl"
+},
+"675": {
+"team": "Feyenoord",
+"venue": "Stadion Feijenoord",
+"lat": 51.893865,
+"lng": 4.523228,
+"city": "Rotterdam",
+"country": "NL",
+"website": "http://www.feyenoord.nl"
+},
+"676": {
+"team": "Utrecht",
+"venue": "Stadion Galgenwaard",
+"lat": 52.078356,
+"lng": 5.145871,
+"city": "Utrecht",
+"country": "NL",
+"website": "http://www.fc-utrecht.nl"
+},
+"677": {
+"team": "Groningen",
+"venue": "Euroborg",
+"lat": 53.2062,
+"lng": 6.59147,
+"city": "Groningen",
+"country": "NL",
+"website": "http://www.fcgroningen.nl"
+},
+"678": {
+"team": "Ajax",
+"venue": "Johan Cruyff ArenA",
+"lat": 52.314353,
+"lng": 4.942843,
+"city": "Amsterdam",
+"country": "NL",
+"website": "http://www.ajax.nl"
+},
+"68": {
+"team": "Norwich",
+"venue": "Carrow Road",
+"lat": 52.622031,
+"lng": 1.309322,
+"city": "Norwich",
+"country": "GB",
+"website": "http://www.canaries.co.uk"
+},
+"680": {
+"team": "Den Haag",
+"venue": "Bingoal Stadion",
+"lat": 52.0667,
+"lng": 4.38486,
+"city": "Den Haag",
+"country": "NL",
+"website": "http://www.adodenhaag.nl"
+},
+"6806": {
+"team": "Sparta",
+"venue": "Sparta Stadion Het Kasteel",
+"lat": 51.919455,
+"lng": 4.433551,
+"city": "Rotterdam",
+"country": "NL",
+"website": "http://www.sparta-rotterdam.nl"
+},
+"682": {
+"team": "AZ",
+"venue": "AFAS Stadion",
+"lat": 52.612827,
+"lng": 4.742062,
+"city": "Alkmaar",
+"country": "NL",
+"website": "http://www.az.nl"
+},
+"684": {
+"team": "Zwolle",
+"venue": "MAC³PARK Stadion",
+"lat": 52.51684,
+"lng": 6.120074,
+"city": "Zwolle",
+"country": "NL",
+"website": "http://www.peczwolle.nl"
+},
+"69": {
+"team": "QPR",
+"venue": "Loftus Road",
+"lat": 51.5094,
+"lng": -0.23211,
+"city": "London",
+"country": "GB",
+"website": "http://www.qpr.co.uk"
+},
+"7": {
+"team": "HSV",
+"venue": "Volksparkstadion",
+"lat": 53.587153,
+"lng": 9.898706,
+"city": "Hamburg",
+"country": "DE",
+"website": "http://www.hsv.de"
+},
+"70": {
+"team": "Stoke",
+"venue": "Bet365 Stadium",
+"lat": 52.98834,
+"lng": -2.175592,
+"city": "Stoke-on-Trent",
+"country": "GB",
+"website": "http://www.stokecityfc.com"
+},
+"71": {
+"team": "Sunderland",
+"venue": "Stadium of Light",
+"lat": 54.914395,
+"lng": -1.388258,
+"city": "Sunderland",
+"country": "GB",
+"website": "http://www.safc.com"
+},
+"712": {
+"team": "Arouca",
+"venue": "Estádio Municipal de Arouca",
+"lat": 40.932292,
+"lng": -8.250431,
+"city": "Arouca",
+"country": "PT",
+"website": "http://www.fcarouca.eu"
+},
+"715": {
+"team": "Cardiff",
+"venue": "Cardiff City Stadium",
+"lat": 51.472821,
+"lng": -3.20296,
+"city": "Cardiff",
+"country": "GB",
+"website": "http://www.cardiffcityfc.co.uk"
+},
+"718": {
+"team": "Go Ahead",
+"venue": "De Adelaarshorst",
+"lat": 52.260399,
+"lng": 6.172634,
+"city": "Deventer",
+"country": "NL",
+"website": "http://www.ga-eagles.nl"
+},
+"719": {
+"team": "Elversberg",
+"venue": "Ursapharm-Arena",
+"lat": 49.3188,
+"lng": 7.12157,
+"city": "Spiesen-Elversberg",
+"country": "DE",
+"website": "http://www.sv07elversberg.de"
+},
+"72": {
+"team": "Swansea",
+"venue": "Swansea.com Stadium",
+"lat": 51.64281,
+"lng": -3.93474,
+"city": "Swansea",
+"country": "GB",
+"website": "http://www.swanseacity.net"
+},
+"721": {
+"team": "RB Leipzig",
+"venue": "Red Bull Arena",
+"lat": 51.345708,
+"lng": 12.348236,
+"city": "Leipzig",
+"country": "DE",
+"website": "http://www.dierotenbullen.com"
+},
+"73": {
+"team": "Tottenham",
+"venue": "Tottenham Hotspur Stadium",
+"lat": 51.604157,
+"lng": -0.06626,
+"city": "London",
+"country": "GB",
+"website": "http://www.tottenhamhotspur.com"
+},
+"7397": {
+"team": "Como 1907",
+"venue": "Stadio Giuseppe Sinigaglia",
+"lat": 45.813829,
+"lng": 9.072324,
+"city": "Como",
+"country": "IT",
+"website": "http://www.como1907.net/"
+},
+"74": {
+"team": "West Brom",
+"venue": "The Hawthorns",
+"lat": 52.509165,
+"lng": -1.963662,
+"city": "West Bromwich",
+"country": "GB",
+"website": "http://www.wba.co.uk"
+},
+"7509": {
+"team": "Sl. Bratislava",
+"venue": "Národný futbalový štadión",
+"lat": 48.16349,
+"lng": 17.13679,
+"city": "Bratislava",
+"country": "SK",
+"website": "http://www.skslovan.com"
+},
+"76": {
+"team": "Wolverhampton",
+"venue": "Molineux Stadium",
+"lat": 52.590272,
+"lng": -2.130408,
+"city": "Wolverhampton",
+"country": "GB",
+"website": "http://www.wolves.co.uk"
+},
+"77": {
+"team": "Athletic",
+"venue": "San Mamés",
+"lat": 43.26417,
+"lng": -2.94944,
+"city": "Bilbao",
+"country": "ES",
+"website": "http://www.athletic-club.eus"
+},
+"78": {
+"team": "Atleti",
+"venue": "Estadio Wanda Metropolitano",
+"lat": 40.43601,
+"lng": -3.599699,
+"city": "Madrid",
+"country": "ES",
+"website": "http://www.clubatleticodemadrid.com"
+},
+"7822": {
+"team": "Alverca",
+"venue": "Complexo Desportivo FC Alverca",
+"lat": 38.89758,
+"lng": -9.03516,
+"city": "Alverca do Ribatejo e Sobralinho",
+"country": "PT",
+"website": "http://www.fcalverca.pt/"
+},
+"79": {
+"team": "Osasuna",
+"venue": "Estadio El Sadar",
+"lat": 42.796662,
+"lng": -1.637131,
+"city": "Pamplona / Iruña",
+"country": "ES",
+"website": "http://www.osasuna.es"
+},
+"80": {
+"team": "Espanyol",
+"venue": "RCDE Stadium",
+"lat": 41.347857,
+"lng": 2.076458,
+"city": "Cornellà de Llobregat",
+"country": "ES",
+"website": "http://www.rcdespanyol.com"
+},
+"81": {
+"team": "Barça",
+"venue": "Camp Nou",
+"lat": 41.380881,
+"lng": 2.122818,
+"city": "Barcelona",
+"country": "ES",
+"website": "http://www.fcbarcelona.com"
+},
+"82": {
+"team": "Getafe",
+"venue": "Coliseum",
+"lat": 40.325725,
+"lng": -3.714933,
+"city": "Getafe",
+"country": "ES",
+"website": "http://www.getafecf.com"
+},
+"84": {
+"team": "Málaga",
+"venue": "Estadio La Rosaleda",
+"lat": 36.734943,
+"lng": -4.426535,
+"city": "Málaga",
+"country": "ES",
+"website": "http://www.malagacf.es"
+},
+"851": {
+"team": "Club Brugge",
+"venue": "Jan Breydelstadion",
+"lat": 51.193346,
+"lng": 3.180585,
+"city": "Brugge",
+"country": "BE",
+"website": "http://www.clubbrugge.be"
+},
+"86": {
+"team": "Real Madrid",
+"venue": "Estadio Santiago Bernabéu",
+"lat": 40.453044,
+"lng": -3.688197,
+"city": "Madrid",
+"country": "ES",
+"website": "http://www.realmadrid.com"
+},
+"87": {
+"team": "Rayo Vallecano",
+"venue": "Estadio de Vallecas",
+"lat": 40.39176,
+"lng": -3.65874,
+"city": "Madrid",
+"country": "ES",
+"website": "http://www.rayovallecano.es"
+},
+"88": {
+"team": "Levante",
+"venue": "Estadio Ciudad de Valencia",
+"lat": 39.494658,
+"lng": -0.364556,
+"city": "València",
+"country": "ES",
+"website": "http://www.levanteud.com"
+},
+"90": {
+"team": "Real Betis",
+"venue": "Estadio Benito Villamarín",
+"lat": 37.35645,
+"lng": -5.980918,
+"city": "Sevilla",
+"country": "ES",
+"website": "http://www.realbetisbalompie.es"
+},
+"9136": {
+"team": "Amadora",
+"venue": "Estádio José Gomes",
+"lat": 38.75216,
+"lng": -9.228,
+"city": "Amadora",
+"country": "PT",
+"website": null
+},
+"92": {
+"team": "Real Sociedad",
+"venue": "Estadio Municipal de Anoeta",
+"lat": 43.30139,
+"lng": -1.973569,
+"city": "Donostia / San Sebastián",
+"country": "ES",
+"website": "http://www.realsociedad.com"
+},
+"930": {
+"team": "Slavia Praha",
+"venue": "Fortuna Arena",
+"lat": 50.06749,
+"lng": 14.4707,
+"city": "Praha",
+"country": "CZ",
+"website": "http://www.slavia.cz"
+},
+"94": {
+"team": "Villarreal",
+"venue": "Estadio de la Cerámica",
+"lat": 39.944208,
+"lng": -0.103405,
+"city": "Vila-real",
+"country": "ES",
+"website": "http://www.villarrealcf.es"
+},
+"95": {
+"team": "Valencia",
+"venue": "Estadio de Mestalla",
+"lat": 39.474528,
+"lng": -0.358157,
+"city": "València",
+"country": "ES",
+"website": "http://www.valenciacf.com"
+},
+"98": {
+"team": "Milan",
+"venue": "Stadio Giuseppe Meazza",
+"lat": 45.4782,
+"lng": 9.123964,
+"city": "Milano",
+"country": "IT",
+"website": "http://www.acmilan.com"
+},
+"99": {
+"team": "Fiorentina",
+"venue": "Stadio Artemio Franchi",
+"lat": 43.780884,
+"lng": 11.282819,
+"city": "Firenze",
+"country": "IT",
+"website": "http://www.acffiorentina.it"
+}
+}

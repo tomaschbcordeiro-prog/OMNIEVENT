@@ -10,7 +10,7 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 | `ticketmaster` | Live. City-by-city radius queries, then one page per country | `TICKETMASTER_API_KEY` |
 | `lisbon` | Live. Agenda Cultural de Lisboa official API, CC BY 4.0. Venues from the bundled `data/lisbon-venues.json` (hand-checked OpenStreetMap matches) plus strict name-matched lookups for new venues; events at venues we can't place are skipped. The API refuses cloud networks (Vercel and GitHub get HTTP 403), so production uses the snapshot in `data/lisbon-events.json`, refreshed with `node scripts/fetch-lisbon.mjs` from a network the API accepts | nothing |
 | `venue-calendars` | Live. Lisbon venues' own public calendars (CCB, Chapitô): sessions grouped per show, school-only sessions left out. Add a venue to `SOURCES` | nothing |
-| `football` | Fixture-tested; on when the key is set. Home grounds from a hand-checked table; unknown grounds are skipped | `FOOTBALL_DATA_KEY` |
+| `football` | Live with the key, snapshot without. 12 competitions; home grounds from `data/stadiums.json` (club venue and address, checked against OpenStreetMap, renamed/moved grounds corrected by hand); unknown grounds and neutral-venue finals are skipped. Refresh the snapshot with `scripts/fetch-football.mjs` | `FOOTBALL_DATA_KEY` |
 | `paris` | Live. City of Paris "Que faire à Paris", ODbL, paged 100 at a time | nothing |
 | `madrid` | Live. City of Madrid cultural agenda, next 100 days | nothing |
 | `seatgeek` | Fixture-tested; on when the key is set | `SEATGEEK_CLIENT_ID` |

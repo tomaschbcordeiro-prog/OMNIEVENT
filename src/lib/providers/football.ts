@@ -1,55 +1,33 @@
-import { slugify } from "../destinations";
-import type { OmniEvent, Participant, Venue } from "../types";
+import tzlookup from "@photostructure/tz-lookup";
+import { getCountry, slugify } from "../destinations";
+import type { OmniEvent, Participant, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, nearestCityId, sleep } from "./common";
+import { nearestCityId, sleep } from "./common";
+import STADIUMS from "./data/stadiums.json";
+import SNAPSHOT from "./data/football-fixtures.json";
 
 /**
- * Football fixtures from football-data.org (v4).
+ * Football fixtures from football-data.org (v4), every scheduled match of the competitions
+ * on the free plan (Premier League, Championship, LaLiga, Bundesliga, Serie A, Ligue 1,
+ * Eredivisie, Primeira Liga, Brasileirão, Champions League, World Cup, Euros).
  *
- * - Requires FOOTBALL_DATA_KEY (free account at https://www.football-data.org/client/register).
- *   The free tier covers the Primeira Liga and the Champions League, 10 requests a minute.
- * - Matches are placed at the home club's stadium, from a hand-checked table of Portuguese
- *   grounds (OpenStreetMap). Matches whose home ground we don't know are skipped, not guessed.
- * - Ticket prices aren't published by this source; event pages link to sellers' searches.
+ * - FOOTBALL_DATA_KEY (free at https://www.football-data.org/client/register) enables live
+ *   updates; without it the bundled snapshot is shown.
+ * - Matches are placed at the home club's stadium: `data/stadiums.json`, built by
+ *   scripts/build-stadiums.py from each club's venue and address and checked against
+ *   OpenStreetMap. Matches at grounds we haven't located, and finals at neutral venues,
+ *   are skipped rather than placed at a guessed location.
+ * - The API publishes no ticket prices. Each match links to the home club's official site;
+ *   event pages add the resale and ticketing sites of that country.
+ * - The API sometimes answers a valid key with "token is invalid"; requests are retried,
+ *   and a snapshot (`data/football-fixtures.json`) stands in for a competition that fails.
  */
 
 const BASE = "https://api.football-data.org/v4";
-const TZ = "Europe/Lisbon";
+export const COMPETITIONS = ["PL", "ELC", "PD", "BL1", "SA", "FL1", "DED", "PPL", "BSA", "CL", "WC", "EC"];
 
-type Ground = { name: string; city: string; lat: number; lng: number };
-// Most specific patterns first: "Sporting Clube de Braga" must not match Sporting CP.
-const GROUNDS: [RegExp, Ground][] = [
-  [/braga/, { name: "Estádio Municipal de Braga", city: "Braga", lat: 41.5625, lng: -8.42987 }],
-  [/vit[oó]ria (sc|sport clube)|guimar/, { name: "Estádio D. Afonso Henriques", city: "Guimarães", lat: 41.44585, lng: -8.30099 }],
-  [/set[uú]bal/, { name: "Estádio do Bonfim", city: "Setúbal", lat: 38.53134, lng: -8.89118 }],
-  [/benfica/, { name: "Estádio da Luz", city: "Lisbon", lat: 38.75269, lng: -9.18469 }],
-  [/sporting (clube de portugal|cp)|^sporting$/, { name: "Estádio José Alvalade", city: "Lisbon", lat: 38.7612, lng: -9.16078 }],
-  [/\bporto\b/, { name: "Estádio do Dragão", city: "Porto", lat: 41.16182, lng: -8.58375 }],
-  [/estoril/, { name: "Estádio António Coimbra da Mota", city: "Estoril", lat: 38.71586, lng: -9.40641 }],
-  [/rio ave/, { name: "Estádio do Rio Ave FC", city: "Vila do Conde", lat: 41.36275, lng: -8.74015 }],
-  [/famalic/, { name: "Estádio Municipal 22 de Junho", city: "Vila Nova de Famalicão", lat: 41.40125, lng: -8.52244 }],
-  [/gil vicente/, { name: "Estádio Cidade de Barcelos", city: "Barcelos", lat: 41.5511, lng: -8.62309 }],
-  [/moreirense/, { name: "Estádio Comendador Joaquim de Almeida Freitas", city: "Moreira de Cónegos", lat: 41.37803, lng: -8.355 }],
-  [/arouca/, { name: "Estádio Municipal de Arouca", city: "Arouca", lat: 40.93229, lng: -8.25043 }],
-  [/santa clara/, { name: "Estádio de São Miguel", city: "Ponta Delgada", lat: 37.76386, lng: -25.62259 }],
-  [/nacional/, { name: "Estádio da Madeira", city: "Funchal", lat: 32.67062, lng: -16.88356 }],
-  [/mar[ií]timo/, { name: "Estádio do Marítimo", city: "Funchal", lat: 32.64557, lng: -16.92839 }],
-  [/estrela/, { name: "Estádio José Gomes", city: "Amadora", lat: 38.75216, lng: -9.228 }],
-  [/tondela/, { name: "Estádio João Cardoso", city: "Tondela", lat: 40.512, lng: -8.08279 }],
-  [/alverca/, { name: "Complexo Desportivo FC Alverca", city: "Alverca do Ribatejo", lat: 38.89758, lng: -9.03516 }],
-  [/\bavs\b|\baves\b/, { name: "Estádio do CD Aves", city: "Vila das Aves", lat: 41.36676, lng: -8.4117 }],
-  [/boavista/, { name: "Estádio do Bessa", city: "Porto", lat: 41.1622, lng: -8.6426 }],
-  [/pa[cç]os de ferreira/, { name: "Estádio Capital do Móvel", city: "Paços de Ferreira", lat: 41.27148, lng: -8.38538 }],
-  [/chaves/, { name: "Estádio Municipal de Chaves", city: "Chaves", lat: 41.75063, lng: -7.46498 }],
-  [/portimonense/, { name: "Estádio Municipal de Portimão", city: "Portimão", lat: 37.13569, lng: -8.53983 }],
-  [/beira-mar/, { name: "Estádio Municipal de Aveiro", city: "Aveiro", lat: 40.64777, lng: -8.59371 }],
-  [/belenenses/, { name: "Estádio do Restelo", city: "Lisbon", lat: 38.70258, lng: -9.20793 }],
-];
-
-export function groundFor(teamName: string): Ground | undefined {
-  const n = teamName.toLowerCase();
-  return GROUNDS.find(([re]) => re.test(n))?.[1];
-}
+export type Stadium = { venue: string; lat: number; lng: number; city?: string; country?: string; website?: string };
+const GROUNDS = STADIUMS as unknown as Record<string, Stadium>;
 
 interface FdTeam { id: number; name: string; shortName?: string; tla?: string; crest?: string }
 export interface FdMatch {
@@ -58,72 +36,99 @@ export interface FdMatch {
   status: string;
   matchday?: number | null;
   stage?: string;
+  group?: string | null;
   competition?: { code?: string; name?: string };
   homeTeam: FdTeam;
   awayTeam: FdTeam;
 }
 
-const STAGE: Record<string, string> = { REGULAR_SEASON: "", LEAGUE_STAGE: "League phase", PLAYOFFS: "Play-offs", LAST_16: "Round of 16", QUARTER_FINALS: "Quarter-finals", SEMI_FINALS: "Semi-finals", FINAL: "Final" };
+const STAGE: Record<string, string> = {
+  LEAGUE_STAGE: "League phase", GROUP_STAGE: "Group stage", PLAYOFFS: "Play-offs", LAST_32: "Round of 32", LAST_16: "Round of 16",
+  QUARTER_FINALS: "Quarter-finals", SEMI_FINALS: "Semi-finals", THIRD_PLACE: "Third place", FINAL: "Final",
+};
+// Finals and third-place matches are played at neutral venues, not the "home" ground.
+const NEUTRAL = new Set(["FINAL", "THIRD_PLACE"]);
 
-/** Pure mapping function — unit-tested with fixtures in tests/football.test.ts. */
-export function normalizeFootball(raw: FdMatch[], syncedAt: string): ProviderBatch {
+/** Pure mapping function — unit-tested with fixtures in tests/lisbon-more.test.ts. */
+export function normalizeFootball(raw: FdMatch[], syncedAt: string, grounds: Record<string, Stadium> = GROUNDS, now = Date.now()): ProviderBatch & { skipped: number } {
   const events: OmniEvent[] = [];
   const venues = new Map<string, Venue>();
   const participants = new Map<string, Participant>();
+  const offers: TicketOffer[] = [];
+  const seen = new Set<number>();
+  let skipped = 0;
   for (const m of raw) {
-    const ground = groundFor(m.homeTeam?.name ?? "") ?? groundFor(m.homeTeam?.shortName ?? "");
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
     const start = Date.parse(m.utcDate);
-    if (!ground || !Number.isFinite(start) || ["FINISHED", "IN_PLAY", "PAUSED", "AWARDED"].includes(m.status)) continue;
-    const venueId = `fd-v-${slugify(ground.name)}`;
+    if (!Number.isFinite(start) || start < now - 3 * 3600000 || ["FINISHED", "IN_PLAY", "PAUSED", "AWARDED", "CANCELLED"].includes(m.status)) continue;
+    const g = grounds[String(m.homeTeam?.id)];
+    if (!g || (m.stage && NEUTRAL.has(m.stage)) || !m.homeTeam?.name || !m.awayTeam?.name) {
+      skipped++;
+      continue;
+    }
+    const cc = g.country ?? "";
+    let tz = "UTC";
+    try {
+      tz = tzlookup(g.lat, g.lng);
+    } catch {
+      // keep UTC
+    }
+    const venueId = `fd-v-${m.homeTeam.id}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(ground.name),
-        name: ground.name,
-        city: ground.city,
-        cityId: nearestCityId(ground.lat, ground.lng),
-        country: "Portugal",
-        countryCode: "PT",
-        lat: ground.lat,
-        lng: ground.lng,
-        timeZone: m.homeTeam && /santa clara/i.test(m.homeTeam.name) ? "Atlantic/Azores" : m.homeTeam && /nacional|mar[ií]timo/i.test(m.homeTeam.name) ? "Atlantic/Madeira" : TZ,
+        slug: slugify(`${g.venue}-${m.homeTeam.id}`),
+        name: g.venue,
+        city: g.city ?? "",
+        cityId: nearestCityId(g.lat, g.lng),
+        country: getCountry(cc)?.name ?? cc,
+        countryCode: cc,
+        lat: g.lat,
+        lng: g.lng,
+        timeZone: tz,
         venueType: "stadium",
         indoor: false,
-        provenance: { provider: "football", externalId: venueId, lastSyncedAt: syncedAt, isDemo: false },
+        url: g.website,
+        provenance: { provider: "football", externalId: String(m.homeTeam.id), lastSyncedAt: syncedAt, isDemo: false },
       });
     const team = (t: FdTeam) => {
       const id = `fd-t-${t.id}`;
       if (!participants.has(id))
-        participants.set(id, { id, slug: slugify(`${t.shortName ?? t.name}-${t.id}`), name: t.shortName ?? t.name, kind: "team", imageUrl: t.crest, provenance: { provider: "football", externalId: String(t.id), lastSyncedAt: syncedAt, isDemo: false } });
+        participants.set(id, { id, slug: slugify(`${t.shortName ?? t.name}-${t.id}`), name: t.shortName ?? t.name, kind: "team", imageUrl: t.crest, url: grounds[String(t.id)]?.website, provenance: { provider: "football", externalId: String(t.id), lastSyncedAt: syncedAt, isDemo: false } });
       return id;
     };
     const home = team(m.homeTeam);
     const away = team(m.awayTeam);
     const competition = m.competition?.name ?? "Football";
-    const stage = m.stage && STAGE[m.stage] !== "" ? STAGE[m.stage] ?? m.stage.replace(/_/g, " ").toLowerCase() : m.matchday ? `Matchday ${m.matchday}` : undefined;
+    const stage = m.stage && STAGE[m.stage] ? STAGE[m.stage] + (m.group ? `, ${m.group.replace(/_/g, " ").toLowerCase()}` : "") : m.matchday ? `Matchday ${m.matchday}` : undefined;
+    // "SCHEDULED" at midnight UTC means only the date is fixed.
+    const dateOnly = m.status === "SCHEDULED" && /T00:00:00Z$/.test(m.utcDate);
     const id = `fd-e-${m.id}`;
-    const status = m.status === "POSTPONED" ? "postponed" : m.status === "CANCELLED" ? "cancelled" : "scheduled";
     const title = `${m.homeTeam.shortName ?? m.homeTeam.name} vs ${m.awayTeam.shortName ?? m.awayTeam.name}`;
     events.push({
       id,
       canonicalId: id,
       slug: slugify(`${title}-${m.id}`),
       title,
+      description: `${competition}${stage ? `, ${stage}` : ""}. ${g.venue}${g.city ? `, ${g.city}` : ""}.`,
       categorySlug: "football",
       groupSlug: "sports",
       eventType: "single",
       venueId,
       start: new Date(start).toISOString(),
-      durationMinutes: 110,
-      timeZone: venues.get(venueId)!.timeZone,
-      status,
-      // "SCHEDULED" means the date is set but the kick-off time isn't confirmed yet.
-      statusNote: m.status === "SCHEDULED" ? "Kick-off time to be confirmed." : undefined,
+      durationMinutes: dateOnly ? 1439 : 110,
+      hoursUnknown: dateOnly || undefined,
+      timeZone: tz,
+      status: m.status === "POSTPONED" ? "postponed" : "scheduled",
+      statusNote: dateOnly ? "Kick-off time to be confirmed." : m.status === "SCHEDULED" ? "Kick-off time may still change." : undefined,
       ticketAccess: "ticketed",
       isFree: false,
       registrationRequired: false,
       online: false,
       familyFriendly: false,
+      officialUrl: g.website,
+      imageUrl: undefined,
       participants: [
         { participantId: home, role: "team_home", order: 0 },
         { participantId: away, role: "team_away", order: 1 },
@@ -131,37 +136,84 @@ export function normalizeFootball(raw: FdMatch[], syncedAt: string): ProviderBat
       sports: { sport: "Football", competition, stage },
       provenance: { provider: "football", externalId: String(m.id), lastSyncedAt: syncedAt, isDemo: false },
     });
+    if (g.website)
+      offers.push({
+        id: `${id}-club`,
+        eventId: id,
+        provider: `${m.homeTeam.shortName ?? m.homeTeam.name} (official)`,
+        providerType: "primary",
+        ticketCategory: "standard",
+        label: "Official tickets on the home club's site",
+        currency: "",
+        availability: "unknown",
+        purchaseUrl: g.website,
+        isDemo: false,
+      });
   }
-  return { events, venues: [...venues.values()], participants: [...participants.values()], offers: [] };
+  return { events, venues: [...venues.values()], participants: [...participants.values()], offers, skipped };
+}
+
+async function fetchCompetition(code: string, signal?: AbortSignal): Promise<FdMatch[]> {
+  let last = "";
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const res = await fetch(`${BASE}/competitions/${code}/matches?status=SCHEDULED,TIMED,POSTPONED`, {
+      headers: { "X-Auth-Token": process.env.FOOTBALL_DATA_KEY! },
+      signal,
+      next: { revalidate: 3 * 3600 },
+    } as RequestInit);
+    if (res.ok) return ((await res.json()) as { matches?: FdMatch[] }).matches ?? [];
+    last = `HTTP ${res.status}`;
+    // 429: per-minute limit. 400 "token is invalid" happens intermittently with valid keys.
+    if (res.status === 429 || res.status === 400) await sleep(res.status === 429 ? 61000 : 15000);
+    else break;
+  }
+  throw new Error(`${code}: ${last}`);
 }
 
 export const footballProvider: ProviderAdapter = {
   id: "football",
-  name: "football-data.org (Primeira Liga, Champions League)",
+  name: "football-data.org (12 competitions)",
   isDemo: false,
-  coverage: "Primeira Liga fixtures and Champions League home matches of Portuguese clubs.",
+  coverage: "Every scheduled match of the Premier League, Championship, LaLiga, Bundesliga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League, World Cup and Euros, at the home club's stadium.",
   attribution: "Football data provided by the Football-Data.org API.",
-  isConfigured: () => !!process.env.FOOTBALL_DATA_KEY,
+  // Without a key the snapshot is shown, so fixtures appear before the key is set up.
+  isConfigured: () => true,
   refreshIntervalMs: 6 * 3600000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     const raw: FdMatch[] = [];
-    let failures = 0;
-    let lastError = "";
-    for (const code of (process.env.FOOTBALL_COMPETITIONS ?? "PPL,CL").split(",").map((s) => s.trim()).filter(Boolean)) {
-      try {
-        const json = (await fetchJson("football", `${BASE}/competitions/${code}/matches?status=SCHEDULED,TIMED,POSTPONED`, ctx, { headers: { "X-Auth-Token": process.env.FOOTBALL_DATA_KEY! }, revalidate: 3 * 3600 })) as { matches?: FdMatch[] };
-        raw.push(...(json.matches ?? []));
-      } catch (err) {
-        failures++;
-        lastError = `${code}: ${String(err).slice(0, 140)}`;
-      }
-      await sleep(6500); // free tier: 10 requests a minute
+    const failed: string[] = [];
+    const snap = SNAPSHOT as unknown as { fetchedAt: string; competitions: Record<string, FdMatch[]> };
+    const codes = process.env.FOOTBALL_COMPETITIONS?.split(",").map((s) => s.trim()).filter(Boolean) ?? COMPETITIONS;
+    if (!process.env.FOOTBALL_DATA_KEY) {
+      for (const code of codes) raw.push(...(snap.competitions[code] ?? []));
+      const { skipped, ...batch } = normalizeFootball(raw, syncedAt);
+      ctx.log("football: no FOOTBALL_DATA_KEY, using the snapshot", { skipped });
+      return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true, finishedAt: new Date().toISOString(), error: `no FOOTBALL_DATA_KEY set; showing the snapshot from ${snap.fetchedAt.slice(0, 16).replace("T", " ")} UTC` } };
     }
-    const batch = normalizeFootball(raw, syncedAt);
+    for (const code of codes) {
+      try {
+        raw.push(...(await fetchCompetition(code, ctx.signal)));
+      } catch (err) {
+        failed.push(code);
+        ctx.log("football competition failed", { code, err: String(err) });
+        raw.push(...(snap.competitions[code] ?? []));
+      }
+      await sleep(6500); // free plan: 10 requests a minute
+    }
+    const { skipped, ...batch } = normalizeFootball(raw, syncedAt);
+    if (skipped) ctx.log("football matches without a located ground", { skipped });
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} competition(s) failed (last: ${lastError})` : undefined },
+      run: {
+        imported: batch.events.length,
+        updated: 0,
+        failures: failed.length,
+        rateLimited: false,
+        ok: batch.events.length > 0,
+        finishedAt: new Date().toISOString(),
+        error: failed.length ? `live data unavailable for ${failed.join(", ")}; showing the snapshot from ${snap.fetchedAt.slice(0, 16).replace("T", " ")} UTC` : undefined,
+      },
     };
   },
 };

@@ -78,7 +78,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Skiddle Events API | UK and Ireland: clubs, gigs, festivals, comedy | `SKIDDLE_API_KEY` (free, <https://www.skiddle.com/api/join.php>) |
 | Agenda Cultural de Lisboa (agendalx.pt API) | City of Lisbon cultural agenda, CC BY 4.0; ~400 mapped events | nothing |
 | Lisbon venue calendars (CCB, Chapitô) | Each venue's full public programme (The Events Calendar REST API) | nothing |
-| football-data.org | Primeira Liga fixtures and Champions League home matches of Portuguese clubs, at hand-checked stadium locations | `FOOTBALL_DATA_KEY` (free, <https://www.football-data.org/client/register>) |
+| football-data.org | Every scheduled match of 12 competitions (Premier League, Championship, LaLiga, Bundesliga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League, World Cup, Euros) at 185 hand-checked stadiums; a snapshot is shown until the key is set | `FOOTBALL_DATA_KEY` (free, <https://www.football-data.org/client/register>) for live updates |
 | Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
 | Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
 
