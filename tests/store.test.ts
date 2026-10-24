@@ -66,3 +66,14 @@ describe("store queries", () => {
     expect(searchEvents({ q: "zzzzqqq" }).total).toBe(0);
   });
 });
+
+describe("marker merging", () => {
+  it("merges groups that would overlap on screen without losing events", () => {
+    const grid = clusterEvents({}, { cellDeg: 1.2 });
+    const merged = clusterEvents({}, { cellDeg: 1.2, mergeDeg: 3 });
+    const sum = (r: typeof grid) => r.clusters.reduce((n, c) => n + c.count, 0);
+    expect(merged.clusters.length).toBeLessThan(grid.clusters.length);
+    expect(sum(merged)).toBe(sum(grid));
+    for (const c of merged.clusters) expect(Object.values(c.groups).reduce((a, b) => a + b, 0)).toBe(c.count);
+  });
+});

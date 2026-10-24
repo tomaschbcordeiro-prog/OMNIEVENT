@@ -500,7 +500,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
 /** Viewport-aware clustering for the globe and 2D map. */
 export function clusterEvents(
   f: SearchFilters,
-  view: { lat?: number; lng?: number; radiusKm?: number; cellDeg: number },
+  view: { lat?: number; lng?: number; radiusKm?: number; cellDeg: number; mergeDeg?: number },
 ): { clusters: Cluster[]; total: number; inView: number } {
   const catSets = catSetsFor(f);
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
@@ -553,7 +553,62 @@ export function clusterEvents(
     });
   }
   clusters.sort((a, b) => b.count - a.count);
-  return { clusters: clusters.slice(0, 1500), total, inView };
+  const merged = view.mergeDeg ? mergeClose(clusters, view.mergeDeg) : clusters;
+  return { clusters: merged.slice(0, 1500), total, inView };
+}
+
+/**
+ * Grid cells can split one city between neighbours, which puts markers on top of each other.
+ * Larger groups absorb smaller ones whose centres are closer than `deg` (longitude scaled by
+ * latitude). The larger group keeps its id, so a selection survives the merge.
+ */
+function mergeClose(clusters: Cluster[], deg: number): Cluster[] {
+  const out: Cluster[] = [];
+  // Venue-level groups keep their biggest venue's name: "Teatro Español +2 more".
+  const extra = new Map<Cluster, { base: string; venues: number }>();
+  // Hosts are indexed on a grid of `deg`-sized cells, so each group only checks its neighbours.
+  const grid = new Map<string, Cluster[]>();
+  const cellOf = (lat: number, lng: number) => [Math.floor(lat / deg), Math.floor(lng / deg)];
+  const near = (o: Cluster, c: Cluster) => {
+    const dLat = o.lat - c.lat;
+    let dLng = Math.abs(o.lng - c.lng);
+    if (dLng > 180) dLng = 360 - dLng;
+    dLng *= Math.cos((((o.lat + c.lat) / 2) * Math.PI) / 180);
+    return dLat * dLat + dLng * dLng < deg * deg;
+  };
+  // Longitude distance shrinks towards the poles, so search wider in longitude there.
+  for (const c of clusters) {
+    const [y, x] = cellOf(c.lat, c.lng);
+    const span = Math.min(60, Math.ceil(1 / Math.max(0.05, Math.cos((c.lat * Math.PI) / 180))));
+    let host: Cluster | undefined;
+    for (let dy = -1; dy <= 1 && !host; dy++)
+      for (let dx = -span; dx <= span && !host; dx++) host = grid.get(`${y + dy}:${x + dx}`)?.find((o) => near(o, c));
+    if (!host) {
+      const copy = { ...c, groups: { ...c.groups }, sample: [...c.sample] };
+      out.push(copy);
+      const k = `${y}:${x}`;
+      grid.set(k, [...(grid.get(k) ?? []), copy]);
+      continue;
+    }
+    const n = host.count + c.count;
+    host.lat = (host.lat * host.count + c.lat * c.count) / n;
+    host.lng = Math.abs(host.lng - c.lng) > 180 ? host.lng : (host.lng * host.count + c.lng * c.count) / n;
+    host.count = n;
+    for (const [g, k] of Object.entries(c.groups)) host.groups[g] = (host.groups[g] ?? 0) + k;
+    host.dominant = Object.entries(host.groups).sort((a, b) => b[1] - a[1])[0][0];
+    host.sample = [...host.sample, ...c.sample].sort((a, b) => a.start.localeCompare(b.start)).slice(0, 6);
+    if (c.venueId || extra.has(host)) {
+      const e = extra.get(host) ?? { base: host.label, venues: 0 };
+      e.venues++;
+      extra.set(host, e);
+      host.venueId = undefined;
+      host.label = `${e.base} +${e.venues} more`;
+    } else if (!/ \+\d+ more$/.test(c.label) && c.label !== host.label && !host.label.endsWith(" more")) {
+      host.label = `${host.label} +1 more`;
+    }
+    if (host.cityId !== c.cityId) host.cityId = undefined;
+  }
+  return out;
 }
 
 export function getEventView(slugOrId: string): EventView | undefined {

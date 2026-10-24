@@ -7,8 +7,10 @@ import { buildStyle, layerVisibility, type BaseStyle, type LayerState } from "@/
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { geodesicCircle, circleBounds } from "@/lib/map/circle";
-import { GROUP_HEX, GROUP_SHAPE } from "@/lib/categories";
+import { GROUP_HEX } from "@/lib/categories";
 import type { Cluster } from "@/lib/types";
+import { SHARE_BUCKETS, badgeImage, clusterMarker, shareBucket, singleMarker } from "./marker-art";
+import { buildPreview } from "./marker-preview";
 
 export type Projection = "globe" | "mercator";
 
@@ -45,6 +47,8 @@ export interface EarthMapProps {
   layers: LayerState;
   clusters: Cluster[];
   selectedClusterId?: string;
+  /** Where the current selection is; after zooming, the marker nearest it keeps the highlight. */
+  selectedAt?: { lat: number; lng: number } | null;
   place?: { lat: number; lng: number } | null;
   /** Radius-search centre and distance; the pin is draggable. */
   searchArea?: { lat: number; lng: number; radiusKm: number } | null;
@@ -71,39 +75,15 @@ export interface EarthMapProps {
 }
 
 const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place-minor", "label-poi", "label-road", "buildings-3d"];
-const EVENT_LAYERS = ["event-markers", "event-halo"];
+const EVENT_LAYERS = ["event-selected", "event-hover", "event-markers"];
+
+/** Marker size from the number of events it stands for, then a gentle zoom adjustment. */
+const sizeByCount: ExpressionSpecification = ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0.82, 2, 0.88, 9, 1.22];
+const markerSize = (k: number): ExpressionSpecification => ["interpolate", ["linear"], ["zoom"], 1, ["*", 0.86 * k, sizeByCount], 8, ["*", k, sizeByCount], 14, ["*", 1.08 * k, sizeByCount]];
+const countText: ExpressionSpecification = ["case", [">", ["get", "count"], 9999], ["concat", ["to-string", ["round", ["/", ["get", "count"], 1000]]], "k"], [">", ["get", "count"], 1], ["number-format", ["get", "count"], { locale: "en" }], ""];
+const countSize: ExpressionSpecification = ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 10.5, 9, 13];
 
 const groupColor: ExpressionSpecification = ["match", ["get", "dominant"], ...Object.entries(GROUP_HEX).flat(), GROUP_HEX.other] as unknown as ExpressionSpecification;
-
-/** Marker glyphs: the same shapes as the legend, so colour is never the only cue. */
-function markerImage(group: string): { width: number; height: number; data: Uint8ClampedArray } {
-  const size = 48;
-  const c = document.createElement("canvas");
-  c.width = c.height = size;
-  const g = c.getContext("2d")!;
-  const h = size / 2;
-  const r = 15;
-  g.beginPath();
-  switch (GROUP_SHAPE[group] ?? "circle") {
-    case "square": g.rect(h - r * 0.85, h - r * 0.85, r * 1.7, r * 1.7); break;
-    case "diamond": g.moveTo(h, h - r); g.lineTo(h + r, h); g.lineTo(h, h + r); g.lineTo(h - r, h); break;
-    case "triangle": g.moveTo(h, h - r); g.lineTo(h + r, h + r * 0.8); g.lineTo(h - r, h + r * 0.8); break;
-    case "hex":
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        g[i ? "lineTo" : "moveTo"](h + r * Math.cos(a), h + r * Math.sin(a));
-      }
-      break;
-    default: g.arc(h, h, r * 0.9, 0, Math.PI * 2);
-  }
-  g.closePath();
-  g.fillStyle = GROUP_HEX[group] ?? GROUP_HEX.other;
-  g.strokeStyle = "#FFFFFF";
-  g.lineWidth = 4;
-  g.stroke();
-  g.fill();
-  return { width: size, height: size, data: g.getImageData(0, 0, size, size).data };
-}
 
 function placeKind(f: MapGeoJSONFeature): string {
   if (f.layer.id === "buildings-3d") return "building";
@@ -121,6 +101,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   latest.current = props;
   const placeMarker = useRef<maplibregl.Marker | null>(null);
   const spinning = useRef(false);
+  const pulseCtl = useRef<{ start(): void; stop(): void } | null>(null);
+  const selectedNow = useRef("");
 
   useImperativeHandle(ref, () => ({
     zoomBy(d) {
@@ -190,46 +172,115 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     map.getCanvas().setAttribute("aria-label", p.ariaLabel ?? "Interactive map");
 
     map.on("load", () => {
-      for (const g of Object.keys(GROUP_HEX)) if (!map.hasImage(`m-${g}`)) map.addImage(`m-${g}`, markerImage(g), { pixelRatio: 2 });
+      for (const g of Object.keys(GROUP_HEX)) {
+        if (!map.hasImage(`m1-${g}`)) map.addImage(`m1-${g}`, singleMarker(g), { pixelRatio: 2 });
+        for (const b of SHARE_BUCKETS) if (!map.hasImage(`mc-${g}-${b}`)) map.addImage(`mc-${g}-${b}`, clusterMarker(g, b), { pixelRatio: 2 });
+      }
+      const badge = badgeImage();
+      if (!map.hasImage("m-badge")) map.addImage("m-badge", badge.image, badge.options);
 
       map.addSource("night", { type: "geojson", data: nightGeoJSON() });
-      map.addSource("events", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // promoteId lets hover use feature-state without rebuilding the data.
+      map.addSource("events", { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "id" });
       map.addSource("search-area", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource("highlight", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
       // Night shading sits above imagery and roads, below borders and labels.
       map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#1B2A5C", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.22, 7, 0.12, 10, 0] }, metadata: { omni: { group: "night" } } }, "buildings-3d");
       // Search circle: a light fill that keeps the map readable plus a crisp edge.
-      map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#1463FF", "fill-opacity": 0.1 } });
-      map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#1463FF", "line-width": 2, "line-opacity": 0.95 } });
+      map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#1463FF", "fill-opacity": 0.08 } });
+      map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#1463FF", "line-width": 2, "line-opacity": 0.9, "line-dasharray": [2, 1.5] } });
       map.addLayer({ id: "event-density", type: "heatmap", source: "events", maxzoom: 12, paint: { "heatmap-weight": ["/", ["ln", ["+", ["get", "count"], 1]], 6], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 9, 2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 14, 6, 30, 11, 50], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "rgba(123,77,255,0.35)", 0.5, "rgba(240,71,90,0.7)", 0.8, "rgba(255,184,0,0.9)", 1, "#FFF6CC"] }, metadata: { omni: { group: "density" } } });
-      map.addLayer({ id: "event-halo", type: "circle", source: "events", paint: { "circle-color": groupColor, "circle-opacity": 0.3, "circle-blur": 0.35, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 11, 7, 32], "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
-      map.addLayer({ id: "event-selected", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-color": "rgba(255,184,0,0.18)", "circle-stroke-color": "#FFB800", "circle-stroke-width": 3, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 12, 7, 30] }, metadata: { omni: { group: "events" } } });
-      map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 22, "circle-color": "rgba(255,184,0,0.25)", "circle-stroke-color": "#FFB800", "circle-stroke-width": 3, "circle-pitch-alignment": "viewport" } });
+      // Soft category glow: present under busy clusters, brighter under the hovered marker.
+      map.addLayer({
+        id: "event-halo",
+        type: "circle",
+        source: "events",
+        paint: {
+          "circle-color": groupColor,
+          "circle-blur": 0.85,
+          "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 18, 9, 40],
+          "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.5, ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0, 2, 0.1, 9, 0.28]],
+          "circle-pitch-alignment": "viewport",
+        },
+        metadata: { omni: { group: "events" } },
+      });
+      // Hover from the results list: a dark ring with a soft glow.
+      map.addLayer({ id: "highlight-glow", type: "circle", source: "highlight", paint: { "circle-radius": 30, "circle-color": "#1463FF", "circle-opacity": 0.18, "circle-blur": 0.8, "circle-pitch-alignment": "viewport" } });
+      map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 21, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#0D1B33", "circle-stroke-width": 2.5, "circle-pitch-alignment": "viewport" } });
+      const markerLayout = (k: number) =>
+        ({
+          "icon-image": ["get", "icon"],
+          "icon-size": markerSize(k),
+          "icon-allow-overlap": true,
+          "icon-pitch-alignment": "viewport",
+          "text-field": countText,
+          "text-font": ["Noto Sans Bold"],
+          "text-size": ["*", k, countSize],
+          // The cluster disc is drawn 2px below centre to leave room for the badge.
+          "text-offset": [0, 0.12],
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+        }) as maplibregl.SymbolLayerSpecification["layout"];
       map.addLayer({
         id: "event-markers",
         type: "symbol",
         source: "events",
+        layout: { ...markerLayout(1), "symbol-sort-key": ["-", 0, ["get", "count"]] },
+        paint: { "text-color": "#0D1B33", "icon-opacity": 1, "icon-opacity-transition": { duration: 250 }, "text-opacity": 1, "text-opacity-transition": { duration: 250 } },
+        metadata: { omni: { group: "events" } },
+      });
+      // Names appear once there is room for them.
+      map.addLayer({
+        id: "event-labels",
+        type: "symbol",
+        source: "events",
+        minzoom: 10,
         layout: {
-          "icon-image": ["concat", "m-", ["get", "dominant"]],
-          "icon-size": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0.62, 7, 1.3],
-          "icon-allow-overlap": true,
-          "icon-pitch-alignment": "viewport",
-          "symbol-sort-key": ["-", 0, ["get", "count"]],
-          "text-field": ["case", [">", ["get", "count"], 1], ["to-string", ["get", "count"]], ""],
+          "text-field": ["get", "title"],
           "text-font": ["Noto Sans Bold"],
-          "text-size": 11,
-          "text-anchor": "left",
-          "text-offset": [1, 0],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10.5, 15, 12.5],
+          "text-anchor": "top",
+          "text-offset": [0, 1.55],
+          "text-max-width": 9,
           "text-optional": true,
+          "symbol-sort-key": ["-", 0, ["get", "count"]],
         },
-        paint: { "text-color": "#0D1B33", "text-halo-color": "#FFFFFF", "text-halo-width": 2 },
+        paint: { "text-color": "#0D1B33", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.6, "text-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 10.6, 1] },
+        metadata: { omni: { group: "events" } },
+      });
+      // Selection: a slow pulse, the marker drawn on top, and a name badge above it.
+      map.addLayer({ id: "event-pulse", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-color": groupColor, "circle-opacity": 0, "circle-radius": 18, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "event-hover", type: "symbol", source: "events", filter: ["==", ["get", "id"], ""], layout: markerLayout(1.2), paint: { "text-color": "#0D1B33" }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "event-selected", type: "symbol", source: "events", filter: ["==", ["get", "id"], ""], layout: markerLayout(1.25), paint: { "text-color": "#0D1B33" }, metadata: { omni: { group: "events" } } });
+      map.addLayer({
+        id: "event-badge",
+        type: "symbol",
+        source: "events",
+        filter: ["==", ["get", "id"], ""],
+        layout: {
+          "icon-image": "m-badge",
+          "icon-text-fit": "both",
+          "icon-allow-overlap": true,
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+          "text-field": ["case", [">", ["get", "count"], 1], ["format", ["get", "title"], {}, "  ", {}, ["number-format", ["get", "count"], { locale: "en" }], { "text-color": "#FFC94D" }], ["get", "title"]],
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 12,
+          "text-max-width": 16,
+          "text-anchor": "bottom",
+          "text-offset": ["case", [">", ["get", "count"], 1], ["literal", [0, -2.75]], ["literal", [0, -2.35]]],
+          "icon-anchor": "bottom",
+          "icon-offset": [0, 0],
+        },
+        paint: { "text-color": "#FFFFFF" },
         metadata: { omni: { group: "events" } },
       });
 
       ready.current = true;
       applyAll();
       setEvents();
+      applySelection();
       setArea();
       setHighlight();
       latest.current.onReady?.();
@@ -279,25 +330,63 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       latest.current.onMapClick?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
 
-    // ---- hover (desktop)
-    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, className: "omni-popup" });
+    // ---- hover (desktop): grow the marker, light its glow, show an attached preview card.
+    // The card is pointer-events: none, so it never blocks the click on the marker.
+    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 26, maxWidth: "300px", className: "omni-popup" });
+    let hovered: string | number | undefined;
+    const setHover = (id: string | number | undefined) => {
+      if (hovered === id) return;
+      if (hovered !== undefined) map.setFeatureState({ source: "events", id: hovered }, { hover: false });
+      hovered = id;
+      if (id !== undefined) map.setFeatureState({ source: "events", id }, { hover: true });
+      if (map.getLayer("event-hover")) map.setFilter("event-hover", ["==", ["get", "id"], id === undefined || id === selectedNow.current ? "" : String(id)]);
+    };
     for (const l of EVENT_LAYERS) {
       map.on("mousemove", l, (e) => {
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
-        if (!f) return;
-        const n = Number(f.properties?.count ?? 0);
-        const el = document.createElement("div");
-        const strong = document.createElement("strong");
-        strong.textContent = String(f.properties?.label ?? "");
-        el.append(strong, document.createTextNode(`, ${n} ${n === 1 ? "event" : "events"}`));
-        popup.setLngLat(e.lngLat).setDOMContent(el).addTo(map);
+        const id = f?.properties?.id as string | undefined;
+        if (!f || !id) return;
+        if (id !== hovered) {
+          const c = latest.current.clusters.find((x) => x.id === id);
+          if (!c) return;
+          setHover(id);
+          popup.setLngLat([c.lng, c.lat]).setDOMContent(buildPreview(c)).addTo(map);
+        }
       });
       map.on("mouseleave", l, () => {
         map.getCanvas().style.cursor = "";
+        setHover(undefined);
         popup.remove();
       });
     }
+    // Data refreshes replace features, so drop a stale hover when the map moves.
+    map.on("movestart", () => {
+      setHover(undefined);
+      popup.remove();
+    });
+
+    // ---- selection pulse: one circle animated in place, paused for reduced motion
+    let pulseFrame = 0;
+    const pulse = (t: number) => {
+      if (!map.getLayer("event-pulse")) return;
+      const p = (t % 2200) / 2200;
+      const ease = 1 - Math.pow(1 - p, 3);
+      map.setPaintProperty("event-pulse", "circle-radius", 18 + ease * 22);
+      map.setPaintProperty("event-pulse", "circle-opacity", 0.35 * (1 - ease));
+      pulseFrame = requestAnimationFrame(pulse);
+    };
+    pulseCtl.current = {
+      start() {
+        cancelAnimationFrame(pulseFrame);
+        if (!latest.current.reducedMotion) pulseFrame = requestAnimationFrame(pulse);
+        else if (map.getLayer("event-pulse")) map.setPaintProperty("event-pulse", "circle-opacity", 0.2);
+      },
+      stop() {
+        cancelAnimationFrame(pulseFrame);
+        if (map.getLayer("event-pulse")) map.setPaintProperty("event-pulse", "circle-opacity", 0);
+      },
+    };
 
     // ---- resilience
     map.on("webglcontextlost", () => latest.current.onFatal?.("webgl-context-lost"));
@@ -313,6 +402,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
 
     return () => {
       clearInterval(nightTimer);
+      cancelAnimationFrame(pulseFrame);
       popup.remove();
       placeMarker.current?.remove();
       placeMarker.current = null;
@@ -345,7 +435,19 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     const src = map.getSource("events") as GeoJSONSource | undefined;
     src?.setData({
       type: "FeatureCollection",
-      features: latest.current.clusters.map((c) => ({ type: "Feature", geometry: { type: "Point", coordinates: [c.lng, c.lat] }, properties: { id: c.id, count: c.count, dominant: c.dominant, label: c.label } })),
+      features: latest.current.clusters.map((c) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [c.lng, c.lat] },
+        properties: {
+          id: c.id,
+          count: c.count,
+          dominant: c.dominant,
+          label: c.label,
+          // A single event is named after itself; a group after its place.
+          title: c.count === 1 && c.sample[0] ? c.sample[0].title : c.label,
+          icon: c.count > 1 ? `mc-${GROUP_HEX[c.dominant] ? c.dominant : "other"}-${shareBucket(c.count, c.groups[c.dominant] ?? c.count)}` : `m1-${GROUP_HEX[c.dominant] ? c.dominant : "other"}`,
+        },
+      })),
     });
   }
 
@@ -380,11 +482,35 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   useEffect(applyAll, [props.base, props.layers, props.projection]);  
   useEffect(setEvents, [props.clusters]);  
 
-  useEffect(() => {
+  // Selection: badge + pulse on the chosen marker; the others step back a little.
+  function applySelection() {
     const map = mapRef.current;
     if (!map || !ready.current || !map.getLayer("event-selected")) return;
-    map.setFilter("event-selected", ["==", ["get", "id"], props.selectedClusterId ?? ""]);
-  }, [props.selectedClusterId]);
+    const { selectedClusterId, selectedAt, clusters } = latest.current;
+    let sel = selectedClusterId && clusters.some((c) => c.id === selectedClusterId) ? selectedClusterId : "";
+    if (!sel && selectedAt) {
+      // Groups re-form at every zoom level: follow the selection to the marker drawn at its place.
+      const at = map.project([selectedAt.lng, selectedAt.lat]);
+      let best = 40;
+      for (const c of clusters) {
+        const p = map.project([c.lng, c.lat]);
+        const d = Math.hypot(p.x - at.x, p.y - at.y);
+        if (d < best) {
+          best = d;
+          sel = c.id;
+        }
+      }
+    }
+    selectedNow.current = sel;
+    const present = !!sel;
+    const f: ExpressionSpecification = ["==", ["get", "id"], present ? sel : ""];
+    for (const l of ["event-selected", "event-badge", "event-pulse"]) map.setFilter(l, f);
+    map.setPaintProperty("event-markers", "icon-opacity", present ? ["case", ["==", ["get", "id"], sel], 1, 0.5] : 1);
+    map.setPaintProperty("event-markers", "text-opacity", present ? ["case", ["==", ["get", "id"], sel], 1, 0.55] : 1);
+    if (present) pulseCtl.current?.start();
+    else pulseCtl.current?.stop();
+  }
+  useEffect(applySelection, [props.selectedClusterId, props.selectedAt?.lat, props.selectedAt?.lng, props.clusters]);  
 
   useEffect(() => {
     const map = mapRef.current;
@@ -450,10 +576,13 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       return;
     }
     if (!placeMarker.current) {
+      // A location beacon, deliberately unlike an event marker: a point with a soft pulse.
       const el = document.createElement("div");
-      el.className = "omni-pin";
-      el.setAttribute("aria-hidden", "true");
-      placeMarker.current = new maplibregl.Marker({ element: el, anchor: "bottom" });
+      el.className = "omni-beacon";
+      el.setAttribute("role", "img");
+      el.setAttribute("aria-label", "Selected location");
+      el.append(document.createElement("span"));
+      placeMarker.current = new maplibregl.Marker({ element: el, anchor: "center" });
     }
     placeMarker.current.setLngLat([props.place.lng, props.place.lat]).addTo(map);
   }, [props.place]);

@@ -5,7 +5,7 @@ import {
   Baby, Mountain, GraduationCap, Shirt, Landmark, CircleDot, Bookmark, BookmarkCheck, SearchX, TriangleAlert, Info,
   type LucideIcon,
 } from "lucide-react";
-import { getCategory, groupOf, GROUP_HEX, GROUP_SHAPE } from "@/lib/categories";
+import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
 import { formatMoney, STATUS_META } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
@@ -29,27 +29,17 @@ export function CategoryIcon({ slug, size = 16, className = "" }: { slug: string
   return <Icon aria-hidden size={size} className={className} style={{ color: GROUP_HEX[group] }} strokeWidth={1.75} />;
 }
 
-/** Legend glyph matching the globe marker shape — colour is never the only cue. */
+/**
+ * Category glyph matching the map markers: a disc in the category colour. From 13 px up it
+ * carries the category icon in white, so colour is never the only cue.
+ */
 export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number }) {
   const c = GROUP_HEX[group] ?? GROUP_HEX.other;
-  const s = GROUP_SHAPE[group] ?? "circle";
-  const h = size / 2;
+  const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="shrink-0">
-      {s === "circle" && <circle cx={h} cy={h} r={h - 0.5} fill={c} />}
-      {s === "square" && <rect x={0.5} y={0.5} width={size - 1} height={size - 1} rx={1} fill={c} />}
-      {s === "diamond" && <polygon points={`${h},0 ${size},${h} ${h},${size} 0,${h}`} fill={c} />}
-      {s === "triangle" && <polygon points={`${h},0.5 ${size - 0.5},${size - 0.5} 0.5,${size - 0.5}`} fill={c} />}
-      {s === "hex" && (
-        <polygon
-          points={Array.from({ length: 6 }, (_, i) => {
-            const a = (Math.PI / 3) * i - Math.PI / 6;
-            return `${h + (h - 0.5) * Math.cos(a)},${h + (h - 0.5) * Math.sin(a)}`;
-          }).join(" ")}
-          fill={c}
-        />
-      )}
-    </svg>
+    <span aria-hidden className="inline-grid place-items-center shrink-0 rounded-full" style={{ width: size, height: size, background: c, boxShadow: size >= 13 ? "0 0 0 1.5px #fff, 0 1px 3px rgb(13 27 51 / 0.3)" : undefined }}>
+      {size >= 13 && <Icon size={Math.round(size * 0.6)} color="#fff" strokeWidth={2.4} />}
+    </span>
   );
 }
 

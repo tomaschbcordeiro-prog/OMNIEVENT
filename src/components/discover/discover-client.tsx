@@ -197,7 +197,9 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   // ---- viewport-based event clusters (debounced + cancellable) ----
   const cell = cellForZoom(view.zoom);
   const radius = viewRadiusKm(view);
-  const viewKey = radius == null ? `global:${cell}` : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${cell},${Math.round(radius)}`;
+  // Zoom in half steps: enough to keep markers apart without refetching on every wheel tick.
+  const zKey = Math.round(view.zoom * 2) / 2;
+  const viewKey = radius == null ? `global:${cell}:${zKey}` : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${cell},${Math.round(radius)},${zKey}`;
   const filterKey = filtersToParams({ ...filters, page: undefined, sort: undefined }).toString();
   useEffect(() => {
     if (!initialView || mode === "list") return;
@@ -207,6 +209,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       try {
         const p = new URLSearchParams(filterKey);
         p.set("cell", String(cell));
+        p.set("z", String(zKey));
         if (radius != null) {
           p.set("vlat", view.lat.toFixed(4));
           p.set("vlng", view.lng.toFixed(4));
@@ -389,6 +392,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
             layers={layers}
             clusters={clusters}
             selectedClusterId={selectedId}
+            selectedAt={selection ? (selection.kind === "cluster" ? selection.cluster : selection.card) : null}
             place={place}
             searchArea={filters.near ?? null}
             onSearchAreaMove={(lat, lng) => setFilters((f) => (f.near ? { ...f, near: { ...f.near, lat, lng }, nearLabel: undefined } : f))}
@@ -468,7 +472,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
                   style={on && hue ? { background: hue, borderColor: hue } : undefined}
                   onClick={() => setFilters((f) => ({ ...f, categories: m.groups.length ? m.groups : undefined }))}
                 >
-                  {m.groups[0] && !on && <ShapeGlyph group={m.groups[0]} size={10} />}
+                  {m.groups[0] && !on && <ShapeGlyph group={m.groups[0]} size={16} />}
                   {m.label}
                 </button>
               );
@@ -692,11 +696,11 @@ function Legend() {
         <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
           {groups.map((g) => (
             <li key={g} className="flex items-center gap-2 t-micro text-text-2">
-              <ShapeGlyph group={g} size={10} />
+              <ShapeGlyph group={g} size={18} />
               {GROUPS.find((x) => x.slug === g)?.name.split(" &")[0]}
             </li>
           ))}
-          <li className="col-span-2 t-micro text-text-3 mt-1 max-w-[240px]">Marker size grows with the number of events. Density mode raises columns by event count.</li>
+          <li className="col-span-2 t-micro text-text-3 mt-1 max-w-[260px]">Numbered markers group several events; the coloured ring shows how much of the group is its main category. Zoom in to separate them.</li>
         </ul>
       )}
     </div>
