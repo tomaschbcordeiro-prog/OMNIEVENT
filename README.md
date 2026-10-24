@@ -2,7 +2,7 @@
 
 Discover events anywhere on Earth on an interactive 3D globe: concerts, sport, theatre, festivals, conferences, exhibitions, attractions and more. Compare ticket options and go straight to the official seller.
 
-> **Status: working MVP in demo mode.** With no API keys, the app runs on clearly labelled **fictional** demo data (about 3,000 events in 84 real cities). Add a Ticketmaster key to load real events. See [What's real and what isn't](#whats-real-and-what-isnt).
+> **Status: working MVP with real events.** Real listings come from Ticketmaster (key), the City of Paris and the City of Madrid (open data, no key), and optionally SeatGeek and Skiddle (free keys). Clearly labelled **fictional** demo data is used only if every real source is switched off. See [What's real and what isn't](#whats-real-and-what-isnt).
 
 ## Quick start
 
@@ -69,16 +69,23 @@ Filter params: `q, cat, from, to, city, country, continent, lat, lng, radius, mi
 
 Providers are adapters (`src/lib/providers/`). The store re-syncs each provider on its refresh interval (stale-while-revalidate), and `/api/sync` lets a scheduler force a run (`vercel.json` runs it daily, the limit on Vercel's free Hobby plan; the store also refreshes stale providers on incoming requests).
 
-**Enable real events:**
-1. Get a free key at <https://developer.ticketmaster.com>.
-2. Set `TICKETMASTER_API_KEY` in `.env.local` (or your host's env vars).
-3. Restart. Demo data switches off automatically (`DEMO_MODE=auto`), and real events, venues and ticket links load and refresh every 60 minutes.
+**Sources:**
+
+| Source | Coverage | Needs |
+|---|---|---|
+| Ticketmaster Discovery API | 50 major cities (2 pages each, 50 km radius) plus one page per country, in 22 markets | `TICKETMASTER_API_KEY` |
+| SeatGeek Platform API | US and Canadian cities, live marketplace prices | `SEATGEEK_CLIENT_ID` (free, <https://seatgeek.com/account/develop>) |
+| Skiddle Events API | UK and Ireland: clubs, gigs, festivals, comedy | `SKIDDLE_API_KEY` (free, <https://www.skiddle.com/api/join.php>) |
+| Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
+| Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
+
+Set keys in `.env.local` (or your host's env vars) and restart; each source switches on when its key is present. `DISABLED_PROVIDERS=paris,madrid` switches sources off. Demo data appears only when no real source is active (`DEMO_MODE=auto`). Listings that give dates but no times are flagged `hoursUnknown`: they show without a time and are left out of time-of-day searches.
 
 More sources: see `src/lib/providers/README.md`. No single API covers every event in the world, and coverage grows one licensed source at a time.
 
 ## Environment variables
 
-See `.env.example`. None are required. `TICKETMASTER_API_KEY` enables real data; `CRON_SECRET` enables scheduled sync; `NEXT_PUBLIC_SITE_URL` sets canonical URLs.
+See `.env.example`. None are required. `TICKETMASTER_API_KEY`, `SEATGEEK_CLIENT_ID` and `SKIDDLE_API_KEY` enable those sources; `CRON_SECRET` enables scheduled sync; `NEXT_PUBLIC_SITE_URL` sets canonical URLs.
 
 ## Database
 
@@ -87,9 +94,10 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ## Tests
 
 ```bash
-npm test                                   # 31 unit tests: parser, geo, provider mapping, store queries
-npm run build && npm start &               # then:
-node tests/e2e/smoke.mjs                   # 11 end-to-end browser flows (Playwright)
+npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
+npm run build                              # then:
+DISABLED_PROVIDERS=paris,madrid npm start  # e2e flows expect demo data
+node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 
 ## What's real and what isn't
@@ -98,8 +106,9 @@ node tests/e2e/smoke.mjs                   # 11 end-to-end browser flows (Playwr
 |---|---|
 | 3D globe and 2D map (MapLibre), satellite/map styles, terrain, 3D buildings, day/night, place search and reverse geocoding, clustering, list view, all pages, ticket comparison, trip planner, calendar | Working, tested |
 | Satellite detail | Free imagery is ≈10 m/pixel (city scale). Street-level satellite detail needs a MapTiler key |
-| Event data | **Fictional demo data** until a provider key is set. Every demo item carries a Demo badge and is `noindex` |
-| Ticketmaster adapter | Implemented and unit-tested against fixtures; **not yet run against the live API** (no key in the build environment) |
+| Event data | Real, from the sources above. Fictional demo data (Demo badge, `noindex`) only when every real source is off |
+| Ticketmaster, Paris, Madrid adapters | Running against the live sources |
+| SeatGeek, Skiddle adapters | Implemented and unit-tested against fixtures; switch on when their keys are set |
 | Ticket purchase | Links out to sellers. No checkout, no payments, no purchase confirmation |
 | Accounts | Not configured. My World is stored in the browser (labelled demo mode); Supabase Auth is the intended integration |
 | Alerts | Preferences are saved; **nothing is sent** (no email/push service connected) |

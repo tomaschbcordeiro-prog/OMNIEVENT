@@ -57,7 +57,7 @@ export function EventRow({
           <span className="truncate">
             {c.venueName}, {c.city}
           </span>
-          {c.eventType !== "daily_attraction" && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
+          {c.eventType !== "daily_attraction" && !c.hoursUnknown && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
           {c.distanceKm != null && <span className="shrink-0">, {formatDistance(c.distanceKm)} away</span>}
         </p>
         {compact && (
@@ -122,7 +122,7 @@ export function EventTile({ c }: { c: Card }) {
           <p className="font-semibold leading-snug line-clamp-2 group-hover:text-cyan transition-colors">{c.title}</p>
           {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
           <p className="t-small text-text-3 truncate tnum">
-            {c.eventType === "daily_attraction" ? "Open daily" : `${d.weekday} ${d.day} ${d.month}, ${formatEventTime(c.start, c.timeZone)}`}
+            {c.eventType === "daily_attraction" ? "Open daily" : `${d.weekday} ${d.day} ${d.month}${c.hoursUnknown ? "" : `, ${formatEventTime(c.start, c.timeZone)}`}`}
           </p>
           <p className="t-small text-text-3 truncate">
             {c.venueName}, {c.city}

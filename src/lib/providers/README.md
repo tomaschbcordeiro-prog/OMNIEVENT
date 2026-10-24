@@ -6,8 +6,15 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 
 | Adapter | Status | Needs |
 |---|---|---|
-| `demo` | Active when no real provider is configured | nothing |
-| `ticketmaster` | Implemented, unit-tested against fixtures; **not yet verified against the live API** | `TICKETMASTER_API_KEY` |
+| `demo` | Active only when no real provider is active | nothing |
+| `ticketmaster` | Live. City-by-city radius queries, then one page per country | `TICKETMASTER_API_KEY` |
+| `paris` | Live. City of Paris "Que faire à Paris", ODbL, paged 100 at a time | nothing |
+| `madrid` | Live. City of Madrid cultural agenda, next 100 days | nothing |
+| `seatgeek` | Fixture-tested; on when the key is set | `SEATGEEK_CLIENT_ID` |
+| `skiddle` | Fixture-tested; on when the key is set | `SKIDDLE_API_KEY` |
+
+Shared helpers (retrying JSON fetch, local-time parsing, price text, nearest city) live in `common.ts`.
+`DISABLED_PROVIDERS=id1,id2` switches adapters off without a code change.
 
 ## Adding a provider
 
@@ -19,7 +26,8 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 
 ## Candidate sources (verify terms, licensing and coverage before building)
 
-- **SeatGeek Platform API** (client id; US-focused events + ticket links)
+- **OpenAgenda** (free key; thousands of French and European agendas)
+- More city open-data agendas (Barcelona, Lisbon, Berlin…), once their feeds are confirmed stable
 - **Eventbrite API** (public search was removed in 2020; only organisation/venue-scoped fetches)
 - **Bandsintown / Songkick** (artist-scoped; partner approval required)
 - Sports schedule providers with ticketing partnerships (commercial licences)

@@ -153,11 +153,13 @@ export default async function EventPage({ params }: { params: P }) {
                     ) : (
                       <>
                         {formatEventDate(e.start, e.timeZone)}
-                        <span className="block">
+                        {e.hoursUnknown ? (
+                          <span className="block text-text-2">Times not listed by the source, see the official page</span>
+                        ) : <span className="block">
                           {formatEventTime(e.start, e.timeZone)}
                           {e.end && e.eventType !== "multi_day" && <> to {formatEventTime(e.end, e.timeZone)}</>}{" "}
                           <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)} ({e.timeZone.replace("_", " ")})</span>
-                        </span>
+                        </span>}
                         {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
                       </>
                     )}

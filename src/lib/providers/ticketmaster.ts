@@ -1,8 +1,8 @@
 import { groupOf } from "../categories";
-import { getCountry, CITIES, slugify } from "../destinations";
-import { haversineKm } from "../geo";
+import { getCountry, slugify } from "../destinations";
 import type { EventStatus, OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
 import { ProviderError, type ProviderAdapter, type ProviderBatch, type SyncContext } from "./types";
+import { citiesIn, envList, nearestCityId, sleep } from "./common";
 
 /**
  * Ticketmaster Discovery API v2 adapter (https://developer.ticketmaster.com).
@@ -10,7 +10,8 @@ import { ProviderError, type ProviderAdapter, type ProviderBatch, type SyncConte
  * - Requires TICKETMASTER_API_KEY (free developer key). Without it the adapter is disabled.
  * - Coverage: Ticketmaster markets (US, CA, MX, UK, IE, much of Europe, AU, NZ and more).
  * - Quota (default developer tier): 5,000 calls/day, 5 req/s; deep paging limited to 1,000 items
- *   per query, so we page per country to widen coverage.
+ *   per query. A country-wide query sorted by date only reaches the next few days, so we query
+ *   each major city by radius (two pages each) and then one page per country for the rest.
  * - Terms: attribution required; purchase links must go to Ticketmaster. Prices from
  *   `priceRanges` are advertised ranges, NOT verified totals; we never mark fees as included
  *   unless the price type says so.
@@ -79,15 +80,6 @@ function bestImage(imgs?: TmImage[]): string | undefined {
   const wide = imgs.filter((i) => i.ratio === "16_9").sort((a, b) => (b.width ?? 0) - (a.width ?? 0));
   const ok = wide.find((i) => (i.width ?? 0) <= 1200) ?? wide[0] ?? imgs[0];
   return ok.url;
-}
-
-function nearestCityId(lat: number, lng: number): string | undefined {
-  let best: { id: string; d: number } | undefined;
-  for (const c of CITIES) {
-    const d = haversineKm(lat, lng, c.lat, c.lng);
-    if (!best || d < best.d) best = { id: c.id, d };
-  }
-  return best && best.d < 60 ? best.id : undefined;
 }
 
 /** Pure mapping function — unit-tested with fixtures in tests/ticketmaster.test.ts. */
@@ -220,8 +212,6 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
   return { events, venues: [...venues.values()], participants: [...participants.values()], offers };
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 async function tmFetch(path: string, params: Record<string, string>, ctx: SyncContext, attempt = 0): Promise<unknown> {
   const key = process.env.TICKETMASTER_API_KEY;
   if (!key) throw new ProviderError("ticketmaster", "TICKETMASTER_API_KEY not configured");
@@ -250,26 +240,31 @@ export const ticketmasterProvider: ProviderAdapter = {
   coverage: "Events sold through Ticketmaster in its supported markets (North America, much of Europe, Australia/NZ, Mexico).",
   attribution: "Event data and ticket links provided by Ticketmaster.",
   isConfigured: () => !!process.env.TICKETMASTER_API_KEY,
-  refreshIntervalMs: Number(process.env.TICKETMASTER_REFRESH_MINUTES ?? 60) * 60000,
+  refreshIntervalMs: Number(process.env.TICKETMASTER_REFRESH_MINUTES ?? 180) * 60000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
-    const countries = (process.env.TICKETMASTER_COUNTRIES?.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)) ?? DEFAULT_COUNTRIES;
+    const countries = envList("TICKETMASTER_COUNTRIES", DEFAULT_COUNTRIES);
+    const pagesPerCity = Math.max(1, Number(process.env.TICKETMASTER_CITY_PAGES ?? 2));
     const raw: TmEvent[] = [];
     let failures = 0;
     let rateLimited = false;
-    const perCountry = Math.max(200, Math.floor(ctx.maxEvents / countries.length));
     // Round the window start to the hour so identical requests hit the data cache.
     const windowStart = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    // City queries first (deep coverage where most events are), then a country-wide page.
+    type Job = { label: string; params: Record<string, string>; pages: number };
+    const queue: Job[] = [
+      ...citiesIn(countries).map((c) => ({ label: c.id, params: { latlong: `${c.lat.toFixed(4)},${c.lng.toFixed(4)}`, radius: "50", unit: "km" }, pages: pagesPerCity })),
+      ...countries.map((cc) => ({ label: cc, params: { countryCode: cc }, pages: 1 })),
+    ];
     // A small worker pool: ~4 requests in flight, paced to stay under 5 req/s.
-    const queue = [...countries];
     const worker = async () => {
-      while (queue.length && !rateLimited) {
-        const cc = queue.shift()!;
-        for (let page = 0; page * 200 < Math.min(perCountry, 1000); page++) {
+      while (queue.length && !rateLimited && raw.length < ctx.maxEvents * 2) {
+        const job = queue.shift()!;
+        for (let page = 0; page < job.pages; page++) {
           const t0 = Date.now();
           try {
             const json = (await tmFetch("/events.json", {
-              countryCode: cc,
+              ...job.params,
               size: "200",
               page: String(page),
               sort: "date,asc",
@@ -283,7 +278,7 @@ export const ticketmasterProvider: ProviderAdapter = {
           } catch (err) {
             failures++;
             if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
-            ctx.log("ticketmaster page failed", { cc, page, err: String(err) });
+            ctx.log("ticketmaster page failed", { query: job.label, page, err: String(err) });
             break;
           }
         }

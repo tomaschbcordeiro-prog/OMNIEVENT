@@ -1,0 +1,215 @@
+import { groupOf } from "../categories";
+import { getCountry, slugify } from "../destinations";
+import type { OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
+import type { ProviderAdapter, ProviderBatch } from "./types";
+import { citiesIn, envList, fetchJson, nearestCityId, sleep } from "./common";
+
+/**
+ * SeatGeek Platform API (https://platform.seatgeek.com).
+ *
+ * - Requires SEATGEEK_CLIENT_ID (free, from seatgeek.com/account/develop).
+ * - Coverage: mostly the US and Canada; SeatGeek is a primary seller for some teams and a
+ *   resale marketplace for the rest, so offers are labelled "marketplace".
+ * - `stats.lowest_price` is a listing price that changes constantly; we show it as "from"
+ *   and never mark fees as included.
+ */
+
+const BASE = "https://api.seatgeek.com/2/events";
+const DEFAULT_COUNTRIES = ["US", "CA"];
+
+interface SgPerformer { id: number; name: string; slug?: string; url?: string; image?: string; type?: string; primary?: boolean; home_team?: boolean; away_team?: boolean }
+interface SgVenue {
+  id: number; name?: string; address?: string; extended_address?: string; city?: string; state?: string;
+  country?: string; postal_code?: string; timezone?: string; url?: string; location?: { lat?: number; lon?: number };
+}
+export interface SgEvent {
+  id: number; title?: string; short_title?: string; url?: string; type?: string;
+  datetime_utc?: string; datetime_tbd?: boolean; time_tbd?: boolean; enddatetime_utc?: string | null;
+  status?: string; announce_date?: string; description?: string;
+  taxonomies?: { name?: string }[];
+  performers?: SgPerformer[];
+  venue?: SgVenue;
+  stats?: { lowest_price?: number | null; highest_price?: number | null; listing_count?: number | null };
+}
+
+const TYPE_MAP: Record<string, string> = {
+  concert: "concerts", music_festival: "music-festivals", classical: "classical", classical_opera: "opera", opera: "opera",
+  classical_orchestral_instrumental: "classical", classical_vocal: "classical",
+  nfl: "american-football", ncaa_football: "american-football", mlb: "baseball", nba: "basketball", ncaa_basketball: "basketball",
+  wnba: "basketball", nhl: "ice-hockey", mls: "football", soccer: "football", nwsl: "football", tennis: "tennis",
+  golf: "golf", pga: "golf", boxing: "combat", mma: "combat", wwe: "combat", wrestling: "combat", ufc: "combat",
+  auto_racing: "motorsport", nascar: "motorsport", f1: "motorsport", indycar: "motorsport", monster_truck: "motorsport",
+  rugby: "rugby", cricket: "cricket", horse_racing: "sports", minor_league_baseball: "baseball", minor_league_hockey: "ice-hockey",
+  sports: "sports", theater: "plays", broadway_tickets_national: "musicals", musical: "musicals", dance_performance_tour: "dance",
+  ballet: "ballet", cirque_du_soleil: "circus", comedy: "stand-up", family: "family-shows", film: "cinema", literary: "spoken-word",
+};
+
+export function mapSgType(type?: string, taxonomies?: { name?: string }[]): string {
+  if (type && TYPE_MAP[type]) return TYPE_MAP[type];
+  for (const t of taxonomies ?? []) if (t.name && TYPE_MAP[t.name]) return TYPE_MAP[t.name];
+  const root = taxonomies?.[0]?.name;
+  return root === "sports" ? "sports" : root === "concert" ? "concerts" : root === "theater" ? "plays" : "other";
+}
+
+/** SeatGeek returns UTC timestamps without a "Z". */
+const utc = (s?: string | null) => (s ? new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}Z`) : undefined);
+
+/** Pure mapping function — unit-tested with fixtures in tests/sources.test.ts. */
+export function normalizeSeatGeek(raw: SgEvent[], syncedAt: string): ProviderBatch {
+  const events: OmniEvent[] = [];
+  const venues = new Map<string, Venue>();
+  const participants = new Map<string, Participant>();
+  const offers: TicketOffer[] = [];
+  const seen = new Set<number>();
+
+  for (const e of raw) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    const v = e.venue;
+    const lat = Number(v?.location?.lat);
+    const lng = Number(v?.location?.lon);
+    const start = utc(e.datetime_utc);
+    // Skip records we cannot place on the globe or in time, including dates still to be announced.
+    if (!v || !e.title || !Number.isFinite(lat) || !Number.isFinite(lng) || !start || isNaN(+start) || e.datetime_tbd) continue;
+    const cc = (v.country ?? "").toUpperCase().slice(0, 2);
+    const venueId = `sg-v-${v.id}`;
+    if (!venues.has(venueId)) {
+      venues.set(venueId, {
+        id: venueId,
+        slug: slugify(`${v.name ?? "venue"}-${v.id}`),
+        name: v.name ?? "Venue",
+        address: v.address || undefined,
+        city: v.city ?? "",
+        cityId: nearestCityId(lat, lng),
+        region: v.state,
+        country: getCountry(cc)?.name ?? cc,
+        countryCode: cc,
+        lat,
+        lng,
+        timeZone: v.timezone || "UTC",
+        url: v.url,
+        provenance: { provider: "seatgeek", externalId: String(v.id), sourceUrl: v.url, lastSyncedAt: syncedAt, isDemo: false },
+      });
+    }
+    const cat = mapSgType(e.type, e.taxonomies);
+    const group = groupOf(cat);
+    const people = (e.performers ?? []).map((p, i) => {
+      const kind: ParticipantKind = group === "sports" ? "team" : group === "theatre" ? "production" : "artist";
+      const id = `sg-p-${p.id}`;
+      if (!participants.has(id))
+        participants.set(id, {
+          id,
+          slug: slugify(`${p.name}-sg${p.id}`),
+          name: p.name,
+          kind,
+          url: p.url,
+          imageUrl: p.image || undefined,
+          provenance: { provider: "seatgeek", externalId: String(p.id), sourceUrl: p.url, lastSyncedAt: syncedAt, isDemo: false },
+        });
+      const role = group === "sports" ? (p.home_team ? "team_home" as const : p.away_team ? "team_away" as const : "team" as const) : i === 0 ? "headliner" as const : "support" as const;
+      return { participantId: id, role, order: i };
+    });
+    const id = `sg-e-${e.id}`;
+    const cancelled = /cancel/i.test(e.status ?? "");
+    const postponed = /postpone/i.test(e.status ?? "");
+    const status = cancelled ? "cancelled" as const : postponed ? "postponed" as const : "on_sale" as const;
+    const main = e.performers?.find((p) => p.primary) ?? e.performers?.[0];
+    events.push({
+      id,
+      canonicalId: id,
+      slug: slugify(`${e.title}-sg${e.id}`),
+      title: e.title,
+      description: e.description || undefined,
+      categorySlug: cat,
+      groupSlug: group,
+      eventType: "single",
+      venueId,
+      start: start.toISOString(),
+      end: utc(e.enddatetime_utc)?.toISOString(),
+      timeZone: v.timezone || "UTC",
+      status,
+      statusNote: e.time_tbd ? "Start time to be confirmed." : undefined,
+      ticketAccess: "ticketed",
+      isFree: false,
+      registrationRequired: false,
+      online: false,
+      familyFriendly: cat === "family-shows",
+      officialUrl: e.url,
+      imageUrl: main?.image || undefined,
+      participants: people,
+      sports: group === "sports" ? { sport: cat === "sports" ? "Sport" : cat.replace(/-/g, " "), league: e.type?.toUpperCase() } : undefined,
+      announcedAt: utc(e.announce_date)?.toISOString(),
+      provenance: { provider: "seatgeek", externalId: String(e.id), sourceUrl: e.url, lastSyncedAt: syncedAt, lastVerifiedAt: syncedAt, isDemo: false },
+    });
+    if (e.url && !cancelled) {
+      const low = e.stats?.lowest_price ?? undefined;
+      offers.push({
+        id: `${id}-sg`,
+        eventId: id,
+        provider: "SeatGeek",
+        providerType: "marketplace",
+        providerEventId: String(e.id),
+        ticketCategory: "standard",
+        label: low != null ? "Lowest listing on SeatGeek" : "Listings on SeatGeek",
+        basePrice: low ?? undefined,
+        maxPrice: e.stats?.highest_price ?? undefined,
+        currency: low != null ? "USD" : "",
+        availability: e.stats?.listing_count === 0 ? "sold_out" : e.stats?.listing_count ? "available" : "unknown",
+        purchaseUrl: e.url,
+        priceObservedAt: low != null ? syncedAt : undefined,
+        availabilityVerifiedAt: e.stats?.listing_count != null ? syncedAt : undefined,
+        isDemo: false,
+      });
+    }
+  }
+  return { events, venues: [...venues.values()], participants: [...participants.values()], offers };
+}
+
+export const seatgeekProvider: ProviderAdapter = {
+  id: "seatgeek",
+  name: "SeatGeek Platform API",
+  isDemo: false,
+  coverage: "Concerts, sports and theatre in the US and Canada, with live marketplace prices.",
+  attribution: "Event data and ticket links provided by SeatGeek.",
+  isConfigured: () => !!process.env.SEATGEEK_CLIENT_ID,
+  refreshIntervalMs: Number(process.env.SEATGEEK_REFRESH_MINUTES ?? 180) * 60000,
+  async sync(ctx) {
+    const syncedAt = new Date().toISOString();
+    const raw: SgEvent[] = [];
+    let failures = 0;
+    const since = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().slice(0, 19);
+    const cities = citiesIn(envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES));
+    const pages = Math.max(1, Number(process.env.SEATGEEK_CITY_PAGES ?? 3));
+    for (const c of cities) {
+      for (let page = 1; page <= pages && raw.length < ctx.maxEvents; page++) {
+        const url = new URL(BASE);
+        url.searchParams.set("client_id", process.env.SEATGEEK_CLIENT_ID!);
+        if (process.env.SEATGEEK_CLIENT_SECRET) url.searchParams.set("client_secret", process.env.SEATGEEK_CLIENT_SECRET);
+        url.searchParams.set("lat", String(c.lat));
+        url.searchParams.set("lon", String(c.lng));
+        url.searchParams.set("range", "50km");
+        url.searchParams.set("per_page", "100");
+        url.searchParams.set("page", String(page));
+        url.searchParams.set("sort", "datetime_utc.asc");
+        url.searchParams.set("datetime_utc.gte", since);
+        try {
+          const json = (await fetchJson("seatgeek", url, ctx)) as { events?: SgEvent[]; meta?: { total?: number; per_page?: number } };
+          const list = json.events ?? [];
+          raw.push(...list);
+          if (list.length < 100 || page * 100 >= (json.meta?.total ?? 0)) break;
+        } catch (err) {
+          failures++;
+          ctx.log("seatgeek page failed", { city: c.id, page, err: String(err) });
+          break;
+        }
+        await sleep(250);
+      }
+      if (failures >= 5) break;
+    }
+    const batch = normalizeSeatGeek(raw, syncedAt);
+    return {
+      batch,
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+    };
+  },
+};

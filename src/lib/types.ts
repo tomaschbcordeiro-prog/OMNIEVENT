@@ -179,6 +179,8 @@ export interface OmniEvent {
   end?: ISODate;
   timeZone: string;
   durationMinutes?: number;
+  /** Only the dates are known; the source gives no start time or opening hours. */
+  hoursUnknown?: boolean;
   status: EventStatus;
   ticketAccess: TicketAccess;
   isFree: boolean;
@@ -227,6 +229,7 @@ export interface EventCard {
   isFree: boolean;
   familyFriendly: boolean;
   online: boolean;
+  hoursUnknown?: boolean;
   venueName: string;
   venueSlug: string;
   city: string;

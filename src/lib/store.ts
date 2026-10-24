@@ -78,7 +78,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   const job = (async () => {
     try {
       const { batch, run } = await p.sync({
-        maxEvents: Number(process.env.SYNC_MAX_EVENTS ?? 5000),
+        maxEvents: Number(process.env.SYNC_MAX_EVENTS ?? 25000),
         log: (msg, extra) => log("info", msg, { provider: p.id, runId, ...extra }),
       });
       const prev = state.providerData.get(p.id);
@@ -124,7 +124,12 @@ export async function ensureFresh(): Promise<void> {
     if (last === undefined) waits.push(syncProvider(p));
     else if (now - last > p.refreshIntervalMs) void syncProvider(p);
   }
-  if (waits.length) await Promise.all(waits);
+  // A slow source must not hold the first page hostage: wait a bounded time, then serve
+  // whatever has loaded while the rest keeps syncing in the background.
+  if (waits.length) {
+    const limit = Number(process.env.FIRST_LOAD_WAIT_MS ?? 12000);
+    await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, limit))]);
+  }
 }
 
 export async function forceSync(providerId?: string): Promise<SyncRun[]> {
@@ -252,6 +257,7 @@ function toCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<stri
     lastSyncedAt: e.provenance.lastSyncedAt,
     editorialPick: e.editorialPick,
     eventType: e.eventType,
+    hoursUnknown: e.hoursUnknown,
   };
 }
 
@@ -281,6 +287,8 @@ function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
   const from = f.from ?? todayIn(tz);
   const to = f.to ?? (f.from ? f.from : addDaysYMD(from, 365));
   if (to < from) return false;
+  // Without known hours we cannot say whether it is on during a time window.
+  if (e.hoursUnknown && (f.tFrom || f.tTo)) return false;
 
   if (e.eventType === "daily_attraction") {
     const first = localDateKey(e.start, tz);
@@ -443,6 +451,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   }
   const sort = f.sort ?? (terms.length ? "relevance" : "date");
   const t = (c: EventCard) => new Date(c.start).getTime();
+  const undated = (c: EventCard) => Number(c.eventType === "daily_attraction" || !!c.hoursUnknown);
   const price = (c: EventCard) => (c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, f.currency ?? "USD") ?? Infinity : Infinity);
   scored.sort((a, b) => {
     switch (sort) {
@@ -451,8 +460,9 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
       case "announced": return (state.events.get(b.c.id)?.announcedAt ?? "").localeCompare(state.events.get(a.c.id)?.announcedAt ?? "");
       case "relevance": return b.s - a.s || t(a.c) - t(b.c);
       default:
-        // Always-open attractions don't have a meaningful "next" date, so they follow dated events.
-        return Number(a.c.eventType === "daily_attraction") - Number(b.c.eventType === "daily_attraction") || t(a.c) - t(b.c);
+        // Always-open attractions and listings with dates only don't have a meaningful "next"
+        // start time, so they follow events with a real start time.
+        return undated(a.c) - undated(b.c) || t(a.c) - t(b.c);
     }
   });
   const pageSize = Math.min(100, Math.max(1, f.pageSize ?? 24));

@@ -928,7 +928,7 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
             <Clock size={15} className="text-text-3 mt-0.5 shrink-0" aria-hidden />
             <dd className="tnum">
               {card.eventType === "daily_attraction" ? "Open daily, timed entry" : <>
-                {formatEventDate(card.start, card.timeZone)}, {formatEventTime(card.start, card.timeZone)} <span className="text-text-3">{tzAbbrev(card.start, card.timeZone)} local time</span>
+                {formatEventDate(card.start, card.timeZone)}{card.hoursUnknown ? <span className="text-text-3">, times on the official page</span> : <>, {formatEventTime(card.start, card.timeZone)} <span className="text-text-3">{tzAbbrev(card.start, card.timeZone)} local time</span></>}
               </>}
             </dd>
           </div>
