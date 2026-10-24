@@ -83,3 +83,12 @@ describe("lisbon snapshot", () => {
     expect(b.events.length).toBeGreaterThan(snap.events.length * 0.6);
   });
 });
+
+describe("seller links in other countries", () => {
+  it("lists the main sellers for the US and skips Ticketmaster when it is already an offer", () => {
+    const s = sellerSearches("US", "Coldplay: Music of the Spheres", "New York", ["Ticketmaster"]);
+    expect(s.map((x) => x.name)).toEqual(["SeatGeek", "StubHub", "Vivid Seats", "AXS", "Eventbrite"]);
+    expect(s[1].url).toBe("https://www.stubhub.com/search?q=Coldplay%20Music%20of%20the%20Spheres");
+    expect(sellerSearches("DE", "Konzert", "Berlin")[1].url).toBe("https://www.eventim.de/search/?searchterm=Konzert");
+  });
+});

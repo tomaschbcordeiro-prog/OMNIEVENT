@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeTmEvents, mapCategory, mapStatus, type TmEvent } from "@/lib/providers/ticketmaster";
+import { normalizeTmEvents, mapCategory, mapStatus, crawlCatalogue, type TmEvent } from "@/lib/providers/ticketmaster";
 
 // Hand-written fixture in the shape of a Discovery API v2 response (not real data).
 const fixture: TmEvent[] = [
@@ -51,5 +51,42 @@ describe("ticketmaster adapter", () => {
     expect(mapCategory({})).toBe("other");
     expect(mapStatus("cancelled")).toBe("cancelled");
     expect(mapStatus("weird")).toBe("unknown");
+  });
+});
+
+describe("full-catalogue crawl", () => {
+  // A fake Discovery API: 4,500 events in "US" spread over 300 days (with a busy day), 120 in "PT".
+  const from = Date.parse("2026-10-24T00:00:00Z");
+  const to = from + 730 * 864e5;
+  const make = (cc: string, n: number, spreadDays: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `${cc}${i}`, t: from + Math.floor((i / n) * spreadDays * 864e5) }));
+  const db: Record<string, { id: string; t: number }[]> = {
+    US: [...make("US", 4500, 300), ...Array.from({ length: 900 }, (_, i) => ({ id: `USbusy${i}`, t: from + 40 * 864e5 + (i % 20) * 3600000 }))],
+    PT: make("PT", 120, 500),
+  };
+  let maxSeen = 0;
+  const fetchPage = async (p: Record<string, string>) => {
+    const all = (db[p.countryCode] ?? []).filter((e) => e.t >= Date.parse(p.startDateTime) && e.t < Date.parse(p.endDateTime));
+    const size = Number(p.size);
+    const page = Number(p.page);
+    if ((page + 1) * size > 1000) throw new Error("deep paging beyond 1,000");
+    maxSeen = Math.max(maxSeen, Math.min(all.length, 1000));
+    const slice = all.slice(page * size, page * size + size).map((e) => ({ id: e.id, name: e.id }));
+    return { _embedded: { events: slice }, page: { totalElements: all.length, totalPages: Math.ceil(all.length / size) } };
+  };
+
+  it("collects every event without ever paging past 1,000", async () => {
+    const got = new Set<string>();
+    const r = await crawlCatalogue(fetchPage, ["US", "PT", "XX"], { from, to, maxCalls: 1000, onEvents: (l) => l.forEach((e) => got.add(e.id)) });
+    expect(got.size).toBe(4500 + 900 + 120);
+    expect(r.complete).toBe(true);
+    expect(r.truncated).toBe(0);
+    expect(maxSeen).toBeLessThanOrEqual(1000);
+    expect(r.calls).toBeLessThan(80);
+  });
+  it("stops at the call budget and reports it", async () => {
+    const r = await crawlCatalogue(fetchPage, ["US"], { from, to, maxCalls: 5, onEvents: () => {} });
+    expect(r.complete).toBe(false);
+    expect(r.calls).toBeLessThanOrEqual(8);
   });
 });

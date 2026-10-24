@@ -2,7 +2,7 @@ import { groupOf } from "../categories";
 import { getCountry, slugify } from "../destinations";
 import type { EventStatus, OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
 import { ProviderError, type ProviderAdapter, type ProviderBatch, type SyncContext } from "./types";
-import { citiesIn, envList, nearestCityId, sleep } from "./common";
+import { envList, nearestCityId, sleep } from "./common";
 
 /**
  * Ticketmaster Discovery API v2 adapter (https://developer.ticketmaster.com).
@@ -10,15 +10,19 @@ import { citiesIn, envList, nearestCityId, sleep } from "./common";
  * - Requires TICKETMASTER_API_KEY (free developer key). Without it the adapter is disabled.
  * - Coverage: Ticketmaster markets (US, CA, MX, UK, IE, much of Europe, AU, NZ and more).
  * - Quota (default developer tier): 5,000 calls/day, 5 req/s; deep paging limited to 1,000 items
- *   per query. A country-wide query sorted by date only reaches the next few days, so we query
- *   each major city by radius (two pages each) and then one page per country for the rest.
+ *   per query, so the full catalogue is read in date windows small enough to fit (crawlCatalogue).
  * - Terms: attribution required; purchase links must go to Ticketmaster. Prices from
  *   `priceRanges` are advertised ranges, NOT verified totals; we never mark fees as included
  *   unless the price type says so.
  */
 
 const BASE = "https://app.ticketmaster.com/discovery/v2";
-const DEFAULT_COUNTRIES = ["US", "CA", "GB", "IE", "ES", "PT", "FR", "DE", "NL", "BE", "IT", "AT", "CH", "DK", "SE", "NO", "FI", "PL", "CZ", "MX", "AU", "NZ"];
+// Markets with Discovery API listings. Checking a country with none costs one request.
+const DEFAULT_COUNTRIES = [
+  "US", "CA", "MX", "GB", "IE", "ES", "PT", "FR", "DE", "NL", "BE", "LU", "IT", "AT", "CH", "DK", "SE", "NO", "FI", "IS",
+  "PL", "CZ", "SK", "HU", "SI", "HR", "RO", "BG", "GR", "CY", "MT", "EE", "LV", "LT", "TR", "AE", "ZA", "AU", "NZ",
+  "JP", "KR", "SG", "HK", "TW", "IN", "BR", "AR", "CL", "CO", "PE",
+];
 
 // ---- Raw API shapes (only the fields we use) ----
 interface TmImage { url: string; width?: number; ratio?: string }
@@ -218,10 +222,10 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", key);
-  // Cached in the platform data cache for three hours so cold server instances don't
-  // re-download everything (and don't spend API quota). The key excludes nothing
-  // secret-dependent beyond the URL, which never leaves the server.
-  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 3 * 3600 } } as RequestInit);
+  // Cached in the platform data cache for a day: the crawl plan is the same all day, so
+  // other server instances and later refreshes reuse these answers instead of spending
+  // the 5,000-calls-a-day quota. The URL (with the key) never leaves the server.
+  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 86400 } } as RequestInit);
   if (res.status === 429) {
     if (attempt >= 3) throw new ProviderError("ticketmaster", "rate limited", 429, true);
     const wait = Number(res.headers.get("retry-after") ?? 2) * 1000 * (attempt + 1);
@@ -233,73 +237,138 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   return res.json();
 }
 
+type TmPage = { _embedded?: { events?: TmEvent[] }; page?: { totalElements?: number; totalPages?: number } };
+type FetchPage = (params: Record<string, string>) => Promise<TmPage>;
+
+const HOUR = 3600000;
+const PAGE_SIZE = 200;
+/** The Discovery API serves at most 1,000 results per query (size × page < 1,000). */
+const MAX_PER_QUERY = 1000;
+const iso = (t: number) => new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
+
+/**
+ * Reads the complete catalogue for each country. A query can only reach 1,000 results,
+ * so each country's calendar is split into date windows: when a window holds more than
+ * 1,000 events it is halved (on whole hours) until every piece fits, then each piece is
+ * read page by page. The plan only depends on the day, so repeat runs make identical
+ * requests and are answered from the data cache.
+ */
+export async function crawlCatalogue(
+  fetchPage: FetchPage,
+  countries: string[],
+  { from, to, maxCalls, onError, onEvents }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void },
+): Promise<{ calls: number; truncated: number; complete: boolean }> {
+  let calls = 0;
+  let truncated = 0;
+  let stopped = false;
+  type Task = { cc: string; start: number; end: number; page: number };
+  const queue: Task[] = countries.map((cc) => ({ cc, start: from, end: to, page: 0 }));
+  const call = async (t: Task) => {
+    calls++;
+    return fetchPage({ countryCode: t.cc, startDateTime: iso(t.start), endDateTime: iso(t.end), size: String(PAGE_SIZE), page: String(t.page), sort: "date,asc" });
+  };
+  const worker = async () => {
+    while (queue.length && !stopped) {
+      if (calls >= maxCalls) {
+        stopped = true;
+        break;
+      }
+      const t = queue.shift()!;
+      let json: TmPage;
+      try {
+        json = await call(t);
+      } catch (err) {
+        if (onError?.(err, `${t.cc} ${iso(t.start)} p${t.page}`) === false) stopped = true;
+        continue;
+      }
+      const total = json.page?.totalElements ?? 0;
+      if (t.page === 0 && total > MAX_PER_QUERY && t.end - t.start > HOUR) {
+        // Too many for one query: halve the window on a whole hour and try each half.
+        const mid = t.start + Math.max(1, Math.floor((t.end - t.start) / 2 / HOUR)) * HOUR;
+        queue.unshift({ ...t, start: t.start, end: mid }, { ...t, start: mid, end: t.end });
+        continue;
+      }
+      onEvents(json._embedded?.events ?? []);
+      if (t.page === 0) {
+        if (total > MAX_PER_QUERY) truncated += total - MAX_PER_QUERY; // over 1,000 events in one hour
+        const pages = Math.min(Math.ceil(Math.min(total, MAX_PER_QUERY) / PAGE_SIZE), MAX_PER_QUERY / PAGE_SIZE);
+        for (let p = pages - 1; p >= 1; p--) queue.unshift({ ...t, page: p });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+  return { calls, truncated, complete: !stopped && !queue.length };
+}
+
 export const ticketmasterProvider: ProviderAdapter = {
   id: "ticketmaster",
   name: "Ticketmaster Discovery API",
   isDemo: false,
-  coverage: "Events sold through Ticketmaster in its supported markets (North America, much of Europe, Australia/NZ, Mexico).",
+  coverage: "Every scheduled event Ticketmaster lists in its markets (North America, much of Europe, Australia/NZ, Mexico and more), up to two years ahead.",
   attribution: "Event data and ticket links provided by Ticketmaster.",
   isConfigured: () => !!process.env.TICKETMASTER_API_KEY,
-  refreshIntervalMs: Number(process.env.TICKETMASTER_REFRESH_MINUTES ?? 180) * 60000,
+  // Re-assembles from the data cache; new API calls happen once a day (see tmFetch).
+  refreshIntervalMs: Number(process.env.TICKETMASTER_REFRESH_MINUTES ?? 360) * 60000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     const countries = envList("TICKETMASTER_COUNTRIES", DEFAULT_COUNTRIES);
-    const pagesPerCity = Math.max(1, Number(process.env.TICKETMASTER_CITY_PAGES ?? 2));
-    const raw: TmEvent[] = [];
     let failures = 0;
     let lastError = "";
     let rateLimited = false;
-    // Round the window start to the day (UTC) so every server instance asks identical
-    // questions all day and shares the data cache; the daily quota is 5,000 calls.
-    const windowStart = new Date(Math.floor(Date.now() / 86400000) * 86400000).toISOString().replace(/\.\d{3}Z$/, "Z");
-    // City queries first (deep coverage where most events are), then a country-wide page.
-    type Job = { label: string; params: Record<string, string>; pages: number };
-    const queue: Job[] = [
-      ...citiesIn(countries).map((c) => ({ label: c.id, params: { latlong: `${c.lat.toFixed(4)},${c.lng.toFixed(4)}`, radius: "50", unit: "km" }, pages: pagesPerCity })),
-      ...countries.map((cc) => ({ label: cc, params: { countryCode: cc }, pages: 1 })),
-    ];
-    // A small worker pool: ~4 requests in flight, paced to stay under 5 req/s.
-    const worker = async () => {
-      while (queue.length && !rateLimited && raw.length < ctx.maxEvents * 2) {
-        const job = queue.shift()!;
-        for (let page = 0; page < job.pages; page++) {
-          const t0 = Date.now();
-          try {
-            const json = (await tmFetch("/events.json", {
-              ...job.params,
-              size: "200",
-              page: String(page),
-              sort: "date,asc",
-              startDateTime: windowStart,
-            }, ctx)) as { _embedded?: { events?: TmEvent[] }; page?: { totalPages?: number } };
-            const list = json._embedded?.events ?? [];
-            raw.push(...list);
-            const elapsed = Date.now() - t0;
-            if (elapsed > 60) await sleep(Math.max(0, 850 - elapsed)); // cache hits skip the wait
-            if (!list.length || page + 1 >= (json.page?.totalPages ?? 0)) break;
-          } catch (err) {
-            failures++;
-            lastError = String(err).slice(0, 160);
-            if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
-            ctx.log("ticketmaster page failed", { query: job.label, page, err: String(err) });
-            break;
-          }
-        }
+    // Day-aligned window so every instance asks identical questions all day.
+    const from = Math.floor(Date.now() / 86400000) * 86400000;
+    const to = from + Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 730) * 86400000;
+    // Only answers that really came from Ticketmaster (not the data cache) use the quota.
+    const budget = Number(process.env.TICKETMASTER_MAX_CALLS ?? 3500);
+    let networkCalls = 0;
+    const fetchPage: FetchPage = async (params) => {
+      if (networkCalls >= budget) throw new ProviderError("ticketmaster", `daily request budget (${budget}) reached`, 429, true);
+      const t0 = Date.now();
+      const json = (await tmFetch("/events.json", params, ctx)) as TmPage;
+      const elapsed = Date.now() - t0;
+      if (elapsed > 60) {
+        networkCalls++;
+        await sleep(Math.max(0, 850 - elapsed)); // stay under 5 req/s; cache hits skip the wait
       }
+      return json;
     };
-    await Promise.all(Array.from({ length: 4 }, worker));
-    // Past events can appear when the window start was rounded down.
+    // Pages are converted as they arrive, so memory holds compact records, not raw JSON.
     const cutoff = Date.now() - 6 * 3600000;
-    const seen = new Set<string>();
-    for (let i = raw.length - 1; i >= 0; i--) {
-      const r = raw[i];
-      if (seen.has(r.id) || (r.dates?.start?.dateTime && Date.parse(r.dates.start.dateTime) < cutoff)) raw.splice(i, 1);
-      else seen.add(r.id);
-    }
-    const batch = normalizeTmEvents(raw, syncedAt);
+    const events = new Map<string, OmniEvent>();
+    const venues = new Map<string, Venue>();
+    const participants = new Map<string, Participant>();
+    const offers = new Map<string, TicketOffer>();
+    const onEvents = (list: TmEvent[]) => {
+      const fresh = list.filter((r) => !(r.dates?.start?.dateTime && Date.parse(r.dates.start.dateTime) < cutoff));
+      const b = normalizeTmEvents(fresh, syncedAt);
+      for (const e of b.events) events.set(e.id, e);
+      for (const v of b.venues) venues.set(v.id, v);
+      for (const x of b.participants) participants.set(x.id, x);
+      for (const o of b.offers) offers.set(o.id, o);
+    };
+    const crawl = await crawlCatalogue(fetchPage, countries, {
+      onEvents,
+      from,
+      to,
+      maxCalls: 20000,
+      onError: (err, what) => {
+        failures++;
+        lastError = String(err).slice(0, 160);
+        ctx.log("ticketmaster page failed", { what, err: lastError });
+        if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
+        return !rateLimited && failures < 25;
+      },
+    });
+    ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated });
+    const batch: ProviderBatch = { events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] };
+    const notes = [
+      failures ? `${failures} request(s) failed (last: ${lastError})` : "",
+      !crawl.complete ? `stopped after ${crawl.calls} requests; the rest loads on the next run` : "",
+      crawl.truncated ? `${crawl.truncated} events in very busy hours not reachable` : "",
+    ].filter(Boolean);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: failures === 0 || batch.events.length > 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: notes.length ? notes.join("; ") : undefined },
     };
   },
   async fetchEvent(externalId) {

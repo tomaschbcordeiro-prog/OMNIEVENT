@@ -73,7 +73,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 
 | Source | Coverage | Needs |
 |---|---|---|
-| Ticketmaster Discovery API | 50 major cities (2 pages each, 50 km radius) plus one page per country, in 22 markets | `TICKETMASTER_API_KEY` |
+| Ticketmaster Discovery API | Full catalogue in ~50 countries, up to 2 years ahead, read in date windows under the 1,000-results-per-query limit | `TICKETMASTER_API_KEY` |
 | SeatGeek Platform API | US and Canadian cities, live marketplace prices | `SEATGEEK_CLIENT_ID` (free, <https://seatgeek.com/account/develop>) |
 | Skiddle Events API | UK and Ireland: clubs, gigs, festivals, comedy | `SKIDDLE_API_KEY` (free, <https://www.skiddle.com/api/join.php>) |
 | Agenda Cultural de Lisboa (agendalx.pt API) | City of Lisbon cultural agenda, CC BY 4.0; ~400 mapped events | nothing |
@@ -82,7 +82,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 
 Set keys in `.env.local` (or your host's env vars) and restart; each source switches on when its key is present. `DISABLED_PROVIDERS=paris,madrid` switches sources off. Demo data appears only when no real source is active (`DEMO_MODE=auto`). Listings that give dates but no times are flagged `hoursUnknown`: they show without a time and are left out of time-of-day searches.
 
-**Ticket comparison in Portugal.** BOL, Ticketline, MEO Blueticket and Eventbrite publish no open data feed, so their prices can't be read. Event pages and previews for Portuguese events link to each seller's own search for the event, labelled as not checked by us (`src/lib/sellers.ts`). Real price comparison across them needs partner/affiliate access from each seller.
+**Ticket comparison.** Most sellers (BOL, Ticketline, MEO Blueticket, StubHub, Vivid Seats, AXS, See Tickets, Eventim, TicketOne, Fnac Spectacles, Eventbrite…) publish no open data feed, so their prices can't be read. Event pages and previews link to each seller's own search for the event in that country, labelled as not checked by us (`src/lib/sellers.ts`). Real price comparison across them needs partner/affiliate access from each seller.
 
 More sources: see `src/lib/providers/README.md`. No single API covers every event in the world, and coverage grows one licensed source at a time.
 

@@ -83,6 +83,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       });
       const prev = state.providerData.get(p.id);
       const prevIds = new Set(prev?.events.map((e) => e.id));
+      // A run cut short (quota, network) keeps what we already had instead of dropping it.
+      if (prev && run.failures > 0) mergeMissing(batch, prev);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       state.providerData.set(p.id, batch);
       state.lastSync.set(p.id, Date.now());
@@ -100,6 +102,20 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   })();
   state.syncing.set(p.id, job);
   return job;
+}
+
+function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
+  const have = <T extends { id: string }>(list: T[]) => new Set(list.map((x) => x.id));
+  const ev = have(batch.events);
+  const now = Date.now();
+  for (const e of prev.events) if (!ev.has(e.id) && Date.parse(e.schedule?.at(-1) ?? e.end ?? e.start) > now) batch.events.push(e);
+  const keep = have(batch.events);
+  const vn = have(batch.venues);
+  for (const v of prev.venues) if (!vn.has(v.id)) batch.venues.push(v);
+  const pp = have(batch.participants);
+  for (const x of prev.participants) if (!pp.has(x.id)) batch.participants.push(x);
+  const of = have(batch.offers);
+  for (const o of prev.offers) if (!of.has(o.id) && keep.has(o.eventId)) batch.offers.push(o);
 }
 
 /**
@@ -285,7 +301,8 @@ function eventIntervals(e: OmniEvent): [number, number][] {
 function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
   const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
   const from = f.from ?? todayIn(tz);
-  const to = f.to ?? (f.from ? f.from : addDaysYMD(from, 365));
+  // No end date means everything scheduled, however far ahead.
+  const to = f.to ?? (f.from ? f.from : addDaysYMD(from, 3650));
   if (to < from) return false;
   // Without known hours we cannot say whether it is on during a time window.
   if (e.hoursUnknown && (f.tFrom || f.tTo)) return false;
