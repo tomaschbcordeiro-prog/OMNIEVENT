@@ -218,10 +218,10 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", key);
-  // Cached in the platform data cache for an hour so cold server instances don't
+  // Cached in the platform data cache for three hours so cold server instances don't
   // re-download everything (and don't spend API quota). The key excludes nothing
   // secret-dependent beyond the URL, which never leaves the server.
-  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 3600 } } as RequestInit);
+  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 3 * 3600 } } as RequestInit);
   if (res.status === 429) {
     if (attempt >= 3) throw new ProviderError("ticketmaster", "rate limited", 429, true);
     const wait = Number(res.headers.get("retry-after") ?? 2) * 1000 * (attempt + 1);
@@ -247,9 +247,11 @@ export const ticketmasterProvider: ProviderAdapter = {
     const pagesPerCity = Math.max(1, Number(process.env.TICKETMASTER_CITY_PAGES ?? 2));
     const raw: TmEvent[] = [];
     let failures = 0;
+    let lastError = "";
     let rateLimited = false;
-    // Round the window start to the hour so identical requests hit the data cache.
-    const windowStart = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    // Round the window start to the day (UTC) so every server instance asks identical
+    // questions all day and shares the data cache; the daily quota is 5,000 calls.
+    const windowStart = new Date(Math.floor(Date.now() / 86400000) * 86400000).toISOString().replace(/\.\d{3}Z$/, "Z");
     // City queries first (deep coverage where most events are), then a country-wide page.
     type Job = { label: string; params: Record<string, string>; pages: number };
     const queue: Job[] = [
@@ -277,6 +279,7 @@ export const ticketmasterProvider: ProviderAdapter = {
             if (!list.length || page + 1 >= (json.page?.totalPages ?? 0)) break;
           } catch (err) {
             failures++;
+            lastError = String(err).slice(0, 160);
             if (err instanceof ProviderError && err.rateLimited) rateLimited = true;
             ctx.log("ticketmaster page failed", { query: job.label, page, err: String(err) });
             break;
@@ -296,7 +299,7 @@ export const ticketmasterProvider: ProviderAdapter = {
     const batch = normalizeTmEvents(raw, syncedAt);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: failures === 0 || batch.events.length > 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: failures === 0 || batch.events.length > 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
   async fetchEvent(externalId) {

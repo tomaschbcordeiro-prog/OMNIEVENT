@@ -326,6 +326,7 @@ export const lisbonProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     const raw: AlxEvent[] = [];
     let failures = 0;
+    let lastError = "";
     for (let page = 1; page <= 40 && raw.length < ctx.maxEvents; page++) {
       const url = new URL(BASE);
       url.searchParams.set("per_page", "50");
@@ -337,6 +338,7 @@ export const lisbonProvider: ProviderAdapter = {
         if (list.length < 50) break;
       } catch (err) {
         failures++;
+            lastError = String(err).slice(0, 160);
         ctx.log("lisbon page failed", { page, err: String(err) });
         if (failures >= 3) break;
       }
@@ -358,7 +360,7 @@ export const lisbonProvider: ProviderAdapter = {
     if (unplaced) ctx.log("lisbon events without a mappable venue", { unplaced });
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
 };

@@ -177,6 +177,7 @@ export const seatgeekProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     const raw: SgEvent[] = [];
     let failures = 0;
+    let lastError = "";
     const since = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().slice(0, 19);
     const cities = citiesIn(envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES));
     const pages = Math.max(1, Number(process.env.SEATGEEK_CITY_PAGES ?? 3));
@@ -199,6 +200,7 @@ export const seatgeekProvider: ProviderAdapter = {
           if (list.length < 100 || page * 100 >= (json.meta?.total ?? 0)) break;
         } catch (err) {
           failures++;
+            lastError = String(err).slice(0, 160);
           ctx.log("seatgeek page failed", { city: c.id, page, err: String(err) });
           break;
         }
@@ -209,7 +211,7 @@ export const seatgeekProvider: ProviderAdapter = {
     const batch = normalizeSeatGeek(raw, syncedAt);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
 };

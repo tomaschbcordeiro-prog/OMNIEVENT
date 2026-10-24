@@ -203,6 +203,7 @@ export const skiddleProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     const raw: SkEvent[] = [];
     let failures = 0;
+    let lastError = "";
     const countries = envList("SKIDDLE_COUNTRIES", DEFAULT_COUNTRIES);
     const cities = [...citiesIn(countries), ...(countries.includes("GB") ? EXTRA_CITIES : [])];
     const pages = Math.max(1, Number(process.env.SKIDDLE_CITY_PAGES ?? 3));
@@ -225,6 +226,7 @@ export const skiddleProvider: ProviderAdapter = {
           if (list.length < 100 || (page + 1) * 100 >= Number(json.totalcount ?? 0)) break;
         } catch (err) {
           failures++;
+            lastError = String(err).slice(0, 160);
           ctx.log("skiddle page failed", { city: c.id, page, err: String(err) });
           break;
         }
@@ -235,7 +237,7 @@ export const skiddleProvider: ProviderAdapter = {
     const batch = normalizeSkiddle(raw, syncedAt);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
 };

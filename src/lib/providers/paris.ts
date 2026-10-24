@@ -213,6 +213,7 @@ export const parisProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     const raw: ParisRecord[] = [];
     let failures = 0;
+    let lastError = "";
     // Hour-rounded so repeat requests hit the data cache.
     const since = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().slice(0, 19);
     for (let offset = 0; offset < Math.min(ctx.maxEvents, 9900); offset += 100) {
@@ -229,6 +230,7 @@ export const parisProvider: ProviderAdapter = {
         if (list.length < 100 || offset + 100 >= (json.total_count ?? 0)) break;
       } catch (err) {
         failures++;
+            lastError = String(err).slice(0, 160);
         ctx.log("paris page failed", { offset, err: String(err) });
         if (failures >= 3) break;
         await sleep(1500);
@@ -238,7 +240,7 @@ export const parisProvider: ProviderAdapter = {
     const batch = normalizeParis(raw, syncedAt);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
 };
