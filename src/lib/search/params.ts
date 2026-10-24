@@ -39,6 +39,8 @@ export const filtersSchema = z
     indoor: z.enum(["indoor", "outdoor"]).optional(),
     participant: z.string().max(120).optional(),
     venue: z.string().max(160).optional(),
+    gdeg: num.min(0).max(30).optional(),
+    gkeys: list.pipe(z.array(z.string().max(120).regex(/^[\w:.-]+$/)).max(300)).optional(),
     sport: z.string().max(40).optional(),
     competition: z.string().max(80).optional(),
     source: z.enum(["all", "demo", "live"]).optional(),
@@ -82,6 +84,7 @@ export function parseFilterParams(sp: URLSearchParams): { ok: true; filters: Sea
     indoor: v.indoor,
     participant: v.participant,
     venue: v.venue,
+    group: v.gdeg != null && v.gkeys?.length ? { deg: v.gdeg, keys: v.gkeys } : undefined,
     sport: v.sport,
     competition: v.competition,
     source: v.source,
@@ -128,6 +131,10 @@ export function filtersToParams(f: SearchFilters): URLSearchParams {
   set("indoor", f.indoor);
   set("participant", f.participant);
   set("venue", f.venue);
+  if (f.group) {
+    set("gdeg", f.group.deg);
+    set("gkeys", f.group.keys);
+  }
   set("sport", f.sport);
   set("competition", f.competition);
   set("source", f.source && f.source !== "all" ? f.source : undefined);

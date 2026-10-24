@@ -393,6 +393,7 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
   if (f.status?.length && !f.status.includes(c.status)) return false;
   if (f.participant && !c.people.some((p) => p.slug === f.participant)) return false;
   if (f.venue && c.venueSlug !== f.venue) return false;
+  if (f.group && !groupKeys(f.group).has(f.group.deg <= 0 ? `v:${e.venueId}` : gridKey(c.lat, c.lng, f.group.deg))) return false;
   if (f.sport && c.sports?.sport.toLowerCase() !== f.sport.toLowerCase()) return false;
   if (f.competition && c.sports?.competition !== f.competition) return false;
 
@@ -497,6 +498,13 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   };
 }
 
+const keySets = new WeakMap<object, Set<string>>();
+function groupKeys(g: { keys: string[] }): Set<string> {
+  let s = keySets.get(g);
+  if (!s) keySets.set(g, (s = new Set(g.keys)));
+  return s;
+}
+
 /** Viewport-aware clustering for the globe and 2D map. */
 export function clusterEvents(
   f: SearchFilters,
@@ -539,7 +547,11 @@ export function clusterEvents(
     const cityName = getDestination(topCity)?.name ?? b.cards[0].city;
     const extraCities = Object.keys(cityCounts).length - 1;
     const sample = [...b.cards].sort((a, c) => a.start.localeCompare(c.start)).slice(0, 6);
+    let radiusKm = 0;
+    for (const c of b.cards) radiusKm = Math.max(radiusKm, haversineKm(lat, lng, c.lat, c.lng));
     clusters.push({
+      radiusKm,
+      group: { deg: Math.max(0, view.cellDeg), keys: [key] },
       id: key,
       lat,
       lng,
@@ -584,17 +596,21 @@ function mergeClose(clusters: Cluster[], deg: number): Cluster[] {
     for (let dy = -1; dy <= 1 && !host; dy++)
       for (let dx = -span; dx <= span && !host; dx++) host = grid.get(`${y + dy}:${x + dx}`)?.find((o) => near(o, c));
     if (!host) {
-      const copy = { ...c, groups: { ...c.groups }, sample: [...c.sample] };
+      const copy = { ...c, groups: { ...c.groups }, sample: [...c.sample], group: c.group && { deg: c.group.deg, keys: [...c.group.keys] } };
       out.push(copy);
       const k = `${y}:${x}`;
       grid.set(k, [...(grid.get(k) ?? []), copy]);
       continue;
     }
     const n = host.count + c.count;
+    const before = { lat: host.lat, lng: host.lng, r: host.radiusKm ?? 0 };
     host.lat = (host.lat * host.count + c.lat * c.count) / n;
     host.lng = Math.abs(host.lng - c.lng) > 180 ? host.lng : (host.lng * host.count + c.lng * c.count) / n;
+    // The merged group must still cover every event of both parts.
+    host.radiusKm = Math.max(before.r + haversineKm(host.lat, host.lng, before.lat, before.lng), (c.radiusKm ?? 0) + haversineKm(host.lat, host.lng, c.lat, c.lng));
     host.count = n;
     for (const [g, k] of Object.entries(c.groups)) host.groups[g] = (host.groups[g] ?? 0) + k;
+    if (host.group && c.group) host.group.keys.push(...c.group.keys);
     host.dominant = Object.entries(host.groups).sort((a, b) => b[1] - a[1])[0][0];
     host.sample = [...host.sample, ...c.sample].sort((a, b) => a.start.localeCompare(b.start)).slice(0, 6);
     if (c.venueId || extra.has(host)) {

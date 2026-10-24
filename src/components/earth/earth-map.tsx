@@ -75,6 +75,8 @@ export interface EarthMapProps {
 }
 
 const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place-minor", "label-poi", "label-road", "buildings-3d"];
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
 const EVENT_LAYERS = ["event-selected", "event-hover", "event-markers"];
 
 /** Marker size from the number of events it stands for, then a gentle zoom adjustment. */
@@ -103,11 +105,12 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   const spinning = useRef(false);
   const pulseCtl = useRef<{ start(): void; stop(): void } | null>(null);
   const selectedNow = useRef("");
+  const popFrame = useRef(0);
 
   useImperativeHandle(ref, () => ({
     zoomBy(d) {
       const m = mapRef.current;
-      if (m) m.easeTo({ zoom: m.getZoom() + d, duration: latest.current.reducedMotion ? 0 : 400 });
+      if (m) m.easeTo({ zoom: m.getZoom() + d, duration: latest.current.reducedMotion ? 0 : 320, easing: easeOutCubic });
     },
     resetNorth() {
       mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: latest.current.reducedMotion ? 0 : 500 });
@@ -124,7 +127,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       const c = m.getCanvas();
       const fit = { top: Math.min(pad.top, c.clientHeight * 0.45), bottom: Math.min(pad.bottom, c.clientHeight * 0.3), left: Math.min(pad.left, c.clientWidth * 0.3), right: Math.min(pad.right, c.clientWidth * 0.45) };
       try {
-        m.fitBounds([[w, s2], [e, n]], { padding: fit, maxZoom: 16, duration: latest.current.reducedMotion ? 0 : 900 });
+        m.fitBounds([[w, s2], [e, n]], { padding: fit, maxZoom: 16, duration: latest.current.reducedMotion ? 0 : 750, easing: easeOutCubic });
       } catch (err) {
         console.error("frame failed", err);
       }
@@ -311,9 +314,23 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     });
 
     // ---- clicks: events first, then labelled map features, else a plain point
+    // Instant feedback where you tap, before any data or camera move arrives.
+    const ripple = (lngLat: maplibregl.LngLatLike, color: string) => {
+      if (latest.current.reducedMotion) return;
+      const el = document.createElement("div");
+      el.className = "omni-ripple";
+      el.style.setProperty("--ripple", color);
+      const mk = new maplibregl.Marker({ element: el }).setLngLat(lngLat).addTo(map);
+      setTimeout(() => mk.remove(), 720);
+    };
     map.on("click", (e) => {
-      if (latest.current.pickMode) return latest.current.onMapClick?.({ lat: e.lngLat.lat, lng: e.lngLat.wrap().lng });
+      if (latest.current.pickMode) {
+        ripple(e.lngLat, "#1463FF");
+        return latest.current.onMapClick?.({ lat: e.lngLat.lat, lng: e.lngLat.wrap().lng });
+      }
       const hit = map.queryRenderedFeatures([[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]], { layers: EVENT_LAYERS.filter((l) => map.getLayer(l)) });
+      const dom = hit[0]?.properties?.dominant as string | undefined;
+      ripple(hit.length ? (hit[0].geometry as GeoJSON.Point).coordinates as [number, number] : e.lngLat, hit.length ? GROUP_HEX[dom ?? ""] ?? "#1463FF" : "#1463FF");
       if (hit.length) {
         const id = hit[0].properties?.id;
         const c = latest.current.clusters.find((x) => x.id === id);
@@ -403,6 +420,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     return () => {
       clearInterval(nightTimer);
       cancelAnimationFrame(pulseFrame);
+      cancelAnimationFrame(popFrame.current);
       popup.remove();
       placeMarker.current?.remove();
       placeMarker.current = null;
@@ -413,7 +431,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       mapRef.current = null;
     };
      
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- style application
   function applyAll() {
@@ -501,14 +519,32 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         }
       }
     }
+    const changed = sel !== selectedNow.current;
     selectedNow.current = sel;
     const present = !!sel;
+    if (changed && present) popSelected();
     const f: ExpressionSpecification = ["==", ["get", "id"], present ? sel : ""];
     for (const l of ["event-selected", "event-badge", "event-pulse"]) map.setFilter(l, f);
     map.setPaintProperty("event-markers", "icon-opacity", present ? ["case", ["==", ["get", "id"], sel], 1, 0.5] : 1);
     map.setPaintProperty("event-markers", "text-opacity", present ? ["case", ["==", ["get", "id"], sel], 1, 0.55] : 1);
     if (present) pulseCtl.current?.start();
     else pulseCtl.current?.stop();
+  }
+  /** A short spring on the newly selected marker: overshoot, then settle at its selected size. */
+  function popSelected() {
+    const map = mapRef.current;
+    if (!map || latest.current.reducedMotion || !map.getLayer("event-selected")) return;
+    cancelAnimationFrame(popFrame.current);
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / 420);
+      // Damped spring from 0.9 to 1.25 with one overshoot.
+      const k = 1.25 - 0.35 * Math.exp(-6 * t) * Math.cos(9 * t);
+      map.setLayoutProperty("event-selected", "icon-size", markerSize(k));
+      map.setLayoutProperty("event-selected", "text-size", ["*", k, countSize]);
+      if (t < 1) popFrame.current = requestAnimationFrame(step);
+    };
+    popFrame.current = requestAnimationFrame(step);
   }
   useEffect(applySelection, [props.selectedClusterId, props.selectedAt?.lat, props.selectedAt?.lng, props.clusters]);  
 
@@ -602,13 +638,21 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     if (finite(f.bearing)) extra.bearing = f.bearing;
     try {
       if (f.bbox && f.bbox.every(finite) && (f.bbox[2] - f.bbox[0] > 0.002 || f.bbox[3] - f.bbox[1] > 0.002)) {
-        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: { top: 140, bottom: 80, left: 60, right: window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, ...(reduced ? { duration: 0 } : {}), ...extra });
+        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: { top: 140, bottom: 80, left: 60, right: window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, duration: reduced ? 0 : 900, easing: easeOutCubic, ...extra });
         return;
       }
       if (!finite(f.lat) || !finite(f.lng)) return;
       const opts = { center: [f.lng, f.lat] as [number, number], zoom: finite(f.zoom) ? f.zoom : map.getZoom(), ...extra };
       if (reduced) map.jumpTo(opts);
-      else map.flyTo({ ...opts, curve: 1.42, speed: 1.3, maxDuration: 4500, essential: false });
+      else {
+        // Targets already on screen get a quick glide; far jumps a short, low arc.
+        const p = map.project(opts.center);
+        const c = map.getCanvas();
+        const onScreen = p.x >= 0 && p.y >= 0 && p.x <= c.clientWidth && p.y <= c.clientHeight;
+        const dz = Math.abs(opts.zoom - map.getZoom());
+        if (onScreen && dz < 6) map.easeTo({ ...opts, duration: Math.min(1100, 520 + dz * 110), easing: easeOutCubic, essential: false });
+        else map.flyTo({ ...opts, curve: 1.25, speed: 2.6, maxDuration: 1700, essential: false });
+      }
     } catch (err) {
       // A bad camera request must never take the page down.
       console.error("camera move failed", err);

@@ -296,6 +296,10 @@ export interface Cluster {
   label: string;
   cityId?: string;
   venueId?: string;
+  /** Distance from the centre to the farthest event in the group, in km. */
+  radiusKm?: number;
+  /** Exact membership: the grid cells (or venues, when deg is 0) this marker stands for. */
+  group?: { deg: number; keys: string[] };
   /** Up to 6 sample events for previews. */
   sample: EventCard[];
 }
@@ -325,6 +329,8 @@ export interface SearchFilters {
   indoor?: "indoor" | "outdoor";
   participant?: string;
   venue?: string;
+  /** Only events in these map groups (as returned with each cluster). */
+  group?: { deg: number; keys: string[] };
   sport?: string;
   competition?: string;
   source?: "all" | "demo" | "live";

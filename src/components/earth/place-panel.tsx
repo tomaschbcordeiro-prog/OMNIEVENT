@@ -70,7 +70,7 @@ export function PlacePanel({
   }, [onClose]);
 
   return (
-    <aside aria-label="Selected place" className="absolute z-30 inset-x-0 bottom-0 lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:w-[380px] surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] panel-in">
+    <aside aria-label="Selected place" className="absolute z-30 inset-x-0 bottom-0 lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:w-[380px] surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] panel-slide">
       <div className="lg:hidden mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong" aria-hidden />
       <div className="p-4 grid gap-3">
         <div className="flex items-start gap-3">

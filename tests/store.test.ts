@@ -77,3 +77,22 @@ describe("marker merging", () => {
     for (const c of merged.clusters) expect(Object.values(c.groups).reduce((a, b) => a + b, 0)).toBe(c.count);
   });
 });
+
+describe("group extent", () => {
+  it("every event of a group lies within its radius, also after merging", () => {
+    const r = clusterEvents({}, { cellDeg: 3.5, mergeDeg: 4 });
+    for (const c of r.clusters.slice(0, 30)) {
+      const near = searchEvents({ near: { lat: c.lat, lng: c.lng, radiusKm: Math.min(2000, (c.radiusKm ?? 0) * 1.05 + 2) }, pageSize: 1 });
+      expect(near.total).toBeGreaterThanOrEqual(c.count);
+    }
+  });
+});
+
+describe("group membership", () => {
+  it("listing a marker's group returns exactly its events", () => {
+    const r = clusterEvents({}, { cellDeg: 3.5, mergeDeg: 4 });
+    for (const c of r.clusters.slice(0, 20)) expect(searchEvents({ group: c.group, pageSize: 1 }).total).toBe(c.count);
+    const venues = clusterEvents({}, { lat: 51.5, lng: -0.12, radiusKm: 30, cellDeg: 0, mergeDeg: 0.01 });
+    for (const c of venues.clusters.slice(0, 10)) expect(searchEvents({ group: c.group, pageSize: 1 }).total).toBe(c.count);
+  });
+});

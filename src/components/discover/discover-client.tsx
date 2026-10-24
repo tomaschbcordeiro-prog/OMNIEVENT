@@ -377,6 +377,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
 
   return (
     <div ref={root} className="relative h-[100dvh] w-full overflow-hidden sky">
+      {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       <div className={`sky-sun transition-opacity duration-700 ${mode === "globe" && view.zoom < 4 ? "opacity-100" : "opacity-0"}`} aria-hidden />
       {/* ---------- Stage: one map engine, two projections ---------- */}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
@@ -684,6 +685,28 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
 
 // ------------------------------------------------------------------ pieces
 
+/** Counts up to a number quickly when it first appears or changes. */
+function CountUp({ value }: { value: number }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setShown(value);
+    const start = from.current;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / 650);
+      const v = Math.round(start + (value - start) * (1 - Math.pow(1 - t, 3)));
+      setShown(v);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else from.current = value;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{shown.toLocaleString()}</>;
+}
+
 function Legend() {
   const [open, setOpen] = useState(false);
   const groups = ["music", "sports", "theatre", "festivals", "conferences", "exhibitions", "attractions", "family"];
@@ -738,7 +761,7 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard; onPick: (c: EventCard)
         onMouseLeave={() => onHover(null)}
         onFocus={() => onHover(c)}
         onBlur={() => onHover(null)}
-        className="group block w-full text-left rounded-[12px] overflow-hidden bg-panel border border-line hover:border-cyan/50 hover:shadow-[0_10px_24px_-14px_rgb(20_60_130_/_0.5)] transition-[box-shadow,border-color]"
+        className="group block w-full text-left rounded-[12px] overflow-hidden bg-panel border border-line hover:border-cyan/50 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-14px_rgb(20_60_130_/_0.55)] transition-[box-shadow,border-color,transform] duration-200 press"
       >
         <span className="relative block">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="block aspect-[4/3] w-full" />
@@ -794,7 +817,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   };
 
   return (
-    <aside aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)]">
+    <aside aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)] panel-slide">
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
         <button className="flex-1 flex items-center gap-1.5 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           <span className="t-h3">Happening soon</span>
@@ -821,7 +844,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
             ) : items.length === 0 ? (
               <p className="t-small text-text-3">{active.empty}</p>
             ) : (
-              <ul className="grid grid-cols-2 gap-2.5">
+              <ul key={active.id} className="grid grid-cols-2 gap-2.5 stagger">
                 {items.map((c) => <SpotCard key={c.id} c={c} onPick={onPick} onHover={onHover} />)}
               </ul>
             )}
@@ -857,14 +880,17 @@ function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack }: 
   return (
     <aside
       aria-label={selection.kind === "event" ? "Event preview" : "Events here"}
-      className="absolute z-30 inset-x-0 bottom-0 max-h-[72dvh] lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:bottom-6 lg:w-[400px] lg:max-h-none surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] flex flex-col panel-in"
+      className="absolute z-30 inset-x-0 bottom-0 max-h-[72dvh] lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:bottom-6 lg:w-[400px] lg:max-h-none surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] flex flex-col panel-slide"
     >
       <div className="lg:hidden mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong" aria-hidden />
-      {selection.kind === "event" ? (
-        <EventPreview card={selection.card} onClose={onClose} onBack={onBack} backLabel={selection.from?.label} />
-      ) : (
-        <ClusterList cluster={selection.cluster} filters={filters} onClose={onClose} onPick={onSelectEvent} />
-      )}
+      {/* The panel stays put; its content slides in when the selection changes. */}
+      <div key={selection.kind === "event" ? selection.card.id : selection.cluster.id} className="content-swap flex flex-col min-h-0 flex-1">
+        {selection.kind === "event" ? (
+          <EventPreview card={selection.card} onClose={onClose} onBack={onBack} backLabel={selection.from?.label} />
+        ) : (
+          <ClusterList cluster={selection.cluster} filters={filters} onClose={onClose} onPick={onSelectEvent} />
+        )}
+      </div>
     </aside>
   );
 }
@@ -873,12 +899,17 @@ function ClusterList({ cluster, filters, onClose, onPick }: { cluster: Cluster; 
   const city = cluster.cityId ? getDestination(cluster.cityId) : undefined;
   // Fetch the full list for this place: a city filter when the cluster is one city, otherwise a radius.
   const p = filtersToParams({ ...filters, page: undefined, sort: "date" });
-  if (city && !cluster.venueId) {
+  if (cluster.group?.keys.length) {
+    // Exactly the events this marker stands for.
+    p.set("gdeg", String(cluster.group.deg));
+    p.set("gkeys", cluster.group.keys.join(","));
+  } else if (city && !cluster.venueId) {
     p.set("city", city.id);
   } else {
     p.set("lat", cluster.lat.toFixed(4));
     p.set("lng", cluster.lng.toFixed(4));
-    p.set("radius", cluster.venueId ? "1" : "60");
+    // Cover the whole group (it may span several cities), with a little margin.
+    p.set("radius", cluster.venueId ? "1" : String(Math.min(2000, Math.max(5, Math.ceil((cluster.radiusKm ?? 55) * 1.05 + 2)))));
   }
   p.set("size", "40");
   const { items, total, loading, error } = useEvents(p.toString());
@@ -889,7 +920,7 @@ function ClusterList({ cluster, filters, onClose, onPick }: { cluster: Cluster; 
       <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-2">
         <div className="min-w-0">
           <h2 className="t-h2 truncate">{cluster.label}</h2>
-          <p className="t-small text-text-2 tnum">{(total || cluster.count).toLocaleString()} matching events{city ? `, ${city.country}` : ""}</p>
+          <p className="t-small text-text-2 tnum"><CountUp value={total || cluster.count} /> matching events{city ? `, ${city.country}` : ""}</p>
         </div>
         <button className="btn btn-ghost btn-icon btn-sm -mr-1" aria-label="Close" onClick={onClose}>
           <X size={16} aria-hidden />
@@ -918,7 +949,7 @@ function ClusterList({ cluster, filters, onClose, onPick }: { cluster: Cluster; 
         ) : items.length === 0 ? (
           <EmptyState title="Nothing here with current filters" />
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-line stagger">
             {items.map((c) => (
               <EventRow key={c.id} c={c} onSelect={onPick} compact />
             ))}
@@ -952,7 +983,9 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
   return (
     <div className="flex flex-col min-h-0 flex-1">
       <div className="relative shrink-0">
-        <Poster title={card.title} imageUrl={card.imageUrl} hue={card.posterHue} categorySlug={card.categorySlug} className="h-36 w-full lg:rounded-t-[var(--radius-l)]" />
+        <div className="overflow-hidden h-36 lg:rounded-t-[var(--radius-l)]">
+          <Poster title={card.title} imageUrl={card.imageUrl} hue={card.posterHue} categorySlug={card.categorySlug} className="h-36 w-full media-in" />
+        </div>
         <button className="absolute right-2 top-2 btn btn-icon btn-sm bg-panel/85 backdrop-blur text-text" aria-label="Close preview" onClick={onClose}>
           <X size={16} aria-hidden />
         </button>
