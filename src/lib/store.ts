@@ -87,7 +87,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       if (prev && run.failures > 0) mergeMissing(batch, prev);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       state.providerData.set(p.id, batch);
-      state.lastSync.set(p.id, Date.now());
+      // A source that refused us with nothing to show is retried in 30 minutes, not after
+      // its full refresh interval (and not every few minutes, which would waste quota).
+      state.lastSync.set(p.id, run.rateLimited && !batch.events.length ? Date.now() - p.refreshIntervalMs + 30 * 60000 : Date.now());
       state.runs.set(p.id, { ...run, provider: p.id, runId, startedAt, updated, imported: batch.events.length - updated });
       rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });

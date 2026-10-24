@@ -227,6 +227,14 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   // the 5,000-calls-a-day quota. The URL (with the key) never leaves the server.
   const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 86400 } } as RequestInit);
   if (res.status === 429) {
+    // Quota responses say when the allowance resets (epoch ms). Retrying before then
+    // only spends requests, so stop and report the time instead.
+    const reset = Number(res.headers.get("rate-limit-reset"));
+    const available = res.headers.get("rate-limit-available");
+    if (reset > Date.now() + 60000 || available === "0") {
+      const when = reset > 0 ? `; allowance resets ${new Date(reset).toISOString().slice(0, 16).replace("T", " ")} UTC` : "";
+      throw new ProviderError("ticketmaster", `daily quota used up${when}`, 429, true);
+    }
     if (attempt >= 3) throw new ProviderError("ticketmaster", "rate limited", 429, true);
     const wait = Number(res.headers.get("retry-after") ?? 2) * 1000 * (attempt + 1);
     ctx.log("ticketmaster rate limited, backing off", { wait });
