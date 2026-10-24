@@ -4,6 +4,7 @@ import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
 import { fetchJson, hueOf, nearestCityId, plainText, sleep } from "./common";
 import KNOWN_VENUES from "./data/lisbon-venues.json";
+import SNAPSHOT from "./data/venue-calendars.json";
 
 /**
  * Venue calendars published with The Events Calendar's public REST API
@@ -13,6 +14,8 @@ import KNOWN_VENUES from "./data/lisbon-venues.json";
  * - Sessions of the same show share a URL (…/evento/<show>/<date>/), so they are grouped
  *   into one event with a schedule.
  * - School-only sessions are left out: they aren't open to the public.
+ * - Some venues refuse cloud networks (CCB refuses Vercel). A snapshot saved with
+ *   `node scripts/fetch-venue-calendars.mjs` is used for any source the live API can't reach.
  */
 
 const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
@@ -190,7 +193,7 @@ export const venueCalendarsProvider: ProviderAdapter = {
         url.searchParams.set("page", String(page));
         url.searchParams.set("start_date", new Date(Math.floor(Date.now() / 86400000) * 86400000).toISOString().slice(0, 10));
         try {
-          const json = (await fetchJson("venue-calendars", url, ctx, { headers: { "User-Agent": UA }, timeoutMs: 40000 })) as { events?: TribeEvent[]; total_pages?: number };
+          const json = (await fetchJson("venue-calendars", url, ctx, { headers: { "User-Agent": UA }, timeoutMs: 20000, attempts: 2 })) as { events?: TribeEvent[]; total_pages?: number };
           raw.push(...(json.events ?? []));
           if (page >= (json.total_pages ?? 0)) break;
         } catch (err) {
@@ -202,6 +205,11 @@ export const venueCalendarsProvider: ProviderAdapter = {
           break;
         }
         await sleep(200);
+      }
+      const snap = (SNAPSHOT as unknown as { fetchedAt: string; sources: Record<string, TribeEvent[]> });
+      if (!raw.length && snap.sources[source.id]?.length) {
+        raw.push(...snap.sources[source.id]);
+        lastError = `${source.id}: live calendar unreachable, showing the snapshot from ${snap.fetchedAt.slice(0, 16).replace("T", " ")} UTC`;
       }
       batches.push(normalizeTribe(source, raw, syncedAt));
     }
