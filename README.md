@@ -77,6 +77,8 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | SeatGeek Platform API | US and Canadian cities, live marketplace prices | `SEATGEEK_CLIENT_ID` (free, <https://seatgeek.com/account/develop>) |
 | Skiddle Events API | UK and Ireland: clubs, gigs, festivals, comedy | `SKIDDLE_API_KEY` (free, <https://www.skiddle.com/api/join.php>) |
 | Agenda Cultural de Lisboa (agendalx.pt API) | City of Lisbon cultural agenda, CC BY 4.0; ~400 mapped events | nothing |
+| Lisbon venue calendars (CCB, Chapitô) | Each venue's full public programme (The Events Calendar REST API) | nothing |
+| football-data.org | Primeira Liga fixtures and Champions League home matches of Portuguese clubs, at hand-checked stadium locations | `FOOTBALL_DATA_KEY` (free, <https://www.football-data.org/client/register>) |
 | Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
 | Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
 
@@ -99,7 +101,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid,lisbon npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 

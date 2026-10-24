@@ -126,6 +126,16 @@ const first = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v) ?? "";
 const decode = (s: string) => plainText(s) ?? s;
 
 export type VenueLocation = { name: string; lat: number; lng: number };
+const nameKey = (s: string) => norm(decode(s)).replace(/[^a-z0-9]+/g, " ").trim();
+const nameIndex = new WeakMap<object, Map<string, VenueLocation>>();
+function byName(located: Record<string, VenueLocation>): Map<string, VenueLocation> {
+  let m = nameIndex.get(located);
+  if (!m) {
+    m = new Map(Object.values(located).map((v) => [nameKey(v.name), v]));
+    nameIndex.set(located, m);
+  }
+  return m;
+}
 const known = KNOWN_VENUES as Record<string, VenueLocation>;
 
 /** Pure mapping function — unit-tested with fixtures in tests/lisbon.test.ts. */
@@ -147,7 +157,8 @@ export function normalizeLisbon(raw: AlxEvent[], syncedAt: string, located: Reco
       continue;
     }
     const [venueSlug, venueTerm] = venueEntry;
-    const loc = located[venueSlug];
+    // The agenda sometimes gives a known venue a new slug; fall back to its name.
+    const loc = located[venueSlug] ?? byName(located).get(nameKey(venueTerm.name ?? ""));
     if (!loc) {
       unplaced++;
       continue;
