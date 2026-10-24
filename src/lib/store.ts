@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { descendantsOf } from "./categories";
@@ -77,9 +78,20 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   const startedAt = new Date().toISOString();
   const job = (async () => {
     try {
+      let lastPublish = 0;
       const { batch, run } = await p.sync({
         maxEvents: Number(process.env.SYNC_MAX_EVENTS ?? 25000),
         log: (msg, extra) => log("info", msg, { provider: p.id, runId, ...extra }),
+        // Partial results join what we already had; published at most every 20 seconds.
+        onProgress: (partial) => {
+          if (Date.now() - lastPublish < 20000) return;
+          lastPublish = Date.now();
+          const prev = state.providerData.get(p.id);
+          const merged: ProviderBatch = { events: [...partial.events], venues: [...partial.venues], participants: [...partial.participants], offers: [...partial.offers] };
+          if (prev) mergeMissing(merged, prev);
+          state.providerData.set(p.id, merged);
+          rebuildIndexes();
+        },
       });
       const prev = state.providerData.get(p.id);
       const prevIds = new Set(prev?.events.map((e) => e.id));
@@ -144,6 +156,16 @@ export async function ensureFresh(): Promise<void> {
   }
   // A slow source must not hold the first page hostage: wait a bounded time, then serve
   // whatever has loaded while the rest keeps syncing in the background.
+  // On serverless hosts an instance freezes once its response is sent; ask the platform to
+  // keep it running until background syncs finish (bounded by the route's maxDuration).
+  const running = [...state.syncing.values()];
+  if (running.length) {
+    try {
+      after(() => Promise.allSettled(running));
+    } catch {
+      // Not inside a request (tests, scripts): nothing to extend.
+    }
+  }
   if (waits.length) {
     const limit = Number(process.env.FIRST_LOAD_WAIT_MS ?? 12000);
     await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, limit))]);

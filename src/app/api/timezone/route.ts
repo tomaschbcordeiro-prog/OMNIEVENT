@@ -4,6 +4,9 @@ import tzlookup from "@photostructure/tz-lookup";
 import { handler, ok, validationError } from "@/lib/api";
 import { tzLabel, todayIn, isValidTimeZone } from "@/lib/time";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 const schema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),

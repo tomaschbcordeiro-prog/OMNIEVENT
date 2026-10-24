@@ -3,6 +3,9 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Header } from "@/components/header";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {

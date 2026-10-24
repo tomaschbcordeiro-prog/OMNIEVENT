@@ -3,6 +3,9 @@ import { z } from "zod";
 import { parseQuery } from "@/lib/search/parse";
 import { handler, ok, validationError } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 const schema = z.object({ q: z.string().min(1).max(200), tz: z.string().max(60).optional() });
 
 /** GET /api/search/parse?q=… — natural-language query → structured filters + interpretation chips. */

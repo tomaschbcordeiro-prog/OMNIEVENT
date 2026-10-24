@@ -329,7 +329,9 @@ export const ticketmasterProvider: ProviderAdapter = {
     const from = Math.floor(Date.now() / 86400000) * 86400000;
     const to = from + Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 730) * 86400000;
     // Only answers that really came from Ticketmaster (not the data cache) use the quota.
-    const budget = Number(process.env.TICKETMASTER_MAX_CALLS ?? 3500);
+    // Per run and per server instance; answers are cached for the day, so each run continues
+    // where earlier runs (on any instance) stopped.
+    const budget = Number(process.env.TICKETMASTER_MAX_CALLS ?? 1500);
     let networkCalls = 0;
     const fetchPage: FetchPage = async (params) => {
       if (networkCalls >= budget) throw new ProviderError("ticketmaster", `daily request budget (${budget}) reached`, 429, true);
@@ -355,6 +357,7 @@ export const ticketmasterProvider: ProviderAdapter = {
       for (const v of b.venues) venues.set(v.id, v);
       for (const x of b.participants) participants.set(x.id, x);
       for (const o of b.offers) offers.set(o.id, o);
+      ctx.onProgress?.({ events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] });
     };
     const crawl = await crawlCatalogue(fetchPage, countries, {
       onEvents,

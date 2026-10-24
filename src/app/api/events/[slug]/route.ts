@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { ensureFresh, getEventView } from "@/lib/store";
 import { handler, ok, apiError } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 export const dynamic = "force-dynamic";
 
 /** GET /api/events/:slug — full event detail with venue, participants and ticket offers. */

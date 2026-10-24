@@ -3,6 +3,9 @@ import { z } from "zod";
 import { reverseGeocode, geocodeError, GEOCODER } from "@/lib/geocode";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 export const dynamic = "force-dynamic";
 
 const schema = z.object({

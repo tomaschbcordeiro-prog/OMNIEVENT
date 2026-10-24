@@ -16,6 +16,8 @@ export interface SyncContext {
   maxEvents: number;
   signal?: AbortSignal;
   log: (msg: string, extra?: Record<string, unknown>) => void;
+  /** Long syncs can publish what they have so far, so events appear before the run ends. */
+  onProgress?: (batch: ProviderBatch) => void;
 }
 
 export interface ProviderAdapter {

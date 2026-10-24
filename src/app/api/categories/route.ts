@@ -2,6 +2,9 @@ import { ensureFresh, groupCounts } from "@/lib/store";
 import { CATEGORIES } from "@/lib/categories";
 import { handler, ok } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 export const dynamic = "force-dynamic";
 
 /** GET /api/categories — the category tree with counts of loaded upcoming events. */

@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { ensureFresh, getEventView } from "@/lib/store";
 import { apiError } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 export const dynamic = "force-dynamic";
 
 const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");

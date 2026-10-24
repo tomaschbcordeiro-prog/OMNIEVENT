@@ -5,6 +5,9 @@ import { ALL_DESTINATIONS } from "@/lib/destinations";
 import { CATEGORIES } from "@/lib/categories";
 import { handler, ok, validationError } from "@/lib/api";
 
+// Background data syncs keep running after the response, up to this many seconds.
+export const maxDuration = 300;
+
 export const dynamic = "force-dynamic";
 const schema = z.object({ q: z.string().max(100) });
 const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
