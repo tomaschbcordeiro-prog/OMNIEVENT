@@ -216,16 +216,20 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
   return { events, venues: [...venues.values()], participants: [...participants.values()], offers };
 }
 
+const CACHE_SECONDS = Number(process.env.TICKETMASTER_CACHE_HOURS ?? 72) * 3600;
+
 async function tmFetch(path: string, params: Record<string, string>, ctx: SyncContext, attempt = 0): Promise<unknown> {
   const key = process.env.TICKETMASTER_API_KEY;
   if (!key) throw new ProviderError("ticketmaster", "TICKETMASTER_API_KEY not configured");
   const url = new URL(`${BASE}${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", key);
-  // Cached in the platform data cache for a day: the crawl plan is the same all day, so
-  // other server instances and later refreshes reuse these answers instead of spending
-  // the 5,000-calls-a-day quota. The URL (with the key) never leaves the server.
-  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: 86400 } } as RequestInit);
+  // Cached in the platform data cache: the crawl plan is the same all month, so other server
+  // instances and later refreshes reuse these answers instead of spending the
+  // 5,000-calls-a-day quota. Only 200s are cached, and an entry past its age keeps being
+  // served while it is refreshed, so a used-up quota never empties the map.
+  // The URL (with the key) never leaves the server.
+  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: CACHE_SECONDS } } as RequestInit);
   if (res.status === 429) {
     // Quota responses say when the allowance resets (epoch ms). Retrying before then
     // only spends requests, so stop and report the time instead.
@@ -325,9 +329,13 @@ export const ticketmasterProvider: ProviderAdapter = {
     let failures = 0;
     let lastError = "";
     let rateLimited = false;
-    // Day-aligned window so every instance asks identical questions all day.
-    const from = Math.floor(Date.now() / 86400000) * 86400000;
-    const to = from + Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 730) * 86400000;
+    let notLoaded = 0;
+    // Month-aligned window so every instance and every run asks identical questions all
+    // month, and the cached answers build up across days instead of starting over daily.
+    const now = new Date();
+    const from = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+    const months = Math.ceil(Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 730) / 30.4) + 1;
+    const to = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + months, 1);
     // Only answers that really came from Ticketmaster (not the data cache) use the quota.
     // Per run and per server instance; answers are cached for the day, so each run continues
     // where earlier runs (on any instance) stopped.
@@ -365,6 +373,14 @@ export const ticketmasterProvider: ProviderAdapter = {
       to,
       maxCalls: 20000,
       onError: (err, what) => {
+        // Once the daily quota is used up, uncached windows answer 429 at no cost, so keep
+        // going: everything already in the cache still loads.
+        if (err instanceof ProviderError && err.rateLimited && /quota/.test(err.message)) {
+          rateLimited = true;
+          notLoaded++;
+          if (!lastError) lastError = String(err).slice(0, 160);
+          return true;
+        }
         failures++;
         lastError = String(err).slice(0, 160);
         ctx.log("ticketmaster page failed", { what, err: lastError });
@@ -375,6 +391,7 @@ export const ticketmasterProvider: ProviderAdapter = {
     ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated });
     const batch: ProviderBatch = { events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] };
     const notes = [
+      notLoaded ? `${notLoaded} date window(s) wait for the daily quota (${lastError.replace(/^.*?daily quota used up;?\s*/, "")})` : "",
       failures ? `${failures} request(s) failed (last: ${lastError})` : "",
       !crawl.complete ? `stopped after ${crawl.calls} requests; the rest loads on the next run` : "",
       crawl.truncated ? `${crawl.truncated} events in very busy hours not reachable` : "",
