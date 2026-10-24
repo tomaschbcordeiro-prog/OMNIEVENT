@@ -1,41 +1,39 @@
 @import "tailwindcss";
 
 /*
- * OMNIEVENT design tokens.
- * Colour is used for meaning: category hues appear on data (markers, category
- * icons, status), never as page decoration.
+ * OMNIEVENT design tokens: "sunlit atlas".
+ * A daytime sky behind the globe, white paper panels and deep-navy ink. Ocean blue
+ * is the interactive colour (`--cyan` keeps its historical name), sun yellow marks
+ * what is selected or happening now, and category hues appear only on data.
  */
 :root {
-  --bg: #05070b;
-  --bg-2: #0a101a;
-  --panel: #101826;
-  --panel-2: #152033;
-  --line: #1f2a3c;
-  --line-strong: #2c3b53;
-  --text: #f6f8fc;
-  --text-2: #9aa8ba;
-  --text-3: #6b7a8f;
-  --cyan: #42dfff;
-  --violet: #9275ff;
-  --coral: #ff7a6b;
-  --amber: #ffb547;
-  --emerald: #3ddc97;
-  --blue: #5b8cff;
+  --bg: #f3f7fc;
+  --bg-2: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #eef3f9;
+  --line: #e0e8f1;
+  --line-strong: #c9d6e4;
+  --text: #0d1b33;
+  --text-2: #46597a;
+  --text-3: #6f819c;
+  --cyan: #1463ff;
+  --cyan-strong: #0a4fd6;
+  --sun: #ffb800;
+  --violet: #7b4dff;
+  --coral: #f0475a;
+  --amber: #f59a0b;
+  --emerald: #0fa979;
+  --blue: #3b5bdb;
 
-  --cat-music: #9275ff;
-  --cat-sports: #42dfff;
-  --cat-theatre: #ff7a6b;
-  --cat-festivals: #ffb547;
-  --cat-conferences: #5b8cff;
-  --cat-exhibitions: #3ddc97;
-  --cat-attractions: #e8eef7;
-  --cat-family: #ffd86b;
-  --cat-other: #9aa8ba;
+  /* The sky the globe floats in. */
+  --sky-top: #3f97f2;
+  --sky-mid: #9fd0ff;
+  --sky-low: #e8f4ff;
 
-  --ok: #3ddc97;
-  --warn: #ffb547;
-  --bad: #ff6b6b;
-  --info: #42dfff;
+  --ok: #0c9b6d;
+  --warn: #c77700;
+  --bad: #d92d43;
+  --info: #1463ff;
 
   --radius-s: 6px;
   --radius-m: 10px;
@@ -54,6 +52,7 @@
   --color-text-2: var(--text-2);
   --color-text-3: var(--text-3);
   --color-cyan: var(--cyan);
+  --color-sun: var(--sun);
   --color-violet: var(--violet);
   --color-coral: var(--coral);
   --color-amber: var(--amber);
@@ -68,7 +67,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   background: var(--bg);
 }
 
@@ -88,16 +87,16 @@ body {
 @layer components {
 /* Type scale (1.25 ratio) */
 .t-display {
-  font-size: clamp(2rem, 1.2rem + 3vw, 3.5rem);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
-  font-weight: 650;
+  font-size: clamp(2.25rem, 1.2rem + 3.4vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 750;
 }
 .t-h1 {
   font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
   line-height: 1.08;
-  letter-spacing: -0.028em;
-  font-weight: 620;
+  letter-spacing: -0.03em;
+  font-weight: 700;
 }
 .t-h2 {
   font-size: 1.375rem;
@@ -133,13 +132,13 @@ body {
   border: 1px solid var(--line);
 }
 .surface-float {
-  background: color-mix(in oklab, var(--panel) 88%, transparent);
-  border: 1px solid color-mix(in oklab, var(--line-strong) 70%, transparent);
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  background: color-mix(in oklab, var(--panel) 90%, transparent);
+  border: 1px solid color-mix(in oklab, var(--line) 80%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.04) inset,
-    0 18px 40px -20px rgb(0 0 0 / 0.7);
+    0 1px 2px rgb(13 27 51 / 0.06),
+    0 18px 44px -18px rgb(20 60 130 / 0.32);
 }
 
 /* Focus */
@@ -173,26 +172,27 @@ body {
 }
 .btn-primary {
   background: var(--cyan);
-  color: #021018;
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgb(20 99 255 / 0.7);
 }
 .btn-primary:hover:not(:disabled) {
-  background: #7ae9ff;
+  background: var(--cyan-strong);
 }
 .btn-secondary {
-  background: var(--panel-2);
+  background: var(--panel);
   color: var(--text);
   border: 1px solid var(--line-strong);
 }
 .btn-secondary:hover:not(:disabled) {
-  border-color: #3d5070;
-  background: #1a273d;
+  border-color: #a9bbd0;
+  background: var(--panel-2);
 }
 .btn-ghost {
   color: var(--text-2);
 }
 .btn-ghost:hover:not(:disabled) {
   color: var(--text);
-  background: rgb(255 255 255 / 0.05);
+  background: rgb(13 27 51 / 0.05);
 }
 .btn-sm {
   height: 1.875rem;
@@ -226,20 +226,20 @@ body {
 }
 .chip:hover {
   color: var(--text);
-  border-color: #3d5070;
+  border-color: #a9bbd0;
 }
 .chip[aria-pressed="true"],
 .chip[data-active="true"] {
-  color: var(--text);
-  background: rgb(66 223 255 / 0.1);
-  border-color: rgb(66 223 255 / 0.55);
+  color: #fff;
+  background: var(--text);
+  border-color: var(--text);
 }
 
 .field {
   height: 2.375rem;
   width: 100%;
   border-radius: var(--radius-s);
-  background: var(--bg-2);
+  background: var(--panel);
   border: 1px solid var(--line-strong);
   padding: 0 0.75rem;
   color: var(--text);
@@ -251,11 +251,11 @@ body {
 .field:focus {
   outline: none;
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgb(66 223 255 / 0.15);
+  box-shadow: 0 0 0 3px rgb(20 99 255 / 0.15);
 }
 select.field {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239AA8BA' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2346597A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.625rem center;
   padding-right: 2rem;
@@ -280,7 +280,7 @@ select.field {
   font-weight: 650;
   letter-spacing: 0.01em;
   color: #1a1204;
-  background: var(--amber);
+  background: var(--sun);
 }
 
 .scroll-thin {
@@ -349,15 +349,12 @@ select.field {
   font-family: var(--font-sans);
 }
 .maplibregl-ctrl-attrib {
-  background: rgb(5 7 11 / 0.72) !important;
+  background: rgb(255 255 255 / 0.75) !important;
   color: var(--text-3);
   font-size: 10px;
 }
 .maplibregl-ctrl-attrib a {
   color: var(--text-2);
-}
-.maplibregl-ctrl-attrib-button {
-  filter: invert(1);
 }
 /* Hover tooltips must never intercept the click on the marker beneath them. */
 .omni-popup,
@@ -371,7 +368,7 @@ select.field {
   border-radius: 6px;
   padding: 5px 9px;
   font-size: 12px;
-  box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.8);
+  box-shadow: 0 10px 24px -12px rgb(20 60 130 / 0.45);
 }
 .omni-popup .maplibregl-popup-content strong {
   color: var(--text);
@@ -384,16 +381,16 @@ select.field {
   width: 22px;
   height: 30px;
   background: no-repeat center / contain
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 30'%3E%3Cpath d='M11 29s9-9.6 9-17A9 9 0 0 0 2 12c0 7.4 9 17 9 17z' fill='%2342DFFF' stroke='%2305070B' stroke-width='2'/%3E%3Ccircle cx='11' cy='11.5' r='3.4' fill='%2305070B'/%3E%3C/svg%3E");
-  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.5));
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 30'%3E%3Cpath d='M11 29s9-9.6 9-17A9 9 0 0 0 2 12c0 7.4 9 17 9 17z' fill='%231463FF' stroke='%23FFFFFF' stroke-width='2'/%3E%3Ccircle cx='11' cy='11.5' r='3.4' fill='%23FFFFFF'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 4px 6px rgb(13 27 51 / 0.35));
 }
 .omni-search-pin {
   width: 30px;
   height: 38px;
   cursor: grab;
   background: no-repeat center / contain
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 38'%3E%3Cpath d='M15 37s12-12.6 12-22A12 12 0 0 0 3 15c0 9.4 12 22 12 22z' fill='%23F6F8FC' stroke='%2305070B' stroke-width='2'/%3E%3Ccircle cx='15' cy='15' r='5.5' fill='none' stroke='%2342DFFF' stroke-width='2.5'/%3E%3Ccircle cx='15' cy='15' r='1.8' fill='%2342DFFF'/%3E%3C/svg%3E");
-  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.55));
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 38'%3E%3Cpath d='M15 37s12-12.6 12-22A12 12 0 0 0 3 15c0 9.4 12 22 12 22z' fill='%23FFB800' stroke='%230D1B33' stroke-width='2'/%3E%3Ccircle cx='15' cy='15' r='5.5' fill='%23FFFFFF' stroke='%230D1B33' stroke-width='2'/%3E%3Ccircle cx='15' cy='15' r='1.8' fill='%230D1B33'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 6px 8px rgb(13 27 51 / 0.35));
   animation: pin-drop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .omni-search-pin:active {
@@ -407,7 +404,58 @@ select.field {
   }
 }
 .maplibregl-cooperative-gesture-screen {
-  background: rgb(5 7 11 / 0.7);
-  color: var(--text);
+  background: rgb(13 27 51 / 0.6);
+  color: #fff;
   font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- daytime sky */
+/* The globe floats in this; MapLibre draws the atmosphere on top of it. */
+.sky {
+  background:
+    radial-gradient(42rem 30rem at 86% 6%, rgb(255 236 170 / 0.85) 0%, rgb(255 225 140 / 0.35) 30%, transparent 62%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 48%, var(--sky-low) 100%);
+}
+/* The sun itself: a soft disc in the top-right corner of the sky. */
+.sky-sun {
+  position: absolute;
+  right: max(6%, 4rem);
+  top: 4.5rem;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe8 0%, #fff1b8 38%, rgb(255 214 102 / 0.55) 60%, transparent 72%);
+  filter: blur(1px);
+  pointer-events: none;
+}
+@media (max-width: 639px) {
+  .sky-sun {
+    display: none;
+  }
+}
+/* Text that sits directly on the sky. */
+.on-sky {
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(10 50 120 / 0.35), 0 8px 30px rgb(10 50 120 / 0.25);
+}
+/* Chips that sit on the sky: solid white so they read against any blue. */
+.chip.sky-chip {
+  background: rgb(255 255 255 / 0.92);
+  border-color: rgb(255 255 255 / 0.95);
+  color: var(--text);
+  box-shadow: 0 4px 14px -8px rgb(10 50 120 / 0.5);
+  height: 2.125rem;
+  padding: 0 0.875rem;
+  font-weight: 600;
+}
+.chip.sky-chip:hover {
+  background: #fff;
+  border-color: #fff;
+  transform: translateY(-1px);
+}
+.chip.sky-chip[aria-pressed="true"],
+.chip.sky-chip[data-active="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: #fff;
 }

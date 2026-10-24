@@ -98,7 +98,7 @@ function markerImage(group: string): { width: number; height: number; data: Uint
   }
   g.closePath();
   g.fillStyle = GROUP_HEX[group] ?? GROUP_HEX.other;
-  g.strokeStyle = "rgba(5,7,11,0.9)";
+  g.strokeStyle = "#FFFFFF";
   g.lineWidth = 4;
   g.stroke();
   g.fill();
@@ -198,21 +198,21 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       map.addSource("highlight", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
       // Night shading sits above imagery and roads, below borders and labels.
-      map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#020611", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.3, 7, 0.18, 10, 0] }, metadata: { omni: { group: "night" } } }, "buildings-3d");
+      map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#1B2A5C", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.22, 7, 0.12, 10, 0] }, metadata: { omni: { group: "night" } } }, "buildings-3d");
       // Search circle: a light fill that keeps the map readable plus a crisp edge.
-      map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#42DFFF", "fill-opacity": 0.07 } });
-      map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#42DFFF", "line-width": 1.6, "line-opacity": 0.9 } });
-      map.addLayer({ id: "event-density", type: "heatmap", source: "events", maxzoom: 12, paint: { "heatmap-weight": ["/", ["ln", ["+", ["get", "count"], 1]], 6], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 9, 2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 14, 6, 30, 11, 50], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "rgba(146,117,255,0.35)", 0.5, "rgba(146,117,255,0.75)", 0.8, "rgba(66,223,255,0.9)", 1, "#F6F8FC"] }, metadata: { omni: { group: "density" } } });
-      map.addLayer({ id: "event-halo", type: "circle", source: "events", paint: { "circle-color": groupColor, "circle-opacity": 0.2, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 9, 7, 26], "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
-      map.addLayer({ id: "event-selected", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#42DFFF", "circle-stroke-width": 2, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 12, 7, 30] }, metadata: { omni: { group: "events" } } });
-      map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 20, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#F6F8FC", "circle-stroke-width": 2.5, "circle-pitch-alignment": "viewport" } });
+      map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#1463FF", "fill-opacity": 0.1 } });
+      map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#1463FF", "line-width": 2, "line-opacity": 0.95 } });
+      map.addLayer({ id: "event-density", type: "heatmap", source: "events", maxzoom: 12, paint: { "heatmap-weight": ["/", ["ln", ["+", ["get", "count"], 1]], 6], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 9, 2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 14, 6, 30, 11, 50], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "rgba(123,77,255,0.35)", 0.5, "rgba(240,71,90,0.7)", 0.8, "rgba(255,184,0,0.9)", 1, "#FFF6CC"] }, metadata: { omni: { group: "density" } } });
+      map.addLayer({ id: "event-halo", type: "circle", source: "events", paint: { "circle-color": groupColor, "circle-opacity": 0.3, "circle-blur": 0.35, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 11, 7, 32], "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "event-selected", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-color": "rgba(255,184,0,0.18)", "circle-stroke-color": "#FFB800", "circle-stroke-width": 3, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 12, 7, 30] }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 22, "circle-color": "rgba(255,184,0,0.25)", "circle-stroke-color": "#FFB800", "circle-stroke-width": 3, "circle-pitch-alignment": "viewport" } });
       map.addLayer({
         id: "event-markers",
         type: "symbol",
         source: "events",
         layout: {
           "icon-image": ["concat", "m-", ["get", "dominant"]],
-          "icon-size": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0.5, 7, 1.15],
+          "icon-size": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0.62, 7, 1.3],
           "icon-allow-overlap": true,
           "icon-pitch-alignment": "viewport",
           "symbol-sort-key": ["-", 0, ["get", "count"]],
@@ -223,7 +223,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
           "text-offset": [1, 0],
           "text-optional": true,
         },
-        paint: { "text-color": "#F6F8FC", "text-halo-color": "rgba(5,7,11,0.9)", "text-halo-width": 1.4 },
+        paint: { "text-color": "#0D1B33", "text-halo-color": "#FFFFFF", "text-halo-width": 2 },
         metadata: { omni: { group: "events" } },
       });
 

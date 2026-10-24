@@ -73,7 +73,7 @@ export function ClusterMap({
           else if (c.sample[0]) router.push(`/events/${c.sample[0].slug}`);
         }}
       />
-      {err && <p className="absolute left-3 top-3 t-micro text-bad bg-bg/80 rounded px-2 py-1">Map data unavailable</p>}
+      {err && <p className="absolute left-3 top-3 t-micro text-bad bg-panel/90 rounded px-2 py-1">Map data unavailable</p>}
     </div>
   );
 }

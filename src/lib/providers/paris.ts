@@ -99,6 +99,11 @@ export function normalizeParis(raw: ParisRecord[], syncedAt: string, now = Date.
     if (sessions.length) {
       [start, end] = sessions[0];
       durationMinutes = Math.round((end - start) / 60000);
+      // A session "starting" at local midnight is the listing's placeholder for "no time given".
+      if (new Date(start).toLocaleTimeString("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }) === "00:00") {
+        hoursUnknown = true;
+        durationMinutes = undefined;
+      }
       if (sessions.length > 1) {
         eventType = "recurring";
         schedule = sessions.slice(1, 120).map(([s]) => new Date(s).toISOString());

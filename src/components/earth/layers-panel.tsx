@@ -35,10 +35,10 @@ export function LayersPanel({
       </div>
       <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Map style">
         {([
-          ["satellite", "Satellite", "linear-gradient(135deg,#1d3a2a,#2c4a5e 55%,#0d2238)"],
-          ["map", "Map", "linear-gradient(135deg,#0b121d,#1f2b3d 60%,#0a1e33)"],
+          ["map", "Day map", "linear-gradient(135deg,#9fd6f5 0%,#9fd6f5 38%,#e6f0dc 40%,#cfe6b8 70%,#ffe3a0 72%,#e6f0dc 75%)"],
+          ["satellite", "Satellite", "linear-gradient(135deg,#2c6e9c,#4f8f6a 50%,#b9a77c 75%,#2c6e9c)"],
         ] as const).map(([b, label, bg]) => (
-          <button key={b} role="radio" aria-checked={base === b} onClick={() => onBase(b)} className={`rounded-[var(--radius-m)] border p-1.5 text-left ${base === b ? "border-cyan" : "border-line-strong hover:border-[#3d5070]"}`}>
+          <button key={b} role="radio" aria-checked={base === b} onClick={() => onBase(b)} className={`rounded-[var(--radius-m)] border p-1.5 text-left ${base === b ? "border-cyan" : "border-line-strong hover:border-cyan/50"}`}>
             <span className="block h-12 rounded-[6px]" style={{ background: bg }} aria-hidden />
             <span className="block t-small mt-1 px-0.5">{label}</span>
           </button>

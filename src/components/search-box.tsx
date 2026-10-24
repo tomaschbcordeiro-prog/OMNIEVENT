@@ -210,8 +210,8 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
         <label htmlFor={`${listId}-input`} className="sr-only">
           Search events, artists, teams, venues and places
         </label>
-        <div className={`flex items-center gap-2 rounded-[var(--radius-m)] border border-line-strong bg-bg-2/90 focus-within:border-cyan focus-within:shadow-[0_0_0_3px_rgb(66_223_255_/_0.15)] ${size === "lg" ? "h-12 px-4" : "h-9 px-3"}`}>
-          {loading ? <Loader2 size={16} className="animate-spin text-text-3 shrink-0" aria-hidden /> : <Search size={16} className="text-text-3 shrink-0" aria-hidden />}
+        <div className={`flex items-center gap-2 border bg-panel focus-within:border-cyan focus-within:shadow-[0_0_0_4px_rgb(20_99_255_/_0.18)] ${size === "lg" ? "h-14 px-5 rounded-full border-white shadow-[0_12px_32px_-12px_rgb(10_50_120_/_0.45)]" : "h-9 px-3 rounded-full border-line-strong"}`}>
+          {loading ? <Loader2 size={size === "lg" ? 19 : 16} className="animate-spin text-cyan shrink-0" aria-hidden /> : <Search size={size === "lg" ? 19 : 16} className={`shrink-0 ${size === "lg" ? "text-cyan" : "text-text-3"}`} aria-hidden />}
           <input
             ref={input}
             id={`${listId}-input`}
@@ -243,7 +243,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                 setActive(-1);
               }
             }}
-            className={`flex-1 min-w-0 bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-base" : "text-sm"}`}
+            className={`flex-1 min-w-0 bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-[17px]" : "text-sm"}`}
           />
           {q && (
             <button type="button" aria-label="Clear search" className="text-text-3 hover:text-text" onClick={() => (setQ(""), input.current?.focus())}>
@@ -279,7 +279,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={it.run}
                   onMouseEnter={() => setActive(i)}
-                  className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer ${i === active ? "bg-white/[0.06]" : ""}`}
+                  className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer ${i === active ? "bg-text/[0.06]" : ""}`}
                 >
                   <span className="text-text-3">{it.icon}</span>
                   <span className="min-w-0 flex-1">

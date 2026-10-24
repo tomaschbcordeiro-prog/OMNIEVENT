@@ -91,10 +91,10 @@ export function EventsBrowser({
             <option value="distance" disabled={!filters.near}>Nearest{filters.near ? "" : " (pick a location)"}</option>
           </select>
           <div className="flex rounded-[var(--radius-s)] border border-line-strong p-0.5" role="radiogroup" aria-label="Layout">
-            <button role="radio" aria-checked={layout === "list"} aria-label="List layout" className={`btn btn-sm btn-icon !h-6 ${layout === "list" ? "bg-white/10" : "btn-ghost"}`} onClick={() => setLayout("list")}>
+            <button role="radio" aria-checked={layout === "list"} aria-label="List layout" className={`btn btn-sm btn-icon !h-6 ${layout === "list" ? "bg-text/[0.08]" : "btn-ghost"}`} onClick={() => setLayout("list")}>
               <List size={14} aria-hidden />
             </button>
-            <button role="radio" aria-checked={layout === "grid"} aria-label="Grid layout" className={`btn btn-sm btn-icon !h-6 ${layout === "grid" ? "bg-white/10" : "btn-ghost"}`} onClick={() => setLayout("grid")}>
+            <button role="radio" aria-checked={layout === "grid"} aria-label="Grid layout" className={`btn btn-sm btn-icon !h-6 ${layout === "grid" ? "bg-text/[0.08]" : "btn-ghost"}`} onClick={() => setLayout("grid")}>
               <LayoutGrid size={14} aria-hidden />
             </button>
           </div>
@@ -143,7 +143,7 @@ export function EventsBrowser({
 
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
-          <button className="absolute inset-0 bg-black/60" aria-label="Close filters" onClick={() => setDrawer(false)} />
+          <button className="absolute inset-0 bg-text/40" aria-label="Close filters" onClick={() => setDrawer(false)} />
           <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col bg-panel rounded-t-[var(--radius-l)] border-t border-line-strong panel-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-line">
               <p className="t-h3">Filters</p>

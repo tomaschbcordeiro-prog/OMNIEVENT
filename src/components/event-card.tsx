@@ -83,7 +83,7 @@ export function EventRow({
       onMouseEnter={onHover ? () => onHover(c) : undefined}
       onMouseLeave={onHover ? () => onHover(null) : undefined}
       onFocusCapture={onHover ? () => onHover(c) : undefined}
-      className={`group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-white/[0.03] ${highlighted ? "bg-cyan/[0.07] ring-1 ring-cyan/40" : ""}`}
+      className={`group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-text/[0.03] ${highlighted ? "bg-cyan/[0.07] ring-1 ring-cyan/40" : ""}`}
     >
       {onSelect ? (
         <button type="button" className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4 text-left" onClick={() => onSelect(c)}>
@@ -111,7 +111,7 @@ export function EventTile({ c }: { c: Card }) {
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">
             {c.isDemo && <DemoBadge />}
-            {c.status !== "on_sale" && <StatusBadge status={c.status} className="bg-bg/80" />}
+            {c.status !== "on_sale" && <StatusBadge status={c.status} className="bg-panel/90" />}
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3">
@@ -133,7 +133,7 @@ export function EventTile({ c }: { c: Card }) {
         </div>
       </Link>
       <div className="absolute right-2 top-2">
-        <SaveButton id={c.id} title={c.title} compact className="bg-bg/70 backdrop-blur" />
+        <SaveButton id={c.id} title={c.title} compact className="bg-panel/85 backdrop-blur" />
       </div>
     </li>
   );

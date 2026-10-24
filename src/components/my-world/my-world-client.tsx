@@ -82,7 +82,7 @@ export function MyWorldClient() {
               <button
                 onClick={() => setTab(t.id)}
                 aria-current={tab === t.id ? "page" : undefined}
-                className={`btn btn-sm w-full justify-start ${tab === t.id ? "bg-white/[0.07] text-text" : "btn-ghost"}`}
+                className={`btn btn-sm w-full justify-start ${tab === t.id ? "bg-text/[0.07] text-text" : "btn-ghost"}`}
               >
                 <t.icon size={15} aria-hidden /> {t.label}
                 {t.id === "saved" && user.saved.length > 0 && <span className="ml-auto text-text-3 tnum">{user.saved.length}</span>}
@@ -364,7 +364,7 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
               <ul className="mt-1 grid gap-0.5">
                 {items.slice(0, 3).map((c) => (
                   <li key={c.id}>
-                    <Link href={`/events/${c.slug}`} className={`block truncate rounded px-1 py-0.5 text-[11px] leading-tight ${clash.has(c.id) ? "bg-warn/15 text-warn" : "bg-white/5 hover:bg-white/10"}`} title={`${c.title}, ${formatEventTime(c.start, c.timeZone)} ${tzAbbrev(c.start, c.timeZone)}`}>
+                    <Link href={`/events/${c.slug}`} className={`block truncate rounded px-1 py-0.5 text-[11px] leading-tight ${clash.has(c.id) ? "bg-warn/15 text-warn" : "bg-text/5 hover:bg-text/[0.08]"}`} title={`${c.title}, ${formatEventTime(c.start, c.timeZone)} ${tzAbbrev(c.start, c.timeZone)}`}>
                       <span className="tnum text-text-3">{formatEventTime(c.start, c.timeZone)}</span> {c.title}
                     </Link>
                   </li>

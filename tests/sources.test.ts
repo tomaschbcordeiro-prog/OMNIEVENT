@@ -139,9 +139,14 @@ describe("skiddle adapter", () => {
 
 describe("listings without hours", () => {
   it("are flagged so time-of-day searches skip them", () => {
-    const m = normalizeMadrid([{ id: "9", title: "Día", dtstart: "2026-11-02 00:00:00.0", dtend: "2026-11-02 23:59:00.0", time: "", location: { latitude: 40.4, longitude: -3.7 } }], SYNC, NOW);
-    expect(m.events[0].hoursUnknown).toBe(true);
+    const m = normalizeMadrid([
+      { id: "9", title: "Día", dtstart: "2026-11-02 00:00:00.0", dtend: "2026-11-02 23:59:00.0", time: "", location: { latitude: 40.4, longitude: -3.7 } },
+      { id: "8", title: "Midnight placeholder", dtstart: "2026-10-08 00:00:00.0", dtend: "2027-05-31 23:59:00.0", time: "00:00", location: { latitude: 40.4, longitude: -3.7 } },
+    ], SYNC, NOW);
+    expect(m.events.map((e) => e.hoursUnknown)).toEqual([true, true]);
     const p = normalizeParis([{ id: "1", title: "Expo", lat_lon: { lat: 48.8, lon: 2.3 }, date_start: "2026-10-01T00:00:00+00:00", date_end: "2026-12-01T23:59:59+00:00" }], SYNC, NOW);
     expect(p.events[0].hoursUnknown).toBe(true);
+    const q = normalizeParis([{ id: "2", title: "Day", lat_lon: { lat: 48.8, lon: 2.3 }, occurrences: "2026-11-03T00:00:00+01:00_2026-11-03T23:59:00+01:00" }], SYNC, NOW);
+    expect(q.events[0].hoursUnknown).toBe(true);
   });
 });

@@ -71,7 +71,7 @@ export function Poster({
       aria-hidden
       className={`relative overflow-hidden ${className}`}
       style={{
-        background: `radial-gradient(120% 90% at 85% 10%, ${accent}38 0%, transparent 55%), linear-gradient(160deg, hsl(${hue} 35% 16%) 0%, hsl(${(hue + 40) % 360} 30% 9%) 100%)`,
+        background: `radial-gradient(120% 90% at 85% 10%, ${accent}55 0%, transparent 60%), linear-gradient(160deg, hsl(${hue} 85% 94%) 0%, hsl(${(hue + 40) % 360} 75% 86%) 100%)`,
       }}
     >
       <Icon
@@ -79,7 +79,7 @@ export function Poster({
         strokeWidth={1}
         style={{
           color: accent,
-          opacity: 0.55,
+          opacity: 0.8,
           width: size === "lg" ? 120 : size === "sm" ? 28 : 56,
           height: size === "lg" ? 120 : size === "sm" ? 28 : 56,
           right: size === "sm" ? 6 : 14,
@@ -95,7 +95,7 @@ const TONE: Record<string, string> = {
   warn: "text-warn bg-warn/10 border-warn/30",
   bad: "text-bad bg-bad/10 border-bad/30",
   info: "text-cyan bg-cyan/10 border-cyan/30",
-  muted: "text-text-2 bg-white/5 border-line-strong",
+  muted: "text-text-2 bg-text/5 border-line-strong",
 };
 
 export function StatusBadge({ status, className = "" }: { status: EventStatus; className?: string }) {
@@ -191,7 +191,7 @@ export function ErrorState({ title, body, onRetry }: { title: string; body?: str
 export function Notice({ children, tone = "info" }: { children: ReactNode; tone?: "info" | "demo" }) {
   return (
     <div className={`flex items-start gap-2.5 rounded-[var(--radius-m)] border p-3 t-small ${tone === "demo" ? "border-amber/30 bg-amber/5 text-text-2" : "border-line-strong bg-panel text-text-2"}`}>
-      <Info size={16} className={`mt-0.5 shrink-0 ${tone === "demo" ? "text-amber" : "text-cyan"}`} aria-hidden />
+      <Info size={16} className={`mt-0.5 shrink-0 ${tone === "demo" ? "text-warn" : "text-cyan"}`} aria-hidden />
       <div>{children}</div>
     </div>
   );

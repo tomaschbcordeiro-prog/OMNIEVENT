@@ -59,7 +59,7 @@ export function AddToTrip({ eventId }: { eventId: string }) {
                 const on = t.eventIds.includes(eventId);
                 return (
                   <li key={t.id}>
-                    <button type="button" className="w-full flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-white/5 text-sm" aria-pressed={on} onClick={() => userActions.toggleTripEvent(t.id, eventId)}>
+                    <button type="button" className="w-full flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-text/5 text-sm" aria-pressed={on} onClick={() => userActions.toggleTripEvent(t.id, eventId)}>
                       <span className="truncate">{t.name}</span>
                       {on && <Check size={14} className="text-cyan" aria-hidden />}
                     </button>

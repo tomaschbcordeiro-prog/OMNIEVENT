@@ -69,7 +69,8 @@ export function normalizeMadrid(raw: MadridEvent[], syncedAt: string, now = Date
     if (!r.id || !r.title || !Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) continue;
     const day0 = parseLocal(r.dtstart?.slice(0, 10), TZ);
     if (day0 === undefined) continue;
-    const time = r.time && /^\d{1,2}:\d{2}$/.test(r.time) ? r.time : undefined;
+    // The agenda writes "00:00" when it has no start time (no municipal activity starts at midnight).
+    const time = r.time && /^\d{1,2}:\d{2}$/.test(r.time) && r.time !== "00:00" ? r.time : undefined;
     const lastDay = parseLocal(r.dtend?.slice(0, 10), TZ) ?? day0;
     const spanDays = Math.round((lastDay - day0) / DAY);
     const endOfLastDay = parseLocal(`${r.dtend?.slice(0, 10) ?? r.dtstart!.slice(0, 10)} 23:59`, TZ)!;

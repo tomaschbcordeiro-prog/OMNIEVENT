@@ -45,7 +45,7 @@ function Fixtures({ items }: { items: EventCard[] }) {
             const d = formatShortDate(c.start, c.timeZone);
             const teams = c.people.filter((p) => p.role.startsWith("team") || p.role === "competitor");
             return (
-              <tr key={c.id} className="hover:bg-white/[0.02]">
+              <tr key={c.id} className="hover:bg-text/[0.02]">
                 <td className="px-3 py-2.5 tnum whitespace-nowrap align-top">
                   <span className="block font-medium">{d.weekday} {d.day} {d.month}</span>
                   <span className="t-micro text-text-3">{formatEventTime(c.start, c.timeZone)} local</span>

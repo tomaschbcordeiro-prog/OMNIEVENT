@@ -252,7 +252,7 @@ function NearPlace({ f, set }: { f: SearchFilters; set: (p: Partial<SearchFilter
             <ul className="mt-1 rounded-[var(--radius-m)] border border-line-strong bg-panel divide-y divide-line overflow-hidden">
               {results.map((r) => (
                 <li key={r.id}>
-                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-white/5" onClick={() => (set({ near: { lat: r.lat, lng: r.lng, radiusKm: 10 }, nearLabel: [r.name, r.context.split(",").slice(-2).join(",").trim()].filter(Boolean).join(", "), city: undefined, country: undefined, continent: undefined }), setQ(""), setResults([]))}>
+                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-text/5" onClick={() => (set({ near: { lat: r.lat, lng: r.lng, radiusKm: 10 }, nearLabel: [r.name, r.context.split(",").slice(-2).join(",").trim()].filter(Boolean).join(", "), city: undefined, country: undefined, continent: undefined }), setQ(""), setResults([]))}>
                     <span className="block t-small">{r.name}</span>
                     <span className="block t-micro text-text-3 truncate">{r.context}</span>
                   </button>

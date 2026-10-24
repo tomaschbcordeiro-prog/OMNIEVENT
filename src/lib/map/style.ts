@@ -24,7 +24,7 @@ export const DEFAULT_LAYERS: LayerState = {
   poi: true,
   buildings: true,
   terrain: true,
-  night: true,
+  night: false,
   events: true,
   density: false,
 };
@@ -83,30 +83,31 @@ export function buildStyle(): StyleSpecification {
       };
 
   const layers: LayerSpecification[] = [
-    // ------------------------------------------------ base: clean map
-    L({ id: "bg", type: "background", paint: { "background-color": "#0B121D" } }, {}),
-    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#10241C", "grass", "#13261F", ["ice", "glacier"], "#1C2633", "sand", "#231F18", "#0F1C18"], "fill-opacity": 0.75 } }, { base: "map" }),
-    L({ id: "landuse", type: "fill", source: "omt", "source-layer": "landuse", minzoom: 9, paint: { "fill-color": ["match", ["get", "class"], ["residential", "suburb", "neighbourhood"], "#111A26", ["commercial", "retail", "industrial"], "#141C29", "#101825"], "fill-opacity": 0.8 } }, { base: "map" }),
-    L({ id: "park", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": "#11281F", "fill-opacity": 0.8 } }, { base: "map" }),
-    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": "#0A1E33" } }, { base: "map" }),
-    L({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway", minzoom: 8, paint: { "line-color": "#0F2A45", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 2.5] } }, { base: "map" }),
-    L({ id: "aeroway", type: "fill", source: "omt", "source-layer": "aeroway", minzoom: 11, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#151E2B" } }, { base: "map" }),
+    // ------------------------------------------------ base: day map (bright, illustrated)
+    L({ id: "bg", type: "background", paint: { "background-color": ["interpolate", ["linear"], ["zoom"], 0, "#DDEFC9", 6, "#E9F2DD", 11, "#F2F4EE"] } }, {}),
+    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#C5E3AE", "grass", "#D8EDC4", ["ice", "glacier"], "#FFFFFF", "sand", "#F7EBC6", "rock", "#E4E2DA", "wetland", "#CDE8D6", "farmland", "#E9F2D6", "#DCEDC8"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 12, 0.6] } }, { base: "map" }),
+    L({ id: "landuse", type: "fill", source: "omt", "source-layer": "landuse", minzoom: 9, paint: { "fill-color": ["match", ["get", "class"], ["residential", "suburb", "neighbourhood"], "#F1EFEA", ["commercial", "retail"], "#FBEBE3", "industrial", "#ECE8F2", ["school", "university", "college"], "#F8F0D8", "hospital", "#FBE4E6", ["stadium", "pitch"], "#CFEBC0", "#F0EEE8"], "fill-opacity": 0.85 } }, { base: "map" }),
+    L({ id: "park", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": "#BFE3A6", "fill-opacity": 0.85 } }, { base: "map" }),
+    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": ["interpolate", ["linear"], ["zoom"], 0, "#3FA4EA", 4, "#62B9F0", 8, "#8ACDF5", 12, "#A8DCF8"] } }, { base: "map" }),
+    L({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway", minzoom: 8, paint: { "line-color": "#93D2F6", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 3] } }, { base: "map" }),
+    L({ id: "aeroway", type: "fill", source: "omt", "source-layer": "aeroway", minzoom: 11, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#E6E8EE" } }, { base: "map" }),
 
     // ------------------------------------------------ base: satellite
-    L({ id: "satellite", type: "raster", source: "satellite", paint: { "raster-saturation": -0.08, "raster-contrast": 0.06, "raster-fade-duration": 250, "raster-resampling": "linear" } }, { base: "satellite" }),
+    L({ id: "satellite", type: "raster", source: "satellite", paint: { "raster-saturation": 0.12, "raster-contrast": 0.04, "raster-brightness-min": 0.04, "raster-fade-duration": 250, "raster-resampling": "linear" } }, { base: "satellite" }),
 
     // ------------------------------------------------ terrain shading (both)
-    L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": 0.35, "hillshade-shadow-color": "#04070C", "hillshade-highlight-color": "#3A4A60", "hillshade-accent-color": "#0B121D" } }, { group: "terrain" }),
+    L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": "rgba(255,255,255,0.6)", "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
 
     // ------------------------------------------------ roads (two looks)
     ...(["map", "satellite"] as const).flatMap((b) => {
       const sat = b === "satellite";
       const c = (major: string, minor: string) => (sat ? major : minor);
       return [
-        L({ id: `road-minor-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["match", ["get", "class"], ["minor", "service", "track", "path"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,255,255,0.35)", "#1F2B3D"), "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0.4, 16, 3, 19, 10] } }, { base: b, group: "roads" }),
-        L({ id: `road-mid-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 8, filter: ["match", ["get", "class"], ["secondary", "tertiary"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,236,190,0.55)", "#2A3A52"), "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 8, 0.4, 14, 2.5, 18, 14] } }, { base: b, group: "roads" }),
-        L({ id: `road-major-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 5, filter: ["match", ["get", "class"], ["motorway", "trunk", "primary"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,214,140,0.7)", "#3B4F6E"), "line-width": ["interpolate", ["exponential", 1.5], ["zoom"], 5, 0.4, 10, 1.6, 14, 4, 18, 20] } }, { base: b, group: "roads" }),
-        L({ id: `rail-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 10, filter: ["match", ["get", "class"], ["rail", "transit"], true, false], paint: { "line-color": c("rgba(200,210,230,0.45)", "#2B3446"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 1.5], "line-dasharray": [3, 2] } }, { base: b, group: "roads" }),
+        ...(sat ? [] : [L({ id: "road-casing-map", type: "line", source: "omt", "source-layer": "transportation", minzoom: 8, filter: ["match", ["get", "class"], ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#D9DEE6", "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 8, 0.8, 14, 4.5, 18, 22] } }, { base: "map", group: "roads" })]),
+        L({ id: `road-minor-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 12, filter: ["match", ["get", "class"], ["minor", "service", "track", "path"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,255,255,0.35)", "#FFFFFF"), "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 12, 0.4, 16, 3, 19, 10] } }, { base: b, group: "roads" }),
+        L({ id: `road-mid-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 8, filter: ["match", ["get", "class"], ["secondary", "tertiary"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,236,190,0.55)", "#FFF6D6"), "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 8, 0.4, 14, 2.5, 18, 14] } }, { base: b, group: "roads" }),
+        L({ id: `road-major-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 5, filter: ["match", ["get", "class"], ["motorway", "trunk", "primary"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": c("rgba(255,214,140,0.7)", "#FFD36B"), "line-width": ["interpolate", ["exponential", 1.5], ["zoom"], 5, 0.4, 10, 1.6, 14, 4, 18, 20] } }, { base: b, group: "roads" }),
+        L({ id: `rail-${b}`, type: "line", source: "omt", "source-layer": "transportation", minzoom: 10, filter: ["match", ["get", "class"], ["rail", "transit"], true, false], paint: { "line-color": c("rgba(200,210,230,0.45)", "#B8C2D1"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 1.5], "line-dasharray": [3, 2] } }, { base: b, group: "roads" }),
       ];
     }),
 
@@ -118,44 +119,45 @@ export function buildStyle(): StyleSpecification {
       "source-layer": "building",
       minzoom: 14,
       paint: {
-        "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 6], 0, "#2A3548", 60, "#3B4A62", 200, "#55688A"],
+        "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 6], 0, "#E9E6F0", 60, "#D5DCEB", 200, "#B9C7E0"],
         "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, ["coalesce", ["get", "render_height"], 6]],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": 0.88,
+        "fill-extrusion-opacity": 0.92,
       },
     }, { group: "buildings" }),
 
     // ------------------------------------------------ borders
-    L({ id: "border-region", type: "line", source: "omt", "source-layer": "boundary", minzoom: 3, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(190,205,230,0.35)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.2], "line-dasharray": [3, 2] } }, { group: "borders" }),
-    L({ id: "border-country", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(230,238,250,0.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4, 12, 2.5], "line-dasharray": ["case", ["==", ["get", "disputed"], 1], ["literal", [2, 2]], ["literal", [1, 0]]] } }, { group: "borders" }),
+    L({ id: "border-region", type: "line", source: "omt", "source-layer": "boundary", minzoom: 3, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(120,110,150,0.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.2], "line-dasharray": [3, 2] } }, { group: "borders" }),
+    L({ id: "border-country", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(140,100,170,0.7)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4, 12, 2.5], "line-dasharray": ["case", ["==", ["get", "disputed"], 1], ["literal", [2, 2]], ["literal", [1, 0]]] } }, { group: "borders" }),
 
     // ------------------------------------------------ labels
-    L({ id: "label-water", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "Point"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 8, 14], "text-letter-spacing": 0.1, "text-max-width": 8 }, paint: { "text-color": "#7FA7CF", "text-halo-color": "rgba(5,7,11,0.6)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-water-line", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "LineString"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 12, "symbol-placement": "line", "text-letter-spacing": 0.1 }, paint: { "text-color": "#7FA7CF", "text-halo-color": "rgba(5,7,11,0.6)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-waterway", type: "symbol", source: "omt", "source-layer": "waterway", minzoom: 12, layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 11, "symbol-placement": "line" }, paint: { "text-color": "#7FA7CF", "text-halo-color": "rgba(5,7,11,0.6)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-road", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13, layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14], "symbol-placement": "line", "text-max-angle": 30 }, paint: { "text-color": "#E8EEF7", "text-halo-color": "rgba(5,7,11,0.85)", "text-halo-width": 1.4 } }, { group: "roads" }),
-    L({ id: "label-housenumber", type: "symbol", source: "omt", "source-layer": "housenumber", minzoom: 17, layout: { "text-field": ["get", "housenumber"], "text-font": FONT, "text-size": 10 }, paint: { "text-color": "#9AA8BA", "text-halo-color": "rgba(5,7,11,0.85)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-poi", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 14, filter: ["<=", ["coalesce", ["get", "rank"], 99], ["step", ["zoom"], 2, 15, 5, 16, 10, 17, 22, 18, 99]], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-anchor": "top", "text-offset": [0, 0.4], "text-max-width": 8, "text-padding": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#C9D5E6", "text-halo-color": "rgba(5,7,11,0.85)", "text-halo-width": 1.2 } }, { group: "poi" }),
-    L({ id: "label-place-minor", type: "symbol", source: "omt", "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood", "hamlet", "village", "isolated_dwelling"], true, false], layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 15, 13], "text-transform": "none", "text-max-width": 8 }, paint: { "text-color": "#C2CEDF", "text-halo-color": "rgba(5,7,11,0.8)", "text-halo-width": 1.2 } }, { group: "labels" }),
-    L({ id: "label-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["match", ["get", "class"], ["city", "town"], true, false], layout: { "text-field": name, "text-font": ["step", ["zoom"], ["literal", FONT], 8, ["literal", FONT_BOLD]] as never, "text-size": ["interpolate", ["linear"], ["zoom"], 3, ["case", ["<=", ["coalesce", ["get", "rank"], 10], 3], 12, 10], 8, 14, 13, 18], "text-max-width": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#F6F8FC", "text-halo-color": "rgba(5,7,11,0.85)", "text-halo-width": 1.4 } }, { group: "labels" }),
-    L({ id: "label-state", type: "symbol", source: "omt", "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-letter-spacing": 0.08, "text-max-width": 7 }, paint: { "text-color": "#A9B7CC", "text-halo-color": "rgba(5,7,11,0.8)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-country", type: "symbol", source: "omt", "source-layer": "place", minzoom: 1.5, maxzoom: 9, filter: ["==", ["get", "class"], "country"], layout: { "text-field": name, "text-font": FONT_BOLD, "text-size": ["interpolate", ["linear"], ["zoom"], 2, 11, 6, 16], "text-max-width": 7 }, paint: { "text-color": "#F6F8FC", "text-halo-color": "rgba(5,7,11,0.8)", "text-halo-width": 1.4 } }, { group: "labels" }),
+    L({ id: "label-water", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "Point"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 8, 14], "text-letter-spacing": 0.1, "text-max-width": 8 }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-water-line", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "LineString"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 12, "symbol-placement": "line", "text-letter-spacing": 0.1 }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-waterway", type: "symbol", source: "omt", "source-layer": "waterway", minzoom: 12, layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 11, "symbol-placement": "line" }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-road", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13, layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14], "symbol-placement": "line", "text-max-angle": 30 }, paint: { "text-color": "#3A4558", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "roads" }),
+    L({ id: "label-housenumber", type: "symbol", source: "omt", "source-layer": "housenumber", minzoom: 17, layout: { "text-field": ["get", "housenumber"], "text-font": FONT, "text-size": 10 }, paint: { "text-color": "#6F7C90", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-poi", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 14, filter: ["<=", ["coalesce", ["get", "rank"], 99], ["step", ["zoom"], 2, 15, 5, 16, 10, 17, 22, 18, 99]], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-anchor": "top", "text-offset": [0, 0.4], "text-max-width": 8, "text-padding": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#5B4A7A", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.2 } }, { group: "poi" }),
+    L({ id: "label-place-minor", type: "symbol", source: "omt", "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood", "hamlet", "village", "isolated_dwelling"], true, false], layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 15, 13], "text-transform": "none", "text-max-width": 8 }, paint: { "text-color": "#4A5568", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } }, { group: "labels" }),
+    L({ id: "label-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["match", ["get", "class"], ["city", "town"], true, false], layout: { "text-field": name, "text-font": ["step", ["zoom"], ["literal", FONT], 8, ["literal", FONT_BOLD]] as never, "text-size": ["interpolate", ["linear"], ["zoom"], 3, ["case", ["<=", ["coalesce", ["get", "rank"], 10], 3], 12, 10], 8, 14, 13, 18], "text-max-width": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#0D1B33", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "labels" }),
+    L({ id: "label-state", type: "symbol", source: "omt", "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-letter-spacing": 0.08, "text-max-width": 7 }, paint: { "text-color": "#7A6A96", "text-halo-color": "rgba(255,255,255,0.85)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-country", type: "symbol", source: "omt", "source-layer": "place", minzoom: 1.5, maxzoom: 9, filter: ["==", ["get", "class"], "country"], layout: { "text-field": name, "text-font": FONT_BOLD, "text-size": ["interpolate", ["linear"], ["zoom"], 2, 11, 6, 16], "text-max-width": 7 }, paint: { "text-color": "#2B2350", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.4 } }, { group: "labels" }),
   ];
 
   return {
     version: 8,
     projection: { type: "globe" },
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    // Daytime sky: a bright blue atmosphere that thins to white at the horizon.
     sky: {
-      "sky-color": "#0A1630",
-      "horizon-color": "#2D5A9C",
-      "fog-color": "#1B3560",
-      "sky-horizon-blend": 0.6,
-      "horizon-fog-blend": 0.5,
-      "fog-ground-blend": 0.35,
+      "sky-color": "#3F97F2",
+      "horizon-color": "#DFF1FF",
+      "fog-color": "#EAF5FF",
+      "sky-horizon-blend": 0.7,
+      "horizon-fog-blend": 0.6,
+      "fog-ground-blend": 0.3,
       "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 8, 0],
     },
-    light: { anchor: "map", position: [1.5, 210, 30], intensity: 0.35 },
+    light: { anchor: "map", position: [1.4, 200, 40], intensity: 0.25, color: "#FFFFFF" },
     sources: {
       omt: { type: "vector", url: "https://tiles.openfreemap.org/planet" },
       satellite: sat,

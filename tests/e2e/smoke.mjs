@@ -144,11 +144,12 @@ await step("2D/3D switch keeps the same place and zoom", async () => {
 
 await step("layers: map style and toggles change what is drawn", async () => {
   await page.getByRole("button", { name: /Layers/ }).click();
-  await page.getByRole("radio", { name: "Map", exact: true }).click();
+  await page.getByRole("radio", { name: "Satellite", exact: true }).click();
+  await page.waitForFunction(() => window.__omniMaps.at(-1).getLayoutProperty("satellite", "visibility") === "visible");
+  await page.getByRole("radio", { name: "Day map", exact: true }).click();
   await page.waitForFunction(() => window.__omniMaps.at(-1).getLayoutProperty("satellite", "visibility") === "none");
   await page.getByLabel("3D buildings").uncheck();
   await page.waitForFunction(() => window.__omniMaps.at(-1).getLayoutProperty("buildings-3d", "visibility") === "none");
-  await page.getByRole("radio", { name: "Satellite", exact: true }).click();
   await page.getByLabel("3D buildings").check();
 });
 

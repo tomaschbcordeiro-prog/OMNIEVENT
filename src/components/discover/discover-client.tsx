@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
-import { GLOBE_MODES, GROUPS } from "@/lib/categories";
+import { GLOBE_MODES, GROUPS, GROUP_HEX } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
@@ -32,7 +32,8 @@ const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthM
 type ViewMode = "globe" | "map" | "list";
 type Selection = { kind: "cluster"; cluster: Cluster } | { kind: "event"; card: EventCard; from?: Cluster } | null;
 
-const PREFS_KEY = "omnievent:map:v1";
+// v2: the daytime map without night shading became the default.
+const PREFS_KEY = "omnievent:map:v2";
 
 function hasWebGL(): boolean {
   try {
@@ -74,7 +75,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   const [place, setPlace] = useState<SelectedPlace | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
-  const [base, setBase] = useState<BaseStyle>("satellite");
+  const [base, setBase] = useState<BaseStyle>("map");
   const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
   const [autoRotate, setAutoRotate] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -137,7 +138,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       const p = filtersToParams(filters);
       p.set("at", [view.lat.toFixed(4), view.lng.toFixed(4), view.zoom.toFixed(2), Math.round(view.bearing), Math.round(view.pitch)].join(","));
       if (mode !== "globe") p.set("view", mode);
-      if (base !== "satellite") p.set("style", base);
+      if (base !== "map") p.set("style", base);
       if (place) p.set("pin", `${place.lat.toFixed(5)},${place.lng.toFixed(5)}`);
       const next = `/?${p.toString()}`;
       if (next === `${window.location.pathname}${window.location.search}`) return;
@@ -240,6 +241,23 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
     setAutoRotate(false);
     setFlyTo({ ...target, key: flyKey.current });
   }, []);
+
+  // Hovering a card in "Happening soon" marks the event on the globe; when the whole planet
+  // is in view, the globe also turns to face it after a short pause.
+  const peekTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const peek = useCallback(
+    (c: EventCard | null) => {
+      clearTimeout(peekTimer.current);
+      setHovered(c ? { lat: c.lat, lng: c.lng } : null);
+      if (!c || mode !== "globe" || view.zoom > 3.5) return;
+      peekTimer.current = setTimeout(() => {
+        flyKey.current++;
+        setAutoRotate(false);
+        setFlyTo({ lat: c.lat, lng: c.lng, zoom: view.zoom, key: flyKey.current });
+      }, 350);
+    },
+    [mode, view.zoom],
+  );
 
   const goBack = () => {
     const prev = history.current.pop();
@@ -354,7 +372,8 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   const tilted = view.pitch > 10;
 
   return (
-    <div ref={root} className="relative h-[100dvh] w-full overflow-hidden bg-bg">
+    <div ref={root} className="relative h-[100dvh] w-full overflow-hidden sky">
+      <div className={`sky-sun transition-opacity duration-700 ${mode === "globe" && view.zoom < 4 ? "opacity-100" : "opacity-0"}`} aria-hidden />
       {/* ---------- Stage: one map engine, two projections ---------- */}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (
@@ -388,7 +407,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         )}
         {showMap && !mapReady && (
           <div className="absolute inset-0 grid place-items-center pointer-events-none">
-            <div className="flex items-center gap-2 text-text-2 t-small">
+            <div className="flex items-center gap-2 on-sky t-small font-medium">
               <Loader2 size={16} className="animate-spin" aria-hidden /> Loading Earth
             </div>
           </div>
@@ -399,14 +418,14 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       <div className="pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px]">
         <div className="max-w-[1220px]">
           <div className="pointer-events-auto max-w-xl">
-            <h1 className={`t-h1 text-balance transition-opacity ${view.zoom > 4 || place ? "sr-only" : ""}`}>
-              One planet. Every experience.
-              <span className="block text-text-2 font-normal text-[0.55em] tracking-normal mt-1.5 leading-snug">
-                Spin the Earth, zoom to any street, or ask for anything, from a match in London to an exhibition in Tokyo.
+            <h1 className={`text-balance on-sky ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
+              <span className="block t-display">One planet.<br />Every experience.</span>
+              <span className="block font-medium text-[1.0625rem] leading-snug mt-3 max-w-md text-white/95">
+                Spin the Earth, tap a glowing marker, or ask for anything, from a match in London to an exhibition in Tokyo.
               </span>
             </h1>
             <SearchBox
-              className="mt-4"
+              className="mt-5"
               size="lg"
               mapCenter={{ lat: view.lat, lng: view.lng }}
               onQuery={(p) => applyParsed(p)}
@@ -424,7 +443,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
                       </p>
                     )}
                     {interp.ambiguities.map((a) => (
-                      <p key={a} className="text-amber/90 text-[12px] mt-0.5">{a}</p>
+                      <p key={a} className="text-warn text-[12px] mt-0.5">{a}</p>
                     ))}
                   </div>
                   <button className="text-text-3 hover:text-text" aria-label="Dismiss" onClick={() => setInterp(null)}>
@@ -436,30 +455,35 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           </div>
 
           <div className="pointer-events-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" role="group" aria-label="Event categories">
-            {GLOBE_MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="chip bg-bg/70 backdrop-blur"
-                aria-pressed={modeId === m.id}
-                onClick={() => setFilters((f) => ({ ...f, categories: m.groups.length ? m.groups : undefined }))}
-              >
-                {m.groups[0] && <ShapeGlyph group={m.groups[0]} size={9} />}
-                {m.label}
-              </button>
-            ))}
+            {GLOBE_MODES.map((m) => {
+              const on = modeId === m.id;
+              const hue = m.groups[0] ? GROUP_HEX[m.groups[0]] : undefined;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="chip sky-chip"
+                  aria-pressed={on}
+                  style={on && hue ? { background: hue, borderColor: hue } : undefined}
+                  onClick={() => setFilters((f) => ({ ...f, categories: m.groups.length ? m.groups : undefined }))}
+                >
+                  {m.groups[0] && !on && <ShapeGlyph group={m.groups[0]} size={10} />}
+                  {m.label}
+                </button>
+              );
+            })}
             {modeId === "custom" && (
-              <span className="chip bg-bg/70" data-active="true">Custom mix</span>
+              <span className="chip sky-chip" data-active="true">Custom mix</span>
             )}
-            <span className="w-px h-5 bg-line-strong mx-1 shrink-0" aria-hidden />
+            <span className="w-px h-5 bg-white/60 mx-1 shrink-0" aria-hidden />
             {datePresets().slice(0, 2).map((p) => (
-              <button key={p.id} type="button" className="chip bg-bg/70 backdrop-blur" aria-pressed={filters.from === p.from && filters.to === p.to} onClick={() => setFilters((f) => (f.from === p.from && f.to === p.to ? { ...f, from: undefined, to: undefined } : { ...f, from: p.from, to: p.to }))}>
+              <button key={p.id} type="button" className="chip sky-chip" aria-pressed={filters.from === p.from && filters.to === p.to} onClick={() => setFilters((f) => (f.from === p.from && f.to === p.to ? { ...f, from: undefined, to: undefined } : { ...f, from: p.from, to: p.to }))}>
                 {p.label}
               </button>
             ))}
-            <button type="button" className="chip bg-bg/70 backdrop-blur" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+            <button type="button" className="chip sky-chip" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
               <SlidersHorizontal size={14} aria-hidden />
-              Filters{nFilters ? <span className="tnum text-cyan">{nFilters}</span> : null}
+              Filters{nFilters ? <span className="tnum rounded-full bg-cyan text-white px-1.5 text-[11px] leading-[18px]">{nFilters}</span> : null}
             </button>
           </div>
           {nFilters + (filters.q ? 1 : 0) > 0 && (
@@ -524,7 +548,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
               disabled={m !== "list" && webgl === false}
               title={m !== "list" && webgl === false ? "Maps need WebGL, which isn't available on this device" : undefined}
               onClick={() => setMode(m)}
-              className={`btn btn-sm ${mode === m ? "bg-white/10 text-text" : "btn-ghost"}`}
+              className={`btn btn-sm rounded-[7px] ${mode === m ? "bg-text text-white" : "btn-ghost"}`}
             >
               <Icon size={15} aria-hidden />
               {label}
@@ -576,10 +600,10 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       </div>
 
       {/* ---------- Status line ---------- */}
-      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-text-3 tnum pointer-events-none hidden md:block" aria-live="polite">
+      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-text-2 tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
-        {dataSummary.live === 0 && <div className="mt-0.5 text-amber/80">Demo mode: all events shown are fictional</div>}
+        {dataSummary.live === 0 && <div className="mt-0.5 text-warn">Demo mode: all events shown are fictional</div>}
       </div>
 
       {(mapFailure || webgl === false) && (
@@ -643,7 +667,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           onClearFocus={() => setFocusedVenue(null)}
         />
       ) : (
-        mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onPick={(c) => (setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
+        mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onHover={peek} onPick={(c) => (setHovered(null), clearTimeout(peekTimer.current), setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
           const d = getDestination(id);
           if (d) fly({ lat: d.lat, lng: d.lng, zoom: 10.5 });
           setFilters((f) => ({ ...f, city: id, country: undefined, continent: undefined }));
@@ -698,82 +722,115 @@ function useEvents(params: string | null) {
   return state;
 }
 
-function MiniList({ title, note, params, onPick, empty }: { title: string; note?: string; params: string; onPick: (c: EventCard) => void; empty: string }) {
-  const { items, loading, error } = useEvents(params);
+function SpotCard({ c, onPick, onHover }: { c: EventCard; onPick: (c: EventCard) => void; onHover: (c: EventCard | null) => void }) {
+  const when = c.eventType === "daily_attraction" ? "Open daily" : new Date(c.start).getTime() < Date.now() && c.eventType === "multi_day" ? "On now" : formatEventDate(c.start, c.timeZone).replace(/ \d{4}$/, "");
   return (
-    <section className="py-3 first:pt-0">
-      <div className="flex items-baseline justify-between gap-2 mb-1">
-        <h2 className="t-h3">{title}</h2>
-        <Link href={`/events?${params.replace(/&?size=\d+/, "")}`} className="t-micro text-text-3 hover:text-cyan shrink-0">See all</Link>
-      </div>
-      {note && <p className="t-micro text-text-3 mb-1">{note}</p>}
-      {loading ? (
-        <div className="grid gap-2 mt-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-11" />)}</div>
-      ) : error ? (
-        <p className="t-small text-bad">Couldn&apos;t load: {error}</p>
-      ) : items.length === 0 ? (
-        <p className="t-small text-text-3">{empty}</p>
-      ) : (
-        <ul>
-          {items.map((c) => (
-            <li key={c.id}>
-              <button type="button" onClick={() => onPick(c)} className="w-full flex items-center gap-2.5 py-1.5 text-left group">
-                <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-9 w-9 rounded-[5px] shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium group-hover:text-cyan">{c.title}</span>
-                  <span className="block truncate t-micro text-text-3 tnum">
-                    {c.city}, {c.eventType === "daily_attraction" ? "open daily" : new Date(c.start).getTime() < Date.now() && c.eventType === "multi_day" ? "on now" : formatEventDate(c.start, c.timeZone).replace(/ \d{4}$/, "")}
-                  </span>
-                </span>
-                {c.isDemo && <DemoBadge />}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <li>
+      <button
+        type="button"
+        onClick={() => onPick(c)}
+        onMouseEnter={() => onHover(c)}
+        onMouseLeave={() => onHover(null)}
+        onFocus={() => onHover(c)}
+        onBlur={() => onHover(null)}
+        className="group block w-full text-left rounded-[12px] overflow-hidden bg-panel border border-line hover:border-cyan/50 hover:shadow-[0_10px_24px_-14px_rgb(20_60_130_/_0.5)] transition-[box-shadow,border-color]"
+      >
+        <span className="relative block">
+          <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="block aspect-[4/3] w-full" />
+          <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-panel/95 px-1.5 py-0.5 text-[11px] font-semibold tnum text-text shadow-sm">
+            <ShapeGlyph group={c.groupSlug} size={8} />
+            {when}
+          </span>
+          {c.isDemo && <span className="absolute right-1.5 top-1.5"><DemoBadge /></span>}
+        </span>
+        <span className="flex flex-col px-2.5 pt-2 pb-2.5">
+          <span className="text-[13px] font-semibold leading-snug line-clamp-2 group-hover:text-cyan">{c.title}</span>
+          <span className="flex items-center gap-1 mt-1 t-micro text-text-3 truncate">
+            <MapPin size={11} aria-hidden className="shrink-0" />
+            <span className="truncate">{c.city}</span>
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }
 
-function DiscoveryPanel({ filters, interests, onPick, onCity }: { filters: SearchFilters; interests: string[]; onPick: (c: EventCard) => void; onCity: (id: string) => void }) {
+function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filters: SearchFilters; interests: string[]; onPick: (c: EventCard) => void; onCity: (id: string) => void; onHover: (c: EventCard | null) => void }) {
   const [open, setOpen] = useState(true);
   const base = filtersToParams({ ...filters, from: undefined, to: undefined, page: undefined, sort: undefined });
   const wk = datePresets()[1];
   const weekend = new URLSearchParams(base);
   weekend.set("from", wk.from);
   weekend.set("to", wk.to);
-  weekend.set("size", "5");
+  weekend.set("size", "8");
   const fresh = new URLSearchParams(filtersToParams({ ...filters, sort: "announced", page: undefined }));
-  fresh.set("size", "5");
-  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "5", status: "on_sale" }) : null;
+  fresh.set("size", "8");
+  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "8", status: "on_sale" }) : null;
+  const tabs = [
+    ...(forYou ? [{ id: "you", label: "For you", params: forYou.toString(), empty: "Nothing on sale matches your interests right now." }] : []),
+    { id: "weekend", label: "This weekend", params: weekend.toString(), empty: "Nothing this weekend matches your filters." },
+    { id: "new", label: "Just announced", params: fresh.toString(), empty: "No recent announcements match your filters." },
+  ];
+  const [tab, setTab] = useState(tabs[0].id);
+  const active = tabs.find((t) => t.id === tab) ?? tabs[0];
+  const { items, loading, error } = useEvents(active.params);
   const [cities, setCities] = useState<{ id: string; name: string; country?: string; stats?: { total: number } }[]>([]);
   useEffect(() => {
     fetch("/api/destinations")
       .then((r) => r.json())
-      .then((j) => setCities(j.destinations.filter((d: { kind: string; stats?: { total: number } }) => d.kind === "city" && d.stats).sort((a: { stats: { total: number } }, b: { stats: { total: number } }) => b.stats.total - a.stats.total).slice(0, 6)))
+      .then((j) => setCities(j.destinations.filter((d: { kind: string; stats?: { total: number } }) => d.kind === "city" && d.stats).sort((a: { stats: { total: number } }, b: { stats: { total: number } }) => b.stats.total - a.stats.total)))
       .catch(() => setCities([]));
   }, []);
+  // "Surprise me" picks any city with a decent number of listings, not only the biggest ones.
+  const surprise = () => {
+    const pool = cities.filter((c) => (c.stats?.total ?? 0) >= 10);
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    if (pick) onCity(pick.id);
+  };
 
   return (
-    <aside aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[340px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)]">
-      <button className="flex items-center justify-between px-4 py-3 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className="t-h3">Happening around the world</span>
-        {open ? <ChevronUp size={16} aria-hidden className="text-text-3" /> : <ChevronDown size={16} aria-hidden className="text-text-3" />}
-      </button>
+    <aside aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)]">
+      <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
+        <button className="flex-1 flex items-center gap-1.5 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="t-h3">Happening soon</span>
+          {open ? <ChevronUp size={16} aria-hidden className="text-text-3" /> : <ChevronDown size={16} aria-hidden className="text-text-3" />}
+        </button>
+        <button type="button" className="btn btn-sm rounded-full bg-sun text-text font-semibold hover:brightness-105 shadow-[0_6px_16px_-8px_rgb(200_140_0_/_0.9)]" onClick={surprise} disabled={!cities.length} title="Fly to a random city with events">
+          <Shuffle size={14} aria-hidden /> Surprise me
+        </button>
+      </div>
       {open && (
-        <div className="overflow-auto scroll-thin px-4 pb-4 divide-y divide-line">
-          {forYou && <MiniList title="For you" note="Based on the interests saved in My World." params={forYou.toString()} onPick={onPick} empty="Nothing on sale matches your interests right now." />}
-          <MiniList title="This weekend" params={weekend.toString()} onPick={onPick} empty="Nothing this weekend matches your filters." />
-          <MiniList title="Newly announced" params={fresh.toString()} onPick={onPick} empty="No recent announcements match your filters." />
-          <section className="pt-3">
-            <h2 className="t-h3">Busiest destinations</h2>
-            <p className="t-micro text-text-3 mb-1.5">Ranked by number of listed upcoming events, not popularity.</p>
-            <ul className="grid grid-cols-2 gap-1.5">
-              {cities.map((c) => (
+        <div className="overflow-auto scroll-thin px-4 pb-4">
+          <div role="tablist" aria-label="Lists" className="flex gap-1 p-1 rounded-full bg-panel-2 mb-3">
+            {tabs.map((t) => (
+              <button key={t.id} role="tab" aria-selected={t.id === active.id} onClick={() => setTab(t.id)} className={`flex-1 rounded-full px-2 py-1.5 text-[12.5px] font-semibold transition-colors ${t.id === active.id ? "bg-panel text-text shadow-sm" : "text-text-2 hover:text-text"}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div role="tabpanel" aria-label={active.label}>
+            {loading ? (
+              <div className="grid grid-cols-2 gap-2.5">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton aspect-[4/5] rounded-[12px]" />)}</div>
+            ) : error ? (
+              <p className="t-small text-bad">Couldn&apos;t load: {error}</p>
+            ) : items.length === 0 ? (
+              <p className="t-small text-text-3">{active.empty}</p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-2.5">
+                {items.map((c) => <SpotCard key={c.id} c={c} onPick={onPick} onHover={onHover} />)}
+              </ul>
+            )}
+            <Link href={`/events?${active.params.replace(/&?size=\d+/, "")}`} className="btn btn-secondary btn-sm w-full mt-3">See all</Link>
+          </div>
+          <section className="pt-4">
+            <h2 className="t-h3">Busiest cities</h2>
+            <p className="t-micro text-text-3 mb-2">By number of listed upcoming events.</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {cities.slice(0, 8).map((c) => (
                 <li key={c.id}>
-                  <button type="button" onClick={() => onCity(c.id)} className="w-full text-left rounded-[var(--radius-s)] border border-line px-2.5 py-1.5 hover:border-line-strong">
-                    <span className="block text-[13px] font-medium truncate">{c.name}</span>
-                    <span className="block t-micro text-text-3 tnum">{c.stats?.total} events</span>
+                  <button type="button" onClick={() => onCity(c.id)} className="chip hover:border-cyan/50">
+                    <span className="font-semibold text-text">{c.name}</span>
+                    <span className="tnum text-text-3">{c.stats?.total.toLocaleString()}</span>
                   </button>
                 </li>
               ))}
@@ -891,17 +948,17 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
     <div className="flex flex-col min-h-0 flex-1">
       <div className="relative shrink-0">
         <Poster title={card.title} imageUrl={card.imageUrl} hue={card.posterHue} categorySlug={card.categorySlug} className="h-36 w-full lg:rounded-t-[var(--radius-l)]" />
-        <button className="absolute right-2 top-2 btn btn-icon btn-sm bg-bg/70 backdrop-blur text-text" aria-label="Close preview" onClick={onClose}>
+        <button className="absolute right-2 top-2 btn btn-icon btn-sm bg-panel/85 backdrop-blur text-text" aria-label="Close preview" onClick={onClose}>
           <X size={16} aria-hidden />
         </button>
         {onBack && (
-          <button className="absolute left-2 top-2 btn btn-sm bg-bg/70 backdrop-blur text-text" onClick={onBack}>
+          <button className="absolute left-2 top-2 btn btn-sm bg-panel/85 backdrop-blur text-text" onClick={onBack}>
             <ChevronLeft size={15} aria-hidden /> {backLabel ? `Back to ${backLabel}` : "Back"}
           </button>
         )}
         <div className="absolute left-3 bottom-2 flex gap-1.5">
           {card.isDemo && <DemoBadge />}
-          <StatusBadge status={card.status} className="bg-bg/80" />
+          <StatusBadge status={card.status} className="bg-panel/90" />
         </div>
       </div>
       <div className="overflow-auto scroll-thin p-4 grid gap-3">
@@ -953,7 +1010,7 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
         <div className="t-micro text-text-3">
           {card.providers.length > 0 ? <>Ticket info from {card.providers.join(", ")}. </> : null}
           Synced {relativeTime(card.lastSyncedAt)}.
-          {card.isDemo && <span className="text-amber/90"> This is fictional demo data.</span>}
+          {card.isDemo && <span className="text-warn"> This is fictional demo data.</span>}
         </div>
         {err && <p className="t-small text-bad">Couldn&apos;t load ticket offers. The full event page may still work.</p>}
         {detail && offers.length > 0 && (
