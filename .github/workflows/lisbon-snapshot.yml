@@ -1,10 +1,11 @@
 name: Lisbon agenda snapshot
 
 # The Agenda Cultural de Lisboa API refuses requests from Vercel's network, so a
-# daily snapshot is committed here and used whenever the live API can't be reached.
+# snapshot is committed here and used whenever the live API can't be reached.
+# GitHub's runners are refused too (HTTP 403), so this runs on demand only. Add back
+#   schedule: [{ cron: "23 5 * * *" }]
+# once the City of Lisbon allows automated access from cloud networks.
 on:
-  schedule:
-    - cron: "23 5 * * *"
   workflow_dispatch:
 
 permissions:
