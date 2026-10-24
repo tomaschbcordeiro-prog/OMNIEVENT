@@ -229,14 +229,15 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   if (res.status === 429) {
     // Quota responses say when the allowance resets (epoch ms). Retrying before then
     // only spends requests, so stop and report the time instead.
+    // A 429 is either the 5-per-second spike limit (retry in a moment) or the daily quota
+    // (resets hours away). Only the latter stops the crawl.
     const reset = Number(res.headers.get("rate-limit-reset"));
-    const available = res.headers.get("rate-limit-available");
-    if (reset > Date.now() + 60000 || available === "0") {
+    if (reset > Date.now() + 5 * 60000) {
       const when = reset > 0 ? `; allowance resets ${new Date(reset).toISOString().slice(0, 16).replace("T", " ")} UTC` : "";
       throw new ProviderError("ticketmaster", `daily quota used up${when}`, 429, true);
     }
-    if (attempt >= 3) throw new ProviderError("ticketmaster", "rate limited", 429, true);
-    const wait = Number(res.headers.get("retry-after") ?? 2) * 1000 * (attempt + 1);
+    if (attempt >= 3) throw new ProviderError("ticketmaster", "busy (per-second limit)", 429, false);
+    const wait = Number(res.headers.get("retry-after") ?? 1.5) * 1000 * (attempt + 1) + Math.random() * 500;
     ctx.log("ticketmaster rate limited, backing off", { wait });
     await sleep(wait);
     return tmFetch(path, params, ctx, attempt + 1);
@@ -304,7 +305,8 @@ export async function crawlCatalogue(
       }
     }
   };
-  await Promise.all(Array.from({ length: 4 }, worker));
+  // Three requests in flight keeps one server under the 5-per-second limit with room for others.
+  await Promise.all(Array.from({ length: 3 }, worker));
   return { calls, truncated, complete: !stopped && !queue.length };
 }
 
