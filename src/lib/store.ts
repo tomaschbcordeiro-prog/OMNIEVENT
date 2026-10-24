@@ -6,6 +6,7 @@ import { convert } from "./currency";
 import { getDestination, CITIES } from "./destinations";
 import { haversineKm, gridKey, latLngToVec3 } from "./geo";
 import { localDateKey } from "./format";
+import { windowIntervals, overlaps, todayIn, isValidTimeZone, parseHM, tzOffsetMs } from "./time";
 import { log } from "./log";
 import type {
   Cluster,
@@ -256,9 +257,60 @@ function toCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<stri
 
 // ------------------------------------------------------------------ queries
 
-function eventEnd(c: EventCard, e?: OmniEvent): number {
-  const ev = e ?? state.events.get(c.id);
-  return new Date(ev?.end ?? c.start).getTime();
+const DAY = 864e5;
+const addDaysYMD = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+const DEFAULT_DURATION_MIN = 120;
+
+/** Scheduled [start, end) intervals of an event: the main run plus any repeat performances. */
+function eventIntervals(e: OmniEvent): [number, number][] {
+  const s = Date.parse(e.start);
+  const dur = (e.durationMinutes ?? DEFAULT_DURATION_MIN) * 60000;
+  // Events without an end time are assumed to last their stated duration, else two hours.
+  const main: [number, number] = [s, e.end ? Math.max(Date.parse(e.end), s + 60000) : s + dur];
+  const extra = (e.schedule ?? []).map((p): [number, number] => [Date.parse(p), Date.parse(p) + dur]);
+  return [main, ...extra];
+}
+
+/**
+ * Date/time filter. The search window is local wall-clock time interpreted in the venue's own
+ * zone; an event matches when any of its scheduled intervals overlaps any day's window.
+ * Daily attractions are matched on their daily opening hours.
+ */
+function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
+  const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
+  const from = f.from ?? todayIn(tz);
+  const to = f.to ?? (f.from ? f.from : addDaysYMD(from, 365));
+  if (to < from) return false;
+
+  if (e.eventType === "daily_attraction") {
+    const first = localDateKey(e.start, tz);
+    const last = localDateKey(new Date(e.end ? Date.parse(e.end) : Date.parse(e.start)), tz);
+    if (last < from || first > to) return false;
+    if (!f.tFrom && !f.tTo) return true;
+    // Compare minutes-of-day: opening hours vs the requested window (either may pass midnight).
+    const local = Date.parse(e.start) + tzOffsetMs(Date.parse(e.start), tz);
+    const open = Math.floor((((local % DAY) + DAY) % DAY) / 60000);
+    const close = open + (e.durationMinutes ?? 480);
+    const [sh, sm] = parseHM(f.tFrom ?? "00:00");
+    const [eh, em] = parseHM(f.tTo ?? "24:00");
+    const ws = sh * 60 + sm;
+    let we = eh * 60 + em;
+    if (we <= ws) we += 1440;
+    for (const shift of [-1440, 0, 1440]) if (open + shift < we && ws < close + shift) return true;
+    return false;
+  }
+
+  for (const iv of eventIntervals(e)) {
+    // Only build windows for days this interval can touch (one day earlier for overnight windows).
+    const lo = [addDaysYMD(localDateKey(new Date(iv[0]), tz), -1), from].sort()[1];
+    const hi = [localDateKey(new Date(iv[1] - 1), tz), to].sort()[0];
+    if (lo > hi) continue;
+    if (!f.tFrom && !f.tTo && Date.parse(`${hi}T00:00:00Z`) - Date.parse(`${lo}T00:00:00Z`) > 2 * DAY) return true;
+    const span = Math.min(62, (Date.parse(`${hi}T00:00:00Z`) - Date.parse(`${lo}T00:00:00Z`)) / DAY);
+    const windows = windowIntervals(lo, addDaysYMD(lo, span), tz, f.tFrom, f.tTo);
+    if (windows.some((w) => overlaps(w, iv))) return true;
+  }
+  return false;
 }
 
 export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[]): boolean {
@@ -268,12 +320,9 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
   if (f.source === "live" && c.isDemo) return false;
   if (catSets?.length && !catSets.some((s) => s.has(c.categorySlug) || s.has(c.groupSlug))) return false;
 
-  // Date overlap, evaluated in the event's own time zone.
-  if (f.from || f.to) {
-    const startKey = localDateKey(c.start, c.timeZone);
-    const endKey = localDateKey(new Date(eventEnd(c, e)), c.timeZone);
-    if (f.from && endKey < f.from) return false;
-    if (f.to && startKey > f.to) return false;
+  // Dates and local times, evaluated in each event's own venue time zone.
+  if (f.from || f.to || f.tFrom || f.tTo) {
+    if (!matchesWhen(e, f)) return false;
   } else if (!f.status?.includes("completed") && c.status === "completed") {
     return false; // hide past events by default
   }
@@ -297,6 +346,9 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
     if (cont !== f.continent) return false;
   }
   if (f.near) {
+    // Online-only events have no physical location, so they never match a radius search.
+    if (c.online) return false;
+    // Great-circle (haversine) distance: exact for any radius, latitude or the antimeridian.
     const d = haversineKm(c.lat, c.lng, f.near.lat, f.near.lng);
     if (d > f.near.radiusKm) return false;
   }

@@ -306,6 +306,11 @@ export interface SearchFilters {
   country?: string; // ISO country code
   continent?: string;
   near?: { lat: number; lng: number; radiusKm: number };
+  /** Human label for `near`, e.g. "Baixa, Lisboa". Display only. */
+  nearLabel?: string;
+  /** Local wall-clock window "HH:MM", interpreted in each event's venue time zone. */
+  tFrom?: string;
+  tTo?: string;
   minPrice?: number;
   maxPrice?: number;
   currency?: CurrencyCode;

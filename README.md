@@ -35,6 +35,15 @@ One MapLibre GL engine renders both views from the same camera, so switching kee
 
 Not included (would need separate providers and licences): photorealistic 3D city meshes (e.g. Google Photorealistic 3D Tiles via Cesium) and street-level photography.
 
+## Search: area, radius and local time
+
+One search model (`SearchFilters`, encoded by `src/lib/search/params.ts`) drives the map markers, the result lists and every page.
+
+- **Pick an area anywhere**: "Explore an area" then click the map, "Explore events here" on any clicked place, a searched address, or your location (asked only when you press the button). The pin is draggable; the circle is geodesic (exact great-circle distance, correct at high latitudes and across ±180°). Radius 0.5–2,000 km with presets and a log-scale slider.
+- **Local dates and times**: a window such as 24 Oct, 18:00–23:00 is wall-clock time *at each venue* (IANA zones, never fixed offsets or the browser's zone). An event matches when any of its scheduled intervals (main run or repeat performances) overlaps the window. Overnight windows (22:00–04:00) run into the next day. DST: repeated hours widen the window (earliest start, latest end); missing hours move to the first valid instant. Events without an end are assumed to last their stated duration, else two hours. Daily attractions match on their daily opening hours. Online-only events never match a physical radius.
+- **The pin's time zone** comes from `/api/timezone` (offline boundary data, `@photostructure/tz-lookup`) and is shown with its offset on the chosen date.
+- **Across pages**: URLs carry the search (`lat,lng,radius,pl,from,to,tfrom,tto,cat,…`), "Full list" and "Show on map" switch views, and Events / Categories / Destinations offer to continue the last search (kept for the browser tab). Saved searches live in My World (stored in this browser until accounts exist).
+
 ## Pages
 
 | Route | What it does |

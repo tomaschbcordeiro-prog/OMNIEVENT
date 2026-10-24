@@ -12,6 +12,9 @@ import { EventTile } from "@/components/event-card";
 import { ClusterMap } from "@/components/cluster-map";
 import { CategoryIcon, ShapeGlyph } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
+import { Suspense } from "react";
+import { Crosshair } from "lucide-react";
+import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
 
 export const dynamic = "force-dynamic";
@@ -88,8 +91,15 @@ export default async function DestinationPage({ params, searchParams }: { params
             <p className="t-small text-text-3 mt-1 tnum">
               {result.total.toLocaleString()} upcoming events listed{d.currency ? `, prices usually in ${d.currency}` : ""}. {d.lat.toFixed(2)}°, {d.lng.toFixed(2)}°
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <FollowButton kind="destination" id={d.id} name={d.name} />
+              {/* Cities open as a radius search; larger areas just open the map there. */}
+              <Link
+                className="btn btn-secondary btn-sm"
+                href={d.kind === "city" ? `/?${filtersToParams({ ...user, near: { lat: d.lat, lng: d.lng, radiusKm: 15 }, nearLabel: `${d.name}${d.country ? `, ${d.country}` : ""}`, city: undefined, page: undefined })}` : `/?at=${d.lat.toFixed(3)},${d.lng.toFixed(3)},${zoom},0,0`}
+              >
+                <Crosshair size={14} aria-hidden /> Explore on the map
+              </Link>
             </div>
 
             <form className="mt-6 grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end rounded-[var(--radius-l)] border border-line p-4" action={`/destinations/${d.slug}`}>
@@ -199,6 +209,9 @@ export default async function DestinationPage({ params, searchParams }: { params
         )}
 
         <section id="all" className="mt-12 scroll-mt-24" aria-labelledby="alltitle">
+          <Suspense fallback={null}>
+            <ContinueSearch keep={["near", "nearLabel", "city", "country", "continent"]} />
+          </Suspense>
           <h2 id="alltitle" className="t-h2 mb-4">Everything in {d.name}</h2>
           <EventsBrowser result={result} filters={user} facets={result.facets} basePath={`/destinations/${d.slug}`} />
         </section>

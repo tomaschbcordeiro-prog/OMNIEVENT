@@ -2,6 +2,7 @@ import { CITIES, slugify } from "../destinations";
 import { groupOf } from "../categories";
 import { convert } from "../currency";
 import { localDateKey } from "../format";
+import { zonedTimeToUtc } from "../time";
 import type {
   EventStatus,
   OmniEvent,
@@ -151,22 +152,6 @@ const PROVIDERS = [
 ];
 
 const DAY = 86400000;
-
-const partFormatters = new Map<string, Intl.DateTimeFormat>();
-
-/** Convert a wall-clock time in an IANA zone to a UTC ISO string. */
-function zonedTimeToUtc(y: number, m: number, d: number, hh: number, mm: number, tz: string): string {
-  const guess = Date.UTC(y, m - 1, d, hh, mm);
-  let fmt = partFormatters.get(tz);
-  if (!fmt) {
-    fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    partFormatters.set(tz, fmt);
-  }
-  const parts = Object.fromEntries(fmt.formatToParts(new Date(guess)).map((p) => [p.type, p.value]));
-  const asIfUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
-  const offset = asIfUtc - guess;
-  return new Date(guess - offset).toISOString();
-}
 
 function localYMD(t: number, tz: string): [number, number, number] {
   const s = localDateKey(new Date(t), tz);

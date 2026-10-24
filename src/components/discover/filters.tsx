@@ -1,6 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Crosshair, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { TIME_PRESETS } from "@/lib/time";
+import { formatKm, kmToSlider, sliderToKm, RADIUS_PRESETS } from "@/lib/map/circle";
 import type { SearchFilters, EventStatus } from "@/lib/types";
 import { GROUPS } from "@/lib/categories";
 import { CITIES, COUNTRIES, getDestination } from "@/lib/destinations";
@@ -112,15 +115,29 @@ export function FilterForm({ f, onChange, showCategories = true }: { f: SearchFi
         </select>
       </div>
 
-      {f.near && (
-        <div>
-          <label className="label" htmlFor="f-radius">Distance from selected point: {f.near.radiusKm} km</label>
-          <input id="f-radius" type="range" min={5} max={500} step={5} value={f.near.radiusKm} onChange={(e) => set({ near: { ...f.near!, radiusKm: +e.target.value } })} className="w-full accent-[var(--cyan)]" />
-          <button type="button" className="btn btn-ghost btn-sm mt-1 -ml-2" onClick={() => set({ near: undefined, sort: f.sort === "distance" ? undefined : f.sort })}>
-            Remove distance filter
-          </button>
+      <NearPlace f={f} set={set} />
+
+      <fieldset>
+        <legend className="label">Local time</legend>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {TIME_PRESETS.map((p) => (
+            <button key={p.id} type="button" className="chip" aria-pressed={(p.from ?? "") === (f.tFrom ?? "") && (p.to ?? "") === (f.tTo ?? "")} onClick={() => set({ tFrom: p.from, tTo: p.to })}>
+              {p.label}
+            </button>
+          ))}
         </div>
-      )}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="label" htmlFor="f-tfrom">Starts after</label>
+            <input id="f-tfrom" type="time" step={900} className="field tnum" value={f.tFrom ?? ""} onChange={(e) => set({ tFrom: e.target.value || undefined })} />
+          </div>
+          <div>
+            <label className="label" htmlFor="f-tto">Until</label>
+            <input id="f-tto" type="time" step={900} className="field tnum" value={f.tTo ?? ""} onChange={(e) => set({ tTo: e.target.value || undefined })} />
+          </div>
+        </div>
+        <p className="t-micro text-text-3 mt-1.5">Times are the local time at each venue. An end before the start runs past midnight.</p>
+      </fieldset>
 
       <fieldset>
         <legend className="label">Price per ticket</legend>
@@ -188,16 +205,79 @@ export function FilterForm({ f, onChange, showCategories = true }: { f: SearchFi
   );
 }
 
+/** "Near a place": search any address or city, then choose a radius. Uses the same geocoder as the map. */
+function NearPlace({ f, set }: { f: SearchFilters; set: (p: Partial<SearchFilters>) => void }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<{ id: string; name: string; context: string; lat: number; lng: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (q.trim().length < 3) return setResults([]);
+    const ctrl = new AbortController();
+    setLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/geocode?q=${encodeURIComponent(q.trim())}&limit=5`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((j) => (setResults(j.results), setLoading(false)))
+        .catch((e) => e.name !== "AbortError" && (setResults([]), setLoading(false)));
+    }, 350);
+    return () => (clearTimeout(t), ctrl.abort());
+  }, [q]);
+  return (
+    <fieldset>
+      <legend className="label">Near a place</legend>
+      {f.near ? (
+        <div className="rounded-[var(--radius-m)] border border-line-strong p-3">
+          <div className="flex items-start justify-between gap-2">
+            <p className="t-small flex items-center gap-1.5 min-w-0">
+              <Crosshair size={14} className="text-cyan shrink-0" aria-hidden />
+              <span className="truncate">{f.nearLabel ?? `${f.near.lat.toFixed(3)}, ${f.near.lng.toFixed(3)}`}</span>
+            </p>
+            <button type="button" className="t-micro text-text-3 hover:text-text" onClick={() => set({ near: undefined, nearLabel: undefined, sort: f.sort === "distance" ? undefined : f.sort })}>Remove</button>
+          </div>
+          <label className="t-micro text-text-3 mt-2 flex justify-between" htmlFor="f-radius">
+            Radius <span className="text-text tnum">{formatKm(f.near.radiusKm)}</span>
+          </label>
+          <input id="f-radius" type="range" min={0} max={1000} value={kmToSlider(f.near.radiusKm)} onChange={(e) => set({ near: { ...f.near!, radiusKm: sliderToKm(+e.target.value) } })} className="w-full accent-[var(--cyan)]" />
+          <div className="mt-1 flex flex-wrap gap-1">
+            {RADIUS_PRESETS.slice(0, 6).map((r) => (
+              <button key={r} type="button" className="chip !h-6 !px-2 !text-[12px] tnum" aria-pressed={f.near!.radiusKm === r} onClick={() => set({ near: { ...f.near!, radiusKm: r } })}>{r} km</button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="relative">
+          <input className="field" placeholder="City, neighbourhood or address" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search for a place to search around" />
+          {loading && <Loader2 size={14} className="absolute right-3 top-3 animate-spin text-text-3" aria-hidden />}
+          {results.length > 0 && (
+            <ul className="mt-1 rounded-[var(--radius-m)] border border-line-strong bg-panel divide-y divide-line overflow-hidden">
+              {results.map((r) => (
+                <li key={r.id}>
+                  <button type="button" className="w-full text-left px-3 py-2 hover:bg-white/5" onClick={() => (set({ near: { lat: r.lat, lng: r.lng, radiusKm: 10 }, nearLabel: [r.name, r.context.split(",").slice(-2).join(",").trim()].filter(Boolean).join(", "), city: undefined, country: undefined, continent: undefined }), setQ(""), setResults([]))}>
+                    <span className="block t-small">{r.name}</span>
+                    <span className="block t-micro text-text-3 truncate">{r.context}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
 /** Removable chips summarising active filters. */
 export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f: SearchFilters) => void }) {
   const chips: { k: string; label: string; clear: Partial<SearchFilters> }[] = [];
   if (f.q) chips.push({ k: "q", label: `“${f.q}”`, clear: { q: undefined } });
   f.categories?.forEach((c) => chips.push({ k: `c-${c}`, label: GROUPS.find((g) => g.slug === c)?.name ?? c.replace(/-/g, " "), clear: { categories: f.categories!.filter((x) => x !== c) } }));
-  if (f.from || f.to) chips.push({ k: "date", label: f.from === f.to ? f.from! : `${f.from ?? "…"} to ${f.to ?? "…"}`, clear: { from: undefined, to: undefined } });
+  const day = (ymd?: string) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "…");
+  if (f.from || f.to) chips.push({ k: "date", label: f.from === f.to ? day(f.from) : `${day(f.from)} to ${day(f.to)}`, clear: { from: undefined, to: undefined } });
   if (f.city) chips.push({ k: "city", label: getDestination(f.city)?.name ?? f.city, clear: { city: undefined } });
   if (f.country) chips.push({ k: "country", label: COUNTRIES.find((c) => c.countryCode === f.country)?.name ?? f.country, clear: { country: undefined } });
   if (f.continent) chips.push({ k: "continent", label: getDestination(f.continent)?.name ?? f.continent, clear: { continent: undefined } });
-  if (f.near) chips.push({ k: "near", label: `Within ${f.near.radiusKm} km`, clear: { near: undefined } });
+  if (f.near) chips.push({ k: "near", label: `${f.nearLabel ? `${f.nearLabel.split(",")[0]}, ` : ""}within ${formatKm(f.near.radiusKm)}`, clear: { near: undefined, nearLabel: undefined } });
+  if (f.tFrom || f.tTo) chips.push({ k: "time", label: `${f.tFrom ?? "00:00"}–${f.tTo ?? "24:00"} local`, clear: { tFrom: undefined, tTo: undefined } });
   if (f.minPrice != null || f.maxPrice != null)
     chips.push({ k: "price", label: `${f.currency ?? "Local"} ${f.minPrice ?? 0}–${f.maxPrice ?? "any"}`, clear: { minPrice: undefined, maxPrice: undefined, currency: undefined } });
   if (f.access) chips.push({ k: "access", label: f.access === "free" ? "Free" : f.access === "registration" ? "Registration" : "Ticketed", clear: { access: undefined } });

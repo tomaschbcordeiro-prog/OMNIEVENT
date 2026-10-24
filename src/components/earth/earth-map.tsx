@@ -6,6 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { buildStyle, layerVisibility, type BaseStyle, type LayerState } from "@/lib/map/style";
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
+import { geodesicCircle, circleBounds } from "@/lib/map/circle";
 import { GROUP_HEX, GROUP_SHAPE } from "@/lib/categories";
 import type { Cluster } from "@/lib/types";
 
@@ -33,6 +34,8 @@ export interface EarthMapHandle {
   resetNorth(): void;
   setPitch(pitch: number): void;
   getCamera(): CameraState | null;
+  /** Fit a search circle inside the part of the map not covered by panels. */
+  frameCircle(lat: number, lng: number, km: number): void;
 }
 
 export interface EarthMapProps {
@@ -43,6 +46,15 @@ export interface EarthMapProps {
   clusters: Cluster[];
   selectedClusterId?: string;
   place?: { lat: number; lng: number } | null;
+  /** Radius-search centre and distance; the pin is draggable. */
+  searchArea?: { lat: number; lng: number; radiusKm: number } | null;
+  onSearchAreaMove?: (lat: number, lng: number) => void;
+  /** While true, the cursor is a crosshair: the next click chooses a location. */
+  pickMode?: boolean;
+  /** Ring drawn around a highlighted event (e.g. hovered in the results list). */
+  highlight?: { lat: number; lng: number } | null;
+  /** Screen space covered by floating panels, so framing keeps targets visible. */
+  framePadding?: { top: number; right: number; bottom: number; left: number };
   flyTo?: FlyRequest;
   autoRotate?: boolean;
   reducedMotion?: boolean;
@@ -121,6 +133,20 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     setPitch(p) {
       mapRef.current?.easeTo({ pitch: p, duration: latest.current.reducedMotion ? 0 : 600 });
     },
+    frameCircle(lat, lng, km) {
+      const m = mapRef.current;
+      if (!m) return;
+      const [w, s2, e, n] = circleBounds(lat, lng, km);
+      const pad = latest.current.framePadding ?? { top: 80, right: 60, bottom: 60, left: 60 };
+      // Never ask for more padding than the map has room for.
+      const c = m.getCanvas();
+      const fit = { top: Math.min(pad.top, c.clientHeight * 0.45), bottom: Math.min(pad.bottom, c.clientHeight * 0.3), left: Math.min(pad.left, c.clientWidth * 0.3), right: Math.min(pad.right, c.clientWidth * 0.45) };
+      try {
+        m.fitBounds([[w, s2], [e, n]], { padding: fit, maxZoom: 16, duration: latest.current.reducedMotion ? 0 : 900 });
+      } catch (err) {
+        console.error("frame failed", err);
+      }
+    },
     getCamera() {
       const m = mapRef.current;
       if (!m) return null;
@@ -168,12 +194,18 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
 
       map.addSource("night", { type: "geojson", data: nightGeoJSON() });
       map.addSource("events", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("search-area", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource("highlight", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
       // Night shading sits above imagery and roads, below borders and labels.
       map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#020611", "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.3, 7, 0.18, 10, 0] }, metadata: { omni: { group: "night" } } }, "buildings-3d");
+      // Search circle: a light fill that keeps the map readable plus a crisp edge.
+      map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#42DFFF", "fill-opacity": 0.07 } });
+      map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#42DFFF", "line-width": 1.6, "line-opacity": 0.9 } });
       map.addLayer({ id: "event-density", type: "heatmap", source: "events", maxzoom: 12, paint: { "heatmap-weight": ["/", ["ln", ["+", ["get", "count"], 1]], 6], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 9, 2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 14, 6, 30, 11, 50], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "rgba(146,117,255,0.35)", 0.5, "rgba(146,117,255,0.75)", 0.8, "rgba(66,223,255,0.9)", 1, "#F6F8FC"] }, metadata: { omni: { group: "density" } } });
       map.addLayer({ id: "event-halo", type: "circle", source: "events", paint: { "circle-color": groupColor, "circle-opacity": 0.2, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 9, 7, 26], "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
       map.addLayer({ id: "event-selected", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#42DFFF", "circle-stroke-width": 2, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 12, 7, 30] }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 20, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#F6F8FC", "circle-stroke-width": 2.5, "circle-pitch-alignment": "viewport" } });
       map.addLayer({
         id: "event-markers",
         type: "symbol",
@@ -198,6 +230,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       ready.current = true;
       applyAll();
       setEvents();
+      setArea();
+      setHighlight();
       latest.current.onReady?.();
       emitView();
     });
@@ -227,6 +261,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
 
     // ---- clicks: events first, then labelled map features, else a plain point
     map.on("click", (e) => {
+      if (latest.current.pickMode) return latest.current.onMapClick?.({ lat: e.lngLat.lat, lng: e.lngLat.wrap().lng });
       const hit = map.queryRenderedFeatures([[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]], { layers: EVENT_LAYERS.filter((l) => map.getLayer(l)) });
       if (hit.length) {
         const id = hit[0].properties?.id;
@@ -281,6 +316,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       popup.remove();
       placeMarker.current?.remove();
       placeMarker.current = null;
+      areaMarker.current?.remove();
+      areaMarker.current = null;
       ready.current = false;
       map.remove(); // frees GPU resources, workers and tile caches
       mapRef.current = null;
@@ -310,6 +347,23 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       type: "FeatureCollection",
       features: latest.current.clusters.map((c) => ({ type: "Feature", geometry: { type: "Point", coordinates: [c.lng, c.lat] }, properties: { id: c.id, count: c.count, dominant: c.dominant, label: c.label } })),
     });
+  }
+
+  function setArea() {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const a = latest.current.searchArea;
+    (map.getSource("search-area") as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: a ? [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [geodesicCircle(a.lat, a.lng, a.radiusKm)] } }] : [],
+    });
+  }
+
+  function setHighlight() {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const h = latest.current.highlight;
+    (map.getSource("highlight") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: h ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [h.lng, h.lat] } }] : [] });
   }
 
   function spin() {
@@ -344,6 +398,47 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       map.stop();
     }
   }, [props.autoRotate]);  
+
+  useEffect(setArea, [props.searchArea?.lat, props.searchArea?.lng, props.searchArea?.radiusKm]);  
+  useEffect(setHighlight, [props.highlight?.lat, props.highlight?.lng]);  
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map) map.getCanvas().style.cursor = props.pickMode ? "crosshair" : "";
+  }, [props.pickMode]);
+
+  // ---- draggable search pin (distinct from the place pin and event markers)
+  const areaMarker = useRef<maplibregl.Marker | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    const a = props.searchArea;
+    if (!map) return;
+    if (!a) {
+      areaMarker.current?.remove();
+      areaMarker.current = null;
+      return;
+    }
+    if (!areaMarker.current) {
+      const el = document.createElement("div");
+      el.className = "omni-search-pin";
+      el.title = "Drag to move the search area";
+      el.setAttribute("aria-label", "Search area centre. Drag to move.");
+      const mk = new maplibregl.Marker({ element: el, anchor: "bottom", draggable: true });
+      mk.on("drag", () => {
+        const p = mk.getLngLat();
+        const cur = latest.current.searchArea;
+        if (!cur) return;
+        // Live circle while dragging; results update when the pin is dropped.
+        (map.getSource("search-area") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [geodesicCircle(p.lat, p.lng, cur.radiusKm)] } }] });
+      });
+      mk.on("dragend", () => {
+        const p = mk.getLngLat().wrap();
+        latest.current.onSearchAreaMove?.(p.lat, p.lng);
+      });
+      areaMarker.current = mk;
+    }
+    areaMarker.current.setLngLat([a.lng, a.lat]).addTo(map);
+  }, [props.searchArea?.lat, props.searchArea?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- selected place pin
   useEffect(() => {

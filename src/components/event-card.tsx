@@ -33,7 +33,9 @@ function DateBlock({ c }: { c: Card }) {
   );
 }
 
-export function EventRow({ c, onSelect, compact = false }: { c: Card; onSelect?: (c: Card) => void; compact?: boolean }) {
+export function EventRow({
+  c, onSelect, compact = false, highlighted = false, onHover,
+}: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void }) {
   const user = useUser();
   const people = peopleLine(c);
   const body = (
@@ -43,13 +45,15 @@ export function EventRow({ c, onSelect, compact = false }: { c: Card; onSelect?:
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-[12px] text-text-2">
           <CategoryIcon slug={c.categorySlug} size={13} />
-          <span>{c.sports?.competition ?? categoryLabel(c.categorySlug)}</span>
-          {c.sports?.stage && <span className="text-text-3">, {c.sports.stage}</span>}
+          <span className="truncate">
+            {c.sports?.competition ?? categoryLabel(c.categorySlug)}
+            {c.sports?.stage && <span className="text-text-3">, {c.sports.stage}</span>}
+          </span>
         </div>
         <p className="font-semibold leading-snug truncate mt-0.5 group-hover:text-cyan transition-colors">{c.title}</p>
         {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
-        <p className="t-small text-text-3 truncate flex items-center gap-1 mt-0.5">
-          <MapPin size={12} aria-hidden className="shrink-0" />
+        <p className="t-small text-text-3 truncate flex items-center mt-0.5">
+          <MapPin size={12} aria-hidden className="shrink-0 mr-1" />
           <span className="truncate">
             {c.venueName}, {c.city}
           </span>
@@ -74,7 +78,13 @@ export function EventRow({ c, onSelect, compact = false }: { c: Card; onSelect?:
     </>
   );
   return (
-    <li className="group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-white/[0.03]">
+    <li
+      data-venue={c.venueSlug}
+      onMouseEnter={onHover ? () => onHover(c) : undefined}
+      onMouseLeave={onHover ? () => onHover(null) : undefined}
+      onFocusCapture={onHover ? () => onHover(c) : undefined}
+      className={`group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-white/[0.03] ${highlighted ? "bg-cyan/[0.07] ring-1 ring-cyan/40" : ""}`}
+    >
       {onSelect ? (
         <button type="button" className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4 text-left" onClick={() => onSelect(c)}>
           {body}

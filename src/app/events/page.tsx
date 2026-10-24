@@ -6,6 +6,9 @@ import { EventsBrowser } from "@/components/events-browser";
 import { Footer } from "@/components/footer";
 import { Notice } from "@/components/ui";
 import { getDestination } from "@/lib/destinations";
+import { Suspense } from "react";
+import { ContinueSearch } from "@/components/continue-search";
+import { summarizeSearch } from "@/lib/search/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +52,8 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <div className="mb-6">
-          <h1 className="t-h1">{asked ? `Results for “${asked}”` : "All events"}</h1>
+          <h1 className="t-h1">{asked ? `Results for “${asked}”` : filters.near ? `Events near ${filters.nearLabel?.split(",")[0] ?? "the selected point"}` : "All events"}</h1>
+          {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-1">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
           <p className="t-body text-text-2 mt-1 measure">
             Every category in one search. Prices are what sellers advertise; we show whether fees are included when the seller tells us.
           </p>
@@ -65,6 +69,9 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
             </Notice>
           )}
         </div>
+        <Suspense fallback={null}>
+          <ContinueSearch />
+        </Suspense>
         <EventsBrowser result={result} filters={filters} facets={result.facets} />
       </main>
       <Footer />

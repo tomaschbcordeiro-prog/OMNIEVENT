@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download, Share2,
-  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Lock,
+  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Lock, Search as SearchIcon, Map as MapIcon, List as ListIcon,
 } from "lucide-react";
 import type { EventCard, Cluster } from "@/lib/types";
 import { useUser, userActions, type Trip } from "@/lib/user/store";
@@ -18,10 +18,11 @@ import { EventRow } from "../event-card";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { ClusterMap } from "../cluster-map";
 
-type Tab = "overview" | "saved" | "calendar" | "trips" | "following" | "alerts" | "account";
+type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "following" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "saved", label: "Saved", icon: Bookmark },
+  { id: "searches", label: "Saved searches", icon: SearchIcon },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "trips", label: "Trips", icon: Route },
   { id: "following", label: "Following", icon: Heart },
@@ -86,6 +87,7 @@ export function MyWorldClient() {
                 <t.icon size={15} aria-hidden /> {t.label}
                 {t.id === "saved" && user.saved.length > 0 && <span className="ml-auto text-text-3 tnum">{user.saved.length}</span>}
                 {t.id === "trips" && user.trips.length > 0 && <span className="ml-auto text-text-3 tnum">{user.trips.length}</span>}
+                {t.id === "searches" && user.searches.length > 0 && <span className="ml-auto text-text-3 tnum">{user.searches.length}</span>}
               </button>
             </li>
           ))}
@@ -96,6 +98,7 @@ export function MyWorldClient() {
         {error && <div className="mb-4"><ErrorState title="Couldn't load your saved events" body={error} /></div>}
         {tab === "overview" && <Overview cards={cards} loading={loading} onTab={setTab} />}
         {tab === "saved" && <Saved cards={cards} missing={missing} loading={loading} />}
+        {tab === "searches" && <SavedSearches />}
         {tab === "calendar" && <Calendar cards={cards} />}
         {tab === "trips" && <Trips cards={cards} />}
         {tab === "following" && <Following />}
@@ -262,6 +265,48 @@ function Saved({ cards, missing, loading }: { cards: Map<string, EventCard>; mis
             <button className="underline hover:text-text" onClick={() => savedMissing.forEach((s) => userActions.toggleSave(s.id))}>Remove them</button>
           </Notice>
         </div>
+      )}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ Saved searches
+
+function SavedSearches() {
+  const user = useUser();
+  return (
+    <section>
+      <h1 className="t-h1">Saved searches</h1>
+      <p className="t-small text-text-2 mt-1 measure">
+        A saved search keeps its place, radius, dates, local times and categories. Opening it runs it again, so results are always current. Saved in this browser.
+      </p>
+      {user.searches.length === 0 ? (
+        <div className="mt-5">
+          <EmptyState
+            title="No saved searches yet"
+            body="On the map, choose Explore an area, set a radius and times, then press Save search."
+            action={<Link href="/" className="btn btn-primary btn-sm">Explore the map</Link>}
+          />
+        </div>
+      ) : (
+        <ul className="mt-5 divide-y divide-line">
+          {user.searches.map((x) => (
+            <li key={x.id} className="flex flex-wrap items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate">{x.name}</p>
+                <p className="t-small text-text-2 truncate">{x.summary}</p>
+                <p className="t-micro text-text-3">Saved {new Date(x.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+              </div>
+              <div className="flex gap-1.5">
+                <Link href={`/?${x.params}`} className="btn btn-primary btn-sm"><MapIcon size={14} aria-hidden /> Map</Link>
+                <Link href={`/events?${x.params}`} className="btn btn-secondary btn-sm"><ListIcon size={14} aria-hidden /> List</Link>
+                <button className="btn btn-ghost btn-icon btn-sm" aria-label={`Delete saved search ${x.name}`} onClick={() => userActions.deleteSearch(x.id)}>
+                  <Trash2 size={14} aria-hidden />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

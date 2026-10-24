@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MapPin, Ticket, ZoomIn, Undo2, Loader2, Copy, Check } from "lucide-react";
+import { X, MapPin, Crosshair, ZoomIn, Undo2, Loader2, Copy, Check } from "lucide-react";
 import { formatCoords, zoomForKind } from "@/lib/map/view";
 
 export interface SelectedPlace {
@@ -31,14 +31,15 @@ const KIND_LABEL: Record<string, string> = {
  * so every level (street → neighbourhood → city → country) is real and clickable.
  */
 export function PlacePanel({
-  place, canGoBack, onClose, onBack, onZoom, onEventsNear, onLevel,
+  place, canGoBack, onClose, onBack, onZoom, onExplore, onLevel,
 }: {
   place: SelectedPlace;
   canGoBack: boolean;
   onClose: () => void;
   onBack: () => void;
   onZoom: () => void;
-  onEventsNear: () => void;
+  /** Start a radius search centred here, named with the best label we have. */
+  onExplore: (label?: string) => void;
   onLevel: (query: string, kind: string) => void;
 }) {
   const [rev, setRev] = useState<Reverse | null>(null);
@@ -128,8 +129,14 @@ export function PlacePanel({
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <button className="btn btn-primary btn-sm col-span-2" onClick={onEventsNear}>
-            <Ticket size={14} aria-hidden /> Events near here
+          <button
+            className="btn btn-primary btn-sm col-span-2"
+            onClick={() => {
+              const city = rev?.hierarchy.find((h) => ["city", "town", "village"].includes(h.kind))?.name;
+              onExplore([place.name ?? rev?.hierarchy[0]?.name, city].filter((x, i, a) => x && a.indexOf(x) === i).join(", ") || undefined);
+            }}
+          >
+            <Crosshair size={14} aria-hidden /> Explore events here
           </button>
           <button className="btn btn-secondary btn-sm" onClick={onZoom}>
             <ZoomIn size={14} aria-hidden /> Zoom in

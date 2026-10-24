@@ -24,7 +24,10 @@ export const filtersSchema = z
     continent: z.string().max(30).regex(/^[a-z-]+$/).optional(),
     lat: num.min(-90).max(90).optional(),
     lng: num.min(-180).max(180).optional(),
-    radius: num.min(1).max(20000).optional(),
+    radius: num.min(0.5).max(2000).optional(),
+    pl: z.string().max(100).optional(),
+    tfrom: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:MM").optional(),
+    tto: z.string().regex(/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/, "expected HH:MM").optional(),
     min: num.min(0).optional(),
     max: num.min(0).optional(),
     cur: z.string().regex(/^[A-Z]{3}$/).optional(),
@@ -64,7 +67,10 @@ export function parseFilterParams(sp: URLSearchParams): { ok: true; filters: Sea
     city: v.city,
     country: v.country?.toUpperCase(),
     continent: v.continent,
-    near: v.lat != null && v.lng != null ? { lat: v.lat, lng: v.lng, radiusKm: v.radius ?? 50 } : undefined,
+    near: v.lat != null && v.lng != null ? { lat: v.lat, lng: v.lng, radiusKm: v.radius ?? 10 } : undefined,
+    nearLabel: v.lat != null ? v.pl : undefined,
+    tFrom: v.tfrom,
+    tTo: v.tto,
     minPrice: v.min,
     maxPrice: v.max,
     currency: v.cur,
@@ -106,8 +112,11 @@ export function filtersToParams(f: SearchFilters): URLSearchParams {
   if (f.near) {
     set("lat", f.near.lat.toFixed(4));
     set("lng", f.near.lng.toFixed(4));
-    set("radius", f.near.radiusKm);
+    set("radius", Math.round(f.near.radiusKm * 10) / 10);
+    set("pl", f.nearLabel);
   }
+  set("tfrom", f.tFrom);
+  set("tto", f.tTo);
   set("min", f.minPrice);
   set("max", f.maxPrice);
   set("cur", f.currency);
@@ -135,6 +144,7 @@ export function activeFilterCount(f: SearchFilters): number {
     f.from || f.to,
     f.city || f.country || f.continent,
     f.near,
+    f.tFrom || f.tTo,
     f.minPrice != null || f.maxPrice != null,
     f.status?.length,
     f.access,

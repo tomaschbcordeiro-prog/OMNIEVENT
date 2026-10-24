@@ -387,6 +387,25 @@ select.field {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 30'%3E%3Cpath d='M11 29s9-9.6 9-17A9 9 0 0 0 2 12c0 7.4 9 17 9 17z' fill='%2342DFFF' stroke='%2305070B' stroke-width='2'/%3E%3Ccircle cx='11' cy='11.5' r='3.4' fill='%2305070B'/%3E%3C/svg%3E");
   filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.5));
 }
+.omni-search-pin {
+  width: 30px;
+  height: 38px;
+  cursor: grab;
+  background: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 38'%3E%3Cpath d='M15 37s12-12.6 12-22A12 12 0 0 0 3 15c0 9.4 12 22 12 22z' fill='%23F6F8FC' stroke='%2305070B' stroke-width='2'/%3E%3Ccircle cx='15' cy='15' r='5.5' fill='none' stroke='%2342DFFF' stroke-width='2.5'/%3E%3Ccircle cx='15' cy='15' r='1.8' fill='%2342DFFF'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.55));
+  animation: pin-drop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.omni-search-pin:active {
+  cursor: grabbing;
+}
+/* `translate` composes with the transform MapLibre uses to position markers. */
+@keyframes pin-drop {
+  from {
+    translate: 0 -14px;
+    opacity: 0;
+  }
+}
 .maplibregl-cooperative-gesture-screen {
   background: rgb(5 7 11 / 0.7);
   color: var(--text);

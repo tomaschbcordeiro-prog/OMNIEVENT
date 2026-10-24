@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import { GLOBE_MODES, GROUPS } from "@/lib/categories";
@@ -22,6 +22,9 @@ import { FilterForm, ActiveFilters, datePresets } from "./filters";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
 import { LayersPanel } from "../earth/layers-panel";
+import { ExplorePanel } from "../earth/explore-panel";
+import { rememberSearch } from "@/lib/search/session";
+import { formatKm } from "@/lib/map/circle";
 
 // MapLibre touches `window` on import, so the map only loads in the browser.
 const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthMap), { ssr: false, loading: () => null });
@@ -80,6 +83,9 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   const [fullscreen, setFullscreen] = useState(false);
   const [interp, setInterp] = useState<ParsedQuery | null>(null);
   const [retry, setRetry] = useState(0);
+  const [pickMode, setPickMode] = useState(false);
+  const [hovered, setHovered] = useState<{ lat: number; lng: number } | null>(null);
+  const [focusedVenue, setFocusedVenue] = useState<string | null>(null);
   const flyKey = useRef(0);
   const history = useRef<CameraState[]>([]);
   const mapApi = useRef<EarthMapHandle>(null);
@@ -144,6 +150,48 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
     return () => clearTimeout(t);
   }, [filters, view, mode, base, place, initialView]);
 
+  // ---- remember the search for Events / Categories / Destinations ----
+  useEffect(() => {
+    if (!initialView) return;
+    const t = setTimeout(() => rememberSearch(filters), 400);
+    return () => clearTimeout(t);
+  }, [filters, initialView]);
+
+  // ---- frame the search circle whenever its centre or size changes ----
+  const near = filters.near;
+  const nearKey = near ? `${near.lat.toFixed(5)},${near.lng.toFixed(5)},${near.radiusKm}` : "";
+  useEffect(() => {
+    if (!near || !mapReady) return;
+    // Fit inside the part of the map that panels don't cover (see framePadding).
+    mapApi.current?.frameCircle(near.lat, near.lng, near.radiusKm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearKey, mapReady]);
+
+  /** Start (or move) a radius search, keeping the current radius, dates, times and categories. */
+  const explore = useCallback((lat: number, lng: number, label?: string) => {
+    setFilters((f) => ({
+      ...f,
+      near: { lat, lng, radiusKm: f.near?.radiusKm ?? 10 },
+      nearLabel: label,
+      city: undefined,
+      country: undefined,
+      continent: undefined,
+      page: undefined,
+    }));
+    setPickMode(false);
+    setPlace(null);
+    setSelection(null);
+    setFocusedVenue(null);
+    setAutoRotate(false);
+  }, []);
+
+  useEffect(() => {
+    if (!pickMode) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPickMode(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pickMode]);
+
   // ---- viewport-based event clusters (debounced + cancellable) ----
   const cell = cellForZoom(view.zoom);
   const radius = viewRadiusKm(view);
@@ -204,6 +252,12 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
     (c: Cluster) => {
       setAutoRotate(false);
       setPlace(null);
+      // In a radius search, picking a venue on the map highlights its events in the results list.
+      if (filters.near && (c.venueId || c.count <= 8) && c.count > 1 && c.sample[0]) {
+        setSelection(null);
+        setFocusedVenue(c.sample[0].venueSlug);
+        return;
+      }
       const small = c.count <= 8 || !!c.venueId || view.zoom >= 11;
       if (small) {
         setSelection(c.count === 1 && c.sample[0] ? { kind: "event", card: c.sample[0] } : { kind: "cluster", cluster: c });
@@ -212,11 +266,12 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       setSelection({ kind: "cluster", cluster: c });
       fly({ lat: c.lat, lng: c.lng, zoom: Math.min(14, Math.max(3.5, view.zoom + 2.5)) });
     },
-    [view.zoom, fly],
+    [view.zoom, fly, filters.near],
   );
 
   const onMapClick = useCallback(
     (c: MapClick) => {
+      if (pickMode) return explore(c.lat, c.lng);
       setSelection(null);
       setAutoRotate(false);
       if (c.feature) {
@@ -226,16 +281,18 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         setPlace({ lat: c.lat, lng: c.lng });
       }
     },
-    [fly],
+    [fly, pickMode, explore],
   );
 
   const goToGeoPlace = useCallback(
     (g: GeoPlace) => {
       setSelection(null);
+      // During a radius search, a searched place becomes the new centre; radius and times stay.
+      if (filters.near || pickMode) return explore(g.lat, g.lng, [g.name, g.context.split(",").slice(-2).join(",").trim()].filter(Boolean).join(", "));
       setPlace({ lat: g.lat, lng: g.lng, name: g.name, kind: g.kind, context: g.context, zoom: zoomForKind(g.kind) });
       fly({ lat: g.lat, lng: g.lng, zoom: zoomForKind(g.kind), bbox: g.bbox });
     },
-    [fly],
+    [fly, filters.near, pickMode, explore],
   );
 
   const flyToQuery = async (q: string, kind: string) => {
@@ -271,9 +328,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        setFilters((f) => ({ ...f, near: { lat, lng, radiusKm: 50 }, sort: "distance" }));
-        setPlace({ lat, lng, name: "Your location", kind: "place" });
-        fly({ lat, lng, zoom: 11 });
+        explore(lat, lng, "Your location");
       },
       () => setError("Location permission was not granted. You can still search by city."),
       { maximumAge: 600000, timeout: 10000 },
@@ -315,8 +370,13 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
             clusters={clusters}
             selectedClusterId={selectedId}
             place={place}
+            searchArea={filters.near ?? null}
+            onSearchAreaMove={(lat, lng) => setFilters((f) => (f.near ? { ...f, near: { ...f.near, lat, lng }, nearLabel: undefined } : f))}
+            pickMode={pickMode}
+            highlight={hovered}
+            framePadding={typeof window !== "undefined" && window.innerWidth >= 1024 ? { top: 200, right: 440, bottom: 110, left: 60 } : { top: 190, right: 30, bottom: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.5), left: 30 }}
             flyTo={flyTo}
-            autoRotate={autoRotate && !selection && !place && mode === "globe"}
+            autoRotate={autoRotate && !selection && !place && !filters.near && !pickMode && mode === "globe"}
             reducedMotion={reduced}
             onView={setView}
             onClusterClick={onClusterClick}
@@ -410,6 +470,14 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
         </div>
       </div>
 
+      {pickMode && (
+        <div role="status" className="absolute z-30 left-1/2 -translate-x-1/2 top-[calc(var(--header-h)+9.5rem)] lg:top-[calc(var(--header-h)+8rem)] surface-float rounded-full pl-4 pr-1.5 py-1.5 flex items-center gap-3 t-small panel-in">
+          <Crosshair size={15} className="text-cyan" aria-hidden />
+          Click anywhere on the map to explore events nearby
+          <button className="btn btn-ghost btn-sm" onClick={() => setPickMode(false)}>Cancel</button>
+        </div>
+      )}
+
       {/* ---------- Filters drawer ---------- */}
       {showFilters && (
         <aside className="absolute z-40 inset-x-0 bottom-0 max-h-[80dvh] sm:inset-auto sm:left-6 sm:top-[calc(var(--header-h)+12rem)] sm:bottom-6 sm:w-[380px] sm:max-h-none surface-float rounded-t-[var(--radius-l)] sm:rounded-[var(--radius-l)] flex flex-col panel-in" aria-label="Filters">
@@ -437,7 +505,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       )}
 
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
-      <div className="absolute z-20 left-4 sm:left-6 bottom-8 sm:bottom-8 flex flex-col gap-2 items-start">
+      <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"}`}>
         {showLayers && mode !== "list" && (
           <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} />
         )}
@@ -485,6 +553,14 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
             <button className="btn btn-secondary btn-icon btn-sm" aria-label="Reset to whole-planet view" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME }))}>
               <RotateCcw size={14} aria-hidden />
             </button>
+            <button
+              className={`btn btn-sm ${pickMode || near ? "btn-primary" : "btn-secondary"}`}
+              aria-pressed={pickMode}
+              onClick={() => (near && !pickMode ? setPickMode(true) : setPickMode((p) => !p))}
+              title="Pick a point on the map and search a radius around it"
+            >
+              <Crosshair size={14} aria-hidden /> {near ? `${formatKm(near.radiusKm)} area` : "Explore an area"}
+            </button>
             <button className="btn btn-secondary btn-icon btn-sm" aria-label="Show events near me" title="Use my location (optional, not stored)" onClick={locate}>
               <LocateFixed size={15} aria-hidden />
             </button>
@@ -525,7 +601,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           <ErrorState title="Couldn't load events for this view" body={error} onRetry={() => (setError(null), setRetry((r) => r + 1))} />
         </div>
       )}
-      {!loading && !error && counts?.total === 0 && mode !== "list" && (
+      {!loading && !error && counts?.total === 0 && mode !== "list" && !near && (
         <div className="absolute z-20 left-1/2 -translate-x-1/2 top-1/2 w-[min(92vw,420px)] surface-float rounded-[var(--radius-l)] p-5">
           <p className="t-h3">No events match these filters</p>
           <p className="t-small text-text-2 mt-1">Try a wider date range or fewer categories. Missing results don&apos;t mean nothing is happening; our sources don&apos;t cover every event yet.</p>
@@ -541,23 +617,30 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           onClose={() => setSelection(null)}
           onSelectEvent={(c) => {
             setSelection({ kind: "event", card: c, from: selection.kind === "cluster" ? selection.cluster : undefined });
-            if (view.zoom < 9) fly({ lat: c.lat, lng: c.lng, zoom: 13 });
+            if (view.zoom < 9 && !filters.near) fly({ lat: c.lat, lng: c.lng, zoom: 13 });
           }}
           onBack={selection.kind === "event" && selection.from ? () => setSelection({ kind: "cluster", cluster: selection.from! }) : undefined}
         />
       ) : place && mode !== "list" ? (
         <PlacePanel
+          key={`${place.lat},${place.lng}`}
           place={place}
           canGoBack={history.current.length > 0}
           onClose={() => setPlace(null)}
           onBack={goBack}
           onZoom={() => fly({ lat: place.lat, lng: place.lng, zoom: Math.min(19, Math.max(view.zoom + 2, (place.zoom ?? 0) + 1)) })}
-          onEventsNear={() => {
-            const r = view.zoom >= 13 ? 5 : view.zoom >= 10 ? 25 : view.zoom >= 6 ? 100 : 300;
-            setFilters((f) => ({ ...f, city: undefined, country: undefined, continent: undefined, near: { lat: place.lat, lng: place.lng, radiusKm: r }, sort: "distance" }));
-            setMode("list");
-          }}
+          onExplore={(label) => explore(place.lat, place.lng, label)}
           onLevel={(q, kind) => flyToQuery(q, kind)}
+        />
+      ) : near && mode !== "list" ? (
+        <ExplorePanel
+          filters={{ ...filters, near }}
+          onChange={setFilters}
+          onClose={() => (setFilters((f) => ({ ...f, near: undefined, nearLabel: undefined, sort: f.sort === "distance" ? undefined : f.sort })), setFocusedVenue(null), setHovered(null))}
+          onSelect={(c) => (setSelection({ kind: "event", card: c }), setHovered(null))}
+          onHover={(c) => setHovered(c ? { lat: c.lat, lng: c.lng } : null)}
+          focusedVenue={focusedVenue}
+          onClearFocus={() => setFocusedVenue(null)}
         />
       ) : (
         mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onPick={(c) => (setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
@@ -855,6 +938,7 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
             <dd>
               <Link href={`/venues/${card.venueSlug}`} className="hover:text-cyan">{card.venueName}</Link>
               <span className="text-text-2">, {card.city}, {card.country}</span>
+              {card.distanceKm != null && <span className="block t-micro text-text-3 tnum">{card.distanceKm < 1 ? `${Math.round(card.distanceKm * 1000)} m` : `${card.distanceKm.toFixed(1)} km`} from the search pin</span>}
             </dd>
           </div>
           <div className="flex gap-2">

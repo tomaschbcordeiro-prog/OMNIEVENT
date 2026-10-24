@@ -8,6 +8,8 @@ import { parseFilterParams, filtersToParams } from "@/lib/search/params";
 import { formatEventTime, formatShortDate } from "@/lib/format";
 import { EventsBrowser } from "@/components/events-browser";
 import { ClusterMap } from "@/components/cluster-map";
+import { Suspense } from "react";
+import { ContinueSearch } from "@/components/continue-search";
 import { CategoryIcon, DemoBadge, Price, StatusBadge } from "@/components/ui";
 import { Footer } from "@/components/footer";
 import type { EventCard } from "@/lib/types";
@@ -175,6 +177,9 @@ export default async function CategoryPage({ params, searchParams }: { params: P
         )}
 
         <section className="mt-12" aria-labelledby="all">
+          <Suspense fallback={null}>
+            <ContinueSearch keep={["categories"]} />
+          </Suspense>
           <h2 id="all" className="t-h2 mb-4">{isSports ? "All sports events" : `All ${cat.name.toLowerCase()}`}</h2>
           <EventsBrowser result={result} filters={filters} hideCategoryStrip basePath={`/categories/${slug}`} />
         </section>

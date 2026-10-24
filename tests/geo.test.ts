@@ -53,3 +53,19 @@ describe("day/night bands", () => {
     expect(inPoly(10, 85, night)).toBe(false);
   });
 });
+
+import { geodesicCircle, sliderToKm, kmToSlider } from "@/lib/map/circle";
+describe("geodesic radius circle", () => {
+  it("every vertex is exactly the radius away, at any latitude", () => {
+    for (const [lat, lng, km] of [[38.72, -9.14, 10], [64.1, -21.9, 250], [-33.9, 151.2, 500], [0, 179.9, 100]]) {
+      for (const [lo, la] of geodesicCircle(lat, lng, km, 32)) expect(haversineKm(lat, lng, la, lo)).toBeCloseTo(km, 3);
+    }
+  });
+  it("stays continuous across the antimeridian", () => {
+    const pts = geodesicCircle(-17.8, 179.5, 300, 64);
+    for (let i = 1; i < pts.length; i++) expect(Math.abs(pts[i][0] - pts[i - 1][0])).toBeLessThan(10);
+  });
+  it("slider maps round-trip within rounding", () => {
+    for (const km of [1, 5, 10, 25, 100, 500]) expect(Math.abs(sliderToKm(kmToSlider(km)) - km) / km).toBeLessThan(0.05);
+  });
+});

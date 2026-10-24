@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { LayoutGrid, List, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
+import { rememberSearch } from "@/lib/search/session";
+import { hasWhereOrWhen } from "@/lib/search/summary";
 import type { EventCard, Paged, SearchFilters } from "@/lib/types";
 import { filtersToParams, activeFilterCount } from "@/lib/search/params";
 import { GROUPS } from "@/lib/categories";
@@ -35,6 +37,11 @@ export function EventsBrowser({
     start(() => router.push(`${basePath ?? path}${p.toString() ? `?${p}` : ""}`, { scroll: false }));
   };
   const n = activeFilterCount(filters);
+  // Keep the shared search in step so other pages can offer to continue it.
+  // An empty search here never overwrites a richer one from another page.
+  useEffect(() => {
+    if (hasWhereOrWhen(filters)) rememberSearch(filters);
+  }, [filters]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -69,6 +76,9 @@ export function EventsBrowser({
             {pending && <Loader2 size={14} className="animate-spin" aria-hidden />}
             {result.total.toLocaleString()} {result.total === 1 ? "event" : "events"}
           </p>
+          <Link href={`/?${filtersToParams({ ...filters, page: undefined, pageSize: undefined, sort: undefined })}`} className="btn btn-secondary btn-sm">
+            <MapIcon size={14} aria-hidden /> Show on map
+          </Link>
           <button className="btn btn-secondary btn-sm lg:hidden" onClick={() => setDrawer(true)}>
             <SlidersHorizontal size={14} aria-hidden /> Filters{n ? <span className="text-cyan tnum">{n}</span> : null}
           </button>

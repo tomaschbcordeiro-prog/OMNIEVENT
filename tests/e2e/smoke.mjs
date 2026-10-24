@@ -152,6 +152,95 @@ await step("layers: map style and toggles change what is drawn", async () => {
   await page.getByLabel("3D buildings").check();
 });
 
+const hav = (a, b, c, d) => { const R = 6371, t = (x) => (x * Math.PI) / 180; const s1 = Math.sin(t(c - a) / 2) ** 2 + Math.cos(t(a)) * Math.cos(t(c)) * Math.sin(t(d - b) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s1)); };
+const urlParams = () => new URL(page.url()).searchParams;
+const foundCount = async () => Number((await page.getByText(/events? found$/).first().innerText()).replace(/[^\d]/g, ""));
+
+await step("radius search: pick a point on the map, results stay inside the circle", async () => {
+  await page.goto(BASE + "/?at=38.72,-9.14,10,0,0");
+  await mapIdle();
+  await page.getByRole("button", { name: /Explore an area/ }).click();
+  await page.getByText("Click anywhere on the map to explore events nearby").waitFor();
+  const r = await page.evaluate(() => window.__omniMaps.at(-1).getCanvas().getBoundingClientRect());
+  await page.mouse.click(r.left + r.width * 0.4, r.top + r.height * 0.55);
+  const panel = page.getByRole("complementary", { name: "Explore nearby" });
+  await panel.waitFor();
+  await panel.getByText(/events? found$/).waitFor({ timeout: 20000 });
+  await page.waitForFunction(() => new URL(location.href).searchParams.get("radius") === "10");
+  const n10 = await foundCount();
+  await panel.getByRole("button", { name: "25 km", exact: true }).click();
+  await page.waitForFunction(() => new URL(location.href).searchParams.get("radius") === "25");
+  await page.waitForTimeout(1500);
+  const n25 = await foundCount();
+  assert.ok(n25 >= n10, `25 km found ${n25} < 10 km ${n10}`);
+  await mapIdle();
+  const lat = +urlParams().get("lat"), lng = +urlParams().get("lng");
+  const pts = await page.evaluate(() => window.__omniMaps.at(-1).querySourceFeatures("events").map((f) => f.geometry.coordinates));
+  assert.ok(pts.length > 0, "no markers");
+  for (const [x, y] of pts) assert.ok(hav(lat, lng, y, x) <= 25.5, `marker outside circle: ${y},${x}`);
+});
+
+await step("local time: evening window applies, shows the area's time zone", async () => {
+  const panel = page.getByRole("complementary", { name: "Explore nearby" });
+  const all = await foundCount();
+  await panel.getByRole("button", { name: "Evening", exact: true }).click();
+  await page.waitForFunction(() => { const p = new URL(location.href).searchParams; return p.get("tfrom") === "18:00" && p.get("tto") === "23:00"; });
+  await page.waitForTimeout(1500);
+  assert.ok((await foundCount()) <= all);
+  await panel.getByText(/Europe\/Lisbon/).waitFor();
+});
+
+await step("dragging the pin moves the search and keeps the radius", async () => {
+  await mapIdle();
+  const before = { lat: urlParams().get("lat"), lng: urlParams().get("lng") };
+  const pin = await page.locator(".omni-search-pin").boundingBox();
+  await page.mouse.move(pin.x + pin.width / 2, pin.y + pin.height - 4);
+  await page.mouse.down();
+  await page.mouse.move(pin.x + 120, pin.y + 60, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction((b) => new URL(location.href).searchParams.get("lat") !== b.lat, before);
+  assert.equal(urlParams().get("radius"), "25");
+  assert.equal(urlParams().get("tfrom"), "18:00");
+});
+
+await step("list to map: choosing a result opens its preview, closing returns to the results", async () => {
+  const panel = page.getByRole("complementary", { name: "Explore nearby" });
+  if ((await foundCount()) === 0) await panel.getByRole("button", { name: "Any time of day" }).click();
+  await panel.locator("li button").first().click();
+  await page.getByRole("complementary", { name: "Event preview" }).waitFor();
+  await page.getByRole("button", { name: "Close preview" }).click();
+  await page.getByRole("complementary", { name: "Explore nearby" }).waitFor();
+});
+
+await step("cross-page: the full list and a category page continue the same search", async () => {
+  await page.getByRole("link", { name: /Full list/ }).click();
+  await page.waitForURL(/\/events\?/);
+  const p = urlParams();
+  assert.ok(p.get("lat") && p.get("radius") === "25", "events page lost the area");
+  await page.getByRole("heading", { level: 1, name: /Events near/ }).waitFor();
+  await page.goto(BASE + "/categories/music");
+  const banner = page.getByRole("region", { name: "Continue your search" });
+  await banner.waitFor();
+  await banner.getByRole("button", { name: "Apply" }).click();
+  await page.waitForURL(/\/categories\/music\?.*lat=.*radius=25/);
+  // The category comes from the page itself; the area and times come from the earlier search.
+  assert.equal(urlParams().get("tfrom"), "18:00");
+  await page.getByRole("button", { name: /Remove filter .*within 25 km/ }).waitFor();
+});
+
+await step("saved searches: save on the map, find it in My World", async () => {
+  await page.goto(BASE + "/?lat=38.7223&lng=-9.1393&radius=10&pl=Lisboa&tfrom=18%3A00&tto=23%3A00");
+  const panel = page.getByRole("complementary", { name: "Explore nearby" });
+  await panel.waitFor();
+  await panel.getByRole("button", { name: "Save search" }).click();
+  await page.getByLabel("Name this search").fill("Evenings in Lisbon");
+  await panel.getByRole("button", { name: "Save", exact: true }).click();
+  await page.goto(BASE + "/my-world?tab=searches");
+  await page.getByText("Evenings in Lisbon").waitFor();
+  await page.getByRole("link", { name: "Map" }).first().click();
+  await page.getByRole("complementary", { name: "Explore nearby" }).waitFor();
+});
+
 await step("events page: category chip updates URL and results", async () => {
   await page.goto(BASE + "/events");
   await page.getByRole("group", { name: "Quick categories" }).getByRole("button", { name: /Sports/ }).click();

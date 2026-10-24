@@ -36,8 +36,18 @@ export interface Prefs {
 
 export type FollowKind = "participant" | "venue" | "destination" | "competition" | "category";
 
+export interface SavedSearch {
+  id: string;
+  name: string;
+  /** Search filters as URL parameters (same format as shareable links). */
+  params: string;
+  summary: string;
+  createdAt: string;
+}
+
 export interface UserData {
   version: 1;
+  searches: SavedSearch[];
   saved: { id: string; at: string }[];
   follows: { kind: FollowKind; id: string; name: string; at: string }[];
   trips: Trip[];
@@ -69,6 +79,7 @@ export const DEFAULT_PREFS: Prefs = {
 
 const empty = (): UserData => ({
   version: 1,
+  searches: [],
   saved: [],
   follows: [],
   trips: [],
@@ -197,6 +208,14 @@ export const userActions = {
           : t,
       ),
     }));
+  },
+  saveSearch(name: string, params: string, summary: string): string {
+    const id = uid();
+    update((d) => ({ ...d, searches: [{ id, name: name.trim().slice(0, 80) || summary, params, summary, createdAt: now() }, ...d.searches].slice(0, 50) }));
+    return id;
+  },
+  deleteSearch(id: string) {
+    update((d) => ({ ...d, searches: d.searches.filter((x) => x.id !== id) }));
   },
   exportData(): string {
     load();
