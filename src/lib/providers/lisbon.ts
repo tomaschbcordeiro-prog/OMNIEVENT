@@ -306,7 +306,7 @@ async function locateVenue(name: string, ctx: SyncContext): Promise<VenueLocatio
   url.searchParams.set("limit", "5");
   try {
     // Cached for 30 days: venues don't move.
-    const json = (await fetchJson("lisbon", url, ctx, { revalidate: 30 * 86400, attempts: 2, timeoutMs: 10000, headers: { "User-Agent": UA } })) as { features?: { geometry: { coordinates: [number, number] }; properties: { name?: string } }[] };
+    const json = (await fetchJson("lisbon", url, ctx, { revalidate: 30 * 86400, attempts: 1, timeoutMs: 5000, headers: { "User-Agent": UA } })) as { features?: { geometry: { coordinates: [number, number] }; properties: { name?: string } }[] };
     for (const f of json.features ?? []) {
       const [lng, lat] = f.geometry.coordinates;
       if (haversineKm(lat, lng, LISBON.lat, LISBON.lng) < 30 && f.properties.name && sameVenueName(name, f.properties.name)) return { name, lat, lng };
@@ -362,7 +362,9 @@ export const lisbonProvider: ProviderAdapter = {
       const v = r.venue && !Array.isArray(r.venue) ? Object.entries(r.venue)[0] : undefined;
       if (v && !located[v[0]] && v[1].name) unknown.set(v[0], decode(v[1].name));
     }
-    for (const [slug, name] of [...unknown].slice(0, 60)) {
+    // Capped so a cold server is ready quickly; lookups are cached for 30 days, so later
+    // runs work through the rest.
+    for (const [slug, name] of [...unknown].slice(0, 12)) {
       const loc = await locateVenue(name, ctx);
       if (loc) located[slug] = loc;
       await sleep(250);
