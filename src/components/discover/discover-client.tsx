@@ -25,6 +25,7 @@ import { LayersPanel } from "../earth/layers-panel";
 import { ExplorePanel } from "../earth/explore-panel";
 import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
+import { sellerSearches } from "@/lib/sellers";
 
 // MapLibre touches `window` on import, so the map only loads in the browser.
 const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthMap), { ssr: false, loading: () => null });
@@ -1024,6 +1025,21 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
             )}
           </div>
         )}
+        {detail && !card.isDemo && card.ticketAccess !== "free" && (() => {
+          const sellers = sellerSearches(detail.venue.countryCode, card.title, card.city, offers.map((o) => o.provider));
+          return sellers.length ? (
+            <div>
+              <p className="t-micro text-text-3 mb-1.5">Compare on other ticket sites (opens their search, not checked by us)</p>
+              <div className="flex flex-wrap gap-1.5">
+                {sellers.map((s) => (
+                  <a key={s.id} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="chip hover:border-cyan/50">
+                    {s.name} <ExternalLink size={12} aria-hidden />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
         <div className="grid grid-cols-[1fr_auto] gap-2 pt-1">
           <Link href={`/events/${card.slug}`} className="btn btn-primary">View details</Link>
           <SaveButton id={card.id} title={card.title} />

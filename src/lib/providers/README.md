@@ -8,6 +8,7 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 |---|---|---|
 | `demo` | Active only when no real provider is active | nothing |
 | `ticketmaster` | Live. City-by-city radius queries, then one page per country | `TICKETMASTER_API_KEY` |
+| `lisbon` | Live. Agenda Cultural de Lisboa official API, CC BY 4.0. Venues from the bundled `data/lisbon-venues.json` (hand-checked OpenStreetMap matches) plus strict name-matched lookups for new venues; events at venues we can't place are skipped | nothing |
 | `paris` | Live. City of Paris "Que faire à Paris", ODbL, paged 100 at a time | nothing |
 | `madrid` | Live. City of Madrid cultural agenda, next 100 days | nothing |
 | `seatgeek` | Fixture-tested; on when the key is set | `SEATGEEK_CLIENT_ID` |

@@ -29,13 +29,13 @@ export async function fetchJson(
   provider: string,
   url: string | URL,
   ctx: Pick<SyncContext, "signal" | "log">,
-  { revalidate = 3600, timeoutMs = 30000, attempts = 3 }: { revalidate?: number; timeoutMs?: number; attempts?: number } = {},
+  { revalidate = 3600, timeoutMs = 30000, attempts = 3, headers }: { revalidate?: number; timeoutMs?: number; attempts?: number; headers?: Record<string, string> } = {},
 ): Promise<unknown> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const signal = ctx.signal ? AbortSignal.any([ctx.signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
     try {
-      const init = (revalidate > 0 ? { signal, next: { revalidate } } : { signal, cache: "no-store" }) as RequestInit;
+      const init = (revalidate > 0 ? { signal, headers, next: { revalidate } } : { signal, headers, cache: "no-store" }) as RequestInit;
       const res = await fetch(url, init);
       if (res.status === 429) {
         lastErr = new ProviderError(provider, "rate limited", 429, true);
@@ -92,6 +92,8 @@ export function plainText(html: string | undefined | null): string | undefined {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|li|h\d)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')

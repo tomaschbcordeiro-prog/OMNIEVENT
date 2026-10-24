@@ -76,10 +76,13 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Ticketmaster Discovery API | 50 major cities (2 pages each, 50 km radius) plus one page per country, in 22 markets | `TICKETMASTER_API_KEY` |
 | SeatGeek Platform API | US and Canadian cities, live marketplace prices | `SEATGEEK_CLIENT_ID` (free, <https://seatgeek.com/account/develop>) |
 | Skiddle Events API | UK and Ireland: clubs, gigs, festivals, comedy | `SKIDDLE_API_KEY` (free, <https://www.skiddle.com/api/join.php>) |
+| Agenda Cultural de Lisboa (agendalx.pt API) | City of Lisbon cultural agenda, CC BY 4.0; ~400 mapped events | nothing |
 | Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
 | Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
 
 Set keys in `.env.local` (or your host's env vars) and restart; each source switches on when its key is present. `DISABLED_PROVIDERS=paris,madrid` switches sources off. Demo data appears only when no real source is active (`DEMO_MODE=auto`). Listings that give dates but no times are flagged `hoursUnknown`: they show without a time and are left out of time-of-day searches.
+
+**Ticket comparison in Portugal.** BOL, Ticketline, MEO Blueticket and Eventbrite publish no open data feed, so their prices can't be read. Event pages and previews for Portuguese events link to each seller's own search for the event, labelled as not checked by us (`src/lib/sellers.ts`). Real price comparison across them needs partner/affiliate access from each seller.
 
 More sources: see `src/lib/providers/README.md`. No single API covers every event in the world, and coverage grows one licensed source at a time.
 
@@ -96,7 +99,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 

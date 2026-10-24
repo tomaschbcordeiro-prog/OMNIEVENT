@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database } from "lucide-react";
+import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
 import { ensureFresh, getEventView, searchEvents } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, ACCESS_META } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
@@ -10,6 +10,7 @@ import { CategoryIcon, DemoBadge, Poster, Price, SaveButton, StatusBadge, Notice
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
 import type { EventView } from "@/lib/types";
+import { sellerSearches } from "@/lib/sellers";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -73,6 +74,7 @@ export default async function EventPage({ params }: { params: P }) {
   const cat = getCategory(e.categorySlug);
   const group = groupOf(e.categorySlug);
   const v = e.venue;
+  const sellers = e.provenance.isDemo ? [] : sellerSearches(v.countryCode, e.title, v.city, e.offers.map((o) => o.provider));
   const sameVenue = searchEvents({ venue: v.slug, pageSize: 6 }).items.filter((c) => c.id !== e.id).slice(0, 5);
   const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 8, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 5);
   const isDaily = e.eventType === "daily_attraction";
@@ -227,6 +229,22 @@ export default async function EventPage({ params }: { params: P }) {
                 <p className="t-body">Entry is free. No ticket is needed unless the organiser says otherwise.</p>
               ) : (
                 <TicketComparison offers={e.offers} eventStatus={e.status} />
+              )}
+              {e.ticketAccess !== "free" && sellers.length > 0 && (
+                <div className="mt-5 rounded-[var(--radius-m)] border border-line bg-panel p-4">
+                  <h3 className="t-small font-semibold">Compare on other ticket sites in {v.country}</h3>
+                  <p className="t-micro text-text-3 mt-0.5">These open each seller&apos;s own search for this event. We haven&apos;t checked whether they sell it, or at what price.</p>
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {sellers.map((s) => (
+                      <li key={s.id}>
+                        <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center justify-between gap-2 rounded-[var(--radius-s)] border border-line-strong px-3 py-2 hover:border-cyan/50 hover:bg-panel-2">
+                          <span className="font-medium text-sm">Search {s.name}</span>
+                          <ExternalLink size={14} className="text-text-3" aria-hidden />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </section>
 

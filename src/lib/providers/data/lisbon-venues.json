@@ -1,0 +1,872 @@
+{
+"31-darmada": {
+"name": "31 D’Armada",
+"lat": 38.70528,
+"lng": -9.17019
+},
+"8-marvila": {
+"name": "8 Marvila",
+"lat": 38.742023,
+"lng": -9.102003
+},
+"academia-das-ciencias-de-lisboa": {
+"name": "Academia das Ciências de Lisboa",
+"lat": 38.713136,
+"lng": -9.149696
+},
+"academia-de-santo-amaro": {
+"name": "Academia de Santo Amaro",
+"lat": 38.701835,
+"lng": -9.182768
+},
+"alameda-d-afonso-henriques": {
+"name": "Alameda D. Afonso Henriques",
+"lat": 38.737124,
+"lng": -9.132836
+},
+"alliance-francaise": {
+"name": "Alliance Française",
+"lat": 38.726007,
+"lng": -9.161043
+},
+"altice-arena": {
+"name": "MEO Arena",
+"lat": 38.768469,
+"lng": -9.0939
+},
+"aqueduto-das-aguas-livres": {
+"name": "Aqueduto das Águas Livres",
+"lat": 38.721703,
+"lng": -9.160689
+},
+"arquivo-municipal-de-lisboa": {
+"name": "Arquivo Municipal de Lisboa",
+"lat": 38.735629,
+"lng": -9.171495
+},
+"arquivo-municipal-de-lisboa-videoteca": {
+"name": "Arquivo Municipal de Lisboa - Videoteca",
+"lat": 38.704525,
+"lng": -9.177243
+},
+"arte-graca": {
+"name": "Galeria Arte Graça",
+"lat": 38.720926,
+"lng": -9.130015
+},
+"atelier-arteria": {
+"name": "Atelier Artéria",
+"lat": 38.742182,
+"lng": -9.171804
+},
+"atelier-mestres-1-a": {
+"name": "Atelier Mestres 1A",
+"lat": 38.726682,
+"lng": -9.165559
+},
+"atelier-museu-julio-pomar": {
+"name": "Atelier-Museu Júlio Pomar",
+"lat": 38.711245,
+"lng": -9.150414
+},
+"atmosfera-m": {
+"name": "Atmosfera M",
+"lat": 38.711877,
+"lng": -9.152627
+},
+"auditorio-camoes": {
+"name": "Auditório Camões",
+"lat": 38.73111,
+"lng": -9.142449
+},
+"auditorio-santa-joana": {
+"name": "Auditório Santa Joana Princesa",
+"lat": 38.753875,
+"lng": -9.137178
+},
+"aula-magna": {
+"name": "Aula Magna",
+"lat": 38.752574,
+"lng": -9.158484
+},
+"avenidas-um-teatro-em-cada-bairro": {
+"name": "Avenidas - Um Teatro em Cada Bairro",
+"lat": 38.746101,
+"lng": -9.158285
+},
+"b-leza": {
+"name": "B.Leza",
+"lat": 38.705483,
+"lng": -9.147348
+},
+"b-mad-berardo-museu-arte-deco-2": {
+"name": "B-Mad, Berardo Museu Arte Deco",
+"lat": 38.703846,
+"lng": -9.179278
+},
+"basilica-da-estrela": {
+"name": "Basílica da Estrela",
+"lat": 38.713251,
+"lng": -9.160513
+},
+"beato-riverside-rooftop": {
+"name": "Beato Riverside Rooftop",
+"lat": 38.731067,
+"lng": -9.105904
+},
+"biblioteca-camoes": {
+"name": "Biblioteca Camões",
+"lat": 38.710805,
+"lng": -9.14604
+},
+"biblioteca-dos-corucheus": {
+"name": "Biblioteca dos Coruchéus",
+"lat": 38.751004,
+"lng": -9.144149
+},
+"biblioteca-marvila": {
+"name": "Biblioteca de Marvila",
+"lat": 38.740232,
+"lng": -9.109154
+},
+"biblioteca-nacional-de-portugal": {
+"name": "Biblioteca Nacional de Portugal",
+"lat": 38.750976,
+"lng": -9.152182
+},
+"biblioteca-orlando-ribeiro": {
+"name": "Biblioteca Orlando Ribeiro",
+"lat": 38.759791,
+"lng": -9.169313
+},
+"biblioteca-orlando-ribeiro-fonoteca": {
+"name": "Auditório da Biblioteca Orlando Ribeiro",
+"lat": 38.759791,
+"lng": -9.169313
+},
+"biblioteca-palacio-galveias": {
+"name": "Biblioteca Palácio Galveias",
+"lat": 38.741436,
+"lng": -9.143639
+},
+"bota-anjos": {
+"name": "BOTA Anjos",
+"lat": 38.72654,
+"lng": -9.13684
+},
+"boutique-da-cultura": {
+"name": "Boutique da Cultura - Um Teatro em Cada Bairro",
+"lat": 38.757609,
+"lng": -9.185341
+},
+"broteria": {
+"name": "Brotéria",
+"lat": 38.713372,
+"lng": -9.143719
+},
+"camb-centro-de-arte-manuel-de-brito": {
+"name": "CAMB - Centro de Arte Manuel de Brito",
+"lat": 38.6999,
+"lng": -9.23023
+},
+"carlos-carvalho-arte-contemporanea": {
+"name": "Carlos Carvalho Arte Contemporânea",
+"lat": 38.748288,
+"lng": -9.169122
+},
+"carpintarias-de-sao-lazaro": {
+"name": "Carpintarias de São Lázaro",
+"lat": 38.718419,
+"lng": -9.136255
+},
+"casa-asia-colecao-francisco-capelo": {
+"name": "Casa Ásia - Coleção Francisco Capelo",
+"lat": 38.713175,
+"lng": -9.14376
+},
+"casa-da-achada-centro-mario-dionisio": {
+"name": "Casa da Achada – Centro Mário Dionísio",
+"lat": 38.713476,
+"lng": -9.135355
+},
+"casa-do-alentejo": {
+"name": "Casa do Alentejo",
+"lat": 38.715923,
+"lng": -9.139854
+},
+"casa-do-capitao": {
+"name": "Casa Capitão",
+"lat": 38.730887,
+"lng": -9.10728
+},
+"casa-do-concelho-de-ponte-de-lima": {
+"name": "Casa do Concelho de Ponte de Lima",
+"lat": 38.736456,
+"lng": -9.166031
+},
+"casa-do-coreto": {
+"name": "Casa do Coreto",
+"lat": 38.759974,
+"lng": -9.189281
+},
+"casa-do-jardim-da-estrela-um-teatro-em-cada-bairro": {
+"name": "Casa do Jardim da Estrela - Um Teatro em Cada Bairro",
+"lat": 38.714695,
+"lng": -9.159053
+},
+"casa-fernando-pessoa": {
+"name": "Casa Fernando Pessoa",
+"lat": 38.716672,
+"lng": -9.162519
+},
+"casa-museu-medeiros-e-almeida": {
+"name": "Museu Medeiros e Almeida",
+"lat": 38.72168,
+"lng": -9.149145
+},
+"casino-de-lisboa": {
+"name": "Casino Lisboa",
+"lat": 38.764863,
+"lng": -9.096597
+},
+"castelo-de-sao-jorge": {
+"name": "Castelo de São Jorge",
+"lat": 38.713926,
+"lng": -9.133483
+},
+"centro-cultural-casapiano": {
+"name": "Centro Cultural Casapiano",
+"lat": 38.699413,
+"lng": -9.205862
+},
+"centro-cultural-de-belem": {
+"name": "Centro Cultural de Belém",
+"lat": 38.695305,
+"lng": -9.208539
+},
+"centro-de-arte-moderna": {
+"name": "Fundação Calouste Gulbenkian - Centro de Arte Moderna",
+"lat": 38.735961,
+"lng": -9.153332
+},
+"chapito": {
+"name": "Chapitô",
+"lat": 38.711582,
+"lng": -9.133873
+},
+"cinema-ideal": {
+"name": "Cinema Ideal",
+"lat": 38.710602,
+"lng": -9.14438
+},
+"cinema-sao-jorge": {
+"name": "Cinema São Jorge",
+"lat": 38.720411,
+"lng": -9.146545
+},
+"cinemateca": {
+"name": "Cinemateca Portuguesa - Museu do Cinema",
+"lat": 38.720771,
+"lng": -9.148647
+},
+"cinemateca-junior": {
+"name": "Cinemateca Júnior",
+"lat": 38.7158,
+"lng": -9.14245
+},
+"clube-atletico-e-recreativo-do-caramao": {
+"name": "Clube Atlético e Recreativo do Caramão",
+"lat": 38.713402,
+"lng": -9.206127
+},
+"clube-estefania": {
+"name": "Clube Estefânia",
+"lat": 38.725798,
+"lng": -9.140683
+},
+"colegio-almada-negreiros-universidade-nova-de-lisboa": {
+"name": "Colégio Almada Negreiros (Universidade Nova de Lisboa)",
+"lat": 38.732587,
+"lng": -9.16083
+},
+"coliseu-dos-recreios": {
+"name": "Coliseu dos Recreios",
+"lat": 38.716645,
+"lng": -9.140349
+},
+"comunidade-hindu-de-portugal": {
+"name": "Comunidade Hindu de Portugal",
+"lat": 38.769783,
+"lng": -9.174744
+},
+"convento-de-sao-pedro-de-alcantara": {
+"name": "Convento de São Pedro de Alcântara",
+"lat": 38.715018,
+"lng": -9.145297
+},
+"cordoaria-nacional": {
+"name": "Cordoaria Nacional",
+"lat": 38.697663,
+"lng": -9.191025
+},
+"corucheus-um-teatro-em-cada-bairro": {
+"name": "Coruchéus – Um Teatro em Cada Bairro",
+"lat": 38.751,
+"lng": -9.14415
+},
+"culturgest": {
+"name": "Culturgest",
+"lat": 38.740949,
+"lng": -9.142605
+},
+"damas": {
+"name": "DAMAS",
+"lat": 38.708392,
+"lng": -9.198675
+},
+"edificio-central-do-municipio": {
+"name": "Edifício Central do Município",
+"lat": 38.714506,
+"lng": -9.180717
+},
+"escola-secundaria-antonio-damasio": {
+"name": "Escola Secundária António Damásio",
+"lat": 38.770343,
+"lng": -9.107729
+},
+"espaco-bento-martins": {
+"name": "Espaço Bento Martins",
+"lat": 38.757211,
+"lng": -9.187213
+},
+"espaco-exibicionista": {
+"name": "Espaço Exibicionista",
+"lat": 38.732744,
+"lng": -9.141292
+},
+"espaco-imperfeito": {
+"name": "Espaço Imperfeito",
+"lat": 38.736607,
+"lng": -9.127877
+},
+"espaco-nimas": {
+"name": "Cinema Nimas",
+"lat": 38.735689,
+"lng": -9.147223
+},
+"espaco-nowhere": {
+"name": "NowHere Lisboa",
+"lat": 38.710825,
+"lng": -9.15161
+},
+"estudios-victor-cordon": {
+"name": "Estúdios Victor Córdon",
+"lat": 38.776142,
+"lng": -9.266156
+},
+"estufa-fria": {
+"name": "Estufa Fria de Lisboa",
+"lat": 38.729328,
+"lng": -9.155497
+},
+"fab-lab-lisboa": {
+"name": "Fab Lab Lisboa",
+"lat": 38.72192,
+"lng": -9.13189
+},
+"fabrica-braco-de-prata": {
+"name": "Fábrica Braço de Prata",
+"lat": 38.743796,
+"lng": -9.101225
+},
+"fabrica-de-moagem-da-antiga-manutencao-militar": {
+"name": "Fábrica de Moagem da Antiga Manutenção Militar",
+"lat": 38.731,
+"lng": -9.10671
+},
+"faculdade-de-ciencias-sociais-e-humanas-da-universidade-nova-de-lisboa": {
+"name": "Faculdade de Ciências Sociais e Humanas da Universidade Nova de Lisboa",
+"lat": 38.740367,
+"lng": -9.150561
+},
+"forum-grandella": {
+"name": "Fórum Grandela",
+"lat": 38.746514,
+"lng": -9.183883
+},
+"fundacao-calouste-gulbenkian": {
+"name": "Fundação Calouste Gulbenkian",
+"lat": 38.73729,
+"lng": -9.154801
+},
+"fundacao-portuguesa-das-comunicacoes-museu-das-comunicacoes": {
+"name": "Fundação Portuguesa das Comunicações – Museu das Comunicações",
+"lat": 38.707871,
+"lng": -9.150365
+},
+"gabinete-de-estudos-olisiponenses-geo": {
+"name": "Gabinete de Estudos Olisiponenses (Geo)",
+"lat": 38.746653,
+"lng": -9.182591
+},
+"galeria-111": {
+"name": "Galeria 111",
+"lat": 38.752994,
+"lng": -9.1526
+},
+"galeria-beltrao-coelho": {
+"name": "Galeria Beltrão Coelho",
+"lat": 38.742223,
+"lng": -9.127964
+},
+"galeria-foco": {
+"name": "Galeria Foco",
+"lat": 38.722692,
+"lng": -9.136523
+},
+"galeria-francisco-fino": {
+"name": "Galeria Francisco Fino",
+"lat": 38.738514,
+"lng": -9.10539
+},
+"galeria-imago": {
+"name": "Galeria Imago",
+"lat": 38.718348,
+"lng": -9.122934
+},
+"galeria-municipal-pavilhao-branco": {
+"name": "Pavilhão Branco",
+"lat": 38.757672,
+"lng": -9.15689
+},
+"galeria-vera-cortes": {
+"name": "Galeria Vera Cortês",
+"lat": 38.756936,
+"lng": -9.141962
+},
+"galeria-ze-dos-bois": {
+"name": "Galeria Zé dos Bois",
+"lat": 38.711765,
+"lng": -9.144561
+},
+"goethe-institut": {
+"name": "Goethe-Institut",
+"lat": 38.721269,
+"lng": -9.141013
+},
+"hard-rock-cafe-lisboa": {
+"name": "Hard Rock Café Lisboa",
+"lat": 38.716613,
+"lng": -9.141757
+},
+"hotel-bairro-alto": {
+"name": "Hotel Bairro Alto",
+"lat": 38.710285,
+"lng": -9.143282
+},
+"igreja-de-nossa-senhora-da-boa-hora": {
+"name": "Igreja de Nossa Senhora da Boa Hora",
+"lat": 38.563404,
+"lng": -9.09049
+},
+"igreja-de-nossa-senhora-de-fatima": {
+"name": "Igreja de Nossa Senhora de Fátima",
+"lat": 38.739671,
+"lng": -9.150842
+},
+"igreja-de-sao-vicente-de-fora": {
+"name": "Igreja e Mosteiro de São Vicente de Fora",
+"lat": 38.714729,
+"lng": -9.127489
+},
+"igreja-do-menino-deus": {
+"name": "Igreja do Menino Deus",
+"lat": 38.713639,
+"lng": -9.131452
+},
+"igreja-do-sagrado-coracao-de-jesus": {
+"name": "Igreja do Sagrado Coração de Jesus",
+"lat": 38.724889,
+"lng": -9.147034
+},
+"igreja-paroquial-de-santa-engracia": {
+"name": "Igreja Paroquial de Santa Engrácia",
+"lat": 38.71911,
+"lng": -9.119569
+},
+"inquieta-livraria-e-cafetaria": {
+"name": "Inquieta - livraria e cafetaria",
+"lat": 38.728884,
+"lng": -9.162329
+},
+"instituto-cervantes": {
+"name": "Instituto Cervantes",
+"lat": 38.723795,
+"lng": -9.145967
+},
+"levo": {
+"name": "Levö",
+"lat": 38.727175,
+"lng": -9.136143
+},
+"lisboa-ao-vivo": {
+"name": "Lisboa ao Vivo",
+"lat": 38.756909,
+"lng": -9.111047
+},
+"lu-ca-teatro-luis-de-camoes": {
+"name": "LU.CA - Teatro Luís de Camões",
+"lat": 38.699034,
+"lng": -9.199352
+},
+"luxfragil": {
+"name": "LuxFrágil",
+"lat": 38.71499,
+"lng": -9.12062
+},
+"maat-museu-de-arte-arquitetura-e-tecnologia": {
+"name": "MAAT - Museu de Arte, Arquitetura e Tecnologia",
+"lat": 38.695934,
+"lng": -9.193624
+},
+"maria-matos-teatro-municipal": {
+"name": "Teatro Maria Matos",
+"lat": 38.745956,
+"lng": -9.138526
+},
+"mercado-de-arroios": {
+"name": "Mercado de Arroios",
+"lat": 38.735242,
+"lng": -9.132663
+},
+"mercado-de-santa-clara": {
+"name": "Mercado de Santa Clara",
+"lat": 38.715533,
+"lng": -9.125612
+},
+"mude-museu-do-design-e-da-moda-colecao-francisco-capelo": {
+"name": "MUDE - Museu do Design",
+"lat": 38.709142,
+"lng": -9.136497
+},
+"museu-bordalo-pinheiro": {
+"name": "Museu Bordalo Pinheiro",
+"lat": 38.758899,
+"lng": -9.154147
+},
+"museu-colecao-berardo-arte-moderna-e-comtemporanea": {
+"name": "MAC/CCB",
+"lat": 38.695647,
+"lng": -9.20931
+},
+"museu-da-agua": {
+"name": "Museu da Água",
+"lat": 38.719906,
+"lng": -9.119649
+},
+"museu-da-agua-da-epal-galeria-do-loreto": {
+"name": "Museu da Água da EPAL – Galeria do Loreto",
+"lat": 38.71618,
+"lng": -9.148722
+},
+"museu-da-farmacia": {
+"name": "Museu da Farmácia",
+"lat": 38.710068,
+"lng": -9.147247
+},
+"museu-da-marioneta": {
+"name": "Museu da Marioneta",
+"lat": 38.708004,
+"lng": -9.155793
+},
+"museu-de-lisboa-palacio-pimenta": {
+"name": "Museu de Lisboa - Palácio Pimenta",
+"lat": 38.758228,
+"lng": -9.157118
+},
+"museu-de-lisboa-teatro-romano": {
+"name": "Museu de Lisboa - Teatro Romano",
+"lat": 38.710604,
+"lng": -9.132356
+},
+"museu-de-sao-roque": {
+"name": "Museu de São Roque",
+"lat": 38.713443,
+"lng": -9.143114
+},
+"museu-do-aljube-resistencia-e-liberdade": {
+"name": "Museu do Aljube – Resistência e Liberdade",
+"lat": 38.71018,
+"lng": -9.132553
+},
+"museu-do-oriente": {
+"name": "Museu do Oriente",
+"lat": 38.702901,
+"lng": -9.170571
+},
+"museu-do-tesouro-real": {
+"name": "Museu do Tesouro Real",
+"lat": 38.707627,
+"lng": -9.198759
+},
+"museu-nacional-de-arte-contemporanea": {
+"name": "Museu Nacional de Arte Contemporânea do Chiado",
+"lat": 38.708836,
+"lng": -9.141183
+},
+"museu-nacional-de-etnologia": {
+"name": "Museu Nacional de Etnologia",
+"lat": 38.704837,
+"lng": -9.208487
+},
+"museu-nacional-de-historia-natural-e-da-ciencia": {
+"name": "Museu Nacional de História Natural e da Ciência",
+"lat": 38.718066,
+"lng": -9.150227
+},
+"museu-nacional-do-traje": {
+"name": "Museu Nacional do Traje",
+"lat": 38.775151,
+"lng": -9.164811
+},
+"oceanario-de-lisboa": {
+"name": "Oceanário de Lisboa",
+"lat": 38.76352,
+"lng": -9.093716
+},
+"ochre-space": {
+"name": "Ochre Space",
+"lat": 38.704675,
+"lng": -9.198232
+},
+"pacos-do-concelho": {
+"name": "Paços do Concelho",
+"lat": 38.708127,
+"lng": -9.13881
+},
+"padrao-dos-descobrimentos": {
+"name": "Padrão dos Descobrimentos",
+"lat": 38.693605,
+"lng": -9.2057
+},
+"palacio-das-especiarias": {
+"name": "Palácio das Especiarias",
+"lat": 38.629758,
+"lng": -9.04539
+},
+"palacio-de-sao-bento": {
+"name": "Assembleia da República",
+"lat": 38.711173,
+"lng": -9.15371
+},
+"palacio-de-vilalva-provedoria-da-justica": {
+"name": "Palácio de Vilalva - Provedoria da Justiça",
+"lat": 38.706896,
+"lng": -9.164215
+},
+"palacio-nacional-da-ajuda": {
+"name": "Palácio Nacional da Ajuda",
+"lat": 38.707631,
+"lng": -9.197833
+},
+"palacio-nacional-de-belem": {
+"name": "Palácio Nacional de Belém",
+"lat": 38.698203,
+"lng": -9.200434
+},
+"palacio-sinel-de-cordes": {
+"name": "Palácio Sinel de Cordes",
+"lat": 38.716183,
+"lng": -9.12492
+},
+"panteao-nacional": {
+"name": "Panteão Nacional",
+"lat": 38.714978,
+"lng": -9.124683
+},
+"parque-florestal-de-monsanto-centro-de-interpretacao-de-monsanto": {
+"name": "Parque Florestal de Monsanto - Centro de Interpretação de Monsanto",
+"lat": 38.740264,
+"lng": -9.186248
+},
+"parque-mayer": {
+"name": "Parque Mayer",
+"lat": 38.718905,
+"lng": -9.146481
+},
+"parque-verde-de-carnide": {
+"name": "Parque Verde de Carnide",
+"lat": 38.765847,
+"lng": -9.192161
+},
+"pavilhao-31-hospital-julio-de-matos": {
+"name": "Pavilhão 31 - Hospital Júlio de Matos",
+"lat": 38.757048,
+"lng": -9.146098
+},
+"pavilhao-de-portugal-2": {
+"name": "Pavilhão de Portugal",
+"lat": 38.766342,
+"lng": -9.09498
+},
+"pavilhao-do-conhecimento-ciencia-viva": {
+"name": "Pavilhão do Conhecimento – Ciência Viva",
+"lat": 38.762281,
+"lng": -9.095582
+},
+"pavilhao-juliao-sarmento": {
+"name": "Pavilhão Julião Sarmento",
+"lat": 38.694232,
+"lng": -9.212505
+},
+"praca-de-toiros-do-campo-pequeno": {
+"name": "Sagres Campo Pequeno",
+"lat": 38.741115,
+"lng": -9.146784
+},
+"praca-do-comercio": {
+"name": "Praça do Comércio",
+"lat": 38.707715,
+"lng": -9.136524
+},
+"prata-riverside-village": {
+"name": "Prata Riverside Village",
+"lat": 38.744938,
+"lng": -9.099286
+},
+"principe-real-terrace": {
+"name": "Príncipe Real Terrace",
+"lat": 38.714417,
+"lng": -9.143695
+},
+"quinta-conde-dos-arcos": {
+"name": "Quinta Conde dos Arcos",
+"lat": 38.770497,
+"lng": -9.108676
+},
+"reitoria-da-universidade-nova-de-lisboa": {
+"name": "Reitoria da Universidade Nova de Lisboa",
+"lat": 38.733741,
+"lng": -9.160386
+},
+"rua-das-gaivotas-6": {
+"name": "Rua das Gaivotas 6",
+"lat": 38.755516,
+"lng": -9.098023
+},
+"sala-de-cinema-fernando-lopes-campus-academico-da-universidade-lusofona": {
+"name": "Cinema Fernando Lopes",
+"lat": 38.758043,
+"lng": -9.152681
+},
+"sala-estudio-valentim-de-barros": {
+"name": "Sala Estúdio Valentim de Barros",
+"lat": 38.72482,
+"lng": -9.140929
+},
+"sao-luiz-teatro-municipal": {
+"name": "São Luiz Teatro Municipal",
+"lat": 38.709268,
+"lng": -9.142298
+},
+"sociedade-nacional-de-belas-artes": {
+"name": "Sociedade Nacional de Belas-Artes",
+"lat": 38.721063,
+"lng": -9.149519
+},
+"tasca-das-artes": {
+"name": "Tasca das Artes",
+"lat": 38.726018,
+"lng": -9.127625
+},
+"teatro-aberto": {
+"name": "Teatro Aberto",
+"lat": 38.73618,
+"lng": -9.158478
+},
+"teatro-armando-cortez": {
+"name": "Teatro Armando Cortez",
+"lat": 38.760532,
+"lng": -9.192083
+},
+"teatro-camoes": {
+"name": "Teatro Camões",
+"lat": 38.76097,
+"lng": -9.093313
+},
+"teatro-cinearte": {
+"name": "Teatro Cinearte",
+"lat": 38.70718,
+"lng": -9.1552
+},
+"teatro-do-bairro": {
+"name": "Teatro do Bairro",
+"lat": 38.712275,
+"lng": -9.145881
+},
+"teatro-do-bairro-alto": {
+"name": "Teatro do Bairro Alto",
+"lat": 38.717968,
+"lng": -9.154018
+},
+"teatro-meridional": {
+"name": "Teatro Meridional",
+"lat": 38.739191,
+"lng": -9.103711
+},
+"teatro-nacional-dona-maria-ii": {
+"name": "Teatro Nacional D. Maria II",
+"lat": 38.714779,
+"lng": -9.139771
+},
+"teatro-politeama": {
+"name": "Teatro Politeama",
+"lat": 38.716529,
+"lng": -9.141058
+},
+"teatro-taborda": {
+"name": "Teatro Taborda",
+"lat": 38.714827,
+"lng": -9.132808
+},
+"teatro-tivoli-bbva": {
+"name": "Teatro Tivoli BBVA",
+"lat": 38.720272,
+"lng": -9.145024
+},
+"teatro-turim": {
+"name": "Turim - Um Teatro em Cada Bairro",
+"lat": 38.75064,
+"lng": -9.2024
+},
+"teatro-variedades": {
+"name": "Teatro Variedades",
+"lat": 38.718937,
+"lng": -9.145999
+},
+"teatro-villaret": {
+"name": "Teatro Villaret",
+"lat": 38.730247,
+"lng": -9.146717
+},
+"topo-chiado": {
+"name": "Carmo Rooftop",
+"lat": 38.711701,
+"lng": -9.140974
+},
+"tribunal-constitucional-palacio-ratton": {
+"name": "Tribunal Constitucional | Palácio Ratton",
+"lat": 38.713995,
+"lng": -9.147809
+},
+"universidade-catolica": {
+"name": "Universidade Católica",
+"lat": 38.74914,
+"lng": -9.165983
+},
+"voz-do-operario": {
+"name": "A Voz do Operário",
+"lat": 38.715546,
+"lng": -9.129319
+}
+}
