@@ -74,3 +74,12 @@ describe("ticket seller comparison links", () => {
     expect(sellerSearches("ZZ", "x", "y")).toEqual([]);
   });
 });
+
+describe("lisbon snapshot", () => {
+  it("is valid and maps most events onto the map", async () => {
+    const snap = (await import("@/lib/providers/data/lisbon-events.json")).default as unknown as { fetchedAt: string; events: AlxEvent[] };
+    expect(Date.parse(snap.fetchedAt)).toBeGreaterThan(0);
+    const b = normalizeLisbon(snap.events, snap.fetchedAt, undefined, Date.parse(snap.fetchedAt));
+    expect(b.events.length).toBeGreaterThan(snap.events.length * 0.6);
+  });
+});

@@ -1,0 +1,27 @@
+name: Lisbon agenda snapshot
+
+# The Agenda Cultural de Lisboa API refuses requests from Vercel's network, so a
+# daily snapshot is committed here and used whenever the live API can't be reached.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fetch-lisbon.mjs
+      - name: Commit if changed
+        run: |
+          git config user.name "omnievent-bot"
+          git config user.email "omnievent-bot@users.noreply.github.com"
+          git add src/lib/providers/data/lisbon-events.json
+          git diff --cached --quiet || (git commit -m "Update Lisbon agenda snapshot" && git push)

@@ -5,6 +5,7 @@ import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch, SyncContext } from "./types";
 import { fetchJson, hueOf, nearestCityId, parseLocal, plainText, sleep } from "./common";
 import KNOWN_VENUES from "./data/lisbon-venues.json";
+import SNAPSHOT from "./data/lisbon-events.json";
 
 /**
  * Agenda Cultural de Lisboa (agendalx.pt), the City of Lisbon's cultural agenda.
@@ -15,6 +16,8 @@ import KNOWN_VENUES from "./data/lisbon-venues.json";
  * - Venues come without coordinates. `data/lisbon-venues.json` holds venues located once
  *   from OpenStreetMap and checked by hand; new venues are looked up at sync time and kept
  *   only when the place name clearly matches. Events at venues we can't place are skipped.
+ * - The API refuses some cloud networks (Vercel gets HTTP 403). A daily snapshot saved by
+ *   .github/workflows/lisbon-snapshot.yml (scripts/fetch-lisbon.mjs) is used when it does.
  * - Times are given per weekday ("sex: 21h; sáb: 21h30") alongside a list of dates.
  */
 
@@ -344,6 +347,14 @@ export const lisbonProvider: ProviderAdapter = {
       }
       await sleep(150);
     }
+    let fromSnapshot = false;
+    if (!raw.length) {
+      const snap = SNAPSHOT as unknown as { fetchedAt: string; events: AlxEvent[] };
+      raw.push(...snap.events);
+      fromSnapshot = true;
+      ctx.log("lisbon live API unavailable, using snapshot", { fetchedAt: snap.fetchedAt, lastError });
+      lastError = `live API refused (${lastError}); showing the snapshot from ${snap.fetchedAt.slice(0, 16).replace("T", " ")} UTC`;
+    }
     // Look up venues that are not in the bundled table (a few per run, gently paced).
     const located: Record<string, VenueLocation> = { ...known };
     const unknown = new Map<string, string>();
@@ -360,7 +371,7 @@ export const lisbonProvider: ProviderAdapter = {
     if (unplaced) ctx.log("lisbon events without a mappable venue", { unplaced });
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: fromSnapshot ? lastError : failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
     };
   },
 };
