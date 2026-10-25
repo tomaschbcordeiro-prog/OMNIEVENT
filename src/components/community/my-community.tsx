@@ -23,7 +23,7 @@ export function MyCommunity() {
         <Avatar p={profile} size={64} />
         <div className="min-w-0 flex-1">
           <h2 className="t-h2">{profile.name}</h2>
-          <p className="t-small text-text-2 tnum">{profile.karma} points · {profile.counts.posts} posts · {profile.counts.reviews} ratings · {profile.counts.going} plans</p>
+          <p className="t-small text-text-2 tnum">{profile.karma} {profile.karma === 1 ? "point" : "points"} · {profile.counts.posts} posts · {profile.counts.reviews} ratings · {profile.counts.going} plans</p>
           <div className="mt-2 flex flex-wrap gap-1">
             {profile.badges.map((b) => <span key={b} className="rounded-full bg-sun/15 px-2 py-0.5 t-micro font-semibold">{BADGES[b]?.emoji} {BADGES[b]?.label}</span>)}
           </div>

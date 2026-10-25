@@ -267,7 +267,7 @@ await step("community: join, say you're going, post, like and reply", async () =
   await page.getByLabel("Name others will see").fill("Smoke Tester");
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "detached" });
-  await page.getByText(/1 (going|were there)/).waitFor();
+  await page.locator("#community button[aria-pressed=true]", { hasText: /You're going|I was there/ }).waitFor();
   await page.getByRole("radio", { name: /Chat/ }).click();
   await page.locator("#compose-top").fill("Which entrance is quickest?");
   await page.getByRole("button", { name: "Post", exact: true }).click();

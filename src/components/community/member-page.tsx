@@ -53,7 +53,7 @@ export function MemberPage({ id }: { id: string }) {
         {isMe && <button type="button" className="btn btn-secondary btn-sm" onClick={() => void requireMember(true, true)}>Edit profile</button>}
       </header>
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[1fr_300px]">
+      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[1fr_300px]">
         <section aria-labelledby="posts-h">
           <h2 id="posts-h" className="t-h2 flex items-center gap-2"><MessageCircle size={18} className="text-cyan" aria-hidden />Posts</h2>
           {m.posts.length === 0 && <p className="t-small text-text-2 mt-2">{isMe ? "You haven't posted yet. Find an event and say hello!" : "No posts yet."}</p>}

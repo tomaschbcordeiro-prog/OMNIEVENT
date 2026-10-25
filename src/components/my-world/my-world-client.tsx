@@ -76,8 +76,8 @@ export function MyWorldClient() {
   const { cards, missing, loading, error } = useCards(allIds);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
-      <nav aria-label="My World sections" className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start">
+    <div className="grid gap-8 grid-cols-1 lg:grid-cols-[220px_1fr]">
+      <nav aria-label="My World sections" className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start">
         <ul className="flex lg:flex-col gap-1 overflow-x-auto no-scrollbar -mx-1 px-1">
           {TABS.map((t) => (
             <li key={t.id}>

@@ -109,7 +109,7 @@ export default async function EventPage({ params }: { params: P }) {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
           <article className="min-w-0">
             <div className="relative overflow-hidden rounded-[var(--radius-l)] border border-line">
               <Poster title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className="aspect-[21/9] w-full" />

@@ -85,7 +85,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
         </div>
       )}
 
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
         <section aria-labelledby="feed-h" className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="feed-h" className="t-h2 flex items-center gap-2"><MessageCircle size={20} className="text-cyan" aria-hidden />What people are saying</h2>
@@ -106,9 +106,9 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               <p className="t-h3 mt-2">It&apos;s quiet here. Start something!</p>
               <p className="t-small text-text-2 mt-1">Open an event you&apos;re curious about and say you&apos;re going, ask a question, or rate a venue you know.</p>
               {starters.length > 0 && (
-                <ul className="mt-4 grid gap-3 sm:grid-cols-2 stagger">
+                <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 stagger">
                   {starters.map((c) => (
-                    <li key={c.id}>
+                    <li key={c.id} className="min-w-0">
                       <Link href={`/events/${c.slug}#community`} className="press group flex gap-3 rounded-[var(--radius-m)] border border-line bg-panel p-2.5 hover:border-cyan/40">
                         <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-16 w-16 rounded-[var(--radius-s)] shrink-0" />
                         <span className="min-w-0">
@@ -202,7 +202,7 @@ function MemberCard({ profile }: { profile: PublicProfile | null }) {
         <Avatar p={profile} size={56} />
         <div className="min-w-0">
           <p className="t-h3 truncate">{profile.name}</p>
-          <p className="t-small text-text-2 tnum">{profile.karma} points · {profile.badges.length} {profile.badges.length === 1 ? "badge" : "badges"}</p>
+          <p className="t-small text-text-2 tnum">{profile.karma} {profile.karma === 1 ? "point" : "points"} · {profile.badges.length} {profile.badges.length === 1 ? "badge" : "badges"}</p>
         </div>
         <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => void requireMember(true, true)}>Edit</button>
       </div>
