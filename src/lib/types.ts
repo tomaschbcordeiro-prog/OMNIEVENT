@@ -383,4 +383,6 @@ export interface SyncRun {
   rateLimited: boolean;
   ok: boolean;
   error?: string;
+  /** This run covered only part of the source (a crawl spread over several runs): keep earlier results. */
+  partial?: boolean;
 }

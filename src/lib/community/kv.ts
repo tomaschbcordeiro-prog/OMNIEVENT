@@ -19,6 +19,7 @@ const envEnding = (...ends: string[]) => {
   }
   return undefined;
 };
+/** Shared with other server-side caches (see lib/shared-cache.ts). */
 const URL_ = envEnding("KV_REST_API_URL", "UPSTASH_REDIS_REST_URL");
 const TOKEN = envEnding("KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_TOKEN");
 
@@ -79,6 +80,7 @@ function local(c: Cmd): Val {
         return typeof e?.v === "string" ? e.v : null;
       });
     case "SET": {
+      if (a.some((x) => x.toUpperCase() === "NX") && get(k)) return null;
       const i = a.findIndex((x) => x.toUpperCase() === "EX");
       mem.set(k, { v: a[1], exp: i > 0 ? Date.now() + Number(a[i + 1]) * 1000 : undefined });
       return "OK";

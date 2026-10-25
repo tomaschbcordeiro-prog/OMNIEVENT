@@ -1,5 +1,6 @@
 import "server-only";
 import { after } from "next/server";
+import { acquireLock, loadSnapshot, releaseLock, saveSnapshot, sharedEnabled, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { descendantsOf } from "./categories";
@@ -49,6 +50,9 @@ interface StoreState {
   aliases: Map<string, string>;
   /** Until when requests may wait for this server's first data. */
   firstLoadDeadline?: number;
+  /** When this instance last looked for newer shared snapshots, and the one in flight. */
+  sharedCheckedAt?: number;
+  hydrating?: Promise<void>;
 }
 
 const g = globalThis as unknown as { __omniStore?: StoreState };
@@ -78,7 +82,14 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   if (existing) return existing;
   const runId = `${p.id}-${Date.now().toString(36)}`;
   const startedAt = new Date().toISOString();
+  const shared = sharedEnabled && !p.isDemo;
   const job = (async () => {
+    // One instance reads a source at a time; the others pick up its snapshot.
+    if (shared && !(await acquireLock(`sync:${p.id}`, 330))) {
+      state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
+      state.syncing.delete(p.id);
+      return;
+    }
     try {
       let lastPublish = 0;
       // What we had before this run: partial results published during it don't count as "updated".
@@ -99,8 +110,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       });
       const prev = state.providerData.get(p.id);
       const prevIds = new Set(before?.events.map((e) => e.id));
-      // A run cut short (quota, network) keeps what we already had instead of dropping it.
-      if (prev && run.failures > 0) mergeMissing(batch, prev);
+      // A run cut short (quota, network), or one that covered part of a long crawl, keeps
+      // what we already had instead of dropping it.
+      if (prev && (run.failures > 0 || run.partial)) mergeMissing(batch, prev);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       state.providerData.set(p.id, batch);
       // A source that refused us with nothing to show is retried in 30 minutes, not after
@@ -109,6 +121,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       state.runs.set(p.id, { ...run, provider: p.id, runId, startedAt, updated, imported: batch.events.length - updated });
       rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
+      if (shared && batch.events.length)
+        await saveSnapshot(p.id, batch).catch((err) => log("error", "snapshot save failed", { provider: p.id, err: String(err) }));
     } catch (err) {
       state.runs.set(p.id, { provider: p.id, runId, startedAt, finishedAt: new Date().toISOString(), imported: 0, updated: 0, failures: 1, rateLimited: false, ok: false, error: String(err) });
       // Back off before retrying a failing provider.
@@ -116,6 +130,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       log("error", "provider sync failed", { provider: p.id, runId, err: String(err) });
     } finally {
       state.syncing.delete(p.id);
+      if (shared) await releaseLock(`sync:${p.id}`);
     }
   })();
   state.syncing.set(p.id, job);
@@ -140,8 +155,48 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
  * Ensures data is loaded and refreshes stale providers. The first call awaits the
  * initial load; later refreshes run in the background (stale-while-revalidate).
  */
+/**
+ * Loads snapshots other instances saved that are newer than what this instance has.
+ * Checked when an instance starts and then every five minutes (one small request).
+ */
+async function hydrate(providers: ProviderAdapter[]): Promise<void> {
+  let index: Awaited<ReturnType<typeof snapshotIndex>>;
+  try {
+    index = await snapshotIndex();
+  } catch (err) {
+    log("error", "snapshot index failed", { err: String(err) });
+    return;
+  }
+  let changed = false;
+  await Promise.all(
+    providers.map(async (p) => {
+      const meta = index[p.id];
+      if (!meta || p.isDemo || state.syncing.has(p.id) || meta.at <= (state.lastSync.get(p.id) ?? 0)) return;
+      try {
+        const batch = await loadSnapshot(p.id, meta);
+        if (!batch || state.syncing.has(p.id)) return;
+        state.providerData.set(p.id, batch);
+        state.lastSync.set(p.id, meta.at);
+        if (!state.runs.has(p.id))
+          state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
+        changed = true;
+      } catch (err) {
+        log("error", "snapshot load failed", { provider: p.id, err: String(err) });
+      }
+    }),
+  );
+  if (changed) rebuildIndexes();
+}
+
 export async function ensureFresh(): Promise<void> {
   const providers = activeProviders();
+  if (sharedEnabled && !state.hydrating && Date.now() - (state.sharedCheckedAt ?? 0) > 5 * 60000) {
+    const first = state.sharedCheckedAt === undefined;
+    state.sharedCheckedAt = Date.now();
+    state.hydrating = hydrate(providers).finally(() => (state.hydrating = undefined));
+    // A new instance starts from the shared snapshots before deciding what to re-read.
+    if (first) await Promise.race([state.hydrating, new Promise((r) => setTimeout(r, 10000))]);
+  }
   // Drop data from providers that are no longer active (e.g. demo after a key is added).
   let dropped = false;
   for (const id of state.providerData.keys())

@@ -90,3 +90,25 @@ describe("full-catalogue crawl", () => {
     expect(r.calls).toBeLessThanOrEqual(8);
   });
 });
+
+describe("crawl resume", () => {
+  it("returns failed and unread windows, and continues from them", async () => {
+    const { crawlCatalogue } = await import("@/lib/providers/ticketmaster");
+    const day = 86400000;
+    const seen: string[] = [];
+    let fail = true;
+    const fetchPage = async (p: Record<string, string>) => {
+      seen.push(`${p.countryCode}-${p.page}`);
+      if (p.countryCode === "GB" && fail) throw new Error("quota");
+      return { _embedded: { events: [] }, page: { totalElements: 0 } };
+    };
+    const first = await crawlCatalogue(fetchPage, ["US", "GB"], { from: 0, to: day, maxCalls: 10, onEvents: () => {} });
+    expect(first.complete).toBe(false);
+    expect(first.remaining.map((t) => t.cc)).toEqual(["GB"]);
+    fail = false;
+    seen.length = 0;
+    const second = await crawlCatalogue(fetchPage, ["US", "GB"], { from: 0, to: day, maxCalls: 10, onEvents: () => {}, resume: first.remaining });
+    expect(seen).toEqual(["GB-0"]);
+    expect(second).toMatchObject({ complete: true, remaining: [] });
+  });
+});

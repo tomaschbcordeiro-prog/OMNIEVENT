@@ -3,6 +3,7 @@ import { getCountry, slugify } from "../destinations";
 import type { EventStatus, OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
 import { ProviderError, type ProviderAdapter, type ProviderBatch, type SyncContext } from "./types";
 import { envList, nearestCityId, sleep } from "./common";
+import { getState, setState } from "../shared-cache";
 
 /**
  * Ticketmaster Discovery API v2 adapter (https://developer.ticketmaster.com).
@@ -266,16 +267,20 @@ const iso = (t: number) => new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
  * read page by page. The plan only depends on the day, so repeat runs make identical
  * requests and are answered from the data cache.
  */
+export type CrawlTask = { cc: string; start: number; end: number; page: number };
+
 export async function crawlCatalogue(
   fetchPage: FetchPage,
   countries: string[],
-  { from, to, maxCalls, onError, onEvents }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void },
-): Promise<{ calls: number; truncated: number; complete: boolean }> {
+  { from, to, maxCalls, onError, onEvents, resume }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void; resume?: CrawlTask[] },
+): Promise<{ calls: number; truncated: number; complete: boolean; remaining: CrawlTask[] }> {
   let calls = 0;
   let truncated = 0;
   let stopped = false;
-  type Task = { cc: string; start: number; end: number; page: number };
-  const queue: Task[] = countries.map((cc) => ({ cc, start: from, end: to, page: 0 }));
+  type Task = CrawlTask;
+  // A crawl too big for one run continues from where the last run stopped.
+  const queue: Task[] = resume?.length ? [...resume] : countries.map((cc) => ({ cc, start: from, end: to, page: 0 }));
+  const deferred: Task[] = [];
   const call = async (t: Task) => {
     calls++;
     return fetchPage({ countryCode: t.cc, startDateTime: iso(t.start), endDateTime: iso(t.end), size: String(PAGE_SIZE), page: String(t.page), sort: "date,asc" });
@@ -291,6 +296,7 @@ export async function crawlCatalogue(
       try {
         json = await call(t);
       } catch (err) {
+        deferred.push(t); // retried next run
         if (onError?.(err, `${t.cc} ${iso(t.start)} p${t.page}`) === false) stopped = true;
         continue;
       }
@@ -311,7 +317,8 @@ export async function crawlCatalogue(
   };
   // Three requests in flight keeps one server under the 5-per-second limit with room for others.
   await Promise.all(Array.from({ length: 3 }, worker));
-  return { calls, truncated, complete: !stopped && !queue.length };
+  const remaining = [...deferred, ...queue];
+  return { calls, truncated, complete: !remaining.length, remaining };
 }
 
 export const ticketmasterProvider: ProviderAdapter = {
@@ -339,7 +346,8 @@ export const ticketmasterProvider: ProviderAdapter = {
     // Only answers that really came from Ticketmaster (not the data cache) use the quota.
     // Per run and per server instance; answers are cached for the day, so each run continues
     // where earlier runs (on any instance) stopped.
-    const budget = Number(process.env.TICKETMASTER_MAX_CALLS ?? 1500);
+    // Four refreshes a day stay under the 5,000-a-day quota.
+    const budget = Number(process.env.TICKETMASTER_MAX_CALLS ?? 1200);
     let networkCalls = 0;
     const fetchPage: FetchPage = async (params) => {
       if (networkCalls >= budget) throw new ProviderError("ticketmaster", `daily request budget (${budget}) reached`, 429, true);
@@ -367,7 +375,11 @@ export const ticketmasterProvider: ProviderAdapter = {
       for (const o of b.offers) offers.set(o.id, o);
       ctx.onProgress?.({ events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] });
     };
+    // Where the previous run stopped, if it was reading the same plan (same month).
+    const saved = await getState<{ from: number; to: number; countries: string; queue: CrawlTask[] }>("ticketmaster:crawl");
+    const resume = saved && saved.from === from && saved.to === to && saved.countries === countries.join(",") ? saved.queue : undefined;
     const crawl = await crawlCatalogue(fetchPage, countries, {
+      resume,
       onEvents,
       from,
       to,
@@ -388,17 +400,18 @@ export const ticketmasterProvider: ProviderAdapter = {
         return !rateLimited && failures < 25;
       },
     });
-    ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated });
+    ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated, resumed: !!resume });
+    await setState("ticketmaster:crawl", crawl.remaining.length ? { from, to, countries: countries.join(","), queue: crawl.remaining } : undefined, 40 * 86400);
     const batch: ProviderBatch = { events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] };
     const notes = [
       notLoaded ? `${notLoaded} date window(s) wait for the daily quota (${lastError.replace(/^.*?daily quota used up;?\s*/, "")})` : "",
       failures ? `${failures} request(s) failed (last: ${lastError})` : "",
-      !crawl.complete ? `stopped after ${crawl.calls} requests; the rest loads on the next run` : "",
+      !crawl.complete ? `${crawl.remaining.length} date window(s) left; the next run continues from there (${networkCalls} requests to Ticketmaster this run)` : "",
       crawl.truncated ? `${crawl.truncated} events in very busy hours not reachable` : "",
     ].filter(Boolean);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: notes.length ? notes.join("; ") : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited, ok: batch.events.length > 0 || failures === 0, partial: !!resume || !crawl.complete, finishedAt: new Date().toISOString(), error: notes.length ? notes.join("; ") : undefined },
     };
   },
   async fetchEvent(externalId) {
