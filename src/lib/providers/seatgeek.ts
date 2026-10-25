@@ -2,7 +2,7 @@ import { groupOf } from "../categories";
 import { getCountry, slugify } from "../destinations";
 import type { OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { citiesIn, envList, fetchJson, nearestCityId, sleep } from "./common";
+import { envList, fetchJson, nearestCityId, sleep } from "./common";
 
 /**
  * SeatGeek Platform API (https://platform.seatgeek.com).
@@ -175,40 +175,58 @@ export const seatgeekProvider: ProviderAdapter = {
   refreshIntervalMs: Number(process.env.SEATGEEK_REFRESH_MINUTES ?? 180) * 60000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
-    const raw: SgEvent[] = [];
+    const raw = new Map<number, SgEvent>();
     let failures = 0;
     let lastError = "";
-    const since = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString().slice(0, 19);
-    const cities = citiesIn(envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES));
-    const pages = Math.max(1, Number(process.env.SEATGEEK_CITY_PAGES ?? 3));
-    for (const c of cities) {
-      for (let page = 1; page <= pages && raw.length < ctx.maxEvents; page++) {
-        const url = new URL(BASE);
-        url.searchParams.set("client_id", process.env.SEATGEEK_CLIENT_ID!);
-        if (process.env.SEATGEEK_CLIENT_SECRET) url.searchParams.set("client_secret", process.env.SEATGEEK_CLIENT_SECRET);
-        url.searchParams.set("lat", String(c.lat));
-        url.searchParams.set("lon", String(c.lng));
-        url.searchParams.set("range", "50km");
-        url.searchParams.set("per_page", "100");
-        url.searchParams.set("page", String(page));
-        url.searchParams.set("sort", "datetime_utc.asc");
-        url.searchParams.set("datetime_utc.gte", since);
-        try {
-          const json = (await fetchJson("seatgeek", url, ctx)) as { events?: SgEvent[]; meta?: { total?: number; per_page?: number } };
-          const list = json.events ?? [];
-          raw.push(...list);
-          if (list.length < 100 || page * 100 >= (json.meta?.total ?? 0)) break;
-        } catch (err) {
-          failures++;
-            lastError = String(err).slice(0, 160);
-          ctx.log("seatgeek page failed", { city: c.id, page, err: String(err) });
-          break;
+    let calls = 0;
+    const maxCalls = Number(process.env.SEATGEEK_MAX_CALLS ?? 600);
+    const PER_PAGE = 500;
+    // SeatGeek answers at most ~10,000 results per query; windows above this are halved.
+    const LIMIT = 5000;
+    const HOUR = 3600000;
+    const from = Math.floor(Date.now() / HOUR) * HOUR;
+    const to = from + Number(process.env.SEATGEEK_DAYS_AHEAD ?? 730) * 86400000;
+    const iso = (t: number) => new Date(t).toISOString().slice(0, 19);
+    type Task = { cc: string; start: number; end: number; page: number; per?: number };
+    const queue: Task[] = envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES).map((cc) => ({ cc, start: from, end: to, page: 1 }));
+    // Every event of each country, read in date windows small enough to page through.
+    while (queue.length && calls < maxCalls && failures < 10) {
+      const t = queue.shift()!;
+      const url = new URL(BASE);
+      url.searchParams.set("client_id", process.env.SEATGEEK_CLIENT_ID!);
+      if (process.env.SEATGEEK_CLIENT_SECRET) url.searchParams.set("client_secret", process.env.SEATGEEK_CLIENT_SECRET);
+      url.searchParams.set("venue.country", t.cc);
+      url.searchParams.set("datetime_utc.gte", iso(t.start));
+      url.searchParams.set("datetime_utc.lt", iso(t.end));
+      url.searchParams.set("per_page", String(t.per ?? PER_PAGE));
+      url.searchParams.set("page", String(t.page));
+      url.searchParams.set("sort", "datetime_utc.asc");
+      calls++;
+      try {
+        const json = (await fetchJson("seatgeek", url, ctx, { revalidate: 0, timeoutMs: 45000 })) as { events?: SgEvent[]; meta?: { total?: number; per_page?: number } };
+        const total = json.meta?.total ?? 0;
+        // The API may serve fewer per page than asked; page by what it actually returns.
+        const per = Math.max(1, Math.min(PER_PAGE, json.meta?.per_page ?? PER_PAGE));
+        if (t.page === 1 && total > LIMIT && t.end - t.start > 2 * HOUR) {
+          const mid = t.start + Math.floor((t.end - t.start) / 2 / HOUR) * HOUR;
+          queue.unshift({ ...t, end: mid }, { ...t, start: mid });
+          continue;
         }
-        await sleep(250);
+        for (const e of json.events ?? []) raw.set(e.id, e);
+        if (t.page === 1) for (let p = Math.min(Math.ceil(total / per), Math.floor(LIMIT / per)); p >= 2; p--) queue.unshift({ ...t, page: p, per });
+        if (t.page === 1 || calls % 10 === 0) ctx.onProgress?.(normalizeSeatGeek([...raw.values()], syncedAt));
+      } catch (err) {
+        failures++;
+        lastError = String(err).slice(0, 160);
+        ctx.log("seatgeek page failed", { cc: t.cc, from: iso(t.start), page: t.page, err: lastError });
       }
-      if (failures >= 5) break;
+      await sleep(200);
     }
-    const batch = normalizeSeatGeek(raw, syncedAt);
+    if (queue.length) {
+      failures++;
+      lastError = `stopped after ${calls} requests; ${queue.length} windows left for the next run`;
+    }
+    const batch = normalizeSeatGeek([...raw.values()], syncedAt);
     return {
       batch,
       run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
