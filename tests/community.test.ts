@@ -84,3 +84,19 @@ describe("community", () => {
 async function getProfileKarma(secret: string) {
   return (await getMember(memberId(secret)))!.profile.karma;
 }
+
+describe("notifications", () => {
+  it("tells authors about replies and likes, not about their own", async () => {
+    const { getNotices } = await import("@/lib/community/service");
+    const p = await createPost(A, { target: T, text: "Anyone driving from Porto?" }, meta, "ip");
+    await createPost(A, { target: T, text: "I'll update here", parent: p.id }, meta, "ip");
+    await createPost(B, { target: T, text: "Yes, 2 seats", parent: p.id }, meta, "ip");
+    await toggleLike(C, p.id);
+    await toggleLike(A, p.id);
+    const n = await getNotices(memberId(A));
+    expect(n.unread).toBe(2);
+    expect(n.items.map((i) => i.type)).toEqual(["like", "reply"]);
+    expect(n.items[1].text).toBe("Yes, 2 seats");
+    expect(n.profiles[memberId(B)].name).toBe("Bruno");
+  });
+});

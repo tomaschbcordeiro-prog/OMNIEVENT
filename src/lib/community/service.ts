@@ -7,6 +7,8 @@ import {
   POST_KINDS,
   TARGET_RE,
   type CommunityHome,
+  type Notice,
+  type Notices,
   type FeedItem,
   type Post,
   type PostKind,
@@ -243,10 +245,12 @@ export async function createPost(
   const rating = kind === "review" ? Math.round(Number(input.rating)) : undefined;
   if (kind === "review" && !(rating! >= 1 && rating! <= 5)) throw new CommunityError("Pick 1 to 5 stars.");
   let parent: string | undefined;
+  let replyTo: Post | undefined;
   if (input.parent) {
     const p = json<Post>(await cmd(["GET", `c:p:${String(input.parent)}`]));
     if (!p || p.target !== input.target) throw new CommunityError("That conversation is gone.");
     parent = p.parent ?? p.id; // one level of replies
+    replyTo = p;
   }
   const text = cleanText(input.text, { min: kind === "review" ? 0 : 2 });
   const post: Post = { id: randomBytes(8).toString("hex"), target: input.target, author: me.id, kind: parent ? "comment" : kind, text, rating: parent ? undefined : rating, parent, createdAt: now() };
@@ -263,6 +267,15 @@ export async function createPost(
     ["ZINCRBY", "c:karma", kind === "review" ? 10 : 5, me.id],
     hot(post.target, 2),
   ];
+  if (replyTo) {
+    const n: Notice = { type: "reply", by: me.id, post: post.id, target: post.target, at: post.createdAt, text: text.slice(0, 120) };
+    cmds.push(...notify(replyTo.author, n));
+    // The author of the conversation hears about replies to other replies in it too.
+    if (replyTo.parent) {
+      const top = json<Post>(await cmd(["GET", `c:p:${replyTo.parent}`]));
+      if (top && top.author !== replyTo.author) cmds.push(...notify(top.author, n));
+    }
+  }
   await pipe(cmds);
   if (post.rating) await rate(me.id, post.target, post.rating);
   await rememberMeta(meta);
@@ -316,6 +329,7 @@ export async function toggleLike(secret: string, postId: string): Promise<{ like
     ["HINCRBY", `c:lk:${post.target}`, postId, added ? 1 : -1],
     ...(self ? [] : ([["HINCRBY", `c:uc:${post.author}`, "likes", added ? 1 : -1], ["ZINCRBY", "c:karma", added ? 2 : -2, post.author]] as Cmd[])),
     hot(post.target, added ? 0.5 : -0.5),
+    ...(added ? notify(post.author, { type: "like", by: me.id, post: postId, target: post.target, at: now() }) : []),
   ]);
   return { liked: added, likes: Math.max(0, Number(likes)) };
 }
@@ -356,31 +370,58 @@ export async function reportPost(secret: string, postId: string) {
   if (n >= 3 && !post.hidden) await pipe([["SET", `c:p:${postId}`, JSON.stringify({ ...post, hidden: true })], ["ZREM", "c:feed", postId]]);
 }
 
+// ---- Notifications ---------------------------------------------------------------------
+
+function notify(to: string, n: Notice): Cmd[] {
+  if (to === n.by) return [];
+  return [["LPUSH", `c:n:${to}`, JSON.stringify(n)], ["LTRIM", `c:n:${to}`, 0, 49], ["INCR", `c:nu:${to}`]];
+}
+
+export async function getNotices(viewer: string): Promise<Notices> {
+  const [raw, unread] = await pipe([["LRANGE", `c:n:${viewer}`, 0, 29], ["GET", `c:nu:${viewer}`]]);
+  const list = ((raw as string[]) ?? []).map((r) => json<Notice>(r)).filter((n): n is Notice => !!n);
+  const [meta, profiles] = await Promise.all([metas([...new Set(list.map((n) => n.target))]), getProfiles(list.map((n) => n.by))]);
+  return { items: list.map((n) => ({ ...n, meta: meta[n.target] })), unread: Number(unread ?? 0), profiles };
+}
+
+export async function unreadNotices(viewer: string): Promise<number> {
+  return Number((await cmd(["GET", `c:nu:${viewer}`])) ?? 0);
+}
+
+export async function markNoticesSeen(secret: string) {
+  const me = await requireProfile(secret);
+  await cmd(["SET", `c:nu:${me.id}`, 0]);
+}
+
 // ---- Community home, profiles ------------------------------------------------------------
 
-export async function getHome(viewer?: string): Promise<CommunityHome> {
+/** What people engaged with most: this week counts fully, last week half, so the list moves without emptying on Mondays. */
+export async function trending(limit = 12, prefix = ""): Promise<string[]> {
   const w = week();
+  const res = await pipe([
+    ["ZREVRANGE", `c:hot:${w}`, 0, 59, "WITHSCORES"],
+    ["ZREVRANGE", `c:hot:${w - 1}`, 0, 59, "WITHSCORES"],
+  ]);
+  const heat = new Map<string, number>();
+  res.forEach((v, i) => {
+    const list = (v as string[]) ?? [];
+    for (let j = 0; j + 1 < list.length; j += 2) heat.set(list[j], (heat.get(list[j]) ?? 0) + Number(list[j + 1]) * (i ? 0.5 : 1));
+  });
+  return [...heat.entries()].filter(([t, s]) => s > 0 && t.startsWith(prefix)).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([t]) => t);
+}
+
+export async function getHome(viewer?: string): Promise<CommunityHome> {
   const res = await pipe([
     ["HGETALL", "c:stat"],
     ["ZREVRANGE", "c:feed", 0, 39],
-    ["ZREVRANGE", `c:hot:${w}`, 0, 23, "WITHSCORES"],
-    ["ZREVRANGE", `c:hot:${w - 1}`, 0, 23, "WITHSCORES"],
     ["ZREVRANGE", "c:rated", 0, 11],
     ["ZREVRANGE", "c:karma", 0, 9],
   ]);
   const stat = pairs(res[0]);
   const posts = await loadPosts((res[1] as string[]) ?? [], viewer);
-  // This week counts fully, last week half, so the list moves without emptying on Mondays.
-  const heat = new Map<string, number>();
-  const add = (v: unknown, k: number) => {
-    const list = (v as string[]) ?? [];
-    for (let i = 0; i + 1 < list.length; i += 2) heat.set(list[i], (heat.get(list[i]) ?? 0) + Number(list[i + 1]) * k);
-  };
-  add(res[2], 1);
-  add(res[3], 0.5);
-  const hotList = [...heat.entries()].filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t]) => t);
-  const rated = ((res[4] as string[]) ?? []).filter(Boolean);
-  const leaderIds = ((res[5] as string[]) ?? []).filter(Boolean);
+  const hotList = await trending(12);
+  const rated = ((res[2] as string[]) ?? []).filter(Boolean);
+  const leaderIds = ((res[3] as string[]) ?? []).filter(Boolean);
   const targets = [...new Set([...posts.map((p) => p.target), ...hotList, ...rated])];
   const [meta, sums, profiles] = await Promise.all([metas(targets), summaries([...hotList, ...rated]), getProfiles([...posts.map((p) => p.author), ...leaderIds])]);
   const feed: FeedItem[] = posts.map((post) => ({ post, meta: meta[post.target] }));

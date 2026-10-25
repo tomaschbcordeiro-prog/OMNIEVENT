@@ -10,6 +10,7 @@ import { formatMoney, STATUS_META } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
 import { userActions, useUser } from "@/lib/user/store";
+import { toast } from "./toast";
 import type { ReactNode } from "react";
 
 export const ICONS: Record<string, LucideIcon> = {
@@ -139,6 +140,7 @@ export function SaveButton({ id, title, compact = false, className = "" }: { id:
         e.preventDefault();
         e.stopPropagation();
         userActions.toggleSave(id);
+        toast(saved ? { title: "Removed from saved", emoji: "🗑️" } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
       className={`btn ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
     >

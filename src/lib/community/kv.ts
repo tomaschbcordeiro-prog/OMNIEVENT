@@ -33,7 +33,7 @@ async function remote(cmds: Cmd[]): Promise<Val[]> {
 
 // ---- In-memory stand-in ----------------------------------------------------------------
 
-type Entry = { v: string | Set<string> | Map<string, string> | Map<string, number>; exp?: number; z?: true };
+type Entry = { v: string | string[] | Set<string> | Map<string, string> | Map<string, number>; exp?: number; z?: true };
 const g = globalThis as unknown as { __omniKv?: Map<string, Entry> };
 const mem = (g.__omniKv ??= new Map());
 
@@ -47,6 +47,7 @@ function get(key: string): Entry | undefined {
 }
 const set_ = (k: string) => (get(k)?.v as Set<string>) ?? (mem.set(k, { v: new Set<string>() }).get(k)!.v as Set<string>);
 const hash = (k: string) => (get(k)?.v as Map<string, string>) ?? (mem.set(k, { v: new Map<string, string>() }).get(k)!.v as Map<string, string>);
+const list_ = (k: string) => (get(k)?.v as string[]) ?? (mem.set(k, { v: [] as string[] }).get(k)!.v as string[]);
 const zset = (k: string) => (get(k)?.v as Map<string, number>) ?? (mem.set(k, { v: new Map<string, number>(), z: true }).get(k)!.v as Map<string, number>);
 const zsorted = (k: string, desc: boolean) => [...zset(k).entries()].sort((a, b) => (desc ? b[1] - a[1] : a[1] - b[1]) || (a[0] < b[0] ? -1 : 1));
 const range = <T,>(list: T[], start: number, stop: number) => {
@@ -107,6 +108,19 @@ function local(c: Cmd): Val {
     }
     case "SRANDMEMBER":
       return [...set_(k)].slice(-Number(a[1] ?? 1)).reverse();
+    case "LPUSH": {
+      const l = list_(k);
+      l.unshift(...a.slice(1).reverse());
+      return l.length;
+    }
+    case "LTRIM": {
+      const l = list_(k);
+      const kept = range(l, Number(a[1]), Number(a[2]));
+      l.splice(0, l.length, ...kept);
+      return "OK";
+    }
+    case "LRANGE":
+      return range(list_(k), Number(a[1]), Number(a[2]));
     case "HSET": {
       const h = hash(k);
       let n = 0;

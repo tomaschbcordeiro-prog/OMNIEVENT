@@ -118,3 +118,19 @@ export const KIND_META: Record<PostKind, { label: string; emoji: string; placeho
   meetup: { label: "Meet up", emoji: "👋", placeholder: "Going alone? Suggest a place to meet before or after…" },
   review: { label: "Review", emoji: "⭐", placeholder: "How was it? What should others know?" },
 };
+
+export interface Notice {
+  type: "reply" | "like";
+  by: string;
+  post: string;
+  target: string;
+  at: string;
+  /** Start of the reply, for replies. */
+  text?: string;
+}
+
+export interface Notices {
+  items: (Notice & { meta?: TargetMeta })[];
+  unread: number;
+  profiles: Record<string, PublicProfile>;
+}

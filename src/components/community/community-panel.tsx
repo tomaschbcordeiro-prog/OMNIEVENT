@@ -5,6 +5,33 @@ import { Heart, MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star
 import { KIND_META, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
 import { ago, communityGet, communityPost, CommunityRequestError, refreshMe, useMe } from "@/lib/community/client";
 import { Avatar, Burst, MemberName, requireMember, StarInput, Stars } from "./bits";
+import { BADGES } from "@/lib/community/types";
+import { toast } from "../toast";
+
+const DONE: Record<string, { title: string; emoji: string }> = {
+  going: { title: "See you there!", emoji: "🎉" },
+  interested: { title: "Marked as interested", emoji: "⭐" },
+  none: { title: "Plan removed", emoji: "👌" },
+  rate: { title: "Thanks for rating", emoji: "⭐" },
+  post: { title: "Posted", emoji: "💬" },
+  review: { title: "Review posted", emoji: "⭐" },
+  edit: { title: "Changes saved", emoji: "✏️" },
+  delete: { title: "Post deleted", emoji: "🗑️" },
+  report: { title: "Reported. Thanks for keeping it friendly", emoji: "🛡️" },
+};
+
+/** Confirms the action, shows points earned, and celebrates any new badge. */
+async function reward(key: string) {
+  window.dispatchEvent(new Event("omni:community"));
+  const { before, after } = await refreshMe();
+  const gained = before && after ? after.karma - before.karma : 0;
+  const d = DONE[key];
+  if (d) toast({ title: d.title, emoji: d.emoji, body: gained > 0 ? `+${gained} ${gained === 1 ? "point" : "points"}` : undefined });
+  for (const b of after?.badges ?? []) {
+    if (before && !before.badges.includes(b) && BADGES[b])
+      toast({ celebrate: true, emoji: BADGES[b].emoji, title: `New badge: ${BADGES[b].label}`, body: BADGES[b].hint, href: `/community/u/${after!.id}`, linkLabel: "See it" });
+  }
+}
 
 export type PanelMode = "event-upcoming" | "event-past" | "place" | "person" | "city";
 
@@ -61,7 +88,8 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
     if (!(await requireMember(!!profile))) return false;
     try {
       await communityPost({ target, ...body });
-      void refreshMe();
+      const key = body.action === "plan" ? String(body.plan) : body.action === "post" ? (body.kind === "review" && !body.parent ? "review" : "post") : String(body.action);
+      void reward(key);
       return true;
     } catch (err) {
       setError(err instanceof CommunityRequestError ? err.message : "Something went wrong.");

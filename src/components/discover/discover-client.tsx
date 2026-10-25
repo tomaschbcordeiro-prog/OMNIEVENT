@@ -8,6 +8,8 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
+import type { Summary } from "@/lib/community/types";
+import { CommunityPulse } from "../community/pulse";
 import { GLOBE_MODES, GROUPS, GROUP_HEX } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
@@ -736,7 +738,7 @@ function useEvents(params: string | null) {
     if (params === null) return;
     const ctrl = new AbortController();
     setState((s) => ({ ...s, loading: true }));
-    fetch(`/api/events?${params}`, { signal: ctrl.signal })
+    fetch(params === "buzz" ? "/api/community?view=buzz" : `/api/events?${params}`, { signal: ctrl.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json().catch(() => null))?.error?.message ?? `HTTP ${r.status}`);
         return r.json();
@@ -750,7 +752,8 @@ function useEvents(params: string | null) {
   return state;
 }
 
-function SpotCard({ c, onPick, onHover }: { c: EventCard; onPick: (c: EventCard) => void; onHover: (c: EventCard | null) => void }) {
+function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; onPick: (c: EventCard) => void; onHover: (c: EventCard | null) => void }) {
+  const buzz = c.buzz;
   const when = c.eventType === "daily_attraction" ? "Open daily" : new Date(c.start).getTime() < Date.now() && c.eventType === "multi_day" ? "On now" : formatEventDate(c.start, c.timeZone).replace(/ \d{4}$/, "");
   return (
     <li>
@@ -770,6 +773,12 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard; onPick: (c: EventCard)
             {when}
           </span>
           {c.isDemo && <span className="absolute right-1.5 top-1.5"><DemoBadge /></span>}
+          {buzz && (buzz.going > 0 || buzz.posts > 0) && (
+            <span className="absolute left-1.5 bottom-1.5 inline-flex items-center gap-1.5 rounded-full bg-text/85 px-1.5 py-0.5 text-[11px] font-semibold tnum text-white backdrop-blur">
+              {buzz.going > 0 && <span>🎟️ {buzz.going}</span>}
+              {buzz.posts > 0 && <span>💬 {buzz.posts}</span>}
+            </span>
+          )}
         </span>
         <span className="flex flex-col px-2.5 pt-2 pb-2.5">
           <span className="text-[13px] font-semibold leading-snug line-clamp-2 group-hover:text-cyan">{c.title}</span>
@@ -797,7 +806,8 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   const tabs = [
     ...(forYou ? [{ id: "you", label: "For you", params: forYou.toString(), empty: "Nothing on sale matches your interests right now." }] : []),
     { id: "weekend", label: "This weekend", params: weekend.toString(), empty: "Nothing this weekend matches your filters." },
-    { id: "new", label: "Just announced", params: fresh.toString(), empty: "No recent announcements match your filters." },
+    { id: "new", label: "New", params: fresh.toString(), empty: "No recent announcements match your filters." },
+    { id: "buzz", label: "🔥 Buzzing", params: "buzz", empty: "Nothing yet. Say you're going to an event and it shows up here for everyone." },
   ];
   const [tab, setTab] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === tab) ?? tabs[0];
@@ -848,7 +858,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
                 {items.map((c) => <SpotCard key={c.id} c={c} onPick={onPick} onHover={onHover} />)}
               </ul>
             )}
-            <Link href={`/events?${active.params.replace(/&?size=\d+/, "")}`} className="btn btn-secondary btn-sm w-full mt-3">See all</Link>
+            <Link href={active.id === "buzz" ? "/community" : `/events?${active.params.replace(/&?size=\d+/, "")}`} className="btn btn-secondary btn-sm w-full mt-3">{active.id === "buzz" ? "Open the community" : "See all"}</Link>
           </div>
           <section className="pt-4">
             <h2 className="t-h3">Busiest cities</h2>
@@ -1077,6 +1087,7 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
             </div>
           ) : null;
         })()}
+        <CommunityPulse key={card.id} target={`e:${card.id}`} href={`/events/${card.slug}#community`} />
         <div className="grid grid-cols-[1fr_auto] gap-2 pt-1">
           <Link href={`/events/${card.slug}`} className="btn btn-primary">View details</Link>
           <SaveButton id={card.id} title={card.title} />

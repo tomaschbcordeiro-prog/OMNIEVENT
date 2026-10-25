@@ -41,8 +41,8 @@ export function memberSecret(create = false): string | null {
 
 // ---- Own profile store ------------------------------------------------------------------
 
-type State = { profile: PublicProfile | null; loaded: boolean };
-let state: State = { profile: null, loaded: false };
+type State = { profile: PublicProfile | null; loaded: boolean; unread: number };
+let state: State = { profile: null, loaded: false, unread: 0 };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -58,7 +58,7 @@ function load() {
   const cached = read(PROFILE_KEY);
   if (cached) {
     try {
-      state = { profile: JSON.parse(cached) as PublicProfile, loaded: true };
+      state = { profile: JSON.parse(cached) as PublicProfile, loaded: true, unread: 0 };
     } catch {
       // ignore
     }
@@ -66,15 +66,15 @@ function load() {
   loading = (async () => {
     if (!memberSecret()) return setState({ loaded: true, profile: null });
     try {
-      const r = await communityGet<{ profile: PublicProfile | null }>("view=me");
-      setState({ profile: r.profile, loaded: true });
+      const r = await communityGet<{ profile: PublicProfile | null; unread?: number }>("view=me");
+      setState({ profile: r.profile, loaded: true, unread: r.unread ?? 0 });
     } catch {
       setState({ loaded: true });
     }
   })();
 }
 
-const SERVER: State = { profile: null, loaded: false };
+const SERVER: State = { profile: null, loaded: false, unread: 0 };
 
 /** The member's own profile (null until they join). */
 export function useMe(): State {
@@ -93,14 +93,20 @@ export function setMe(profile: PublicProfile | null) {
   setState({ profile, loaded: true });
 }
 
+export function setUnread(unread: number) {
+  setState({ unread });
+}
+
 /** Re-reads the member's profile, e.g. after earning points. */
-export async function refreshMe() {
-  if (!memberSecret()) return;
+export async function refreshMe(): Promise<{ before: PublicProfile | null; after: PublicProfile | null }> {
+  const before = state.profile;
+  if (!memberSecret()) return { before, after: before };
   try {
-    const r = await communityGet<{ profile: PublicProfile | null }>("view=me");
-    setState({ profile: r.profile, loaded: true });
+    const r = await communityGet<{ profile: PublicProfile | null; unread?: number }>("view=me");
+    setState({ profile: r.profile, loaded: true, unread: r.unread ?? 0 });
+    return { before, after: r.profile };
   } catch {
-    // keep what we have
+    return { before, after: before };
   }
 }
 

@@ -1,4 +1,4 @@
-import { ensureFresh } from "@/lib/store";
+import { ensureFresh, getCard } from "@/lib/store";
 import { apiError, clientKey, handler, ok, rateLimit } from "@/lib/api";
 import {
   CommunityError,
@@ -16,6 +16,10 @@ import {
   summaries,
   toggleLike,
   getProfile,
+  trending,
+  getNotices,
+  unreadNotices,
+  markNoticesSeen,
 } from "@/lib/community/service";
 import { resolveTarget } from "@/lib/community/meta";
 
@@ -38,8 +42,10 @@ function fail(err: unknown) {
  * GET /api/community?view=thread&target=e:<id>   conversation, ratings and plans
  * GET /api/community?view=home                   feed, trending, top rated, leaders
  * GET /api/community?view=member&id=<id>         a member's profile and posts
- * GET /api/community?view=me                     the caller's own profile
+ * GET /api/community?view=me                     the caller's own profile and unread count
+ * GET /api/community?view=notifications          replies and likes on the caller's posts
  * GET /api/community?view=summaries&targets=a,b  counts for cards
+ * GET /api/community?view=buzz                   trending events as cards
  */
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
@@ -56,7 +62,25 @@ export const GET = handler(async (req: Request) => {
       const m = await getMember(url.searchParams.get("id") ?? "", viewer);
       return m ? ok(m) : apiError(404, "not_found", "No member with that id.");
     }
-    if (view === "me") return ok({ profile: viewer ? (await getProfile(viewer)) ?? null : null });
+    if (view === "me") return ok({ profile: viewer ? (await getProfile(viewer)) ?? null : null, unread: viewer ? await unreadNotices(viewer) : 0 });
+    if (view === "notifications") {
+      if (!viewer) return apiError(401, "community", "Join the community first.");
+      return ok(await getNotices(viewer));
+    }
+    if (view === "buzz") {
+      // Events people are talking about or going to, as cards for the globe's lists.
+      await ensureFresh();
+      const targets = await trending(24, "e:");
+      const sums = await summaries(targets);
+      const items = targets
+        .map((t) => {
+          const c = getCard(t.slice(2));
+          return c && Date.parse(c.start) > Date.now() - 12 * 3600000 ? { ...c, buzz: sums[t] } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 8);
+      return ok({ items, total: items.length });
+    }
     if (view === "summaries") return ok(await summaries((url.searchParams.get("targets") ?? "").split(",")));
     return ok(await getHome(viewer));
   } catch (err) {
@@ -101,6 +125,9 @@ export const POST = handler(async (req: Request) => {
         return ok({ post: await editPost(secret, String(body.post ?? ""), body.text) });
       case "delete":
         await deletePost(secret, String(body.post ?? ""));
+        return ok({ ok: true });
+      case "seen":
+        await markNoticesSeen(secret);
         return ok({ ok: true });
       case "report":
         await reportPost(secret, String(body.post ?? ""));

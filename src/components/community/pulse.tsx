@@ -6,14 +6,18 @@ import type { Summary } from "@/lib/community/types";
 import { communityGet } from "@/lib/community/client";
 
 /** One line of community activity that jumps to the conversation. */
-export function CommunityPulse({ target }: { target: string }) {
+export function CommunityPulse({ target, href = "#community" }: { target: string; href?: string }) {
   const [s, setS] = useState<Summary | null>(null);
   useEffect(() => {
-    communityGet<Record<string, Summary>>(`view=summaries&targets=${encodeURIComponent(target)}`).then((r) => setS(r[target] ?? null), () => {});
+    const load = () => communityGet<Record<string, Summary>>(`view=summaries&targets=${encodeURIComponent(target)}`).then((r) => setS(r[target] ?? null), () => {});
+    void load();
+    // Stays in step with the conversation further down the page.
+    window.addEventListener("omni:community", load);
+    return () => window.removeEventListener("omni:community", load);
   }, [target]);
   const any = s && (s.going || s.interested || s.posts || s.ratingCount);
   return (
-    <a href="#community" className="press flex items-center gap-3 rounded-[var(--radius-m)] border border-line bg-panel-2/60 px-3 py-2.5 t-small hover:border-cyan/40 hover:bg-cyan/5">
+    <a href={href} className="press flex items-center gap-3 rounded-[var(--radius-m)] border border-line bg-panel-2/60 px-3 py-2.5 t-small hover:border-cyan/40 hover:bg-cyan/5">
       {any ? (
         <>
           <span className="flex items-center gap-1 font-semibold"><Ticket size={14} className="text-sun" aria-hidden />{s.going} going</span>

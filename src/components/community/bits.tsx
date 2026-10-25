@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Shuffle, Star, X } from "lucide-react";
 import { AVATARS, BADGES, suggestName, type Profile, type PublicProfile } from "@/lib/community/types";
 import { communityPost, setMe, useMe } from "@/lib/community/client";
+import { toast } from "../toast";
 
 export function Avatar({ p, size = 36, className = "" }: { p?: Pick<Profile, "avatar" | "hue" | "name"> | null; size?: number; className?: string }) {
   return (
@@ -152,6 +153,8 @@ function JoinDialog({ edit, onClose }: { edit: boolean; onClose: (ok: boolean) =
     try {
       const r = await communityPost<{ profile: PublicProfile }>({ action: "profile", name, avatar, hue, bio });
       setMe(r.profile);
+      if (!edit) toast({ celebrate: true, emoji: r.profile.avatar, title: `Welcome, ${r.profile.name}!`, body: "You earned the 🌱 Newcomer badge." });
+      else toast({ title: "Profile saved", emoji: r.profile.avatar });
       onClose(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");

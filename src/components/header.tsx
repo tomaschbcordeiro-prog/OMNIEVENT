@@ -7,6 +7,7 @@ import { Menu, X, CircleUserRound } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
+import { NotificationBell } from "./community/bell";
 
 const NAV = [
   { href: "/", key: "nav.discover" },
@@ -54,7 +55,7 @@ export function Header() {
               key={n.href}
               href={n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
             >
               {t(n.key)}
             </Link>
@@ -63,6 +64,7 @@ export function Header() {
         </div>
         <div className="flex-1" />
         {!isHome && <SearchBox className="hidden md:block w-full max-w-md" placeholder={t("search.placeholder")} />}
+        <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <Link href="/my-world?tab=account" className={`btn btn-ghost btn-icon hidden sm:inline-flex ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label="Account and preferences">
           <CircleUserRound size={19} aria-hidden />
         </Link>
