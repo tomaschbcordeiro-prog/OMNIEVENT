@@ -205,6 +205,16 @@ function rebuildIndexes() {
   const offersById = new Map<string, TicketOffer>();
   const aliases = new Map<string, string>();
   const dedupe = new Map<string, string>(); // key → canonical event id
+  // The same show listed by two sources (a city agenda and a ticket seller) rarely shares
+  // exact coordinates or start times: same title, same day and venues within 400 m merge,
+  // so its page compares both sellers.
+  const byTitleDay = new Map<string, { id: string; lat: number; lng: number; provider: string }[]>();
+  const sameShowElsewhere = (e: OmniEvent, v: Venue) => {
+    const t = norm(e.title);
+    if (t.length < 6) return undefined;
+    const day = `${t}|${Math.floor(new Date(e.start).getTime() / 86400000)}`;
+    return byTitleDay.get(day)?.find((c) => c.provider !== e.provenance.provider && haversineKm(c.lat, c.lng, v.lat, v.lng) < 0.4)?.id;
+  };
 
   // Real providers first so that they win canonical status over demo data.
   const ordered = [...state.providerData.entries()].sort(([a], [b]) => (a === "demo" ? 1 : 0) - (b === "demo" ? 1 : 0));
@@ -219,13 +229,15 @@ function rebuildIndexes() {
       // Conservative duplicate key: identical normalised title, same ~100 m venue cell,
       // start within the same 15-minute window. Similar names alone never merge.
       const key = `${norm(e.title)}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(new Date(e.start).getTime() / 900000)}`;
-      const canonical = dedupe.get(key);
+      const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v);
       if (canonical && events.get(canonical)?.provenance.isDemo === e.provenance.isDemo) {
         aliases.set(e.id, canonical);
         continue;
       }
       dedupe.set(key, e.id);
       events.set(e.id, { ...e, canonicalId: e.id });
+      const day = `${norm(e.title)}|${Math.floor(new Date(e.start).getTime() / 86400000)}`;
+      byTitleDay.set(day, [...(byTitleDay.get(day) ?? []), { id: e.id, lat: v.lat, lng: v.lng, provider: e.provenance.provider }]);
     }
     for (const o of batch.offers) {
       const eventId = aliases.get(o.eventId) ?? o.eventId;

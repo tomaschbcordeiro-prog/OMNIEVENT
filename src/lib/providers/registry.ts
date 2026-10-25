@@ -2,6 +2,7 @@ import { demoProvider } from "./demo";
 import { lisbonProvider } from "./lisbon";
 import { venueCalendarsProvider } from "./venue-calendars";
 import { footballProvider } from "./football";
+import { bolProvider } from "./bol";
 import { madridProvider } from "./madrid";
 import { parisProvider } from "./paris";
 import { seatgeekProvider } from "./seatgeek";
@@ -13,7 +14,7 @@ import type { ProviderAdapter } from "./types";
  * Register new sources here. Each adapter is independent; the store merges and
  * de-duplicates their output. See src/lib/providers/README.md.
  */
-export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, footballProvider, parisProvider, madridProvider, demoProvider];
+export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, bolProvider, footballProvider, parisProvider, madridProvider, demoProvider];
 
 /** DISABLED_PROVIDERS=paris,madrid switches sources off without a code change. */
 const disabled = () => new Set((process.env.DISABLED_PROVIDERS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
