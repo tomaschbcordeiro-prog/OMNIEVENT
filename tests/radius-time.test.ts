@@ -6,7 +6,7 @@ import { localDateKey } from "@/lib/format";
 
 beforeAll(async () => {
   delete process.env.TICKETMASTER_API_KEY;
-  process.env.DISABLED_PROVIDERS = "paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal";
+  process.env.DISABLED_PROVIDERS = "paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda";
   await ensureFresh();
 });
 
