@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, Users } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
 import { KIND_META, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
 import { ago, communityGet, communityPost, CommunityRequestError, refreshMe, useMe } from "@/lib/community/client";
 import { Avatar, Burst, MemberName, requireMember, StarInput, Stars } from "./bits";
@@ -227,7 +227,24 @@ function PlanCard({ thread, past, onPlan }: { thread: Thread | null; past: boole
           </button>
           {burst > 0 && <Burst key={burst} />}
         </div>
-        {!past && (
+        {!past && me?.going && (
+          <button type="button" className="btn btn-secondary press" onClick={async () => {
+            const url = `${location.origin}${location.pathname}#community`;
+            const text = `I'm going to ${document.title.split(" | ")[0]}. Join me?`;
+            try {
+              if (navigator.share) await navigator.share({ title: text, text, url });
+              else {
+                await navigator.clipboard.writeText(`${text} ${url}`);
+                toast({ title: "Invite link copied", emoji: "🔗", body: "Paste it to your friends." });
+              }
+            } catch {
+              // share sheet closed
+            }
+          }}>
+            <UserPlus size={15} aria-hidden /> Invite friends
+          </button>
+        )}
+        {!past && !me?.going && (
           <button type="button" disabled={busy || !thread} aria-pressed={!!me?.interested} onClick={() => click("interested")} className={`btn ${me?.interested ? "bg-cyan/10 text-cyan border-cyan/40" : "btn-secondary"} press`}>
             <Star size={15} fill={me?.interested ? "currentColor" : "none"} aria-hidden />
             Interested

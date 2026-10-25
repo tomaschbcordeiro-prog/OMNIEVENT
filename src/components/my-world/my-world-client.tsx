@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download, Share2,
-  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Lock, Search as SearchIcon, Map as MapIcon, List as ListIcon,
+  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Lock, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users,
 } from "lucide-react";
 import type { EventCard, Cluster } from "@/lib/types";
 import { useUser, userActions, type Trip } from "@/lib/user/store";
@@ -17,8 +17,9 @@ import { formatEventDate, formatEventTime, localDateKey, tzAbbrev } from "@/lib/
 import { EventRow } from "../event-card";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { ClusterMap } from "../cluster-map";
+import { MyCommunity } from "../community/my-community";
 
-type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "following" | "alerts" | "account";
+type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "following" | "community" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "saved", label: "Saved", icon: Bookmark },
@@ -26,6 +27,7 @@ const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "trips", label: "Trips", icon: Route },
   { id: "following", label: "Following", icon: Heart },
+  { id: "community", label: "Community", icon: Users },
   { id: "alerts", label: "Alerts", icon: Bell },
   { id: "account", label: "Account", icon: Settings },
 ];
@@ -102,6 +104,7 @@ export function MyWorldClient() {
         {tab === "calendar" && <Calendar cards={cards} />}
         {tab === "trips" && <Trips cards={cards} />}
         {tab === "following" && <Following />}
+        {tab === "community" && <MyCommunity />}
         {tab === "alerts" && <Alerts />}
         {tab === "account" && <Account />}
       </div>
