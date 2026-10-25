@@ -79,6 +79,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   const job = (async () => {
     try {
       let lastPublish = 0;
+      // What we had before this run: partial results published during it don't count as "updated".
+      const before = state.providerData.get(p.id);
       const { batch, run } = await p.sync({
         maxEvents: Number(process.env.SYNC_MAX_EVENTS ?? 25000),
         log: (msg, extra) => log("info", msg, { provider: p.id, runId, ...extra }),
@@ -94,7 +96,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
         },
       });
       const prev = state.providerData.get(p.id);
-      const prevIds = new Set(prev?.events.map((e) => e.id));
+      const prevIds = new Set(before?.events.map((e) => e.id));
       // A run cut short (quota, network) keeps what we already had instead of dropping it.
       if (prev && run.failures > 0) mergeMissing(batch, prev);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
