@@ -11,8 +11,16 @@ import "server-only";
 export type Cmd = (string | number)[];
 type Val = unknown;
 
-const URL_ = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel may add a custom prefix to these names (e.g. STORAGE_KV_REST_API_URL), so match the ending.
+const envEnding = (...ends: string[]) => {
+  for (const end of ends) {
+    const key = Object.keys(process.env).find((k) => k === end || k.endsWith(`_${end}`));
+    if (key && process.env[key]) return process.env[key];
+  }
+  return undefined;
+};
+const URL_ = envEnding("KV_REST_API_URL", "UPSTASH_REDIS_REST_URL");
+const TOKEN = envEnding("KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_TOKEN");
 
 export const persistent = !!(URL_ && TOKEN);
 
