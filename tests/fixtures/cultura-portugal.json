@@ -1,0 +1,38 @@
+[
+{
+"Name": "Lisboa Barroca",
+"Type": "Concertos",
+"Theme": "Música",
+"StartDate": "2026-10-25T15:11:55",
+"EndDate": "2026-10-25T15:11:58",
+"Location": "Lisboa",
+"Where": "<p>Sala Branca do Panteão Nacional</p>",
+"Price": "<p>Gratuito</p>",
+"Info": "<p>Ver bilheteira</p>",
+"Url": "http://culturaportugal.gov.pt/pt/conhecer/eventos/gepac-2026/lisboa-barroca/"
+},
+{
+"Name": "Conferência Internacional do Audiovisual da CPLP",
+"Type": "Conferências",
+"Theme": "Cinema",
+"StartDate": "2026-11-09T14:50:09",
+"EndDate": "2026-11-13T14:50:13",
+"Location": "Lisboa",
+"Where": "<p>Universidade Lusófona</p>",
+"Price": "<p>Sob consulta</p>",
+"Info": "<p><a rel=\"noopener\" href=\"https://cplpaudiovisual.com/conferencia/\" target=\"_blank\">CPLP</a></p>",
+"Url": "http://culturaportugal.gov.pt/pt/conhecer/eventos/gepac-2026/conferencia-internacional-do-audiovisual-da-cplp/"
+},
+{
+"Name": "FLIS – Festival Literário Internacional de Sintra",
+"Type": "Festival",
+"Theme": "Literatura",
+"StartDate": "2026-11-13T11:55:25",
+"EndDate": "2026-11-22T11:55:28",
+"Location": "Sintra",
+"Where": "<p>Sintra (vários espaços)</p>",
+"Price": "<p>Sob consulta</p>",
+"Info": "<p><a rel=\"noopener\" href=\"https://cm-sintra.pt/\" target=\"_blank\">CMS</a></p>",
+"Url": "http://culturaportugal.gov.pt/pt/conhecer/eventos/gepac-2026/flis-festival-literario-internacional-de-sintra/"
+}
+]
