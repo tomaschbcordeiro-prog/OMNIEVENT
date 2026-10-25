@@ -81,6 +81,8 @@ const state: StoreState =
 const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
 /** When this instance last uploaded each source's snapshot. */
 const savedAt = new Map<string, number>();
+/** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
+const dataAt = new Map<string, number>();
 
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
@@ -126,6 +128,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       if (prev && (run.failures > 0 || run.partial)) mergeMissing(batch, prev);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       state.providerData.set(p.id, batch);
+      dataAt.set(p.id, Date.now());
       // A source that refused us with nothing to show is retried in 30 minutes, not after
       // its full refresh interval (and not every few minutes, which would waste quota).
       state.lastSync.set(p.id, run.rateLimited && !batch.events.length ? Date.now() - p.refreshIntervalMs + 30 * 60000 : Date.now());
@@ -191,12 +194,13 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   await Promise.all(
     providers.map(async (p) => {
       const meta = index[p.id];
-      if (!meta || p.isDemo || state.syncing.has(p.id) || meta.at <= (state.lastSync.get(p.id) ?? 0)) return;
+      if (!meta || p.isDemo || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
       try {
         const batch = await loadSnapshot(p.id, meta);
         if (!batch || state.syncing.has(p.id)) return;
         state.providerData.set(p.id, batch);
-        state.lastSync.set(p.id, meta.at);
+        dataAt.set(p.id, meta.at);
+        state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
         if (!state.runs.has(p.id))
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;
