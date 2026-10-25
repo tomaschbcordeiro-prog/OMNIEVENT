@@ -8,6 +8,7 @@ import { LocationMap } from "@/components/event-detail-client";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
 import { Footer } from "@/components/footer";
+import { CommunityPanel } from "@/components/community/community-panel";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -74,6 +75,7 @@ export default async function VenuePage({ params }: { params: P }) {
             <div className="mt-3"><EmptyState title="Nothing listed here right now" /></div>
           )}
         </section>
+        <CommunityPanel target={`v:${v.slug}`} mode="place" title={v.name} />
       </main>
       <Footer />
     </>

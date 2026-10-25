@@ -24,6 +24,7 @@ export function Footer() {
               <li><Link className="hover:text-text" href="/events">All events</Link></li>
               <li><Link className="hover:text-text" href="/categories">Categories</Link></li>
               <li><Link className="hover:text-text" href="/destinations">Destinations</Link></li>
+              <li><Link className="hover:text-text" href="/community">Community</Link></li>
               <li><Link className="hover:text-text" href="/my-world">My World</Link></li>
             </ul>
           </div>

@@ -257,6 +257,28 @@ await step("desktop hides mobile filter button; mobile shows it", async () => {
   await m.close();
 });
 
+await step("community: join, say you're going, post, like and reply", async () => {
+  const r = await page.request.get(BASE + "/api/events?pageSize=1");
+  const slug = (await r.json()).items[0].slug;
+  await page.goto(BASE + "/events/" + slug);
+  await page.locator("#community").scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: /I'm going|I was there/ }).click();
+  await page.getByRole("dialog").waitFor();
+  await page.getByLabel("Name others will see").fill("Smoke Tester");
+  await page.getByRole("button", { name: "Join", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  await page.getByText(/1 (going|were there)/).waitFor();
+  await page.getByRole("radio", { name: /Chat/ }).click();
+  await page.locator("#compose-top").fill("Which entrance is quickest?");
+  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByText("Which entrance is quickest?").waitFor();
+  await page.getByRole("button", { name: "Like" }).first().click();
+  await page.getByRole("button", { name: "Unlike" }).first().waitFor();
+  await page.goto(BASE + "/community");
+  await page.getByText("Which entrance is quickest?").waitFor();
+  await page.getByText("Smoke Tester").first().waitFor();
+});
+
 await step("unknown event returns 404", async () => {
   const r = await page.request.get(BASE + "/events/definitely-not-real");
   assert.equal(r.status(), 404);

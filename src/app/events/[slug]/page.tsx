@@ -11,6 +11,8 @@ import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, 
 import { Footer } from "@/components/footer";
 import type { EventView } from "@/lib/types";
 import { sellerSearches } from "@/lib/sellers";
+import { CommunityPanel } from "@/components/community/community-panel";
+import { CommunityPulse } from "@/components/community/pulse";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -248,6 +250,8 @@ export default async function EventPage({ params }: { params: P }) {
               )}
             </section>
 
+            <CommunityPanel target={`e:${e.id}`} mode={Date.parse(e.end ?? e.start) + (e.end ? 0 : (e.durationMinutes ?? 180) * 60000) < Date.now() ? "event-past" : "event-upcoming"} title={e.title} />
+
             <section className="mt-10 grid gap-6 sm:grid-cols-2" aria-label="Good to know">
               <div>
                 <h2 className="t-h3 flex items-center gap-2"><ShieldCheck size={16} className="text-text-3" aria-hidden />Age policy</h2>
@@ -330,6 +334,7 @@ export default async function EventPage({ params }: { params: P }) {
                 {e.officialUrl && (
                   <a href={e.officialUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary w-full">Official event page</a>
                 )}
+                <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
                   <SaveButton id={e.id} title={e.title} />
                   <AddToTrip eventId={e.id} />

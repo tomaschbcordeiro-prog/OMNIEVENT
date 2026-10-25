@@ -16,6 +16,7 @@ import { Suspense } from "react";
 import { Crosshair } from "lucide-react";
 import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
+import { CommunityPanel } from "@/components/community/community-panel";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -207,6 +208,8 @@ export default async function DestinationPage({ params, searchParams }: { params
             </ul>
           </section>
         )}
+
+        {d.kind === "city" && <CommunityPanel target={`d:${d.id}`} mode="city" title={d.name} />}
 
         <section id="all" className="mt-12 scroll-mt-24" aria-labelledby="alltitle">
           <Suspense fallback={null}>

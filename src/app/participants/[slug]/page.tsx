@@ -7,6 +7,7 @@ import { ClusterMap } from "@/components/cluster-map";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
 import { Footer } from "@/components/footer";
+import { CommunityPanel } from "@/components/community/community-panel";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -67,6 +68,7 @@ export default async function ParticipantPage({ params }: { params: P }) {
             <ul className="divide-y divide-line mt-2 opacity-75">{past.items.map((c) => <EventRow key={c.id} c={c} />)}</ul>
           </section>
         )}
+        <CommunityPanel target={`p:${p.slug}`} mode="person" title={p.name} />
       </main>
       <Footer />
     </>

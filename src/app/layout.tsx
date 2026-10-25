@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Header } from "@/components/header";
+import { JoinHost } from "@/components/community/bits";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <Header />
         <div id="main">{children}</div>
+        <JoinHost />
       </body>
     </html>
   );
