@@ -236,7 +236,11 @@ async function fetchListing(cat: number, signal?: AbortSignal): Promise<BolEvent
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return parseBolListing(await res.text(), cat);
+      const html = await res.text();
+      const list = parseBolListing(html, cat);
+      // A page without any show is a block or challenge page, not an empty catalogue.
+      if (!list.length) throw new Error(`no shows on the page (${html.length} bytes${/captcha|challenge|cloudflare|access denied/i.test(html) ? ", looks like a bot check" : ""})`);
+      return list;
     } catch (err) {
       last = String(err);
       await sleep(2000);
