@@ -126,6 +126,15 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // A run cut short (quota, network), or one that covered part of a long crawl, keeps
       // what we already had instead of dropping it.
       if (prev && (run.failures > 0 || run.partial)) mergeMissing(batch, prev);
+      // Part of a crawl also joins the shared snapshot, which may hold earlier parts read by
+      // other instances.
+      if (shared && run.partial) {
+        const meta = (await snapshotIndex().catch(() => ({}) as Record<string, never>))[p.id];
+        if (meta && meta.at > (dataAt.get(p.id) ?? 0)) {
+          const snap = await loadSnapshot(p.id, meta).catch(() => undefined);
+          if (snap) mergeMissing(batch, snap);
+        }
+      }
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       state.providerData.set(p.id, batch);
       dataAt.set(p.id, Date.now());
