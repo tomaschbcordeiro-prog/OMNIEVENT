@@ -1,0 +1,179 @@
+[
+{
+"id": 305454,
+"title": "Visita comentada: los bajos fondos de las ciudades romanas. +14",
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"image": "//www.zaragoza.es/cont/paginas/actividades/imagen/banner_320x_480__24_.png",
+"type": "Visitas Guiadas",
+"category": [
+{
+"id": 26,
+"title": "Otros",
+"image": "//www.zaragoza.es/cont/paginas/actividades/imagen/otros.gif"
+}
+],
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.8747835612772946,
+41.65527311590783
+]
+},
+"location": "Museo del Puerto Fluvial de Caesaraugusta",
+"price": [
+{
+"fareGroup": "Anticipada",
+"hasCurrencyValue": 2,
+"hasCurrency": "EUR",
+"minSize": "1"
+}
+],
+"priceComment": "<p><strong>***<a href=\"http://museos-cultura.zaragoza.es/actividades/\">Venta de entradas</a>***</strong></p>\n",
+"subEvent": [
+{
+"id": 303339,
+"location": {
+"title": "Museo del Puerto Fluvial de Caesaraugusta",
+"streetAddress": "Pza. San Bruno, 8",
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.8747835612772946,
+41.65527311590783
+]
+}
+},
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"openingHours": [
+{
+"dayOfWeek": "Domingo",
+"startTime": "12:00",
+"codSesion": 174915,
+"codigosIndividuales": false
+}
+]
+}
+]
+},
+{
+"id": 315494,
+"title": "Piensa en Wilbur",
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"image": "//www.zaragoza.es/cont/paginas/actividades/icon/teatro.png",
+"type": "Otras",
+"category": [
+{
+"id": 17,
+"title": "Teatro y Artes Escénicas",
+"image": "//www.zaragoza.es/cont/paginas/actividades/imagen/teatro.gif",
+"imageAlt": "//www.zaragoza.es/cont/paginas/actividades/icon/teatro.png"
+}
+],
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.9074237119463309,
+41.6468436264052
+]
+},
+"location": "Teatro de las Esquinas",
+"price": [
+{
+"fareGroup": "Normal",
+"hasCurrencyValue": 17.6,
+"hasCurrency": "EUR",
+"minSize": "1"
+}
+],
+"priceComment": "<p><a href=\"https://teatrodelasesquinas.koobin.com/piensa-en-wilbur\">Venta de entradas</a></p>\n",
+"subEvent": [
+{
+"id": 314933,
+"location": {
+"title": "Teatro de las Esquinas",
+"streetAddress": "Vía Univérsitas 30-32, esquina con Duquesa Villahermosa",
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.9074237119463309,
+41.6468436264052
+]
+}
+},
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"openingHours": [
+{
+"dayOfWeek": "Domingo",
+"startTime": "12:30",
+"codSesion": 190836,
+"codigosIndividuales": false
+}
+]
+}
+]
+},
+{
+"id": 314401,
+"title": "Escape Room. Indiana's Adventure",
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"image": "//www.zaragoza.es/cont/paginas/actividades/imagen/rrss_1600x900_ficha.png",
+"type": "Otras",
+"category": [
+{
+"id": 93,
+"title": "Ocio y Juegos",
+"image": "//www.zaragoza.es/cont/paginas/actividades/imagen/otros.gif",
+"imageAlt": "//www.zaragoza.es/cont/paginas/actividades/icon/ocio.png"
+}
+],
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.8786593129678876,
+41.650927752587826
+]
+},
+"location": "Hollywood Escape Zaragoza",
+"price": [
+{
+"fareGroup": "Gratuita",
+"hasCurrencyValue": 0,
+"hasCurrency": "EUR",
+"minSize": "4"
+}
+],
+"priceComment": null,
+"subEvent": [
+{
+"id": 313674,
+"location": {
+"title": "Hollywood Escape Zaragoza",
+"streetAddress": "C/ Santa Catalina, 1",
+"geometry": {
+"type": "Point",
+"coordinates": [
+-0.8786593129678876,
+41.650927752587826
+]
+}
+},
+"startDate": "2026-10-25T00:00:00",
+"endDate": "2026-10-25T00:00:00",
+"openingHours": [
+{
+"dayOfWeek": "Domingo",
+"startTime": "10:00",
+"endTime": "11:15",
+"codSesion": 187900,
+"codigosIndividuales": false
+}
+]
+}
+]
+}
+]
