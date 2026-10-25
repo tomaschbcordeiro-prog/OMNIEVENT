@@ -16,6 +16,7 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 | `castilla-leon` | Live. Junta de Castilla y León open data (Opendatasoft): geolocated cultural agenda including village libraries | nothing |
 | `cultura-portugal` | Live. Portuguese government culture portal feed: national museums, monuments and theatres. Positions in the feed are placeholders, so venues were located by name (`data/cultura-portugal-venues.json`); multi-venue and unplaced events show at the town centre and say so. Dates only | nothing |
 | `openagenda` | Live. OpenAgenda public events via the Opendatasoft open-data export: French towns, departments, libraries, museums, theatres, festivals, with venue coordinates. Read in weekly windows for the coming year; online, cancelled and catalogue placeholder dates skipped | nothing |
+| `nyc-parks` | Live. NYC Parks public events for the next 14 days (NYC Open Data), with coordinates; weekly fitness classes left out | nothing |
 | `football` | Live with the key, snapshot without. 12 competitions; home grounds from `data/stadiums.json` (club venue and address, checked against OpenStreetMap, renamed/moved grounds corrected by hand); unknown grounds and neutral-venue finals are skipped. Refresh the snapshot with `scripts/fetch-football.mjs` | `FOOTBALL_DATA_KEY` |
 | `paris` | Live. City of Paris "Que faire à Paris", ODbL, paged 100 at a time | nothing |
 | `madrid` | Live. City of Madrid cultural agenda, next 100 days | nothing |

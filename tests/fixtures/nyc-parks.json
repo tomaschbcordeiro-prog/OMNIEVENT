@@ -1,0 +1,48 @@
+[
+{
+"title": "Halloween in Brooklyn's Finest Garden",
+"guid": "2286814",
+"link": {
+"url": "http://www.nycgovparks.org/events/2026/10/31/halloween-in-brooklyns-finest-garden"
+},
+"starttime": "2026-10-31T17:00:00.000",
+"endtime": "2026-10-31T20:00:00.000",
+"location": "Brooklyn's Finest Garden",
+"categories": "Best for Kids | Halloween",
+"coordinates": "40.68134070000000000, -73.96187020000000000"
+},
+{
+"title": "Strength & Cardio Circuit Training",
+"instructor": "Chelsie Reid",
+"guid": "2228570",
+"link": {
+"url": "http://www.nycgovparks.org/events/2026/10/25/strength-cardio-circuit-training"
+},
+"registration_url": {
+"url": "https://nycparks.perfectmind.com/24936/Clients/BookMe4LandingPages/Class?widgetId=15f6af07-39c5-473e-b053-96653f77a406&embed=False&redirectedFromEmbededMode=False&classId=8989a499-4c44-4d93-82d0-923adb48e6e0&occurrenceDate=20261025"
+},
+"registration_description": "Registration has begun and ends on 10/25/2026.",
+"parkids": "B245",
+"parknames": "St. John's Park",
+"starttime": "2026-10-25T09:30:00.000",
+"endtime": "2026-10-25T10:15:00.000",
+"location": "Dance Room (in St. John's Park)",
+"categories": "Fitness | Shape Up NYC | Recreation Center Programming | Exercise Classes",
+"coordinates": "40.67350006000000000, -73.93479919000000000"
+},
+{
+"title": "Ongoing Outdoor Museum Exhibit: Alice's Terracotta Garden",
+"guid": "2197714",
+"link": {
+"url": "http://www.nycgovparks.org/events/2026/10/25/ongoing-outdoor-museum-exhibit-alices-terracotta-garden"
+},
+"registration_description": "Outdoor, self-guided tour.",
+"parkids": "R006",
+"parknames": "Conference House Park",
+"starttime": "2026-10-25T11:00:00.000",
+"endtime": "2026-10-25T15:00:00.000",
+"location": "H.H. Biddle House (in Conference House Park)",
+"categories": "Art | History | Tours | Waterfront | Walking",
+"coordinates": "40.50554614753800000, -74.25419378280700000"
+}
+]
