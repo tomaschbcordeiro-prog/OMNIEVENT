@@ -79,6 +79,8 @@ const state: StoreState =
 
 /** Sources with a daily request quota: only ever read by one instance at a time. */
 const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
+/** When this instance last uploaded each source's snapshot. */
+const savedAt = new Map<string, number>();
 
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
@@ -116,6 +118,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
           rebuildIndexes();
         },
       });
+      const fresh = batch.events.length;
       const prev = state.providerData.get(p.id);
       const prevIds = new Set(before?.events.map((e) => e.id));
       // A run cut short (quota, network), or one that covered part of a long crawl, keeps
@@ -129,12 +132,17 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       state.runs.set(p.id, { ...run, provider: p.id, runId, startedAt, updated, imported: batch.events.length - updated });
       rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
-      if (shared && batch.events.length)
+      // Shared only when this run brought something (a run that found nothing new doesn't
+      // re-upload), and during a long crawl at most every 90 minutes to spare bandwidth.
+      const lastSave = savedAt.get(p.id) ?? 0;
+      if (shared && fresh && (!run.partial || Date.now() - lastSave > 90 * 60000 || !(run.error ?? "").includes("left"))) {
+        savedAt.set(p.id, Date.now());
         await saveSnapshot(p.id, batch).catch((err) => {
           log("error", "snapshot save failed", { provider: p.id, err: String(err) });
           const r = state.runs.get(p.id);
           if (r) state.runs.set(p.id, { ...r, error: [r.error, `not shared with other servers (${String(err).slice(0, 120)})`].filter(Boolean).join("; ") });
         });
+      }
     } catch (err) {
       state.runs.set(p.id, { provider: p.id, runId, startedAt, finishedAt: new Date().toISOString(), imported: 0, updated: 0, failures: 1, rateLimited: false, ok: false, error: String(err) });
       // Back off before retrying a failing provider.

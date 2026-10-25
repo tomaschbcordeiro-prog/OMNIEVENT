@@ -272,7 +272,7 @@ export type CrawlTask = { cc: string; start: number; end: number; page: number }
 export async function crawlCatalogue(
   fetchPage: FetchPage,
   countries: string[],
-  { from, to, maxCalls, onError, onEvents, resume }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void; resume?: CrawlTask[] },
+  { from, to, maxCalls, onError, onEvents, resume, deadline = Infinity }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void; resume?: CrawlTask[]; deadline?: number },
 ): Promise<{ calls: number; truncated: number; complete: boolean; remaining: CrawlTask[] }> {
   let calls = 0;
   let truncated = 0;
@@ -287,7 +287,7 @@ export async function crawlCatalogue(
   };
   const worker = async () => {
     while (queue.length && !stopped) {
-      if (calls >= maxCalls) {
+      if (calls >= maxCalls || Date.now() > deadline) {
         stopped = true;
         break;
       }
@@ -328,8 +328,9 @@ export const ticketmasterProvider: ProviderAdapter = {
   coverage: "Every scheduled event Ticketmaster lists in its markets (North America, much of Europe, Australia/NZ, Mexico and more), up to two years ahead.",
   attribution: "Event data and ticket links provided by Ticketmaster.",
   isConfigured: () => !!process.env.TICKETMASTER_API_KEY,
-  // Re-assembles from the data cache; new API calls happen once a day (see tmFetch).
-  refreshIntervalMs: Number(process.env.TICKETMASTER_REFRESH_MINUTES ?? 360) * 60000,
+  // Each run reads for a few minutes and continues where the last one stopped; a finished
+  // crawl is repeated after 12 hours (see sync).
+  refreshIntervalMs: Number(process.env.TICKETMASTER_RUN_EVERY_MINUTES ?? 30) * 60000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     const countries = envList("TICKETMASTER_COUNTRIES", DEFAULT_COUNTRIES);
@@ -378,8 +379,14 @@ export const ticketmasterProvider: ProviderAdapter = {
     // Where the previous run stopped, if it was reading the same plan (same month).
     const saved = await getState<{ from: number; to: number; countries: string; queue: CrawlTask[] }>("ticketmaster:crawl");
     const resume = saved && saved.from === from && saved.to === to && saved.countries === countries.join(",") ? saved.queue : undefined;
+    // A finished crawl is repeated twice a day; until then runs come every half hour.
+    const done = await getState<number>("ticketmaster:complete");
+    if (!resume && done && Date.now() - done < 12 * 3600000)
+      return { batch: { events: [], venues: [], participants: [], offers: [] }, run: { imported: 0, updated: 0, failures: 0, rateLimited: false, ok: true, partial: true, finishedAt: new Date().toISOString() } };
     const crawl = await crawlCatalogue(fetchPage, countries, {
       resume,
+      // Servers stop a request's work after five minutes; stop before, save, continue next run.
+      deadline: Date.now() + Number(process.env.TICKETMASTER_RUN_SECONDS ?? 220) * 1000,
       onEvents,
       from,
       to,
@@ -402,6 +409,7 @@ export const ticketmasterProvider: ProviderAdapter = {
     });
     ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated, resumed: !!resume });
     await setState("ticketmaster:crawl", crawl.remaining.length ? { from, to, countries: countries.join(","), queue: crawl.remaining } : undefined, 40 * 86400);
+    if (!crawl.remaining.length) await setState("ticketmaster:complete", Date.now());
     const batch: ProviderBatch = { events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] };
     const notes = [
       notLoaded ? `${notLoaded} date window(s) wait for the daily quota (${lastError.replace(/^.*?daily quota used up;?\s*/, "")})` : "",

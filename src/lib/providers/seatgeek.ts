@@ -3,6 +3,7 @@ import { getCountry, slugify } from "../destinations";
 import type { OmniEvent, Participant, ParticipantKind, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
 import { envList, fetchJson, nearestCityId, sleep } from "./common";
+import { getState, setState } from "../shared-cache";
 
 /**
  * SeatGeek Platform API (https://platform.seatgeek.com).
@@ -172,7 +173,8 @@ export const seatgeekProvider: ProviderAdapter = {
   coverage: "Concerts, sports and theatre in the US and Canada, with live marketplace prices.",
   attribution: "Event data and ticket links provided by SeatGeek.",
   isConfigured: () => !!process.env.SEATGEEK_CLIENT_ID,
-  refreshIntervalMs: Number(process.env.SEATGEEK_REFRESH_MINUTES ?? 180) * 60000,
+  // Runs every half hour until the catalogue is read, then again after three hours (see sync).
+  refreshIntervalMs: Number(process.env.SEATGEEK_RUN_EVERY_MINUTES ?? 30) * 60000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     const raw = new Map<number, SgEvent>();
@@ -188,9 +190,18 @@ export const seatgeekProvider: ProviderAdapter = {
     const to = from + Number(process.env.SEATGEEK_DAYS_AHEAD ?? 730) * 86400000;
     const iso = (t: number) => new Date(t).toISOString().slice(0, 19);
     type Task = { cc: string; start: number; end: number; page: number; per?: number };
-    const queue: Task[] = envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES).map((cc) => ({ cc, start: from, end: to, page: 1 }));
+    const countries = envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES);
+    // Runs are cut after a few minutes; the next one continues from the saved queue.
+    const saved = await getState<{ countries: string; queue: Task[] }>("seatgeek:crawl");
+    const resume = saved && saved.countries === countries.join(",") && saved.queue.length ? saved.queue.filter((t) => t.end > from) : undefined;
+    const done = await getState<number>("seatgeek:complete");
+    if (!resume && done && Date.now() - done < 3 * 3600000)
+      return { batch: { events: [], venues: [], participants: [], offers: [] }, run: { imported: 0, updated: 0, failures: 0, rateLimited: false, ok: true, partial: true, finishedAt: new Date().toISOString() } };
+    const queue: Task[] = resume ?? countries.map((cc) => ({ cc, start: from, end: to, page: 1 }));
+    const deadline = Date.now() + Number(process.env.SEATGEEK_RUN_SECONDS ?? 220) * 1000;
+    const deferred: Task[] = [];
     // Every event of each country, read in date windows small enough to page through.
-    while (queue.length && calls < maxCalls && failures < 10) {
+    while (queue.length && calls < maxCalls && failures < 10 && Date.now() < deadline) {
       const t = queue.shift()!;
       const url = new URL(BASE);
       url.searchParams.set("client_id", process.env.SEATGEEK_CLIENT_ID!);
@@ -217,19 +228,21 @@ export const seatgeekProvider: ProviderAdapter = {
         if (t.page === 1 || calls % 10 === 0) ctx.onProgress?.(normalizeSeatGeek([...raw.values()], syncedAt));
       } catch (err) {
         failures++;
+        deferred.push(t);
         lastError = String(err).slice(0, 160);
         ctx.log("seatgeek page failed", { cc: t.cc, from: iso(t.start), page: t.page, err: lastError });
       }
       await sleep(200);
     }
-    if (queue.length) {
-      failures++;
-      lastError = `stopped after ${calls} requests; ${queue.length} windows left for the next run`;
-    }
+    const remaining = [...deferred, ...queue];
+    await setState("seatgeek:crawl", remaining.length ? { countries: countries.join(","), queue: remaining } : undefined, 7 * 86400);
+    if (!remaining.length) await setState("seatgeek:complete", Date.now());
+    const partial = !!resume || remaining.length > 0;
+    if (remaining.length) lastError = `${remaining.length} date window(s) left; the next run continues from there`;
     const batch = normalizeSeatGeek([...raw.values()], syncedAt);
     return {
       batch,
-      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} page request(s) failed (last: ${lastError})` : undefined },
+      run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0 || failures === 0, partial, finishedAt: new Date().toISOString(), error: lastError || undefined },
     };
   },
 };

@@ -57,8 +57,15 @@ export async function snapshotIndex(): Promise<Record<string, SnapshotMeta>> {
 
 export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<ProviderBatch | undefined> {
   if (!persistent) return undefined;
-  const parts = (await cmd<(string | null)[]>(["MGET", ...Array.from({ length: meta.n }, (_, i) => `snap:${id}:${meta.ver}:${i}`)])) ?? [];
-  if (parts.length !== meta.n || parts.some((p) => typeof p !== "string")) return undefined;
+  // One chunk per request: a single reply carrying every chunk can exceed Redis' size limit.
+  const parts: (string | null)[] = new Array(meta.n).fill(null);
+  for (let i = 0; i < meta.n; i += 4)
+    await Promise.all(
+      Array.from({ length: Math.min(4, meta.n - i) }, async (_, j) => {
+        parts[i + j] = await cmd<string | null>(["GET", `snap:${id}:${meta.ver}:${i + j}`]);
+      }),
+    );
+  if (parts.some((p) => typeof p !== "string")) return undefined;
   return JSON.parse(gunzipSync(Buffer.from(parts.join(""), "base64")).toString("utf8")) as ProviderBatch;
 }
 
