@@ -47,6 +47,8 @@ interface StoreState {
   syncing: Map<string, Promise<void>>;
   /** event id → canonical event id when merged as a duplicate. */
   aliases: Map<string, string>;
+  /** Until when requests may wait for this server's first data. */
+  firstLoadDeadline?: number;
 }
 
 const g = globalThis as unknown as { __omniStore?: StoreState };
@@ -169,8 +171,11 @@ export async function ensureFresh(): Promise<void> {
     }
   }
   if (waits.length) {
-    const limit = Number(process.env.FIRST_LOAD_WAIT_MS ?? 12000);
-    await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, limit))]);
+    // Only the first moments of a server's life wait: one deadline shared by every request,
+    // so a source that takes minutes (a full catalogue crawl) never slows later pages.
+    state.firstLoadDeadline ??= now + Number(process.env.FIRST_LOAD_WAIT_MS ?? 12000);
+    const left = state.firstLoadDeadline - now;
+    if (left > 0) await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, left))]);
   }
 }
 
