@@ -191,16 +191,25 @@ export const footballProvider: ProviderAdapter = {
       ctx.log("football: no FOOTBALL_DATA_KEY, using the snapshot", { skipped });
       return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true, finishedAt: new Date().toISOString(), error: `no FOOTBALL_DATA_KEY set; showing the snapshot from ${snap.fetchedAt.slice(0, 16).replace("T", " ")} UTC` } };
     }
+    // The free plan allows 10 requests a minute, so reading all competitions takes over a
+    // minute. Show the snapshot straight away and swap in live data competition by competition.
+    const byCode = new Map(codes.map((c) => [c, snap.competitions[c] ?? []]));
+    const publish = () => {
+      const { events, venues, participants, offers } = normalizeFootball([...byCode.values()].flat(), syncedAt);
+      ctx.onProgress?.({ events, venues, participants, offers });
+    };
+    publish();
     for (const code of codes) {
       try {
-        raw.push(...(await fetchCompetition(code, ctx.signal)));
+        byCode.set(code, await fetchCompetition(code, ctx.signal));
+        publish();
       } catch (err) {
         failed.push(code);
         ctx.log("football competition failed", { code, err: String(err) });
-        raw.push(...(snap.competitions[code] ?? []));
       }
-      await sleep(6500); // free plan: 10 requests a minute
+      await sleep(6500);
     }
+    raw.push(...[...byCode.values()].flat());
     const { skipped, ...batch } = normalizeFootball(raw, syncedAt);
     if (skipped) ctx.log("football matches without a located ground", { skipped });
     return {
