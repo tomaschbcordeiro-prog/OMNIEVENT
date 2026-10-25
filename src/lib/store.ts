@@ -600,8 +600,11 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
     if (c.cityId) cities[c.cityId] = (cities[c.cityId] ?? 0) + 1;
   }
   const sort = f.sort ?? (terms.length ? "relevance" : "date");
-  const t = (c: EventCard) => new Date(c.start).getTime();
-  const undated = (c: EventCard) => Number(c.eventType === "daily_attraction" || !!c.hoursUnknown);
+  // Long runs that began before the period asked for (exhibitions, seasons) sort by when
+  // the period starts, not by their opening years ago.
+  const windowStart = f.from ? Date.parse(`${f.from}T00:00:00Z`) : Date.now() - 6 * 3600000;
+  const t = (c: EventCard) => Math.max(new Date(c.start).getTime(), windowStart);
+  const undated = (c: EventCard) => Number(c.eventType === "daily_attraction" || c.eventType === "multi_day" || !!c.hoursUnknown);
   const price = (c: EventCard) => (c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, f.currency ?? "USD") ?? Infinity : Infinity);
   scored.sort((a, b) => {
     switch (sort) {
