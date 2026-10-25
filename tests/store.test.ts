@@ -4,7 +4,7 @@ import { generateDemoData } from "@/lib/providers/demo";
 
 beforeAll(async () => {
   delete process.env.TICKETMASTER_API_KEY;
-  process.env.DISABLED_PROVIDERS = "paris,madrid,lisbon,venue-calendars,football,bol";
+  process.env.DISABLED_PROVIDERS = "paris,madrid,lisbon,venue-calendars,football,bol,catalonia";
   await ensureFresh();
 });
 

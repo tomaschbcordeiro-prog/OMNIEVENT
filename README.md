@@ -79,6 +79,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Agenda Cultural de Lisboa (agendalx.pt API) | City of Lisbon cultural agenda, CC BY 4.0; ~400 mapped events | nothing |
 | Lisbon venue calendars (CCB, Chapitô) | Each venue's full public programme (The Events Calendar REST API) | nothing |
 | BOL (bol.pt) | Theatre, concerts, museums, festivals and family shows sold through BOL across Portugal and the islands, with venue coordinates, prices and availability | nothing |
+| Agenda Cultural de Catalunya | Cultural activities across Catalonia (open data, coordinates, prices, ticket links) | nothing |
 | football-data.org | Every scheduled match of 12 competitions (Premier League, Championship, LaLiga, Bundesliga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League, World Cup, Euros) at 185 hand-checked stadiums; a snapshot is shown until the key is set | `FOOTBALL_DATA_KEY` (free, <https://www.football-data.org/client/register>) for live updates |
 | Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
 | Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
@@ -102,7 +103,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 
