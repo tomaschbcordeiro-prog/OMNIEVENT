@@ -307,7 +307,7 @@ function rebuildIndexes() {
   for (const [, batch] of ordered) {
     for (const e of batch.events) {
       const v = venues.get(e.venueId);
-      if (!v) continue;
+      if (!v || !Number.isFinite(Date.parse(e.start)) || !Number.isFinite(v.lat) || !Number.isFinite(v.lng)) continue;
       // Conservative duplicate key: identical normalised title, same ~100 m venue cell,
       // start within the same 15-minute window. Similar names alone never merge.
       const key = `${norm(e.title)}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(new Date(e.start).getTime() / 900000)}`;
@@ -404,11 +404,13 @@ const DEFAULT_DURATION_MIN = 120;
 /** Scheduled [start, end) intervals of an event: the main run plus any repeat performances. */
 function eventIntervals(e: OmniEvent): [number, number][] {
   const s = Date.parse(e.start);
-  const dur = (e.durationMinutes ?? DEFAULT_DURATION_MIN) * 60000;
+  const dur = (Number.isFinite(e.durationMinutes) && e.durationMinutes! > 0 ? e.durationMinutes! : DEFAULT_DURATION_MIN) * 60000;
   // Events without an end time are assumed to last their stated duration, else two hours.
-  const main: [number, number] = [s, e.end ? Math.max(Date.parse(e.end), s + 60000) : s + dur];
+  const end = e.end ? Date.parse(e.end) : NaN;
+  const main: [number, number] = [s, Number.isFinite(end) ? Math.max(end, s + 60000) : s + dur];
   const extra = (e.schedule ?? []).map((p): [number, number] => [Date.parse(p), Date.parse(p) + dur]);
-  return [main, ...extra];
+  // A malformed date from a source must not break every search.
+  return [main, ...extra].filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
 }
 
 /**
@@ -416,6 +418,18 @@ function eventIntervals(e: OmniEvent): [number, number][] {
  * zone; an event matches when any of its scheduled intervals overlaps any day's window.
  * Daily attractions are matched on their daily opening hours.
  */
+let whenErrorLogged = false;
+/** matchesWhen, but one bad record from a source can't fail the whole search. */
+function safeWhen(e: OmniEvent, f: SearchFilters): boolean {
+  try {
+    return matchesWhen(e, f);
+  } catch (err) {
+    if (!whenErrorLogged) log("error", "date filter failed for an event", { id: e.id, start: e.start, end: e.end, tz: e.timeZone, err: String(err) });
+    whenErrorLogged = true;
+    return false;
+  }
+}
+
 function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
   const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
   const from = f.from ?? todayIn(tz);
@@ -465,7 +479,7 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
 
   // Dates and local times, evaluated in each event's own venue time zone.
   if (f.from || f.to || f.tFrom || f.tTo) {
-    if (!matchesWhen(e, f)) return false;
+    if (!safeWhen(e, f)) return false;
   } else if (!f.status?.includes("completed") && c.status === "completed") {
     return false; // hide past events by default
   }
