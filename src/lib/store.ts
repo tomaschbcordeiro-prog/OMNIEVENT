@@ -77,6 +77,9 @@ const state: StoreState =
 
 // ------------------------------------------------------------------ sync
 
+/** Sources with a daily request quota: only ever read by one instance at a time. */
+const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
+
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
   if (existing) return existing;
@@ -84,11 +87,16 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   const startedAt = new Date().toISOString();
   const shared = sharedEnabled && !p.isDemo;
   const job = (async () => {
-    // One instance reads a source at a time; the others pick up its snapshot.
-    if (shared && !(await acquireLock(`sync:${p.id}`, 330))) {
-      state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
-      state.syncing.delete(p.id);
-      return;
+    // One instance reads a source at a time; the others pick up its snapshot. An instance
+    // with nothing at all from a source reads it anyway, except sources with a daily quota.
+    let locked = false;
+    if (shared) {
+      locked = await acquireLock(`sync:${p.id}`, 330);
+      if (!locked && (QUOTA_SOURCES.has(p.id) || state.providerData.has(p.id))) {
+        state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
+        state.syncing.delete(p.id);
+        return;
+      }
     }
     try {
       let lastPublish = 0;
@@ -122,7 +130,11 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
       if (shared && batch.events.length)
-        await saveSnapshot(p.id, batch).catch((err) => log("error", "snapshot save failed", { provider: p.id, err: String(err) }));
+        await saveSnapshot(p.id, batch).catch((err) => {
+          log("error", "snapshot save failed", { provider: p.id, err: String(err) });
+          const r = state.runs.get(p.id);
+          if (r) state.runs.set(p.id, { ...r, error: [r.error, `not shared with other servers (${String(err).slice(0, 120)})`].filter(Boolean).join("; ") });
+        });
     } catch (err) {
       state.runs.set(p.id, { provider: p.id, runId, startedAt, finishedAt: new Date().toISOString(), imported: 0, updated: 0, failures: 1, rateLimited: false, ok: false, error: String(err) });
       // Back off before retrying a failing provider.
@@ -130,7 +142,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       log("error", "provider sync failed", { provider: p.id, runId, err: String(err) });
     } finally {
       state.syncing.delete(p.id);
-      if (shared) await releaseLock(`sync:${p.id}`);
+      if (locked) await releaseLock(`sync:${p.id}`);
     }
   })();
   state.syncing.set(p.id, job);
