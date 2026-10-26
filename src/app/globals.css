@@ -25,10 +25,10 @@
   --emerald: #0fa979;
   --blue: #3b5bdb;
 
-  /* The sky the globe floats in. */
-  --sky-top: #3f97f2;
-  --sky-mid: #9fd0ff;
-  --sky-low: #e8f4ff;
+  /* The sky the globe floats in: a calm, deep blue that never washes out to white. */
+  --sky-top: #1d55c4;
+  --sky-mid: #4a7fe0;
+  --sky-low: #93b4ee;
 
   --ok: #0c9b6d;
   --warn: #c77700;
@@ -571,25 +571,9 @@ select.field {
 /* The globe floats in this; MapLibre draws the atmosphere on top of it. */
 .sky {
   background:
-    radial-gradient(42rem 30rem at 86% 6%, rgb(255 236 170 / 0.85) 0%, rgb(255 225 140 / 0.35) 30%, transparent 62%),
-    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 48%, var(--sky-low) 100%);
-}
-/* The sun itself: a soft disc in the top-right corner of the sky. */
-.sky-sun {
-  position: absolute;
-  right: max(6%, 4rem);
-  top: 4.5rem;
-  width: 9rem;
-  height: 9rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fffbe8 0%, #fff1b8 38%, rgb(255 214 102 / 0.55) 60%, transparent 72%);
-  filter: blur(1px);
-  pointer-events: none;
-}
-@media (max-width: 639px) {
-  .sky-sun {
-    display: none;
-  }
+    radial-gradient(46rem 30rem at 88% -4%, rgb(255 205 150 / 0.2) 0%, transparent 62%),
+    radial-gradient(44rem 34rem at 6% 104%, rgb(168 140 255 / 0.22) 0%, transparent 60%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
 }
 /* Text that sits directly on the sky. */
 .on-sky {

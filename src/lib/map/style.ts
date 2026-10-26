@@ -84,19 +84,21 @@ export function buildStyle(): StyleSpecification {
 
   const layers: LayerSpecification[] = [
     // ------------------------------------------------ base: day map (bright, illustrated)
-    L({ id: "bg", type: "background", paint: { "background-color": ["interpolate", ["linear"], ["zoom"], 0, "#DDEFC9", 6, "#E9F2DD", 11, "#F2F4EE"] } }, {}),
-    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#C5E3AE", "grass", "#D8EDC4", ["ice", "glacier"], "#FFFFFF", "sand", "#F7EBC6", "rock", "#E4E2DA", "wetland", "#CDE8D6", "farmland", "#E9F2D6", "#DCEDC8"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 12, 0.6] } }, { base: "map" }),
+    L({ id: "bg", type: "background", paint: { "background-color": ["interpolate", ["linear"], ["zoom"], 0, "#CFE6B6", 6, "#E1EDD2", 11, "#EEF1EA"] } }, {}),
+    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#C5E3AE", "grass", "#D8EDC4", ["ice", "glacier"], "#E8F0F6", "sand", "#EFE1B8", "rock", "#E4E2DA", "wetland", "#CDE8D6", "farmland", "#E9F2D6", "#DCEDC8"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 12, 0.6] } }, { base: "map" }),
     L({ id: "landuse", type: "fill", source: "omt", "source-layer": "landuse", minzoom: 9, paint: { "fill-color": ["match", ["get", "class"], ["residential", "suburb", "neighbourhood"], "#F1EFEA", ["commercial", "retail"], "#FBEBE3", "industrial", "#ECE8F2", ["school", "university", "college"], "#F8F0D8", "hospital", "#FBE4E6", ["stadium", "pitch"], "#CFEBC0", "#F0EEE8"], "fill-opacity": 0.85 } }, { base: "map" }),
     L({ id: "park", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": "#BFE3A6", "fill-opacity": 0.85 } }, { base: "map" }),
-    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": ["interpolate", ["linear"], ["zoom"], 0, "#3FA4EA", 4, "#62B9F0", 8, "#8ACDF5", 12, "#A8DCF8"] } }, { base: "map" }),
+    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": ["interpolate", ["linear"], ["zoom"], 0, "#3796DD", 4, "#56ADE8", 8, "#7FC3F0", 12, "#9FD4F4"] } }, { base: "map" }),
     L({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway", minzoom: 8, paint: { "line-color": "#93D2F6", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 3] } }, { base: "map" }),
     L({ id: "aeroway", type: "fill", source: "omt", "source-layer": "aeroway", minzoom: 11, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#E6E8EE" } }, { base: "map" }),
 
     // ------------------------------------------------ base: satellite
-    L({ id: "satellite", type: "raster", source: "satellite", paint: { "raster-saturation": 0.12, "raster-contrast": 0.04, "raster-brightness-min": 0.04, "raster-fade-duration": 250, "raster-resampling": "linear" } }, { base: "satellite" }),
+    L({ id: "satellite", type: "raster", source: "satellite", paint: { "raster-saturation": 0.16, "raster-contrast": 0.02, "raster-brightness-min": 0.02, "raster-brightness-max": 0.82, "raster-fade-duration": 250, "raster-resampling": "linear" } }, { base: "satellite" }),
 
     // ------------------------------------------------ terrain shading (both)
-    L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": 0.3, "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": "rgba(255,255,255,0.6)", "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
+    // The elevation tiles include the sea floor, so a strong highlight would wash the oceans out
+    // in pale patches when the whole globe is in view: the shading starts faint and grows.
+    L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 0, 0.06, 4, 0.14, 8, 0.3], "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": ["interpolate", ["linear"], ["zoom"], 0, "rgba(255,255,255,0.12)", 6, "rgba(255,255,255,0.35)", 10, "rgba(255,255,255,0.55)"], "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
 
     // ------------------------------------------------ roads (two looks)
     ...(["map", "satellite"] as const).flatMap((b) => {
@@ -147,15 +149,15 @@ export function buildStyle(): StyleSpecification {
     version: 8,
     projection: { type: "globe" },
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-    // Daytime sky: a bright blue atmosphere that thins to white at the horizon.
+    // Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim.
     sky: {
-      "sky-color": "#3F97F2",
-      "horizon-color": "#DFF1FF",
-      "fog-color": "#EAF5FF",
-      "sky-horizon-blend": 0.7,
-      "horizon-fog-blend": 0.6,
-      "fog-ground-blend": 0.3,
-      "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 8, 0],
+      "sky-color": "#2A63CF",
+      "horizon-color": "#5F8BDE",
+      "fog-color": "#4F8BDA",
+      "sky-horizon-blend": 0.5,
+      "horizon-fog-blend": 0.35,
+      "fog-ground-blend": 0.1,
+      "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.45, 5, 0.35, 8, 0],
     },
     light: { anchor: "map", position: [1.4, 200, 40], intensity: 0.25, color: "#FFFFFF" },
     sources: {

@@ -380,7 +380,6 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   return (
     <div ref={root} className="relative h-[100dvh] w-full overflow-hidden sky">
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
-      <div className={`sky-sun transition-opacity duration-700 ${mode === "globe" && view.zoom < 4 ? "opacity-100" : "opacity-0"}`} aria-hidden />
       {/* ---------- Stage: one map engine, two projections ---------- */}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (
@@ -608,10 +607,10 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       </div>
 
       {/* ---------- Status line ---------- */}
-      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-text-2 tnum pointer-events-none hidden md:block" aria-live="polite">
+      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
-        {dataSummary.live === 0 && <div className="mt-0.5 text-warn">Demo mode: all events shown are fictional</div>}
+        {dataSummary.live === 0 && <div className="mt-0.5 text-[#ffd98a]">Demo mode: all events shown are fictional</div>}
       </div>
 
       {(mapFailure || webgl === false) && (

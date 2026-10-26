@@ -60,7 +60,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               <span className="live-dot" aria-hidden /> Live community
             </p>
             <h1 className="t-display mt-4 text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind every pin on the map</h1>
-            <p className="t-body text-text font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
+            <p className="t-body text-white/95 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
             <dl className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl">
               {([
                 ["Members", home?.stats.members],
