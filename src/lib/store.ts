@@ -53,6 +53,9 @@ interface StoreState {
   /** When this instance last looked for newer shared snapshots, and the one in flight. */
   sharedCheckedAt?: number;
   hydrating?: Promise<void>;
+  /** The shared snapshots last seen, and the sources whose snapshot couldn't be loaded. */
+  snapIndex?: Record<string, { at: number }>;
+  snapFailed?: Set<string>;
 }
 
 const g = globalThis as unknown as { __omniStore?: StoreState };
@@ -83,6 +86,9 @@ const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
 const savedAt = new Map<string, number>();
 /** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
 const dataAt = new Map<string, number>();
+
+/** How long the first requests a server answers may wait for its data. */
+const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 10000);
 
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
@@ -195,6 +201,7 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   let index: Awaited<ReturnType<typeof snapshotIndex>>;
   try {
     index = await snapshotIndex();
+    state.snapIndex = index;
   } catch (err) {
     log("error", "snapshot index failed", { err: String(err) });
     return;
@@ -214,6 +221,7 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;
       } catch (err) {
+        (state.snapFailed ??= new Set()).add(p.id);
         log("error", "snapshot load failed", { provider: p.id, err: String(err) });
       }
     }),
@@ -233,8 +241,12 @@ export async function ensureFresh(): Promise<void> {
     void cleanupSnapshots()
       .then((n) => n && log("info", "old snapshot chunks removed", { n }))
       .catch((err) => log("error", "snapshot cleanup failed", { err: String(err) }));
-    // A new instance starts from the shared snapshots before deciding what to re-read.
-    if (first) await Promise.race([state.hydrating, new Promise((r) => setTimeout(r, 10000))]);
+    // A new instance starts from the shared snapshots before deciding what to re-read, within
+    // the same first-load deadline as everything else.
+    if (first) {
+      state.firstLoadDeadline ??= Date.now() + FIRST_LOAD_WAIT;
+      await Promise.race([state.hydrating, new Promise((r) => setTimeout(r, Math.max(0, state.firstLoadDeadline! - Date.now())))]);
+    }
   }
   // Drop data from providers that are no longer active (e.g. demo after a key is added).
   let dropped = false;
@@ -249,8 +261,12 @@ export async function ensureFresh(): Promise<void> {
   const waits: Promise<void>[] = [];
   for (const p of providers) {
     const last = state.lastSync.get(p.id);
-    if (last === undefined) waits.push(syncProvider(p));
-    else if (now - last > p.refreshIntervalMs) void syncProvider(p);
+    if (last === undefined) {
+      // A recent shared snapshot is on its way (or loading): don't re-read the whole source.
+      const meta = state.snapIndex?.[p.id];
+      if (meta && now - meta.at < p.refreshIntervalMs && !state.snapFailed?.has(p.id)) continue;
+      waits.push(syncProvider(p));
+    } else if (now - last > p.refreshIntervalMs) void syncProvider(p);
   }
   // A slow source must not hold the first page hostage: wait a bounded time, then serve
   // whatever has loaded while the rest keeps syncing in the background.
@@ -267,7 +283,7 @@ export async function ensureFresh(): Promise<void> {
   if (waits.length) {
     // Only the first moments of a server's life wait: one deadline shared by every request,
     // so a source that takes minutes (a full catalogue crawl) never slows later pages.
-    state.firstLoadDeadline ??= now + Number(process.env.FIRST_LOAD_WAIT_MS ?? 12000);
+    state.firstLoadDeadline ??= now + FIRST_LOAD_WAIT;
     const left = state.firstLoadDeadline - now;
     if (left > 0) await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, left))]);
   }
