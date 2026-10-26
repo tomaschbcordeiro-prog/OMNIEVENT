@@ -1,0 +1,918 @@
+{
+"library": [
+{
+"title": "Story Time",
+"description": "<p>Join this story time especially for our littlest patrons! We\u2019ll share songs, rhymes and books, plus suggestions for at-home activities.<br></p>\n<p>For kids 0 to 5 and their caregivers. Space may be",
+"event_types": "Story Time",
+"event_audiences": "Babies (Babies: 0 to 18 months) | Preschoolers (Preschoolers: 3 to 5 years) | Toddlers (Toddlers: 18 to 36 months)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a79ecc9003cbf2bcbb9ff7d",
+"description": "Event Page: Story Time"
+},
+"location_name": "Sulzer Regional",
+"location_details": "Lobby, Large Meeting Room",
+"start": "2026-11-03T10:30:00.000",
+"end": "2026-11-03T11:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "4455 N. Lincoln Avenue",
+"location_zip": "60625",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6844,
+41.9627
+]
+},
+"day_of_the_week": "Tuesday",
+"event_id": "6a79ecc9003cbf2bcbb9ff7d"
+},
+{
+"title": "Teen Club",
+"description": "<p>Whether gaming, learning new tech or just vibing, we've got you covered! Join us to try some of these activities:</p>\n<ul><li>3D Printer</li><li>Silhouette Vinyl Cutter</li><li>Nintendo Switch</li>",
+"event_types": "Crafts, Games and Play",
+"event_audiences": "Teens (Teens: 13 to 19 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a4d5c8920e955280054bd61",
+"description": "Event Page: Teen Club"
+},
+"location_name": "Lincoln Park",
+"start": "2027-04-20T15:30:00.000",
+"end": "2027-04-20T18:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "1150 W. Fullerton Avenue",
+"location_zip": "60614",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.657573,
+41.925437
+]
+},
+"day_of_the_week": "Tuesday",
+"event_id": "6a4d5c8920e955280054bd61"
+},
+{
+"title": "Sulzer Chess Meetup",
+"description": "<p>Join us to play some chess and meet new friends! All levels of players are welcome. Bring your chess set, if you have it. Let's meet, play, and make new friends!</p>\n<p>The room capacity is limited",
+"event_types": "Crafts, Games and Play",
+"event_audiences": "Adults (Adults: 18 and up)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a74a9b486ec588db26f46ec",
+"description": "Event Page: Sulzer Chess Meetup"
+},
+"location_name": "Sulzer Regional",
+"location_details": "Small Meeting Room",
+"start": "2027-01-17T13:30:00.000",
+"end": "2027-01-17T15:30:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "4455 N. Lincoln Avenue",
+"location_zip": "60625",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6844,
+41.9627
+]
+},
+"day_of_the_week": "Sunday",
+"event_id": "6a74a9b486ec588db26f46ec"
+},
+{
+"title": "Story Time",
+"description": "<p>Join this story time especially for our littlest patrons! We\u2019ll share songs, rhymes and books, plus suggestions for at-home activities.<br></p>\n<p>For kids 0 to 5 and their caregivers. Space may be",
+"event_types": "Story Time",
+"event_audiences": "Babies (Babies: 0 to 18 months) | Preschoolers (Preschoolers: 3 to 5 years) | Toddlers (Toddlers: 18 to 36 months)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a79ecc9003cbf2bcbb9ff7f",
+"description": "Event Page: Story Time"
+},
+"location_name": "Sulzer Regional",
+"location_details": "Lobby, Large Meeting Room",
+"start": "2026-11-05T10:30:00.000",
+"end": "2026-11-05T11:00:00.000",
+"featured": false,
+"cancelled": true,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "4455 N. Lincoln Avenue",
+"location_zip": "60625",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6844,
+41.9627
+]
+},
+"day_of_the_week": "Thursday",
+"event_id": "6a79ecc9003cbf2bcbb9ff7f"
+},
+{
+"title": "LEGO\u00ae Club",
+"description": "<p>Complete one of our design challenges or let your imagination run wild. We're excited to see what you create! LEGO bricks are provided, and creations are displayed at the library for a week after t",
+"event_types": "Crafts, Games and Play",
+"event_audiences": "Kids (Kids: 6 to 13 years) | Preschoolers (Preschoolers: 3 to 5 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a837ac53b6c71003e598633",
+"description": "Event Page: LEGO\u00ae Club"
+},
+"location_name": "Merlo",
+"location_details": "Meeting Room, First Floor",
+"start": "2026-12-16T15:30:00.000",
+"end": "2026-12-16T16:30:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "644 W. Belmont Avenue",
+"location_zip": "60657",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.645327,
+41.940164
+]
+},
+"day_of_the_week": "Wednesday",
+"event_id": "6a837ac53b6c71003e598633"
+},
+{
+"title": "Operation Space Station: Science and Survival",
+"description": "<p>Witness life-or-death decisions 250 miles above Earth, as astronauts and Mission Control work together to survive moments of high danger on board humanity\u2019s remarkable orbiting laboratory, the Inte",
+"event_types": "Film Screenings | Health and Science",
+"event_audiences": "Adults (Adults: 18 and up)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6aa9aeffd6577100383d18ff",
+"description": "Event Page: Operation Space Station: Science and Survival"
+},
+"location_name": "Jeffery Manor",
+"start": "2026-11-19T14:00:00.000",
+"end": "2026-11-19T15:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": false,
+"registration_ends": "2026-11-19T14:00:00.000",
+"registration_closed": false,
+"registration_status": "ACTIVE",
+"location_address": "2401 E. 100th Street",
+"location_zip": "60617",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.565588,
+41.713363
+]
+},
+"day_of_the_week": "Thursday",
+"event_id": "6aa9aeffd6577100383d18ff"
+},
+{
+"title": "Open Shop",
+"description": "<p>Drop in during Open Shop to:</p>\n<ul><li>Get a brief software overview<br></li><li>Find out how we can help with your project</li><li>Check out what people are making</li><li>Use an electronic cutt",
+"event_types": "Computers and Technology | DIY",
+"event_audiences": "Adults (Adults: 18 and up)",
+"event_languages": "English | Spanish (Espa\u00f1ol)",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a8608f4d4b10d003007a1ce",
+"description": "Event Page: Open Shop"
+},
+"location_name": "Gage Park",
+"start": "2026-12-19T14:00:00.000",
+"end": "2026-12-19T16:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_ends": "2026-12-19T14:00:00.000",
+"registration_closed": false,
+"registration_status": "ACTIVE",
+"location_address": "2807 W. 55th Street",
+"location_zip": "60632",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.694184,
+41.793563
+]
+},
+"day_of_the_week": "Saturday",
+"event_id": "6a8608f4d4b10d003007a1ce"
+},
+{
+"title": "Robot Club",
+"description": "<p>Join us as we test our STEM brains in creating small kit-based robots, such as bubble machines, doodle bots and more. A new robot will be tested each month.&nbsp;</p><p>For kids 6 to 13.</p><p><str",
+"event_types": "Crafts, Games and Play | Health and Science",
+"event_audiences": "Kids (Kids: 6 to 13 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6aac00db65abe8002a79f38b",
+"description": "Event Page: Robot Club"
+},
+"location_name": "Avalon",
+"start": "2026-11-18T16:00:00.000",
+"end": "2026-11-18T17:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_ends": "2026-11-17T16:00:00.000",
+"registration_closed": false,
+"registration_status": "ACTIVE",
+"location_address": "8148 S. Stony Island Avenue",
+"location_zip": "60617",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.586031,
+41.74691
+]
+},
+"day_of_the_week": "Wednesday",
+"event_id": "6aac00db65abe8002a79f38b"
+},
+{
+"title": "3D Printing for Kids",
+"description": "<p>An introduction on&nbsp;how to use online software to design 3D objects that will then be printed out on the library's 3D printer! The printed design will usually be picked up at a later date.</p>\n",
+"event_types": "Computers and Technology",
+"event_audiences": "Kids (Kids: 6 to 13 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6a762a4e0d65ac3600451fc3",
+"description": "Event Page: 3D Printing for Kids"
+},
+"location_name": "Vodak-East Side",
+"start": "2026-11-12T16:00:00.000",
+"end": "2026-11-12T17:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "3710 E. 106th Street",
+"location_zip": "60617",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.533649,
+41.702875
+]
+},
+"day_of_the_week": "Thursday",
+"event_id": "6a762a4e0d65ac3600451fc3"
+},
+{
+"title": "Reading Room Book Club: A Gentleman in Moscow",
+"description": "<p>Please join us for&nbsp;a discussion of <a id=\"ember5565\" data-add-title-link=\"2168065126\" href=\"/item/show/2168065126\">A Gentleman in Moscow</a> by Amor Towles.</p>\n<p>When, in 1922, Count Alexand",
+"event_types": "Book Clubs",
+"event_audiences": "Adults (Adults: 18 and up)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6ac52754901b02002cc07a41",
+"description": "Event Page: Reading Room Book Club: A Gentleman in Moscow"
+},
+"location_name": "Obama Presidential Center",
+"location_details": "President's Reading Room",
+"start": "2026-12-19T13:00:00.000",
+"end": "2026-12-19T14:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": false,
+"registration_ends": "2026-12-19T13:00:00.000",
+"registration_closed": false,
+"registration_status": "ACTIVE",
+"location_address": "6021 S. Stony Island Avenue",
+"location_zip": "60637",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.5863592,
+41.7860431
+]
+},
+"day_of_the_week": "Saturday",
+"event_id": "6ac52754901b02002cc07a41"
+},
+{
+"title": "Beginning Readers Book Club",
+"description": "<p>Read with us! Each child has their own book in this shared reading experience enhanced with literacy games and crafts.<br></p>\n<p>For beginning readers and their caregivers.<br></p>\n<p><em>This pro",
+"event_types": "Book Clubs",
+"event_audiences": "Kids (Kids: 6 to 13 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6adbdc7a377296003a4e2f6f",
+"description": "Event Page: Beginning Readers Book Club"
+},
+"location_name": "Woodson Regional",
+"start": "2026-12-16T16:30:00.000",
+"end": "2026-12-16T17:30:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "9525 S. Halsted Street",
+"location_zip": "60628",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.642915,
+41.720915
+]
+},
+"day_of_the_week": "Wednesday",
+"event_id": "6adbdc7a377296003a4e2f6f"
+},
+{
+"title": "OBOC Young Readers Club: The Lion of Mars",
+"description": "<p>Curious what it might really feel like to grow up on Mars? Join us for a one-of-a-kind book club exploring science fiction, real-world space science and just plain fun conversation. Pick up a copy ",
+"event_types": "Book Clubs",
+"event_audiences": "Kids (Kids: 6 to 13 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6aa45a2fd969270055347c92",
+"description": "Event Page: OBOC Young Readers Club: The Lion of Mars"
+},
+"location_name": "Mount Greenwood",
+"start": "2026-10-28T16:00:00.000",
+"end": "2026-10-28T17:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": false,
+"registration_ends": "2026-10-27T16:00:00.000",
+"registration_closed": false,
+"registration_status": "ACTIVE",
+"location_address": "11010 S. Kedzie Avenue",
+"location_zip": "60655",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.701067,
+41.693103
+]
+},
+"day_of_the_week": "Wednesday",
+"event_id": "6aa45a2fd969270055347c92"
+},
+{
+"title": "Spanish Conversation Group",
+"description": "<p><strong>Join us for a relaxed and welcoming Spanish conversation group!</strong></p>\n<p>Speak Spanish in a relaxed, welcoming environment while connecting with others through natural conversation. ",
+"event_types": "Workshops",
+"event_audiences": "Adults (Adults: 18 and up)",
+"event_languages": "English | Spanish (Espa\u00f1ol)",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6abac06ca85a2c00337bab9a",
+"description": "Event Page: Spanish Conversation Group"
+},
+"location_name": "West Loop",
+"location_details": "Second Floor Meeting Room",
+"start": "2026-12-19T14:30:00.000",
+"end": "2026-12-19T16:30:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "122 N. Aberdeen Street",
+"location_zip": "60607",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.654799,
+41.8837657
+]
+},
+"day_of_the_week": "Saturday",
+"event_id": "6abac06ca85a2c00337bab9a"
+},
+{
+"title": "Quilting",
+"description": "<p>Join us to learn to quilt!&nbsp; The class is led by local Austin resident Jacqueline Doctor Johnson.</p>\n<p>Come expecting to learn, and to have some fun!&nbsp;&nbsp;<br></p>\n<p>Bring your own sup",
+"event_types": "Crafts, Games and Play",
+"event_audiences": "Adults (Adults: 18 and up) | Seniors (Seniors: 55 and up) | Teens (Teens: 13 to 19 years)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/6aa059af442d35226f676e7c",
+"description": "Event Page: Quilting"
+},
+"location_name": "Austin",
+"location_details": "Auditorium, 2nd floor",
+"start": "2026-12-18T11:00:00.000",
+"end": "2026-12-18T15:00:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "5615 W. Race Avenue",
+"location_zip": "60644",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.765762,
+41.889163
+]
+},
+"day_of_the_week": "Friday",
+"event_id": "6aa059af442d35226f676e7c"
+},
+{
+"title": "Open Play Time",
+"description": "<p>Join us for a drop-in open play time! We have fun, educational toys and books available for self-directed play.</p>\n<p>For kids 0 to 5 with their caregivers.<br></p>\n<p><strong>Accessibility</stron",
+"event_types": "Crafts, Games and Play",
+"event_audiences": "Babies (Babies: 0 to 18 months) | Preschoolers (Preschoolers: 3 to 5 years) | Toddlers (Toddlers: 18 to 36 months)",
+"event_languages": "English",
+"event_page": {
+"url": "https://chipublib.bibliocommons.com/events/69fb7288f6bd012f006621ec",
+"description": "Event Page: Open Play Time"
+},
+"location_name": "West Loop",
+"location_details": "Children's Area",
+"start": "2026-12-11T10:30:00.000",
+"end": "2026-12-11T11:30:00.000",
+"featured": false,
+"cancelled": false,
+"recurring": true,
+"registration_closed": false,
+"registration_status": "NOT REQUIRED",
+"location_address": "122 N. Aberdeen Street",
+"location_zip": "60607",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.654799,
+41.8837657
+]
+},
+"day_of_the_week": "Friday",
+"event_id": "69fb7288f6bd012f006621ec"
+}
+],
+"parks": [
+{
+"activity_id": "624723",
+"type": "Event",
+"title": "Cocoa with Santa at Brands",
+"description": "Enjoy a cup of cocoa, cookies, and take a photo with Santa.\n\nThanks to State Rep. Jaime Andrade Jr. for donating the hot cocoa!\n\n\nYoung children must be accompanied by an adult.",
+"start_date": "2026-12-12T11:00:00.000",
+"end_date": "2026-12-12T12:30:00.000",
+"season": "2026 Events",
+"zone": "2026 Events: Night Out in the Parks",
+"location_facility": "Brands Park",
+"age_range": "At least 6 months but less than 16",
+"category": "Holidays, Night Out in the Parks, Winter Holidays",
+"fee": "0",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/cocoa-santa-brands-0"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/624723"
+},
+"event_cancelled": "N",
+"address": "3285 N. Elston Ave.",
+"zip": "60618",
+"latitude": "41.9411855883",
+"longitude": "-87.6992225647",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.699222564697,
+41.941185588307
+]
+}
+},
+{
+"activity_id": "618547",
+"type": "Event",
+"title": "Chicago's First Responder Yoga at Ridge",
+"description": "Yoga, can help individuals decrease stress and increase their ability to focus and problem solve. First responders experience stress and trauma at higher levels than civilians. Take this opportunity, to flow through a vinyasa style yoga class and learn techniques decompress. First responders and their adult family members are welcome to attend. Please bring a yoga mat and wear comfortable clothing.",
+"start_date": "2026-11-02T18:00:00.000",
+"end_date": "2026-11-02T19:00:00.000",
+"season": "2026 Events",
+"location_facility": "Ridge Park",
+"age_range": "18 and up",
+"category": "Wellness",
+"fee": "0",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/chicagos-first-responder-yoga-ridge-41"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/618547"
+},
+"event_cancelled": "N",
+"address": "1817 W. 96th Street",
+"zip": "60643",
+"latitude": "41.7187548",
+"longitude": "-87.6677416",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6677416,
+41.7187548
+]
+}
+},
+{
+"activity_id": "618526",
+"type": "Event",
+"title": "Drop and Shop at Indian Road",
+"description": "Parents may drop off their child for some Fun and Games while they prepare for the Holidays.\n\n\nChildren must be enrolled in Kiddie College or have a sibling enrolled in Kiddie College. Must be potty trained. Children should bring a lunch and water bottle. In person registration only.",
+"start_date": "2026-12-21T10:00:00.000",
+"end_date": "2026-12-21T14:00:00.000",
+"season": "2026 Events",
+"zone": "2026 Events: Night Out in the Parks",
+"location_facility": "Indian Road Park",
+"age_range": "At least 4 but less than 10",
+"category": "Holidays, Night Out in the Parks, Winter Holidays",
+"fee": "20",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/drop-and-shop-indian-road-0"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/618526"
+},
+"event_cancelled": "N",
+"address": "6010 W. Matson Ave.",
+"zip": "60646",
+"latitude": "41.9929118",
+"longitude": "-87.7783702",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.7783702,
+41.9929118
+]
+}
+},
+{
+"activity_id": "618561",
+"type": "Event",
+"title": "Chicago's First Responder Yoga at Oriole",
+"description": "Yoga, can help individuals decrease stress and increase their ability to focus and problem solve. First responders experience stress and trauma at higher levels than civilians. Take this opportunity, to flow through a vinyasa style yoga class and learn techniques decompress. First responders and their adult family members are welcome to attend. Please bring a yoga mat and wear comfortable clothing. Class will be weather dependent.",
+"start_date": "2026-11-16T10:00:00.000",
+"end_date": "2026-11-16T10:45:00.000",
+"season": "2026 Events",
+"location_facility": "Oriole Park",
+"age_range": "18 and up",
+"category": "Wellness",
+"fee": "0",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/chicagos-first-responder-yoga-oriole-46"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/618561"
+},
+"event_cancelled": "N",
+"address": "5430 N. Olcott Ave.",
+"zip": "60656",
+"latitude": "41.9782824",
+"longitude": "-87.8144555",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.8144555,
+41.9782824
+]
+}
+},
+{
+"activity_id": "618564",
+"type": "Event",
+"title": "Chicago's First Responder Yoga at Oriole",
+"description": "Yoga, can help individuals decrease stress and increase their ability to focus and problem solve. First responders experience stress and trauma at higher levels than civilians. Take this opportunity, to flow through a vinyasa style yoga class and learn techniques decompress. First responders and their adult family members are welcome to attend. Please bring a yoga mat and wear comfortable clothing. Class will be weather dependent.",
+"start_date": "2026-12-07T10:00:00.000",
+"end_date": "2026-12-07T10:45:00.000",
+"season": "2026 Events",
+"location_facility": "Oriole Park",
+"age_range": "18 and up",
+"category": "Wellness",
+"fee": "0",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/chicagos-first-responder-yoga-oriole-49"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/618564"
+},
+"event_cancelled": "N",
+"address": "5430 N. Olcott Ave.",
+"zip": "60656",
+"latitude": "41.9782824",
+"longitude": "-87.8144555",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.8144555,
+41.9782824
+]
+}
+},
+{
+"activity_id": "624536",
+"type": "Event",
+"title": "Windy City Harvest Hoops Fest at Rowan",
+"description": "Join Teens in the Park and Windy City Hoops for a special Thanksgiving basketball combine. During this Fall Harvest Hoops Fest, teens will showcase their basketball skills, athleticism, and potential in front of coaches citywide.",
+"start_date": "2026-11-23T12:00:00.000",
+"end_date": "2026-11-23T15:00:00.000",
+"season": "2026 Events",
+"location_facility": "Rowan (William) Park",
+"age_range": "At least 13 but less than 19",
+"category": "Sports",
+"fee": "0",
+"information_link": {
+"url": "https://www.chicagoparkdistrict.com/events/windy-city-harvest-hoops-fest-rowan"
+},
+"registration_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/624536"
+},
+"event_cancelled": "N",
+"address": "11546 S. Avenue L",
+"zip": "60617",
+"latitude": "41.6849586",
+"longitude": "-87.5373447",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.5373447,
+41.6849586
+]
+}
+},
+{
+"activity_id": "586446",
+"type": "Program",
+"title": "Volleyball - Open at Kilbourn",
+"description": "September 10, 2026 to December 10, 2026",
+"start_date": "2026-09-10T17:00:00.000",
+"end_date": "2026-12-10T19:00:00.000",
+"date_notes": "From September 10, 2026 to December 10, 2026 Each Thursday from 5pm to 7pm Except the following dates: Thursday, Nov 26, 2026",
+"location_facility": "Kilbourn Park",
+"age_range": "Teen",
+"activity_type": "Open",
+"category": "Sports - Volleyball",
+"fee": "0",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/586446"
+},
+"registration_date": "2026-08-03T14:00:00.000",
+"address": "3501 N. Kilbourn Ave.",
+"zip": "60641",
+"latitude": "41.9440726",
+"longitude": "-87.7389875",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.7389875,
+41.9440726
+]
+}
+},
+{
+"activity_id": "589168",
+"type": "Program",
+"title": "Senior Swim at Carver",
+"description": "September 22, 2026 to December 11, 2026",
+"start_date": "2026-09-22T11:00:00.000",
+"end_date": "2026-12-11T12:00:00.000",
+"date_notes": "From September 22, 2026 to December 11, 2026 Each Tuesday,Thursday,Friday from 11am to 12pm Except the following dates: Thursday, Nov 26, 2026",
+"location_facility": "Carver (George Washington) Park",
+"age_range": "Senior",
+"activity_type": "Open",
+"category": "Open",
+"fee": "0",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/589168"
+},
+"registration_date": "2026-08-04T14:00:00.000",
+"address": "939 E. 132nd St.",
+"zip": "60827",
+"latitude": "41.6559204",
+"longitude": "-87.5988761",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.5988761,
+41.6559204
+]
+}
+},
+{
+"activity_id": "622202",
+"type": "Program",
+"title": "Walking Club at Wolfe",
+"description": "September 8, 2026 to December 10, 2026",
+"start_date": "2026-09-08T10:00:00.000",
+"end_date": "2026-12-10T11:00:00.000",
+"date_notes": "From September 8, 2026 to December 10, 2026 Each Tuesday,Thursday from 10am to 11am Except the following dates: Thursday, Oct 22, 2026 Thursday, Nov 26, 2026",
+"location_facility": "Wolfe (Richard) Park",
+"age_range": "Senior",
+"activity_type": "Open",
+"category": "Walking",
+"fee": "0",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/622202"
+},
+"registration_date": "2026-08-04T14:00:00.000",
+"address": "3325 E. 108th St.",
+"zip": "60617",
+"latitude": "41.6989501",
+"longitude": "-87.5431203",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.5431203,
+41.6989501
+]
+}
+},
+{
+"activity_id": "622868",
+"type": "Program",
+"title": "Minis in Motion at McFetridge",
+"description": "November 3, 2026 to November 3, 2026",
+"start_date": "2026-11-03T10:00:00.000",
+"end_date": "2026-11-03T11:30:00.000",
+"date_notes": "From November 3, 2026 to November 3, 2026 Each Tuesday from 10am to 11:30am",
+"location_facility": "McFetridge Sports Center",
+"age_range": "Early Childhood",
+"activity_type": "Open",
+"category": "Fitness",
+"fee": "6",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/622868"
+},
+"registration_date": "2026-10-07T14:00:00.000",
+"address": "3843 N. California Ave.",
+"zip": "60618",
+"latitude": "41.9517076",
+"longitude": "-87.6970874",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6970874,
+41.9517076
+]
+}
+},
+{
+"activity_id": "622570",
+"type": "Program",
+"title": "Ice Skating - Freestyle Ice (Studio Rink) at McFetridge",
+"description": "December 17, 2026 to December 17, 2026",
+"start_date": "2026-12-17T15:45:00.000",
+"end_date": "2026-12-17T16:45:00.000",
+"date_notes": "From December 17, 2026 to December 17, 2026 Each Thursday from 3:45pm to 4:45pm",
+"location_facility": "McFetridge Sports Center",
+"age_range": "All Ages",
+"activity_type": "Open",
+"category": "Sports - Skating",
+"fee": "8",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/622570"
+},
+"registration_date": "2026-10-07T14:00:00.000",
+"address": "3843 N. California Ave.",
+"zip": "60618",
+"latitude": "41.9517076",
+"longitude": "-87.6970874",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6970874,
+41.9517076
+]
+}
+},
+{
+"activity_id": "622525",
+"type": "Program",
+"title": "Ice Skating - Freestyle Ice (Studio Rink) at McFetridge",
+"description": "December 7, 2026 to December 7, 2026",
+"start_date": "2026-12-07T15:45:00.000",
+"end_date": "2026-12-07T16:45:00.000",
+"date_notes": "From December 7, 2026 to December 7, 2026 Each Monday from 3:45pm to 4:45pm",
+"location_facility": "McFetridge Sports Center",
+"age_range": "All Ages",
+"activity_type": "Open",
+"category": "Sports - Skating",
+"fee": "8",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/622525"
+},
+"registration_date": "2026-10-07T14:00:00.000",
+"address": "3843 N. California Ave.",
+"zip": "60618",
+"latitude": "41.9517076",
+"longitude": "-87.6970874",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6970874,
+41.9517076
+]
+}
+},
+{
+"activity_id": "612650",
+"type": "Program",
+"title": "Park Kids - Spring at Margate",
+"description": "March 29, 2027 to May 28, 2027",
+"start_date": "2027-03-29T14:30:00.000",
+"end_date": "2027-05-28T18:00:00.000",
+"date_notes": "From March 29, 2027 to May 28, 2027 Each Monday,Tuesday,Wednesday,Thursday,Friday from 2:30pm to 6pm",
+"location_facility": "Margate Park",
+"age_range": "Youth",
+"activity_type": "Instruction",
+"category": "After School",
+"fee": "100",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/612650"
+},
+"registration_date": "2026-08-04T05:00:00.000",
+"address": "4921 N. Marine Drive",
+"zip": "60640",
+"latitude": "41.972088",
+"longitude": "-87.6497743",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6497743,
+41.972088
+]
+}
+},
+{
+"activity_id": "585997",
+"type": "Program",
+"title": "Small Group Personal Training at Dunham",
+"description": "September 9, 2026 to December 16, 2026",
+"start_date": "2026-09-09T19:15:00.000",
+"end_date": "2026-12-16T20:00:00.000",
+"date_notes": "From September 9, 2026 to December 16, 2026 Each Wednesday from 7:15pm to 8pm Except the following dates: Wednesday, Sep 30, 2026 Wednesday, Oct 28, 2026 Wednesday, Nov 11, 2026 Wednesday, Nov 25, 2026",
+"location_facility": "Dunham (Robert) Park",
+"age_range": "Adult",
+"activity_type": "Instruction",
+"category": "Fitness",
+"fee": "21",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/585997"
+},
+"registration_date": "2026-08-03T14:00:00.000",
+"address": "4638 N. Melvina Ave.",
+"zip": "60630",
+"latitude": "41.965869",
+"longitude": "-87.78234",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.78234,
+41.965869
+]
+}
+},
+{
+"activity_id": "591224",
+"type": "Program",
+"title": "Adult Social Club (Special Rec) at Harrison",
+"description": "September 28, 2026 to December 8, 2026",
+"start_date": "2026-09-28T10:00:00.000",
+"end_date": "2026-12-08T11:00:00.000",
+"date_notes": "From September 28, 2026 to December 8, 2026 Each Monday,Tuesday from 10am to 11am Except the following dates: Monday, Oct 26, 2026 Tuesday, Oct 27, 2026 Tuesday, Nov 3, 2026 Monday, Nov 23, 2026 Tuesday, Nov 24, 2026",
+"location_facility": "Harrison (Carter) Park",
+"age_range": "Adult",
+"activity_type": "Instruction",
+"category": "Clubs",
+"fee": "12",
+"information_link": {
+"url": "http://apm.activecommunities.com/chicagoparkdistrict/Activity_Search/591224"
+},
+"registration_date": "2026-08-04T14:00:00.000",
+"address": "1824 S. Wood St.",
+"zip": "60608",
+"latitude": "41.8570523",
+"longitude": "-87.6718838",
+"location": {
+"type": "Point",
+"coordinates": [
+-87.6718838,
+41.8570523
+]
+}
+}
+]
+}
