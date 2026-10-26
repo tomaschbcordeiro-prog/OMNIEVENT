@@ -32,11 +32,43 @@ export interface SnapshotMeta {
 export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.now()): Promise<void> {
   if (!persistent) return;
   const data = gzipSync(Buffer.from(JSON.stringify(batch))).toString("base64");
-  const ver = at.toString(36);
+  // Two slots per source, used in turn: readers keep the current one while the other is
+  // rewritten, and storage never holds more than two copies of a source.
+  const current = (await snapshotIndex())[id];
+  const ver = current?.ver === "a" ? "b" : "a";
   const n = Math.max(1, Math.ceil(data.length / CHUNK));
   for (let i = 0; i < n; i++) await cmd(["SET", `snap:${id}:${ver}:${i}`, data.slice(i * CHUNK, (i + 1) * CHUNK), "EX", TTL]);
   const meta: SnapshotMeta = { ver, n, at, events: batch.events.length };
   await cmd(["HSET", INDEX, id, JSON.stringify(meta)]);
+  // Chunks left over from a bigger earlier copy in this slot.
+  const stale = Array.from({ length: 40 }, (_, i) => `snap:${id}:${ver}:${n + i}`);
+  await cmd(["DEL", ...stale]).catch(() => {});
+}
+
+/**
+ * Removes snapshot chunks that no index entry points to (older versions). Run at most once
+ * an hour across all instances.
+ */
+export async function cleanupSnapshots(): Promise<number> {
+  if (!persistent) return 0;
+  if (!(await acquireLock("snapshot-cleanup", 3600))) return 0;
+  const index = await snapshotIndex();
+  let cursor = "0";
+  let removed = 0;
+  do {
+    const [next, keys] = (await cmd<[string, string[]]>(["SCAN", cursor, "MATCH", "snap:*", "COUNT", 1000])) ?? ["0", []];
+    cursor = String(next);
+    const drop = keys.filter((k) => {
+      if (k === INDEX) return false;
+      const [, id, ver] = k.split(":");
+      return index[id]?.ver !== ver;
+    });
+    if (drop.length) {
+      await cmd(["DEL", ...drop]);
+      removed += drop.length;
+    }
+  } while (cursor !== "0");
+  return removed;
 }
 
 /** What every source last saved (one request). */

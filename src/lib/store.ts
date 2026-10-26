@@ -1,6 +1,6 @@
 import "server-only";
 import { after } from "next/server";
-import { acquireLock, loadSnapshot, releaseLock, saveSnapshot, sharedEnabled, snapshotIndex } from "./shared-cache";
+import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, sharedEnabled, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { descendantsOf } from "./categories";
@@ -229,6 +229,10 @@ export async function ensureFresh(): Promise<void> {
     const first = state.sharedCheckedAt === undefined;
     state.sharedCheckedAt = Date.now();
     state.hydrating = hydrate(providers).finally(() => (state.hydrating = undefined));
+    // Old snapshot copies are cleared out (one instance, at most hourly).
+    void cleanupSnapshots()
+      .then((n) => n && log("info", "old snapshot chunks removed", { n }))
+      .catch((err) => log("error", "snapshot cleanup failed", { err: String(err) }));
     // A new instance starts from the shared snapshots before deciding what to re-read.
     if (first) await Promise.race([state.hydrating, new Promise((r) => setTimeout(r, 10000))]);
   }
