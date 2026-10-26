@@ -325,7 +325,7 @@ export const ticketmasterProvider: ProviderAdapter = {
   id: "ticketmaster",
   name: "Ticketmaster Discovery API",
   isDemo: false,
-  coverage: "Every scheduled event Ticketmaster lists in its markets (North America, much of Europe, Australia/NZ, Mexico and more), up to two years ahead.",
+  coverage: "Every scheduled event Ticketmaster lists in its markets (North America, much of Europe, Australia/NZ, Mexico and more), up to five years ahead.",
   attribution: "Event data and ticket links provided by Ticketmaster.",
   isConfigured: () => !!process.env.TICKETMASTER_API_KEY,
   // Each run reads for a few minutes and continues where the last one stopped; a finished
