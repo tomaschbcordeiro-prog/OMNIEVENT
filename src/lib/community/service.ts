@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { cmd, pairs, persistent, pipe, type Cmd } from "./kv";
 import {
   AVATARS,
@@ -17,14 +17,18 @@ import {
   type Summary,
   type TargetMeta,
   type Thread,
+  type AccountInfo,
+  USERNAME_RE,
 } from "./types";
 
 /**
  * Community: profiles, posts (chat, questions, tips, meet-ups, reviews), likes, ratings and
  * "going / interested" plans, attached to events, venues, performers/teams and cities.
  *
- * - No passwords: the browser keeps a random secret; its hash is the member id. Losing the
- *   secret (clearing site data) means starting a new profile.
+ * - Accounts: first and last name, a unique username, an email and a password (scrypt).
+ *   The browser keeps a random secret; signing in links it to the account (a session), so
+ *   the same account works on any device. Profiles made before accounts existed (keyed by
+ *   the secret's hash) keep working for reading and are completed into an account.
  * - Posts are plain text, rate-limited, and hidden after three reports.
  * - Keys are prefixed `c:`; see each function for what it reads and writes.
  */
@@ -68,13 +72,6 @@ export function cleanText(raw: unknown, { min = 2, max = MAX_TEXT } = {}): strin
   return text;
 }
 
-export function cleanName(raw: unknown): string {
-  const name = String(raw ?? "").replace(/\s+/g, " ").trim();
-  if (name.length < 2 || name.length > 24) throw new CommunityError("Names are 2 to 24 characters.");
-  if (!/^[\p{L}\p{N} ._'-]+$/u.test(name)) throw new CommunityError("Use letters, numbers, spaces, dots, dashes or apostrophes.");
-  return name;
-}
-
 // ---- Rate limits -----------------------------------------------------------------------
 
 async function limit(key: string, max: number, windowSec: number) {
@@ -116,25 +113,195 @@ export async function getProfile(id: string): Promise<PublicProfile | undefined>
   return (await getProfiles([id]))[id];
 }
 
-export async function saveProfile(secret: string, input: { name?: unknown; avatar?: unknown; hue?: unknown; bio?: unknown }, ip: string): Promise<PublicProfile> {
-  const id = memberId(secret);
+/** Edits the signed-in member's profile and account details. */
+export async function saveProfile(secret: string, input: Record<string, unknown>, ip: string): Promise<PublicProfile> {
+  const prev = await requireProfile(secret);
+  const id = prev.id;
   await limit(`ip:${ip}:profile`, 30, 3600);
-  const prev = json<Profile>(await cmd(["GET", `c:u:${id}`]));
-  const avatar = typeof input.avatar === "string" && AVATARS.includes(input.avatar) ? input.avatar : prev?.avatar ?? AVATARS[0];
-  const hue = Number.isFinite(Number(input.hue)) ? Math.abs(Math.round(Number(input.hue))) % 360 : prev?.hue ?? 210;
-  const bio = input.bio === undefined ? prev?.bio : String(input.bio).trim() ? cleanText(input.bio, { min: 1, max: 160 }) : undefined;
-  const profile: Profile = { id, name: cleanName(input.name ?? prev?.name), avatar, hue, bio, createdAt: prev?.createdAt ?? now() };
-  const cmds: Cmd[] = [["SET", `c:u:${id}`, JSON.stringify(profile)]];
-  if (!prev) cmds.push(["HINCRBY", "c:stat", "members", 1], ["ZADD", "c:karma", 1, id]);
+  const account = await getAccount(id);
+  if (!account) throw new CommunityError("Finish creating your account first.", 401);
+  const firstName = input.firstName === undefined ? account.firstName : personName(input.firstName, "First name");
+  const lastName = input.lastName === undefined ? account.lastName : personName(input.lastName, "Last name");
+  const username = input.username === undefined ? account.username : cleanUsername(input.username);
+  const email = input.email === undefined ? account.email : cleanEmail(input.email);
+  const cmds: Cmd[] = [];
+  if (username !== account.username) {
+    if (!(await claim(`c:uname:${username}`, id))) throw new CommunityError("That username is taken. Try another.", 409);
+    cmds.push(["DEL", `c:uname:${account.username}`]);
+  }
+  if (email !== account.email) {
+    if (!(await claim(`c:email:${email}`, id))) {
+      if (username !== account.username) await cmd(["DEL", `c:uname:${username}`]);
+      throw new CommunityError("There's already an account with that email.", 409);
+    }
+    cmds.push(["DEL", `c:email:${account.email}`]);
+  }
+  const avatar = typeof input.avatar === "string" && AVATARS.includes(input.avatar) ? input.avatar : prev.avatar;
+  const hue = Number.isFinite(Number(input.hue)) ? Math.abs(Math.round(Number(input.hue))) % 360 : prev.hue;
+  const bio = input.bio === undefined ? prev.bio : String(input.bio).trim() ? cleanText(input.bio, { min: 1, max: 160 }) : undefined;
+  const profile: Profile = { ...prev, name: `${firstName} ${lastName}`, firstName, lastName, username, avatar, hue, bio };
+  cmds.push(["SET", `c:u:${id}`, JSON.stringify(profile)], ["SET", `c:acct:${id}`, JSON.stringify({ ...account, firstName, lastName, username, email })]);
   await pipe(cmds);
   return (await getProfile(id))!;
 }
 
 async function requireProfile(secret: string): Promise<Profile> {
-  if (typeof secret !== "string" || secret.length < 20) throw new CommunityError("Join the community first.", 401);
-  const p = json<Profile>(await cmd(["GET", `c:u:${memberId(secret)}`]));
-  if (!p) throw new CommunityError("Join the community first.", 401);
+  const id = await memberOf(secret);
+  const p = id ? json<Profile>(await cmd(["GET", `c:u:${id}`])) : undefined;
+  if (!p) throw new CommunityError("Create an account or sign in first.", 401);
+  if (!p.username) throw new CommunityError("Finish creating your account first.", 401);
   return p;
+}
+
+// ---- Accounts --------------------------------------------------------------------------
+
+interface Account extends AccountInfo {
+  id: string;
+  /** scrypt: "s1$salt$hash", base64. */
+  pw: string;
+  createdAt: string;
+}
+
+const SESSION_TTL = 400 * 86400;
+const sessionKey = (secret: string) => `c:sess:${memberId(secret)}`;
+const RESERVED = new Set(["admin", "administrator", "omnievent", "support", "help", "staff", "moderator", "mod", "root", "system", "null", "undefined", "me", "community", "official", "team"]);
+
+/** Who a browser secret is: the account it is signed in to, else its pre-account profile. */
+export async function memberOf(secret: unknown): Promise<string | undefined> {
+  if (typeof secret !== "string" || secret.length < 20) return undefined;
+  const session = await cmd(["GET", sessionKey(secret)]);
+  return typeof session === "string" ? session : memberId(secret);
+}
+
+function personName(raw: unknown, what: string): string {
+  const name = String(raw ?? "").replace(/\s+/g, " ").trim();
+  if (name.length < 1 || name.length > 30) throw new CommunityError(`${what}: 1 to 30 characters.`);
+  if (!/^[\p{L}\p{M} .'-]+$/u.test(name)) throw new CommunityError(`${what}: use letters, spaces, dots, dashes or apostrophes.`);
+  return name;
+}
+
+export function cleanUsername(raw: unknown): string {
+  const u = String(raw ?? "").trim().replace(/^@/, "").toLowerCase();
+  if (!USERNAME_RE.test(u)) throw new CommunityError("Usernames are 3 to 20 characters: letters, numbers, dots and underscores, starting and ending with a letter or number.");
+  if (RESERVED.has(u)) throw new CommunityError("That username is reserved. Try another.");
+  return u;
+}
+
+export function cleanEmail(raw: unknown): string {
+  const e = String(raw ?? "").trim().toLowerCase();
+  if (e.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) throw new CommunityError("That doesn't look like an email address.");
+  return e;
+}
+
+function checkPassword(raw: unknown): string {
+  const pw = String(raw ?? "");
+  if (pw.length < 8) throw new CommunityError("Use at least 8 characters for the password.");
+  if (pw.length > 128) throw new CommunityError("That password is too long.");
+  return pw.normalize("NFKC");
+}
+
+const derive = (pw: string, salt: Buffer) =>
+  new Promise<Buffer>((resolve, reject) => scrypt(pw, salt, 32, { N: 16384, r: 8, p: 1 }, (err, key) => (err ? reject(err) : resolve(key))));
+
+async function hashPassword(pw: string): Promise<string> {
+  const salt = randomBytes(16);
+  return `s1$${salt.toString("base64")}$${(await derive(pw, salt)).toString("base64")}`;
+}
+
+async function passwordMatches(pw: string, stored: string): Promise<boolean> {
+  const [v, salt, hash] = stored.split("$");
+  if (v !== "s1" || !salt || !hash) return false;
+  const got = await derive(pw, Buffer.from(salt, "base64"));
+  const want = Buffer.from(hash, "base64");
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+
+/** Claims a unique key (username or email) for an account; false if someone else has it. */
+async function claim(key: string, id: string): Promise<boolean> {
+  const [set, owner] = await pipe([["SET", key, id, "NX"], ["GET", key]]);
+  return set === "OK" || owner === id;
+}
+
+async function getAccount(id: string): Promise<Account | undefined> {
+  return json<Account>(await cmd(["GET", `c:acct:${id}`]));
+}
+
+export async function accountInfo(id: string): Promise<AccountInfo | undefined> {
+  const a = await getAccount(id);
+  return a ? { email: a.email, username: a.username, firstName: a.firstName, lastName: a.lastName } : undefined;
+}
+
+/**
+ * Creates an account and signs this browser in. A profile this browser made before accounts
+ * existed becomes the account's, with its posts and points.
+ */
+export async function signUp(secret: string, input: Record<string, unknown>, ip: string): Promise<PublicProfile> {
+  if (typeof secret !== "string" || secret.length < 20) throw new CommunityError("Missing browser key. Reload the page and try again.", 401);
+  await limit(`ip:${ip}:signup`, 8, 3600);
+  const firstName = personName(input.firstName, "First name");
+  const lastName = personName(input.lastName, "Last name");
+  const username = cleanUsername(input.username);
+  const email = cleanEmail(input.email);
+  const password = checkPassword(input.password);
+  const current = await memberOf(secret);
+  const prev = current ? json<Profile>(await cmd(["GET", `c:u:${current}`])) : undefined;
+  if (prev?.username) throw new CommunityError("You're already signed in. Sign out first to create another account.", 409);
+  const id = prev ? prev.id : randomBytes(8).toString("hex");
+
+  if (!(await claim(`c:uname:${username}`, id))) throw new CommunityError("That username is taken. Try another.", 409);
+  if (!(await claim(`c:email:${email}`, id))) {
+    await cmd(["DEL", `c:uname:${username}`]);
+    throw new CommunityError("There's already an account with that email. Sign in instead.", 409);
+  }
+  const account: Account = { id, firstName, lastName, username, email, pw: await hashPassword(password), createdAt: now() };
+  const avatar = typeof input.avatar === "string" && AVATARS.includes(input.avatar) ? input.avatar : prev?.avatar ?? AVATARS[0];
+  const hue = Number.isFinite(Number(input.hue)) ? Math.abs(Math.round(Number(input.hue))) % 360 : prev?.hue ?? 210;
+  const bio = typeof input.bio === "string" && input.bio.trim() ? cleanText(input.bio, { min: 1, max: 160 }) : prev?.bio;
+  const profile: Profile = { id, name: `${firstName} ${lastName}`, firstName, lastName, username, avatar, hue, bio, createdAt: prev?.createdAt ?? now() };
+  const cmds: Cmd[] = [
+    ["SET", `c:acct:${id}`, JSON.stringify(account)],
+    ["SET", `c:u:${id}`, JSON.stringify(profile)],
+    ["SET", sessionKey(secret), id, "EX", SESSION_TTL],
+  ];
+  if (!prev) cmds.push(["HINCRBY", "c:stat", "members", 1], ["ZADD", "c:karma", 1, id]);
+  await pipe(cmds);
+  return (await getProfile(id))!;
+}
+
+/** Signs this browser in with an email or username and the password. */
+export async function signIn(secret: string, input: Record<string, unknown>, ip: string): Promise<PublicProfile> {
+  if (typeof secret !== "string" || secret.length < 20) throw new CommunityError("Missing browser key. Reload the page and try again.", 401);
+  await limit(`ip:${ip}:signin`, 20, 900);
+  const login = String(input.login ?? "").trim().toLowerCase().replace(/^@/, "");
+  if (!login) throw new CommunityError("Enter your email or username.");
+  const id = await cmd(["GET", login.includes("@") ? `c:email:${login}` : `c:uname:${login}`]);
+  await limit(`acct:${typeof id === "string" ? id : login}:signin`, 10, 900);
+  const account = typeof id === "string" ? await getAccount(id) : undefined;
+  if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("Wrong email, username or password.", 401);
+  await cmd(["SET", sessionKey(secret), account.id, "EX", SESSION_TTL]);
+  return (await getProfile(account.id))!;
+}
+
+export async function signOut(secret: string) {
+  if (typeof secret === "string" && secret.length >= 20) await cmd(["DEL", sessionKey(secret)]);
+}
+
+export async function changePassword(secret: string, input: Record<string, unknown>, ip: string) {
+  const me = await requireProfile(secret);
+  await limit(`acct:${me.id}:signin`, 10, 900);
+  const account = await getAccount(me.id);
+  if (!account || !(await passwordMatches(String(input.current ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("Your current password isn't right.", 401);
+  account.pw = await hashPassword(checkPassword(input.next));
+  await cmd(["SET", `c:acct:${me.id}`, JSON.stringify(account)]);
+  void ip;
+}
+
+/** Usernames resolve to member ids, for profile links like /community/u/maria. */
+export async function idForUsername(raw: string): Promise<string | undefined> {
+  const u = raw.trim().replace(/^@/, "").toLowerCase();
+  if (!USERNAME_RE.test(u)) return undefined;
+  const id = await cmd(["GET", `c:uname:${u}`]);
+  return typeof id === "string" ? id : undefined;
 }
 
 // ---- Targets ---------------------------------------------------------------------------

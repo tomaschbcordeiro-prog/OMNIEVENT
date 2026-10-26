@@ -357,7 +357,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus }: { mode: 
           autoFocus={autoFocus}
           placeholder={parent ? "Write a reply…" : isReview ? "Add a few words (optional)" : KIND_META[kind].placeholder}
           value={text}
-          onFocus={() => !profile && void requireMember(false)}
+          onFocus={() => !profile?.username && void requireMember(false)}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void submit(e);

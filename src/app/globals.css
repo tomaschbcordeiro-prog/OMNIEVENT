@@ -752,6 +752,13 @@ select.field {
 /* ---------------------------------------------------------------- community */
 @layer components {
   /* Avatar disc: emoji on a soft tint of the member's hue. */
+  /* Top of the account dialog: tinted by the colour the member picks, updating live. */
+  .account-hero {
+    background:
+      radial-gradient(120% 140% at 100% 0%, hsl(var(--h, 210) 90% 85% / 0.9), transparent 60%),
+      linear-gradient(180deg, hsl(var(--h, 210) 80% 96%), var(--color-panel));
+    transition: background 0.4s ease;
+  }
   .avatar {
     display: inline-grid;
     place-items: center;

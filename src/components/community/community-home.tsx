@@ -8,7 +8,7 @@ import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type Post
 import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
-import { Avatar, MemberName, requireMember, Stars } from "./bits";
+import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
 
 type Filter = "all" | PostKind;
 const FILTERS: Filter[] = ["all", "review", "question", "tip", "meetup", "comment"];
@@ -181,16 +181,19 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
 }
 
 function MemberCard({ profile }: { profile: PublicProfile | null }) {
-  if (!profile)
+  if (!profile?.username)
     return (
       <div className="surface-float rounded-[var(--radius-l)] p-5 panel-in">
         <div className="flex -space-x-2" aria-hidden>
           {["🦊", "🐙", "🎸", "⚽", "🎭"].map((a, i) => <Avatar key={a} p={{ avatar: a, hue: [210, 330, 28, 95, 265][i], name: "" }} size={40} />)}
         </div>
-        <p className="t-h3 mt-3">Join in seconds</p>
-        <p className="t-small text-text-2 mt-1">Pick a name and an avatar. No email, no password.</p>
+        <p className="t-h3 mt-3">{profile ? "Finish your account" : "Join in a minute"}</p>
+        <p className="t-small text-text-2 mt-1">Your name, a username and your email. Sign in on any device.</p>
         <button type="button" className="btn btn-primary mt-4 w-full press" onClick={() => void requireMember(false)}>
-          <Users size={16} aria-hidden /> Join the community
+          <Users size={16} aria-hidden /> {profile ? "Finish my account" : "Create an account"}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm mt-2 w-full" onClick={() => void openAccount("signin")}>
+          I already have an account
         </button>
       </div>
     );
@@ -202,6 +205,7 @@ function MemberCard({ profile }: { profile: PublicProfile | null }) {
         <Avatar p={profile} size={56} />
         <div className="min-w-0">
           <p className="t-h3 truncate">{profile.name}</p>
+          <p className="t-small text-text-2 truncate">@{profile.username}</p>
           <p className="t-small text-text-2 tnum">{profile.karma} {profile.karma === 1 ? "point" : "points"} · {profile.badges.length} {profile.badges.length === 1 ? "badge" : "badges"}</p>
         </div>
         <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => void requireMember(true, true)}>Edit</button>

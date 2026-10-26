@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X, CircleUserRound } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
 import { NotificationBell } from "./community/bell";
+import { AccountMenu } from "./community/account-menu";
 
 const NAV = [
   { href: "/", key: "nav.discover" },
@@ -65,9 +66,7 @@ export function Header() {
         <div className="flex-1" />
         {!isHome && <SearchBox className="hidden md:block w-full max-w-md" placeholder={t("search.placeholder")} />}
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
-        <Link href="/my-world?tab=account" className={`btn btn-ghost btn-icon hidden sm:inline-flex ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label="Account and preferences">
-          <CircleUserRound size={19} aria-hidden />
-        </Link>
+        <AccountMenu floating={isHome} />
         <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
           {menu ? <X size={19} aria-hidden /> : <Menu size={19} aria-hidden />}
         </button>

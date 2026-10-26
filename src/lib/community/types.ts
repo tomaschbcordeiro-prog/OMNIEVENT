@@ -9,7 +9,12 @@ export const POST_KINDS: PostKind[] = ["comment", "question", "tip", "meetup", "
 
 export interface Profile {
   id: string;
+  /** Shown to others: first and last name. */
   name: string;
+  firstName?: string;
+  lastName?: string;
+  /** Unique handle, lower case; missing on profiles made before accounts existed. */
+  username?: string;
   /** One emoji. */
   avatar: string;
   /** Hue of the avatar disc, 0–359. */
@@ -102,15 +107,6 @@ export const BADGES: Record<string, { label: string; emoji: string; hint: string
 
 export const AVATARS = ["🦊", "🐙", "🦉", "🐝", "🦄", "🐬", "🐸", "🦁", "🐼", "🐧", "🦋", "🐢", "🐳", "🦜", "🐨", "🦩", "🌻", "🌵", "🍉", "🎸", "🎧", "⚽", "🎭", "🎨", "🚲", "🛹", "🌍", "🌙", "⚡", "🔥"];
 
-const ADJ = ["Curious", "Sunny", "Lucky", "Brave", "Groovy", "Quiet", "Wild", "Happy", "Swift", "Cosmic", "Golden", "Jolly", "Mellow", "Bold", "Witty"];
-const NOUN = ["Otter", "Fox", "Owl", "Comet", "Panda", "Falcon", "Dolphin", "Tiger", "Koala", "Wave", "Rocket", "Lynx", "Robin", "Maple", "Echo"];
-
-/** A friendly random name, suggested when someone joins. */
-export function suggestName(seed = Math.random()): string {
-  const i = Math.floor(seed * ADJ.length * NOUN.length);
-  return `${ADJ[i % ADJ.length]} ${NOUN[Math.floor(i / ADJ.length) % NOUN.length]}`;
-}
-
 export const KIND_META: Record<PostKind, { label: string; emoji: string; placeholder: string }> = {
   comment: { label: "Chat", emoji: "💬", placeholder: "Say something to people going…" },
   question: { label: "Question", emoji: "❓", placeholder: "Ask the community: doors, bags, food, best seats…" },
@@ -134,3 +130,13 @@ export interface Notices {
   unread: number;
   profiles: Record<string, PublicProfile>;
 }
+
+/** What only the account holder sees about their own account. */
+export interface AccountInfo {
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+}
+
+export const USERNAME_RE = /^[a-z0-9](?:[a-z0-9._]{1,18}[a-z0-9])$/;

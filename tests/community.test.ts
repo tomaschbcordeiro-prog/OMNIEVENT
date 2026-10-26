@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetMemory } from "@/lib/community/kv";
-import { cleanName, cleanText, createPost, deletePost, getHome, getMember, getThread, memberId, reportPost, saveProfile, setPlan, setRating, toggleLike } from "@/lib/community/service";
+import { cleanText, createPost, deletePost, getHome, getMember, getThread, reportPost, setPlan, setRating, signUp, toggleLike } from "@/lib/community/service";
 
 const A = "a".repeat(32);
 const B = "b".repeat(32);
@@ -9,23 +9,25 @@ const D = "d".repeat(32);
 const T = "e:tm-123";
 const meta = { target: T, title: "Test gig", href: "/events/test-gig" };
 
+/** Member id of each test browser's account. */
+const ids: Record<string, string> = {};
+const memberId = (secret: string) => ids[secret];
+
 beforeEach(async () => {
   resetMemory();
-  for (const [s, n] of [[A, "Ana"], [B, "Bruno"], [C, "Carla"], [D, "Duda"]]) await saveProfile(s, { name: n, avatar: "🦊" }, "1.1.1.1");
+  for (const [s, n] of [[A, "Ana"], [B, "Bruno"], [C, "Carla"], [D, "Duda"]])
+    ids[s] = (await signUp(s, { firstName: n, lastName: "Silva", username: n.toLowerCase(), email: `${n.toLowerCase()}@example.com`, password: "correct horse", avatar: "🦊" }, `ip-${n}`)).id;
 });
 
 describe("community", () => {
-  it("validates names and text", () => {
-    expect(cleanName("  Sunny   Otter ")).toBe("Sunny Otter");
-    expect(() => cleanName("x")).toThrow();
-    expect(() => cleanName("<script>")).toThrow();
+  it("validates text", () => {
     expect(cleanText("hi\n\n\n\nthere")).toBe("hi\n\nthere");
     expect(() => cleanText("a")).toThrow();
     expect(() => cleanText("http://a http://b http://c")).toThrow();
   });
 
   it("requires a profile to post", async () => {
-    await expect(createPost("z".repeat(32), { target: T, text: "hello" }, meta, "ip")).rejects.toThrow(/Join/);
+    await expect(createPost("z".repeat(32), { target: T, text: "hello" }, meta, "ip")).rejects.toThrow(/account/);
   });
 
   it("threads replies, likes and plans", async () => {
@@ -97,6 +99,6 @@ describe("notifications", () => {
     expect(n.unread).toBe(2);
     expect(n.items.map((i) => i.type)).toEqual(["like", "reply"]);
     expect(n.items[1].text).toBe("Yes, 2 seats");
-    expect(n.profiles[memberId(B)].name).toBe("Bruno");
+    expect(n.profiles[memberId(B)].name).toBe("Bruno Silva");
   });
 });

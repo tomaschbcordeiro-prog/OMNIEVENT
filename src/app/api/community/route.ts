@@ -8,7 +8,13 @@ import {
   getHome,
   getMember,
   getThread,
-  memberId,
+  memberOf,
+  signUp,
+  signIn,
+  signOut,
+  changePassword,
+  accountInfo,
+  idForUsername,
   reportPost,
   saveProfile,
   setPlan,
@@ -28,10 +34,7 @@ export const maxDuration = 60;
 
 /** The member secret travels in a header, never in a URL. */
 const secretOf = (req: Request) => req.headers.get("x-omni-member") ?? "";
-const viewerOf = (req: Request) => {
-  const s = secretOf(req);
-  return s.length >= 20 ? memberId(s) : undefined;
-};
+const viewerOf = (req: Request) => memberOf(secretOf(req));
 
 function fail(err: unknown) {
   if (err instanceof CommunityError) return apiError(err.status, "community", err.message);
@@ -41,8 +44,8 @@ function fail(err: unknown) {
 /**
  * GET /api/community?view=thread&target=e:<id>   conversation, ratings and plans
  * GET /api/community?view=home                   feed, trending, top rated, leaders
- * GET /api/community?view=member&id=<id>         a member's profile and posts
- * GET /api/community?view=me                     the caller's own profile and unread count
+ * GET /api/community?view=member&id=<id|name>    a member's profile and posts (id or username)
+ * GET /api/community?view=me                     the caller's own profile, account and unread count
  * GET /api/community?view=notifications          replies and likes on the caller's posts
  * GET /api/community?view=summaries&targets=a,b  counts for cards
  * GET /api/community?view=buzz                   trending events as cards
@@ -51,18 +54,22 @@ export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
   const view = url.searchParams.get("view") ?? "home";
   if (!rateLimit(`community:${clientKey(req)}`, 240)) return apiError(429, "rate_limited", "Too many requests.");
-  const viewer = viewerOf(req);
   try {
+    const viewer = await viewerOf(req);
     if (view === "thread") {
       const target = url.searchParams.get("target") ?? "";
       await ensureFresh();
       return ok(await getThread(target, viewer, resolveTarget(target)));
     }
     if (view === "member") {
-      const m = await getMember(url.searchParams.get("id") ?? "", viewer);
-      return m ? ok(m) : apiError(404, "not_found", "No member with that id.");
+      const key = url.searchParams.get("id") ?? "";
+      const m = (await getMember(key, viewer)) ?? (await idForUsername(key).then((id) => (id ? getMember(id, viewer) : undefined)));
+      return m ? ok(m) : apiError(404, "not_found", "No member with that name.");
     }
-    if (view === "me") return ok({ profile: viewer ? (await getProfile(viewer)) ?? null : null, unread: viewer ? await unreadNotices(viewer) : 0 });
+    if (view === "me") {
+      const profile = viewer ? ((await getProfile(viewer)) ?? null) : null;
+      return ok({ profile, account: profile?.username ? ((await accountInfo(profile.id)) ?? null) : null, unread: profile ? await unreadNotices(profile.id) : 0 });
+    }
     if (view === "notifications") {
       if (!viewer) return apiError(401, "community", "Join the community first.");
       return ok(await getNotices(viewer));
@@ -88,7 +95,11 @@ export const GET = handler(async (req: Request) => {
   }
 });
 
-/** POST /api/community  { action, … } — every action needs the member secret header. */
+/**
+ * POST /api/community  { action, … } — every action needs the browser's secret header.
+ * signup { firstName, lastName, username, email, password, avatar?, hue?, bio? } · signin
+ * { login, password } · signout · password { current, next } · profile { …fields to change }
+ */
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
   if (!rateLimit(`community-w:${ip}`, 60)) return apiError(429, "rate_limited", "Too many requests.");
@@ -108,8 +119,17 @@ export const POST = handler(async (req: Request) => {
   };
   try {
     switch (body.action) {
+      case "signup":
+        return ok({ profile: await signUp(secret, body, ip) });
+      case "signin":
+        return ok({ profile: await signIn(secret, body, ip) });
+      case "signout":
+        await signOut(secret);
+        return ok({ ok: true });
+      case "password":
+        await changePassword(secret, body, ip);
+        return ok({ ok: true });
       case "profile":
-        if (secret.length < 20) throw new CommunityError("Missing member key.", 401);
         return ok({ profile: await saveProfile(secret, body, ip) });
       case "post":
         return ok({ post: await createPost(secret, { target, kind: body.kind, text: body.text, rating: body.rating, parent: body.parent }, await needMeta(), ip) });

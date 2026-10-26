@@ -15,7 +15,7 @@ export function MemberPage({ id }: { id: string }) {
   const { profile: me } = useMe();
   const [m, setM] = useState<Member | null | undefined>(undefined);
   useEffect(() => {
-    communityGet<Member>(`view=member&id=${id}`).then(setM, () => setM(null));
+    communityGet<Member>(`view=member&id=${encodeURIComponent(id)}`).then(setM, () => setM(null));
   }, [id, me?.karma, me?.name, me?.avatar]);
 
   if (m === undefined) return <main className="mx-auto max-w-[1000px] px-4 sm:px-6 pt-10"><div className="skeleton h-40" aria-hidden /></main>;
@@ -36,6 +36,7 @@ export function MemberPage({ id }: { id: string }) {
         <Avatar p={p} size={88} />
         <div className="min-w-0 flex-1">
           <h1 className="t-h1">{p.name}</h1>
+          {p.username && <p className="t-body text-text-2">@{p.username}</p>}
           {p.bio && <p className="t-body text-text-2 mt-1">{p.bio}</p>}
           <p className="t-small text-text-3 mt-1">Member since {new Date(p.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p>
           <div className="mt-3 flex flex-wrap gap-1">

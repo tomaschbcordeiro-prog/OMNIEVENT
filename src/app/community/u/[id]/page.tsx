@@ -11,7 +11,7 @@ export default async function Member({ params }: { params: P }) {
   const { id } = await params;
   return (
     <>
-      <MemberPage id={id.replace(/[^a-f0-9]/g, "").slice(0, 16)} />
+      <MemberPage id={decodeURIComponent(id).replace(/[^a-z0-9._]/gi, "").slice(0, 20)} />
       <Footer />
     </>
   );

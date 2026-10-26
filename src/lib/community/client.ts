@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import type { PublicProfile } from "./types";
+import type { AccountInfo, PublicProfile } from "./types";
 
 /**
- * The browser side of the community: the member secret (kept in this browser only),
- * the member's own profile, and a small fetch helper.
+ * The browser side of the community: the browser's secret key (signing in links it to an
+ * account on the server), the member's own profile and account, and a small fetch helper.
  */
 
 const KEY = "omnievent:member:v1";
@@ -41,8 +41,8 @@ export function memberSecret(create = false): string | null {
 
 // ---- Own profile store ------------------------------------------------------------------
 
-type State = { profile: PublicProfile | null; loaded: boolean; unread: number };
-let state: State = { profile: null, loaded: false, unread: 0 };
+type State = { profile: PublicProfile | null; account: AccountInfo | null; loaded: boolean; unread: number };
+let state: State = { profile: null, account: null, loaded: false, unread: 0 };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -58,25 +58,30 @@ function load() {
   const cached = read(PROFILE_KEY);
   if (cached) {
     try {
-      state = { profile: JSON.parse(cached) as PublicProfile, loaded: true, unread: 0 };
+      state = { profile: JSON.parse(cached) as PublicProfile, account: null, loaded: true, unread: 0 };
     } catch {
       // ignore
     }
   }
   loading = (async () => {
-    if (!memberSecret()) return setState({ loaded: true, profile: null });
+    if (!memberSecret()) return setState({ loaded: true, profile: null, account: null });
     try {
-      const r = await communityGet<{ profile: PublicProfile | null; unread?: number }>("view=me");
-      setState({ profile: r.profile, loaded: true, unread: r.unread ?? 0 });
+      const r = await communityGet<{ profile: PublicProfile | null; account?: AccountInfo | null; unread?: number }>("view=me");
+      setState({ profile: r.profile, account: r.account ?? null, loaded: true, unread: r.unread ?? 0 });
     } catch {
       setState({ loaded: true });
     }
   })();
 }
 
-const SERVER: State = { profile: null, loaded: false, unread: 0 };
+const SERVER: State = { profile: null, account: null, loaded: false, unread: 0 };
 
-/** The member's own profile (null until they join). */
+/** True once this browser is signed in to a full account (not just an old anonymous profile). */
+export const hasAccount = () => !!state.profile?.username;
+/** The current state, outside React. */
+export const getMe = () => state;
+
+/** The member's own profile and account (null until they sign up or sign in). */
 export function useMe(): State {
   useEffect(load, []);
   return useSyncExternalStore(
@@ -102,12 +107,42 @@ export async function refreshMe(): Promise<{ before: PublicProfile | null; after
   const before = state.profile;
   if (!memberSecret()) return { before, after: before };
   try {
-    const r = await communityGet<{ profile: PublicProfile | null; unread?: number }>("view=me");
-    setState({ profile: r.profile, loaded: true, unread: r.unread ?? 0 });
+    const r = await communityGet<{ profile: PublicProfile | null; account?: AccountInfo | null; unread?: number }>("view=me");
+    setState({ profile: r.profile, account: r.account ?? null, loaded: true, unread: r.unread ?? 0 });
     return { before, after: r.profile };
   } catch {
     return { before, after: before };
   }
+}
+
+// ---- Account ------------------------------------------------------------------------------
+
+export type SignUpFields = { firstName: string; lastName: string; username: string; email: string; password: string; avatar?: string; hue?: number; bio?: string };
+
+export async function signUp(fields: SignUpFields): Promise<PublicProfile> {
+  const r = await communityPost<{ profile: PublicProfile }>({ action: "signup", ...fields });
+  await refreshMe();
+  return r.profile;
+}
+
+export async function signIn(login: string, password: string): Promise<PublicProfile> {
+  // A fresh key for every sign-in, so a key from an earlier session is never reused.
+  write(KEY, null);
+  memorySecret = null;
+  const r = await communityPost<{ profile: PublicProfile }>({ action: "signin", login, password });
+  await refreshMe();
+  return r.profile;
+}
+
+export async function signOut() {
+  try {
+    await communityPost({ action: "signout" });
+  } catch {
+    // signed out here anyway
+  }
+  write(KEY, null);
+  memorySecret = null;
+  setState({ profile: null, account: null, unread: 0 });
 }
 
 // ---- API ---------------------------------------------------------------------------------
@@ -134,7 +169,7 @@ export async function communityGet<T>(query: string): Promise<T> {
 }
 
 export async function communityPost<T>(body: Record<string, unknown>): Promise<T> {
-  return parse<T>(await fetch("/api/community", { method: "POST", headers: headers(body.action === "profile"), body: JSON.stringify(body) }));
+  return parse<T>(await fetch("/api/community", { method: "POST", headers: headers(body.action === "signup" || body.action === "signin"), body: JSON.stringify(body) }));
 }
 
 /** Short relative time: "now", "5m", "3h", "2d", then a date. */
