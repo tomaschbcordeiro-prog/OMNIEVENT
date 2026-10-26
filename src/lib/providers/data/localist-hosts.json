@@ -156,6 +156,10 @@
   "name": "Pacific Lutheran University"
  },
  {
+  "host": "calendar.santaclarita.gov",
+  "name": "City of Santa Clarita"
+ },
+ {
   "host": "calendar.slcc.edu",
   "name": "Salt Lake Community College"
  },
@@ -364,6 +368,10 @@
   "name": "Howard University"
  },
  {
+  "host": "events.in.gov",
+  "name": "State of Indiana"
+ },
+ {
   "host": "events.ithaca.edu",
   "name": "Ithaca College"
  },
@@ -554,6 +562,10 @@
  {
   "host": "events.uwstout.edu",
   "name": "University of Wisconsin - Stout"
+ },
+ {
+  "host": "events.visitplano.com",
+  "name": "Visit Plano"
  },
  {
   "host": "events.warren-wilson.edu",
