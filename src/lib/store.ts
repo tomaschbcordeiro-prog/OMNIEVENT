@@ -223,6 +223,8 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
 
 export async function ensureFresh(): Promise<void> {
   const providers = activeProviders();
+  // A check stuck for over two minutes is abandoned so the next one can run.
+  if (state.hydrating && Date.now() - (state.sharedCheckedAt ?? 0) > 120000) state.hydrating = undefined;
   if (sharedEnabled && !state.hydrating && Date.now() - (state.sharedCheckedAt ?? 0) > 5 * 60000) {
     const first = state.sharedCheckedAt === undefined;
     state.sharedCheckedAt = Date.now();

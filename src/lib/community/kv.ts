@@ -31,6 +31,8 @@ async function remote(cmds: Cmd[]): Promise<Val[]> {
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify(cmds.map((c) => c.map(String))),
     cache: "no-store",
+    // A request that hangs must not stall whatever waits on it.
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) throw new Error(`community storage: HTTP ${res.status}`);
   const out = (await res.json()) as { result?: Val; error?: string }[];
