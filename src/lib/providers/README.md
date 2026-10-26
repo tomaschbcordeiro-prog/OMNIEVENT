@@ -18,6 +18,9 @@ pagination, rate limits and category mapping. UI code never imports an adapter.
 | `openagenda` | Live. OpenAgenda public events via the Opendatasoft open-data export: French towns, departments, libraries, museums, theatres, festivals, with venue coordinates. Read in weekly windows for the coming year; online, cancelled and catalogue placeholder dates skipped | nothing |
 | `nyc-parks` | Live. NYC Parks public events for the next 14 days (NYC Open Data), with coordinates; weekly fitness classes left out | nothing |
 | `zaragoza` | Live. Zaragoza City Council events API (WGS84 coordinates, session times, prices) | nothing |
+| `helsinki` | Live. City of Helsinki Linked Events API (Helsinki, Espoo, Vantaa): venue coordinates, prices, keywords; umbrella series skipped, their sessions kept | nothing |
+| `taiwan` | Live. Taiwan Ministry of Culture open data: one event per programme and venue, sessions as schedule, prices in TWD | nothing |
+| `montreal` | Live. Ville de Montréal "Événements publics" GeoJSON (dates only); council meetings and online events skipped | nothing |
 | `football` | Live with the key, snapshot without. 12 competitions; home grounds from `data/stadiums.json` (club venue and address, checked against OpenStreetMap, renamed/moved grounds corrected by hand); unknown grounds and neutral-venue finals are skipped. Refresh the snapshot with `scripts/fetch-football.mjs` | `FOOTBALL_DATA_KEY` |
 | `paris` | Live. City of Paris "Que faire à Paris", ODbL, paged 100 at a time | nothing |
 | `madrid` | Live. City of Madrid cultural agenda, next 100 days | nothing |
