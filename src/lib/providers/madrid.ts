@@ -7,13 +7,15 @@ import { fetchJson, hueOf, nearestCityId, parseAmount, parseLocal, plainText } f
 /**
  * Madrid city council cultural agenda (datos.madrid.es, open data, no key).
  *
- * - Dataset 206974: "Actividades culturales y de ocio municipal en los próximos 100 días".
+ * - Dataset 206974: "Actividades culturales y de ocio municipal en los próximos 100 días",
+ *   plus 300107 (all activities and events, further ahead) and 212504 (sports events).
  * - Licence: open data with attribution ("Ayuntamiento de Madrid"), see datos.madrid.es/aviso-legal.
  * - Times are wall-clock times in Madrid. Prices are free text; we only use the first
  *   amount and never claim fees are included.
  */
 
 const URL_DEFAULT = "https://datos.madrid.es/egob/catalogo/206974-0-agenda-eventos-culturales-100.json";
+const MORE = ["https://datos.madrid.es/egob/catalogo/300107-0-agenda-actividades-eventos.json", "https://datos.madrid.es/egob/catalogo/212504-0-agenda-actividades-deportes.json"];
 const TZ = "Europe/Madrid";
 
 export interface MadridEvent {
@@ -181,7 +183,18 @@ export const madridProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     // About 2.4 MB, larger than the data cache accepts, so it is fetched directly.
     const json = (await fetchJson("madrid", process.env.MADRID_AGENDA_URL ?? URL_DEFAULT, ctx, { revalidate: 0, timeoutMs: 45000 })) as { "@graph"?: MadridEvent[] };
-    const batch = normalizeMadrid((json["@graph"] ?? []).slice(0, ctx.maxEvents), syncedAt);
+    const rows = [...(json["@graph"] ?? [])];
+    // The other agendas overlap the main one; they only add what it lacks.
+    const ids = new Set(rows.map((r) => r.id));
+    for (const url of MORE) {
+      try {
+        const more = (await fetchJson("madrid", url, ctx, { revalidate: 0, timeoutMs: 45000 })) as { "@graph"?: MadridEvent[] };
+        for (const r of more["@graph"] ?? []) if (!ids.has(r.id)) (ids.add(r.id), rows.push(r));
+      } catch (err) {
+        ctx.log("madrid extra agenda failed", { url, err: String(err).slice(0, 160) });
+      }
+    }
+    const batch = normalizeMadrid(rows.slice(0, ctx.maxEvents), syncedAt);
     return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true, finishedAt: new Date().toISOString() } };
   },
 };
