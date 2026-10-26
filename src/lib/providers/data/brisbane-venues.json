@@ -1,0 +1,241 @@
+{
+ "Council's Outdoor Gallery": null,
+ "Boondall Wetlands Environment Centre": {
+  "lat": -27.340582,
+  "lng": 153.07856
+ },
+ "Brisbane Botanic Gardens Mt Coot-tha": {
+  "lat": -27.477901,
+  "lng": 152.974634
+ },
+ "The Community Place, Stafford": null,
+ "Elorac Place Community Centre": null,
+ "Wynnum Municipal Hall, Wynnum": null,
+ "Quinn's Street Park, Balmoral": null,
+ "Mt Gravatt PCYC, Upper Mount Gravatt": {
+  "lat": -27.552404,
+  "lng": 153.073341
+ },
+ "Brisbane City Hall, Brisbane City": {
+  "lat": -27.468974,
+  "lng": 153.023489
+ },
+ "Coopers Plains Library": {
+  "lat": -27.564966,
+  "lng": 153.039697
+ },
+ "Chermside Library": {
+  "lat": -27.385952,
+  "lng": 153.035056
+ },
+ "West End Library": {
+  "lat": -27.482435,
+  "lng": 153.011972
+ },
+ "Everton Park Library": {
+  "lat": -27.405302,
+  "lng": 152.990476
+ },
+ "Rochedale Community Hall, Rochedale": {
+  "lat": -27.576891,
+  "lng": 153.112697
+ },
+ "Upper Kedron Hall, Upper Kedron": {
+  "lat": -27.412767,
+  "lng": 152.917199
+ },
+ "Seven Hills Bushland Reserve, Seven Hills": null,
+ "Sunnybank Community Centre, Sunnybank": {
+  "lat": -27.575466,
+  "lng": 153.057801
+ },
+ "Arthur Davis Park, Sandgate": {
+  "lat": -27.319324,
+  "lng": 153.073737
+ },
+ "Annerley Library": {
+  "lat": -27.509418,
+  "lng": 153.033345
+ },
+ "Petrie Terrace Gallery, Petrie Terrace": {
+  "lat": -27.46426,
+  "lng": 153.01417
+ },
+ "Bill Brown Sports Reserve, Fitzgibbon": {
+  "lat": -27.333743,
+  "lng": 153.040145
+ },
+ "Graceville Riverside Parklands, Graceville": {
+  "lat": -27.521479,
+  "lng": 152.990707
+ },
+ "Howard Smith Wharves Precinct, Brisbane City": {
+  "lat": -27.463134,
+  "lng": 153.038239
+ },
+ "Roma Street Parkland, Brisbane City": {
+  "lat": -27.466752,
+  "lng": 153.020969
+ },
+ "La Boite Theatre, Kelvin Grove": null,
+ "Primrose Park, Wynnum West": {
+  "lat": -27.441091,
+  "lng": 153.158814
+ },
+ "Graceville Bowls Club, Graceville": {
+  "lat": -27.523587,
+  "lng": 152.975563
+ },
+ "Burnie Brae Centre, Chermside": {
+  "lat": -27.389941,
+  "lng": 153.034177
+ },
+ "Ferguson Park, Bracken Ridge": {
+  "lat": -27.317999,
+  "lng": 153.036851
+ },
+ "McDowall Reserve": {
+  "lat": -27.377557,
+  "lng": 152.986676
+ },
+ "Forest Lake Community Hall, Forest Lake": {
+  "lat": -27.61482,
+  "lng": 152.97347
+ },
+ "Jindalee Boat Ramp Park, Jindalee": null,
+ "C. J. Greenfield Community Hall, Richlands": {
+  "lat": -27.579139,
+  "lng": 152.965334
+ },
+ "Bulimba Community Centre": {
+  "lat": -27.45354,
+  "lng": 153.057708
+ },
+ "Perrin Park, Toowong": {
+  "lat": -27.491199,
+  "lng": 152.989977
+ },
+ "John Walker Place, Yeronga": {
+  "lat": -27.505314,
+  "lng": 153.017616
+ },
+ "Moggill Girl Guides, Bellbowrie": {
+  "lat": -27.56357,
+  "lng": 152.893082
+ },
+ "Coorparoo School of Arts Hall, Coorparoo": {
+  "lat": -27.495705,
+  "lng": 153.060284
+ },
+ "Ellen Grove mobile library": {
+  "lat": -27.608062,
+  "lng": 152.93341
+ },
+ "Bracken Ridge Hall, Bracken Ridge": {
+  "lat": -27.317819,
+  "lng": 153.038044
+ },
+ "Simpsons Playground": {
+  "lat": -27.523381,
+  "lng": 152.99288
+ },
+ "Visible Ink, Fortitude Valley": {
+  "lat": -27.454503,
+  "lng": 153.034824
+ },
+ "Ithaca Pool, Paddington": {
+  "lat": -27.46285,
+  "lng": 153.010423
+ },
+ "Enoggera Bowls Club, Enoggera": {
+  "lat": -27.419367,
+  "lng": 152.993699
+ },
+ "Northshore Tennis Centre, Hamilton": {
+  "lat": -27.442567,
+  "lng": 153.078087
+ },
+ "Morningside Tennis Centre, Morningside": {
+  "lat": -27.461415,
+  "lng": 153.079036
+ },
+ "Hub Neighbourhood Centre, Inala": null,
+ "BrisWest Centre": {
+  "lat": -27.458812,
+  "lng": 152.996164
+ },
+ "Indooroopilly Activity Hub, Indooroopilly": {
+  "lat": -27.499308,
+  "lng": 152.974159
+ },
+ "Kalinga Park, 150 Park Avenue": {
+  "lat": -27.407948,
+  "lng": 153.047049
+ },
+ "Roy Emerson Tennis Centre, Milton": {
+  "lat": -27.469549,
+  "lng": 153.000563
+ },
+ "Shaw Park Tennis Centre, Wooloowin": null,
+ "St David's Neighbourhood Centre, Coopers Plains": {
+  "lat": -27.566512,
+  "lng": 153.038218
+ },
+ "Chermside Aquatic Centre, Chermside": {
+  "lat": -27.38564,
+  "lng": 153.036217
+ },
+ "St Lucia Bowling Club": {
+  "lat": -27.493238,
+  "lng": 153.008561
+ },
+ "Old Friary, Kenmore Hills": {
+  "lat": -27.500067,
+  "lng": 152.929441
+ },
+ "Kookaburra Park - West, Karana Downs": null,
+ "Anzac Park, Toowong": {
+  "lat": -27.477168,
+  "lng": 152.975049
+ },
+ "Suburban Business Hub, Nundah": null,
+ "Wynnum Manly & Districts Mens Shed, 59 Granada St, Wynnum": {
+  "lat": -27.432807,
+  "lng": 153.170802
+ },
+ "Main Auditorium, Brisbane City Hall": {
+  "lat": -27.468974,
+  "lng": 153.023489
+ },
+ "Brighton mobile library": null,
+ "Sleeman Sports Complex, Chandler": {
+  "lat": -27.509062,
+  "lng": 153.15657
+ },
+ "Cox Park, Bethania Street, Lota": {
+  "lat": -27.469424,
+  "lng": 153.184592
+ },
+ "Bill Lamond Park, 50 Andrew Street, Lota": null,
+ "The Common Park, Coorparoo": null,
+ "Peter Lightfoot Oval": {
+  "lat": -27.551973,
+  "lng": 152.921075
+ },
+ "The Rafting Ground Park, Brookfield": {
+  "lat": -27.520438,
+  "lng": 152.922888
+ },
+ "Laserforce, Woolloongabba": {
+  "lat": -27.489148,
+  "lng": 153.035195
+ },
+ "Doulton Street Park, Calamvale": {
+  "lat": -27.638282,
+  "lng": 153.053031
+ },
+ "Webster Road Park, Stafford Heights": {
+  "lat": -27.394778,
+  "lng": 153.019374
+ }
+}
