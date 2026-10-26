@@ -1,5 +1,5 @@
 import tzlookup from "@photostructure/tz-lookup";
-import { slugify } from "../destinations";
+import { CITIES, slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
@@ -70,15 +70,18 @@ export function normalizeWikidata(items: WdItem[], syncedAt: string, now = Date.
     const start = zonedDay(day0, tz);
     const end = zonedDay(day1, tz, "23:59");
     if (start === undefined || end === undefined || end < now) continue;
-    const venueKey = `${i.place}|${i.lat.toFixed(4)},${i.lng.toFixed(4)}`;
-    const venueId = `wd-v-${keyOf(venueKey)}-${slugify(i.place).slice(0, 40)}`;
+    // Positioned on the event itself (no named venue yet): name the place after the nearest city.
+    const cityId = nearestCityId(i.lat, i.lng);
+    const place = i.place === i.label ? `${CITIES.find((c) => c.id === cityId)?.name ?? "Host city"} (venue to be confirmed)` : i.place;
+    const venueKey = `${place}|${i.lat.toFixed(4)},${i.lng.toFixed(4)}`;
+    const venueId = `wd-v-${keyOf(venueKey)}-${slugify(place).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${i.place}-${keyOf(venueKey)}`),
-        name: i.place,
+        slug: slugify(`${place}-${keyOf(venueKey)}`),
+        name: place,
         city: "",
-        cityId: nearestCityId(i.lat, i.lng),
+        cityId,
         country: i.cc ? (regionName.of(i.cc) ?? i.cc) : "",
         countryCode: i.cc ?? "",
         lat: i.lat,
@@ -95,7 +98,7 @@ export function normalizeWikidata(items: WdItem[], syncedAt: string, now = Date.
       canonicalId: id,
       slug: slugify(`${i.label}-${i.id}`),
       title: i.label,
-      description: `${i.types.join(", ")} at ${i.place}.`,
+      description: `${i.types.join(", ")} at ${place}.`,
       categorySlug: cat,
       groupSlug: groupOf(cat),
       eventType: multi ? "multi_day" : "single",

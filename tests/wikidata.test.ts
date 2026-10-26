@@ -42,3 +42,11 @@ describe("Wikidata big events", () => {
     expect(mapWdCategory(["world's fair"], "Expo 2030")).toBe("art-exhibitions");
   });
 });
+
+describe("Wikidata places", () => {
+  it("names an unnamed venue after the nearest city", () => {
+    const out = normalizeWikidata([item({ id: "Q9", label: "2028 Summer Olympics", place: "2028 Summer Olympics", lat: 34.05, lng: -118.25, types: ["Summer Olympic Games edition"], start: "2028-07-14T00:00:00Z", end: "2028-07-30T00:00:00Z" })], "x", Date.parse("2026-10-26T12:00:00Z"));
+    expect(out.venues[0].name).toMatch(/\(venue to be confirmed\)$/);
+    expect(out.venues[0].name).not.toMatch(/Olympics/);
+  });
+});
