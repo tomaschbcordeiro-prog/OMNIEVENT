@@ -10,6 +10,7 @@ import { formatMoney, STATUS_META } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
 import { userActions, useUser } from "@/lib/user/store";
+import { useState } from "react";
 import { toast } from "./toast";
 import type { ReactNode } from "react";
 
@@ -51,11 +52,13 @@ export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number 
 export function Poster({
   imageUrl, hue = 210, categorySlug, className = "", size = "md",
 }: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg" }) {
+  // A picture that fails to load (moved or blocked by its source) falls back to the drawn poster.
+  const [broken, setBroken] = useState(false);
   const group = groupOf(categorySlug);
   const accent = GROUP_HEX[group] ?? "#9AA8BA";
-  if (imageUrl)
+  if (imageUrl && !broken)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrl} alt="" loading="lazy" decoding="async" className={`object-cover bg-panel-2 ${className}`} />;
+    return <img src={imageUrl} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
     <div
@@ -142,9 +145,9 @@ export function SaveButton({ id, title, compact = false, className = "" }: { id:
         userActions.toggleSave(id);
         toast(saved ? { title: "Removed from saved", emoji: "🗑️" } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
-      className={`btn ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
+      className={`btn press ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
     >
-      <Icon size={15} aria-hidden fill={saved ? "currentColor" : "none"} />
+      <Icon key={String(saved)} size={15} aria-hidden fill={saved ? "currentColor" : "none"} className={saved ? "pop" : undefined} />
       {!compact && (saved ? "Saved" : "Save")}
     </button>
   );

@@ -13,6 +13,7 @@ import {
   signIn,
   signOut,
   changePassword,
+  deleteAccount,
   accountInfo,
   idForUsername,
   reportPost,
@@ -98,7 +99,8 @@ export const GET = handler(async (req: Request) => {
 /**
  * POST /api/community  { action, … } — every action needs the browser's secret header.
  * signup { firstName, lastName, username, email, password, avatar?, hue?, bio? } · signin
- * { login, password } · signout · password { current, next } · profile { …fields to change }
+ * { login, password } · signout · password { current, next } · profile { …fields to change } ·
+ * delete-account { password }
  */
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
@@ -131,6 +133,9 @@ export const POST = handler(async (req: Request) => {
         return ok({ ok: true });
       case "profile":
         return ok({ profile: await saveProfile(secret, body, ip) });
+      case "delete-account":
+        await deleteAccount(secret, body);
+        return ok({ ok: true });
       case "post":
         return ok({ post: await createPost(secret, { target, kind: body.kind, text: body.text, rating: body.rating, parent: body.parent }, await needMeta(), ip) });
       case "rate":

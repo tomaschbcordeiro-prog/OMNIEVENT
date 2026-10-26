@@ -84,6 +84,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* A grid without explicit columns gets one column that never grows past its container, so a
+   wide child (a table, a long title) scrolls or truncates instead of widening the page on
+   phones. Any grid-cols utility overrides this. */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @layer components {
 /* Type scale (1.25 ratio) */
 .t-display {
@@ -701,6 +710,54 @@ select.field {
     border-radius: 3px;
     background: linear-gradient(90deg, transparent, var(--cyan), var(--sun), transparent);
     animation: progress 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  /* Phones: event actions pinned to the bottom, sliding up once the page is scrolled. */
+  .action-bar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 35;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--color-panel) 92%, transparent);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--color-line);
+    box-shadow: 0 -10px 30px -20px rgb(10 50 120 / 0.5);
+    transform: translateY(110%);
+    transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .action-bar.is-shown {
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .action-bar {
+      transition: none;
+    }
+  }
+  /* Event tiles lift on hover and their picture eases in a little. */
+  .tile {
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease;
+  }
+  .tile-media {
+    transition: transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @media (hover: hover) {
+    .tile:hover {
+      transform: translateY(-3px);
+      border-color: var(--color-line-strong);
+      box-shadow: 0 14px 30px -18px rgb(10 50 120 / 0.45);
+    }
+    .tile:hover .tile-media {
+      transform: scale(1.045);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile,
+    .tile-media {
+      transition: none;
+    }
+    .tile:hover,
+    .tile:hover .tile-media {
+      transform: none;
+    }
   }
   /* Buttons and cards give a little under the finger. */
   .press {

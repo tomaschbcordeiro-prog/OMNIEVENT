@@ -13,6 +13,7 @@ import type { EventView } from "@/lib/types";
 import { sellerSearches } from "@/lib/sellers";
 import { CommunityPanel } from "@/components/community/community-panel";
 import { CommunityPulse } from "@/components/community/pulse";
+import { EventActionBar } from "@/components/event-action-bar";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -109,7 +110,7 @@ export default async function EventPage({ params }: { params: P }) {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <article className="min-w-0">
             <div className="relative overflow-hidden rounded-[var(--radius-l)] border border-line">
               <Poster title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className="aspect-[21/9] w-full" />
@@ -301,7 +302,7 @@ export default async function EventPage({ params }: { params: P }) {
             </section>
 
             {(sameVenue.length > 0 || nearby.length > 0) && (
-              <div className="mt-12 grid gap-8 md:grid-cols-2">
+              <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2">
                 {sameVenue.length > 0 && (
                   <section aria-labelledby="same">
                     <h2 id="same" className="t-h3">Also at {v.name}</h2>
@@ -369,8 +370,11 @@ export default async function EventPage({ params }: { params: P }) {
             </div>
           </aside>
         </div>
+        <EventActionBar id={e.id} title={e.title} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
       </main>
       <Footer />
+      {/* Room for the phone action bar, so it never covers the footer. */}
+      <div className="h-20 lg:hidden" aria-hidden />
     </>
   );
 }

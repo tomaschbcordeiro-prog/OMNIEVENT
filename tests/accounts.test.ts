@@ -76,3 +76,19 @@ describe("accounts", () => {
     await expect(signUp(phone, { ...maria, firstName: "<b>" }, "ip")).rejects.toThrow(/First name/);
   });
 });
+
+describe("deleting an account", () => {
+  it("removes the account and frees its username and email", async () => {
+    const { deleteAccount, getProfile, setPlan } = await import("@/lib/community/service");
+    const p = await signUp(phone, maria, "ip1");
+    await setPlan(phone, T, "going", meta);
+    await expect(deleteAccount(phone, { password: "nope nope" })).rejects.toThrow(/password/);
+    await deleteAccount(phone, { password: "fado-e-sardinhas" });
+    expect(await getProfile(p.id)).toBeUndefined();
+    expect(await idForUsername("maria.costa")).toBeUndefined();
+    expect(await cmd(["SISMEMBER", `c:go:${T}`, p.id])).toBe(0);
+    await expect(signIn(laptop, { login: "maria.costa", password: "fado-e-sardinhas" }, "ip3")).rejects.toThrow(/Wrong/);
+    // The username and email can be used again.
+    expect((await signUp(other, maria, "ip2")).username).toBe("maria.costa");
+  });
+});

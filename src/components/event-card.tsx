@@ -105,10 +105,10 @@ export function EventTile({ c }: { c: Card }) {
   const people = peopleLine(c);
   const d = formatShortDate(c.start, c.timeZone);
   return (
-    <li className="group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel hover:border-line-strong">
+    <li className="tile group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
       <Link href={`/events/${c.slug}`} className="flex flex-col flex-1">
-        <div className="relative">
-          <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="aspect-[16/9] w-full" />
+        <div className="relative overflow-hidden">
+          <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">
             {c.isDemo && <DemoBadge />}
             {c.status !== "on_sale" && <StatusBadge status={c.status} className="bg-panel/90" />}

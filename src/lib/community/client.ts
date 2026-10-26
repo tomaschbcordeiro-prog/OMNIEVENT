@@ -145,6 +145,13 @@ export async function signOut() {
   setState({ profile: null, account: null, unread: 0 });
 }
 
+export async function deleteAccount(password: string) {
+  await communityPost({ action: "delete-account", password });
+  write(KEY, null);
+  memorySecret = null;
+  setState({ profile: null, account: null, unread: 0 });
+}
+
 // ---- API ---------------------------------------------------------------------------------
 
 export class CommunityRequestError extends Error {

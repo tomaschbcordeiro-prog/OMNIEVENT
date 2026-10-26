@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, Eye, EyeOff, LogOut, Star, X } from "lucide-react";
 import { AVATARS, BADGES, USERNAME_RE, type Profile, type PublicProfile } from "@/lib/community/types";
-import { communityPost, getMe, hasAccount, refreshMe, setMe, signIn, signOut, signUp, useMe } from "@/lib/community/client";
+import { communityPost, deleteAccount, getMe, hasAccount, refreshMe, setMe, signIn, signOut, signUp, useMe } from "@/lib/community/client";
 import { toast } from "../toast";
 
 export function Avatar({ p, size = 36, className = "" }: { p?: Pick<Profile, "avatar" | "hue" | "name"> | null; size?: number; className?: string }) {
@@ -177,6 +177,8 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
   const [pwOpen, setPwOpen] = useState(false);
   const [currentPw, setCurrentPw] = useState("");
   const [nextPw, setNextPw] = useState("");
+  const [delOpen, setDelOpen] = useState(false);
+  const [delPw, setDelPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const ref = useRef<HTMLDialogElement>(null);
@@ -367,6 +369,34 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
                     <div className="px-3 pb-3 grid gap-2">
                       <PasswordField id="acc-cur" label="Current password" value={currentPw} onChange={setCurrentPw} autoComplete="current-password" />
                       <PasswordField id="acc-new" label="New password" value={nextPw} onChange={setNextPw} autoComplete="new-password" />
+                    </div>
+                  )}
+                </details>
+              )}
+              {mode === "edit" && (
+                <details className="group rounded-[var(--radius-m)] border border-line" onToggle={(e) => setDelOpen((e.target as HTMLDetailsElement).open)}>
+                  <summary className="cursor-pointer list-none px-3 py-2.5 flex items-center justify-between t-small font-medium text-bad">
+                    Delete account
+                    <ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden />
+                  </summary>
+                  {delOpen && (
+                    <div className="px-3 pb-3 grid gap-2">
+                      <p className="t-small text-text-2">This removes your name, username, email, points and plans. Your posts stay in their conversations as from a former member. It can&apos;t be undone.</p>
+                      <PasswordField id="acc-del" label="Your password, to confirm" value={delPw} onChange={setDelPw} autoComplete="current-password" />
+                      <button
+                        type="button"
+                        className="btn btn-sm bg-bad text-white hover:opacity-90"
+                        disabled={busy || delPw.length < 8}
+                        onClick={() =>
+                          void run(async () => {
+                            await deleteAccount(delPw);
+                            toast({ title: "Your account was deleted", emoji: "👋" });
+                            onClose(false);
+                          })
+                        }
+                      >
+                        Delete my account
+                      </button>
                     </div>
                   )}
                 </details>

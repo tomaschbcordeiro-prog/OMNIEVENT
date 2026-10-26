@@ -133,10 +133,10 @@ export function TicketComparison({ offers, eventStatus }: { offers: TicketOffer[
         </button>
       </div>
       {inactive && <p className="t-small text-warn mb-3">This event is {eventStatus}. Offers are shown for reference only.</p>}
-      <div className="grid gap-5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
         {groups.map((g) => (
           <div key={g.id}>
-            <div className="flex items-baseline gap-2 mb-1.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5">
               <h3 className="t-small font-semibold">{g.title}</h3>
               <span className="t-micro text-text-3">{g.note}</span>
             </div>

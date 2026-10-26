@@ -296,6 +296,24 @@ export async function changePassword(secret: string, input: Record<string, unkno
   void ip;
 }
 
+/**
+ * Deletes the account: name, username, email, password, profile, points and plans. Posts
+ * stay in their conversations, shown as from a former member.
+ */
+export async function deleteAccount(secret: string, input: Record<string, unknown>) {
+  const me = await requireProfile(secret);
+  await limit(`acct:${me.id}:signin`, 10, 900);
+  const account = await getAccount(me.id);
+  if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("That password isn't right.", 401);
+  const plans = ((await cmd<string[]>(["ZRANGE", `c:ugo:${me.id}`, 0, -1])) ?? []).filter(Boolean);
+  await pipe([
+    ...plans.flatMap((t): Cmd[] => [["SREM", `c:go:${t}`, me.id], ["HINCRBY", `c:sum:${t}`, "going", -1]]),
+    ["DEL", `c:acct:${me.id}`, `c:u:${me.id}`, `c:uc:${me.id}`, `c:up:${me.id}`, `c:ugo:${me.id}`, `c:uname:${account.username}`, `c:email:${account.email}`, sessionKey(secret)],
+    ["ZREM", "c:karma", me.id],
+    ["HINCRBY", "c:stat", "members", -1],
+  ]);
+}
+
 /** Usernames resolve to member ids, for profile links like /community/u/maria. */
 export async function idForUsername(raw: string): Promise<string | undefined> {
   const u = raw.trim().replace(/^@/, "").toLowerCase();
