@@ -312,7 +312,11 @@ function rebuildIndexes() {
   };
 
   // Real providers first so that they win canonical status over demo data.
-  const ordered = [...state.providerData.entries()].sort(([a], [b]) => (a === "demo" ? 1 : 0) - (b === "demo" ? 1 : 0));
+  // A fixed order (the registry's), so every server instance picks the same event as the
+  // canonical one when two records are the same show, and links work on every instance.
+  const rank = (id: string) => (id === "demo" ? 1e6 : ALL_PROVIDERS.findIndex((p) => p.id === id));
+  const ordered = [...state.providerData.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+  const slugAliases = new Map<string, string>();
   for (const [, batch] of ordered) {
     for (const v of batch.venues) venues.set(v.id, v);
     for (const p of batch.participants) participants.set(p.id, p);
@@ -327,6 +331,7 @@ function rebuildIndexes() {
       const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v);
       if (canonical && events.get(canonical)?.provenance.isDemo === e.provenance.isDemo) {
         aliases.set(e.id, canonical);
+        slugAliases.set(e.slug, canonical);
         continue;
       }
       dedupe.set(key, e.id);
@@ -355,6 +360,8 @@ function rebuildIndexes() {
   state.aliases = aliases;
   state.cards = cards;
   state.bySlug = new Map([...events.values()].map((e) => [e.slug, e.id]));
+  // A merged duplicate's own link leads to the event it was merged into.
+  for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
   state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
   state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
 }
