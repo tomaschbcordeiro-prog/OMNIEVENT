@@ -5,13 +5,33 @@ import type { ProviderAdapter, ProviderBatch } from "./types";
 import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./common";
 
 /**
- * Linked Events (api.hel.fi): the City of Helsinki's open events API, also used by Espoo,
- * Vantaa and many organisers in the region: concerts, theatre, exhibitions, libraries,
- * youth and family activities, sports. No key needed.
+ * Linked Events: the open events API software of Finnish cities, no key needed.
+ * - Helsinki (api.hel.fi), also used by Vantaa and many organisers in the region.
+ * - Espoo (api.espoo.fi), its own instance: city departments, cultural centres, libraries.
+ * Concerts, theatre, exhibitions, libraries, youth and family activities, sports.
  */
 
-const API = "https://api.hel.fi/linkedevents/v1/event/";
 const TZ = "Europe/Helsinki";
+
+export interface LinkedEventsSource {
+  provider: string;
+  api: string;
+  city: string;
+  page: (id: string) => string;
+}
+
+export const HELSINKI: LinkedEventsSource = {
+  provider: "helsinki",
+  api: "https://api.hel.fi/linkedevents/v1/event/",
+  city: "Helsinki",
+  page: (id) => `https://tapahtumat.hel.fi/en/events/${id}`,
+};
+export const ESPOO: LinkedEventsSource = {
+  provider: "espoo",
+  api: "https://api.espoo.fi/events/v1/event/",
+  city: "Espoo",
+  page: (id) => `https://www.espoo.fi/en/events/${id}`,
+};
 
 type L10n = { fi?: string; sv?: string; en?: string } | null | undefined;
 const t = (v: L10n) => (v ? v.en || v.fi || v.sv : undefined)?.trim() || undefined;
@@ -57,7 +77,7 @@ export function mapHelCategory(keywords: string[]): string {
 }
 
 /** Pure mapping function — unit-tested in tests/helsinki.test.ts. */
-export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date.now()): ProviderBatch {
+export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date.now(), src: LinkedEventsSource = HELSINKI): ProviderBatch {
   const events: OmniEvent[] = [];
   const venues = new Map<string, Venue>();
   const offers: TicketOffer[] = [];
@@ -74,8 +94,8 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
     const end = Number.isFinite(endRaw) && endRaw > start ? endRaw : undefined;
     if ((end ?? start) < now) continue;
 
-    const name = t(e.location?.name) ?? "Helsinki";
-    const city = t(e.location?.address_locality) ?? "Helsinki";
+    const name = t(e.location?.name) ?? src.city;
+    const city = t(e.location?.address_locality) ?? src.city;
     const venueKey = e.location?.id ?? `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
     const venueId = `hel-v-${slugify(venueKey).slice(0, 60)}`;
     if (!venues.has(venueId))
@@ -91,7 +111,7 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
         lat,
         lng,
         timeZone: TZ,
-        provenance: { provider: "helsinki", externalId: venueKey, lastSyncedAt: syncedAt, isDemo: false },
+        provenance: { provider: src.provider, externalId: venueKey, lastSyncedAt: syncedAt, isDemo: false },
       });
 
     const keywords = (e.keywords ?? []).map((k) => t(k.name) ?? "").filter(Boolean);
@@ -102,7 +122,7 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
     const price = isFree ? undefined : parseAmount(priceText);
     const multi = end !== undefined && end - start > 36 * 3600000;
     const id = `hel-e-${e.id.replace(/[^a-z0-9]/gi, "-")}`;
-    const link = t(e.info_url) || t(offer?.info_url) || `https://tapahtumat.hel.fi/en/events/${e.id}`;
+    const link = t(e.info_url) || t(offer?.info_url) || src.page(e.id);
     events.push({
       id,
       canonicalId: id,
@@ -127,7 +147,7 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
       imageUrl: e.images?.[0]?.url,
       posterHue: hueOf(e.id),
       participants: [],
-      provenance: { provider: "helsinki", externalId: e.id, sourceUrl: `https://tapahtumat.hel.fi/en/events/${e.id}`, lastSyncedAt: syncedAt, isDemo: false },
+      provenance: { provider: src.provider, externalId: e.id, sourceUrl: src.page(e.id), lastSyncedAt: syncedAt, isDemo: false },
     });
     if (price !== undefined || t(offer?.info_url))
       offers.push({
@@ -148,36 +168,48 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
   return { events, venues: [...venues.values()], participants: [], offers };
 }
 
-export const helsinkiProvider: ProviderAdapter = {
-  id: "helsinki",
-  name: "Linked Events (Helsinki region)",
-  isDemo: false,
-  coverage: "Concerts, theatre, exhibitions, library, family and sports events in Helsinki, Espoo and Vantaa.",
-  attribution: "Data: City of Helsinki Linked Events (CC BY 4.0).",
-  isConfigured: () => true,
-  refreshIntervalMs: 6 * 3600000,
-  async sync(ctx) {
-    const syncedAt = new Date().toISOString();
-    const url = (page: number) => `${API}?start=today&super_event_type=none&include=location,keywords&page_size=100&page=${page}`;
-    const first = (await fetchJson("helsinki", url(1), ctx, { revalidate: 0, timeoutMs: 60000 })) as { meta?: { count?: number }; data?: HelEvent[] };
-    const rows: HelEvent[] = [...(first.data ?? [])];
-    const pages = Math.min(300, Math.ceil((first.meta?.count ?? 0) / 100));
-    const queue = Array.from({ length: Math.max(0, pages - 1) }, (_, i) => i + 2);
-    let failures = 0;
-    const worker = async () => {
-      while (queue.length) {
-        const page = queue.shift()!;
-        try {
-          const json = (await fetchJson("helsinki", url(page), ctx, { revalidate: 0, timeoutMs: 60000 })) as { data?: HelEvent[] };
-          rows.push(...(json.data ?? []));
-        } catch (err) {
-          failures++;
-          ctx.log("helsinki page failed", { page, err: String(err) });
+function linkedEventsProvider(src: LinkedEventsSource, meta: Pick<ProviderAdapter, "name" | "coverage" | "attribution">): ProviderAdapter {
+  return {
+    id: src.provider,
+    ...meta,
+    isDemo: false,
+    isConfigured: () => true,
+    refreshIntervalMs: 6 * 3600000,
+    async sync(ctx) {
+      const syncedAt = new Date().toISOString();
+      const url = (page: number) => `${src.api}?start=today&super_event_type=none&include=location,keywords&page_size=100&page=${page}`;
+      const first = (await fetchJson(src.provider, url(1), ctx, { revalidate: 0, timeoutMs: 60000 })) as { meta?: { count?: number }; data?: HelEvent[] };
+      const rows: HelEvent[] = [...(first.data ?? [])];
+      const pages = Math.min(300, Math.ceil((first.meta?.count ?? 0) / 100));
+      const queue = Array.from({ length: Math.max(0, pages - 1) }, (_, i) => i + 2);
+      let failures = 0;
+      const worker = async () => {
+        while (queue.length) {
+          const page = queue.shift()!;
+          try {
+            const json = (await fetchJson(src.provider, url(page), ctx, { revalidate: 0, timeoutMs: 60000 })) as { data?: HelEvent[] };
+            rows.push(...(json.data ?? []));
+          } catch (err) {
+            failures++;
+            ctx.log(`${src.provider} page failed`, { page, err: String(err) });
+          }
         }
-      }
-    };
-    await Promise.all(Array.from({ length: 5 }, worker));
-    const batch = normalizeHelsinki(rows, syncedAt);
-    return { batch, run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} of ${pages} pages failed` : undefined } };
-  },
-};
+      };
+      await Promise.all(Array.from({ length: 5 }, worker));
+      const batch = normalizeHelsinki(rows, syncedAt, Date.now(), src);
+      return { batch, run: { imported: batch.events.length, updated: 0, failures, rateLimited: false, ok: batch.events.length > 0, finishedAt: new Date().toISOString(), error: failures ? `${failures} of ${pages} pages failed` : undefined } };
+    },
+  };
+}
+
+export const helsinkiProvider = linkedEventsProvider(HELSINKI, {
+  name: "Linked Events (Helsinki region)",
+  coverage: "Concerts, theatre, exhibitions, library, family and sports events in Helsinki, Vantaa and the region.",
+  attribution: "Data: City of Helsinki Linked Events (CC BY 4.0).",
+});
+
+export const espooProvider = linkedEventsProvider(ESPOO, {
+  name: "Espoo events (Linked Events)",
+  coverage: "Events of the City of Espoo: cultural centres, libraries, sports, youth and family activities.",
+  attribution: "Data: City of Espoo Linked Events (CC BY 4.0).",
+});

@@ -89,6 +89,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Helsinki Linked Events | Concerts, theatre, exhibitions, library and family events in the Helsinki region | nothing |
 | Taiwan Ministry of Culture | Concerts, theatre, dance, exhibitions and talks across Taiwan | nothing |
 | Ville de Montréal | Public events in Montréal libraries, cultural centres and parks | nothing |
+| Espoo Linked Events | Events of the City of Espoo (culture centres, libraries, sports, families) | nothing |
 | kulturdaten.berlin | Cultural events across Berlin's districts | nothing |
 | Ajuntament de Barcelona | Barcelona's cultural and sports agenda | nothing |
 | Institut Valencià de Cultura | Theatre, music, dance and film across the Valencian Community | nothing |
@@ -116,7 +117,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin,barcelona,chicago,valencia-ivc npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin,barcelona,chicago,valencia-ivc,espoo npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 
