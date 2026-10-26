@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, plainText, sleep, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, plainText, sleep, zonedDay } from "./common";
 
 /**
  * Zaragoza City Council's open events API: the city's cultural and leisure agenda (museums,
@@ -61,11 +61,11 @@ export function normalizeZaragoza(rows: ZgzEvent[], syncedAt: string, now = Date
 
     const name = e.location?.trim() || sub?.location?.title?.trim() || "Zaragoza";
     const venueKey = `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `zgz-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `zgz-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-zaragoza-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-zaragoza-${keyOf(venueKey)}`),
         name,
         address: sub?.location?.streetAddress?.trim() || undefined,
         city: "Zaragoza",

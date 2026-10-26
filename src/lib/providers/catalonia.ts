@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
 
 /**
  * Agenda Cultural de Catalunya: the Generalitat's open data feed of cultural activities
@@ -85,11 +85,11 @@ export function normalizeCatalonia(rows: CatRow[], syncedAt: string, now = Date.
     const city = town(r.municipi);
     const venueName = r.espai?.trim() || r.adre_a?.trim() || city;
     const venueKey = `${venueName}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `cat-v-${hueOf(venueKey)}-${slugify(venueName).slice(0, 40)}`;
+    const venueId = `cat-v-${keyOf(venueKey)}-${slugify(venueName).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${venueName}-${city}-${hueOf(venueKey)}`),
+        slug: slugify(`${venueName}-${city}-${keyOf(venueKey)}`),
         name: venueName,
         address: r.adre_a?.trim() || undefined,
         city,

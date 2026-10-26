@@ -3,7 +3,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { hueOf, nearestCityId, parseLocal, sleep } from "./common";
+import { hueOf, keyOf, nearestCityId, parseLocal, sleep } from "./common";
 import SNAPSHOT from "./data/bol-events.json";
 import GEOCODED from "./data/bol-venues.json";
 
@@ -161,7 +161,7 @@ export function normalizeBol(raw: BolEvent[], syncedAt: string, now = Date.now()
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${loc.name ?? "local"}-${loc.address?.addressLocality ?? ""}-${hueOf(venueKey)}`),
+        slug: slugify(`${loc.name ?? "local"}-${loc.address?.addressLocality ?? ""}-${keyOf(venueKey)}`),
         name: loc.name ?? "Venue",
         address: [loc.address?.streetAddress, loc.address?.postalCode].filter((x) => x && x !== "-").join(", ") || undefined,
         city: loc.address?.addressLocality ?? "",

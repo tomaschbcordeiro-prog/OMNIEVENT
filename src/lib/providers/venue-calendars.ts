@@ -2,7 +2,7 @@ import { groupOf } from "../categories";
 import { slugify } from "../destinations";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, plainText, sleep } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, plainText, sleep } from "./common";
 import KNOWN_VENUES from "./data/lisbon-venues.json";
 import SNAPSHOT from "./data/venue-calendars.json";
 
@@ -127,7 +127,7 @@ export function normalizeTribe(source: Source, raw: TribeEvent[], syncedAt: stri
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${title}-${source.id}-${hueOf(key)}`),
+      slug: slugify(`${title}-${source.id}-${keyOf(key)}`),
       title,
       description: plainText(first.description)?.slice(0, 1500),
       categorySlug: cat,

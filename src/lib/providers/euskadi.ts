@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
 import VENUES from "./data/euskadi-venues.json";
 
 /**
@@ -72,11 +72,11 @@ export function normalizeEuskadi(items: EusEvent[], syncedAt: string, now = Date
     const lat = placed?.lat ?? tlat;
     const lng = placed?.lng ?? tlng;
     const venueKey = `${name}|${i.municipalityEs}`;
-    const venueId = `eus-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `eus-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${town}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${town}-${keyOf(venueKey)}`),
         name,
         address: placed ? undefined : `Exact location not published; shown at the centre of ${town}`,
         city: town,

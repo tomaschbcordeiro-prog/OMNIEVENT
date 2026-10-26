@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
 
 /**
  * Institut Valencià de Cultura (Generalitat Valenciana open data): theatre, music, dance and
@@ -100,11 +100,11 @@ export function normalizeIvc(rows: IvcRow[], syncedAt: string, now = Date.now())
     const lng = Number(r.longitud);
     const name = r.lugar_evento?.trim() || r.municipio?.trim() || "IVC";
     const venueKey = `${name}|${lat.toFixed(3)},${lng.toFixed(3)}`;
-    const venueId = `ivc-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `ivc-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${r.municipio ?? ""}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${r.municipio ?? ""}-${keyOf(venueKey)}`),
         name,
         address: r.direccion?.trim() || undefined,
         city: r.municipio?.trim() || "València",
@@ -121,12 +121,12 @@ export function normalizeIvc(rows: IvcRow[], syncedAt: string, now = Date.now())
     const priceText = r.precio?.trim() ?? "";
     const isFree = /gratu|lliure|libre/i.test(priceText);
     const price = isFree ? undefined : parseAmount(priceText);
-    const id = `ivc-e-${hueOf(key)}-${slugify(title).slice(0, 30)}`;
+    const id = `ivc-e-${keyOf(key)}-${slugify(title).slice(0, 30)}`;
     const url = r.web?.startsWith("http") ? r.web : "https://ivc.gva.es";
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${title}-${hueOf(key)}`),
+      slug: slugify(`${title}-${keyOf(key)}`),
       title,
       categorySlug: cat,
       groupSlug: groupOf(cat),

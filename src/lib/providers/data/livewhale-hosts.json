@@ -1,0 +1,222 @@
+[
+ {
+  "host": "calendar.astate.edu",
+  "name": "Arkansas State University"
+ },
+ {
+  "host": "calendar.berea.edu",
+  "name": "Berea College"
+ },
+ {
+  "host": "calendar.century.edu",
+  "name": "Century College"
+ },
+ {
+  "host": "calendar.clarkson.edu",
+  "name": "Clarkson University"
+ },
+ {
+  "host": "calendar.gvltec.edu",
+  "name": "Greenville Technical College"
+ },
+ {
+  "host": "calendar.longwood.edu",
+  "name": "Longwood University"
+ },
+ {
+  "host": "calendar.missouri.edu",
+  "name": "University of Missouri"
+ },
+ {
+  "host": "calendar.oakland.edu",
+  "name": "Oakland University"
+ },
+ {
+  "host": "calendar.ou.edu",
+  "name": "University of Oklahoma"
+ },
+ {
+  "host": "calendar.southernct.edu",
+  "name": "Southern Connecticut State University"
+ },
+ {
+  "host": "calendar.tamu.edu",
+  "name": "Texas A&M University - College Station"
+ },
+ {
+  "host": "calendar.tarleton.edu",
+  "name": "Tarleton State University"
+ },
+ {
+  "host": "calendar.tulsacc.edu",
+  "name": "Tulsa Community College"
+ },
+ {
+  "host": "calendar.uakron.edu",
+  "name": "University of Akron"
+ },
+ {
+  "host": "calendar.uc.edu",
+  "name": "University of Cincinnati"
+ },
+ {
+  "host": "calendar.uco.edu",
+  "name": "University of Central Oklahoma"
+ },
+ {
+  "host": "calendar.ufl.edu",
+  "name": "University of Florida"
+ },
+ {
+  "host": "calendar.umkc.edu",
+  "name": "University of Missouri - Kansas City"
+ },
+ {
+  "host": "calendar.usi.edu",
+  "name": "University of Southern Indiana"
+ },
+ {
+  "host": "calendar.uwec.edu",
+  "name": "University of Wisconsin - Eau Claire"
+ },
+ {
+  "host": "events.berkeley.edu",
+  "name": "University of California, Berkeley"
+ },
+ {
+  "host": "events.brown.edu",
+  "name": "Brown University"
+ },
+ {
+  "host": "events.canadacollege.edu",
+  "name": "Canada College"
+ },
+ {
+  "host": "events.clemson.edu",
+  "name": "Clemson University"
+ },
+ {
+  "host": "events.cmu.edu",
+  "name": "Carnegie Mellon University"
+ },
+ {
+  "host": "events.collegeofsanmateo.edu",
+  "name": "College of San Mateo"
+ },
+ {
+  "host": "events.conncoll.edu",
+  "name": "Connecticut College"
+ },
+ {
+  "host": "events.easternflorida.edu",
+  "name": "Eastern Florida State College"
+ },
+ {
+  "host": "events.georgetown.edu",
+  "name": "Georgetown University"
+ },
+ {
+  "host": "events.grinnell.edu",
+  "name": "Grinnell College"
+ },
+ {
+  "host": "events.iu.edu",
+  "name": "Indiana University"
+ },
+ {
+  "host": "events.macalester.edu",
+  "name": "Macalester College"
+ },
+ {
+  "host": "events.mtroyal.ca",
+  "name": "Mount Royal University"
+ },
+ {
+  "host": "events.nyit.edu",
+  "name": "New York Institute of Technology"
+ },
+ {
+  "host": "events.nyu.edu",
+  "name": "New York University"
+ },
+ {
+  "host": "events.rice.edu",
+  "name": "Rice University"
+ },
+ {
+  "host": "events.scu.edu",
+  "name": "Santa Clara University"
+ },
+ {
+  "host": "events.sfu.ca",
+  "name": "Simon Fraser University"
+ },
+ {
+  "host": "events.shu.edu",
+  "name": "Seton Hall University"
+ },
+ {
+  "host": "events.skylinecollege.edu",
+  "name": "Skyline College"
+ },
+ {
+  "host": "events.smccd.edu",
+  "name": "San Mateo County Community College District"
+ },
+ {
+  "host": "events.ualr.edu",
+  "name": "University of Arkansas - Little Rock"
+ },
+ {
+  "host": "events.ucalgary.ca",
+  "name": "University of Calgary"
+ },
+ {
+  "host": "events.uchicago.edu",
+  "name": "University of Chicago"
+ },
+ {
+  "host": "events.uconn.edu",
+  "name": "University of Connecticut"
+ },
+ {
+  "host": "events.unimelb.edu.au",
+  "name": "University of Melbourne"
+ },
+ {
+  "host": "events.uvic.ca",
+  "name": "University of Victoria"
+ },
+ {
+  "host": "events.wesleyan.edu",
+  "name": "Wesleyan University"
+ },
+ {
+  "host": "www.angelo.edu",
+  "name": "Angelo State University"
+ },
+ {
+  "host": "www.beloit.edu",
+  "name": "Beloit College"
+ },
+ {
+  "host": "www.brockport.edu",
+  "name": "State University of New York College at Brockport"
+ },
+ {
+  "host": "www.emoryhenry.edu",
+  "name": "emoryhenry.edu"
+ },
+ {
+  "host": "www.lclark.edu",
+  "name": "Lewis & Clark College"
+ },
+ {
+  "host": "www.southwestern.edu",
+  "name": "Southwestern University"
+ },
+ {
+  "host": "www.ursinus.edu",
+  "name": "Ursinus College"
+ }
+]

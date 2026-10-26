@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText } from "./common";
 
 /**
  * Linked Events: the open events API software of Finnish cities, no key needed.
@@ -101,7 +101,7 @@ export function normalizeHelsinki(rows: HelEvent[], syncedAt: string, now = Date
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${city}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${city}-${keyOf(venueKey)}`),
         name,
         address: t(e.location?.street_address),
         city,

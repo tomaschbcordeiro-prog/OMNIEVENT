@@ -3,7 +3,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText } from "./common";
 import { getState, setState } from "../shared-cache";
 import HOSTS from "./data/localist-hosts.json";
 
@@ -66,8 +66,8 @@ export function mapLocalistCategory(text: string): string {
   return "culture";
 }
 
-const INTERNAL = /\btabling\b|testing (our|the) (new )?calendar|test event|deadline|office hours?|registration (opens|closes)|add\/drop|last day to|no classes|classes (begin|end)|exam|commencement rehearsal|staff meeting|faculty meeting|board meeting|committee|senate|orientation|advising|info(rmation)? session|webinar|zoom|virtual|blood drive|payroll|training\b/i;
-const PUBLIC_AUDIENCE = /public|everyone|community|all\b|open to|visitor|alumni|famil|kids|children|prospective|guests?/i;
+export const INTERNAL = /\btabling\b|graduation checks?|tutoring|study (hall|session)|relaxation room|counseling|drop.?in hours|career (fair|advising)|resume review|testing (our|the) (new )?calendar|test event|deadline|office hours?|registration (opens|closes)|add\/drop|last day to|no classes|classes (begin|end)|exam|commencement rehearsal|staff meeting|faculty meeting|board meeting|committee|senate|orientation|advising|info(rmation)? session|webinar|zoom|virtual|blood drive|payroll|training\b/i;
+export const PUBLIC_AUDIENCE = /public|everyone|community|all\b|open to|visitor|alumni|famil|kids|children|prospective|guests?/i;
 
 const names = (list?: { name: string }[]) => (list ?? []).map((x) => x.name).filter(Boolean);
 
@@ -112,12 +112,12 @@ export function normalizeLocalist(rows: LocalistEvent[], host: LocalistHost, syn
     const cc = (e.geo?.country || "US").toUpperCase().slice(0, 2);
     const placeName = e.location_name?.trim() || e.geo?.street?.trim() || host.name;
     const venueKey = `${host.host}|${e.venue_id ?? placeName}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `loc-v-${hueOf(venueKey)}-${slugify(placeName).slice(0, 40) || "venue"}`;
+    const venueId = `loc-v-${keyOf(venueKey)}-${slugify(placeName).slice(0, 40) || "venue"}`;
     const city = e.geo?.city?.trim() || "";
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${placeName}-${city}-${hueOf(venueKey)}`),
+        slug: slugify(`${placeName}-${city}-${keyOf(venueKey)}`),
         name: placeName,
         address: e.address?.trim() || [e.geo?.street, e.geo?.city, e.geo?.state, e.geo?.zip].filter(Boolean).join(", ") || undefined,
         city,

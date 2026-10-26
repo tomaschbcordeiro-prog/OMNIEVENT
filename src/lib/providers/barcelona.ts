@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText, zonedDay } from "./common";
 
 /**
  * Ajuntament de Barcelona open data: the city's cultural agenda (concerts, exhibitions,
@@ -82,12 +82,12 @@ export function normalizeBarcelona(rows: BcnRow[], syncedAt: string, now = Date.
     const area = r.addresses_neighborhood_name?.trim() || r.addresses_district_name?.trim();
     const name = street || area || "Barcelona";
     const venueKey = `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `bcn-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `bcn-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     const zip = r.addresses_zip_code ? String(r.addresses_zip_code).padStart(5, "0") : undefined;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-barcelona-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-barcelona-${keyOf(venueKey)}`),
         name,
         address: [street, area, zip && `${zip} Barcelona`].filter(Boolean).join(", ") || undefined,
         city: "Barcelona",

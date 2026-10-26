@@ -189,7 +189,11 @@ export const madridProvider: ProviderAdapter = {
     for (const url of MORE) {
       try {
         const more = (await fetchJson("madrid", url, ctx, { revalidate: 0, timeoutMs: 45000 })) as { "@graph"?: MadridEvent[] };
-        for (const r of more["@graph"] ?? []) if (!ids.has(r.id)) (ids.add(r.id), rows.push(r));
+        for (const r of more["@graph"] ?? []) {
+          if (ids.has(r.id)) continue;
+          ids.add(r.id);
+          rows.push(r);
+        }
       } catch (err) {
         ctx.log("madrid extra agenda failed", { url, err: String(err).slice(0, 160) });
       }

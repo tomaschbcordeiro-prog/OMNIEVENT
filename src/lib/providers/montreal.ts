@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, plainText, zonedDay } from "./common";
 
 /**
  * Ville de Montréal open data, "Événements publics": activities in libraries, cultural
@@ -71,11 +71,11 @@ export function normalizeMontreal(rows: MtlProps[], syncedAt: string, now = Date
 
     const place = clean(r.titre_adresse) ?? clean(r.arrondissement) ?? "Montréal";
     const venueKey = `${place}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `mtl-v-${hueOf(venueKey)}-${slugify(place).slice(0, 40)}`;
+    const venueId = `mtl-v-${keyOf(venueKey)}-${slugify(place).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${place}-montreal-${hueOf(venueKey)}`),
+        slug: slugify(`${place}-montreal-${keyOf(venueKey)}`),
         name: place,
         address: [clean(r.adresse_principale), clean(r.code_postal)].filter(Boolean).join(", ") || clean(r.arrondissement),
         city: "Montréal",
@@ -89,12 +89,12 @@ export function normalizeMontreal(rows: MtlProps[], syncedAt: string, now = Date
       });
     const cat = mapMtlCategory(r.type_evenement, r.public_cible);
     const isFree = /gratuit/i.test(r.cout ?? "");
-    const id = `mtl-e-${hueOf(key)}-${slugify(title).slice(0, 30)}`;
+    const id = `mtl-e-${keyOf(key)}-${slugify(title).slice(0, 30)}`;
     const multi = day1 !== day0;
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${title}-montreal-${hueOf(key)}`),
+      slug: slugify(`${title}-montreal-${keyOf(key)}`),
       title,
       description: plainText(r.description)?.slice(0, 1500),
       categorySlug: cat,

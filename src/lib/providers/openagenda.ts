@@ -3,7 +3,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText } from "./common";
 
 /**
  * OpenAgenda's public events, the open-data export on public.opendatasoft.com
@@ -123,11 +123,11 @@ export function normalizeOpenAgenda(rows: OaRow[], syncedAt: string, now = Date.
     const city = r.location_city?.trim() || r.location_address?.split(",").pop()?.trim() || "";
     const name = r.location_name?.trim() || city || "Venue";
     const venueKey = `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `oa-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `oa-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${city}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${city}-${keyOf(venueKey)}`),
         name,
         address: r.location_address?.trim() || undefined,
         city,

@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, plainText, zonedDay } from "./common";
 import VENUES from "./data/cultura-portugal-venues.json";
 
 /**
@@ -73,11 +73,11 @@ export function normalizeCp(items: CpEvent[], syncedAt: string, now = Date.now()
     const name = where || town;
     const several = /\/|v[aá]ri[oa]s/i.test(name);
     const venueKey = `${name}|${town}`;
-    const venueId = `cp-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `cp-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${town}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${town}-${keyOf(venueKey)}`),
         name,
         address: placed ? undefined : several ? `Several venues; shown at the centre of ${town}` : `Exact location not found; shown at the centre of ${town}`,
         city: town,
@@ -93,11 +93,11 @@ export function normalizeCp(items: CpEvent[], syncedAt: string, now = Date.now()
     const cat = mapCpCategory(e);
     const priceText = plainText(e.Price) ?? "";
     const isFree = /gratu|entrada livre|livre/i.test(priceText);
-    const id = `cp-e-${hueOf(e.Url)}-${slugify(e.Name).slice(0, 30)}`;
+    const id = `cp-e-${keyOf(e.Url)}-${slugify(e.Name).slice(0, 30)}`;
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${e.Name}-${town}-${hueOf(e.Url)}`),
+      slug: slugify(`${e.Name}-${town}-${keyOf(e.Url)}`),
       title: plainText(e.Name) ?? e.Name,
       description: [plainText(e.Text)?.slice(0, 1400), priceText && `Price: ${priceText}`].filter(Boolean).join("\n\n") || undefined,
       categorySlug: cat,

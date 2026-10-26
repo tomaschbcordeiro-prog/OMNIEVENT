@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseLocal, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseLocal, plainText, zonedDay } from "./common";
 import type { TribeEvent } from "./venue-calendars";
 
 /**
@@ -110,11 +110,11 @@ function build(drafts: Draft[], syncedAt: string, now: number): ProviderBatch {
     const geo = placed ?? d.m.centre;
     const name = d.venue?.trim() || d.m.name;
     const venueKey = `${d.m.id}|${name}`;
-    const venueId = `ptm-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `ptm-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${d.m.name}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${d.m.name}-${keyOf(venueKey)}`),
         name,
         address: placed ? d.address || undefined : [d.address, `Exact location not given; shown at the centre of ${d.m.name}`].filter(Boolean).join(". "),
         city: d.m.name,
@@ -127,11 +127,11 @@ function build(drafts: Draft[], syncedAt: string, now: number): ProviderBatch {
         provenance: { provider: "pt-municipios", externalId: venueKey, lastSyncedAt: syncedAt, isDemo: false },
       });
     const multi = d.day1 !== d.day0;
-    const id = `ptm-e-${d.m.id}-${hueOf(d.key)}`;
+    const id = `ptm-e-${d.m.id}-${keyOf(d.key)}`;
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${d.title}-${d.m.name}-${hueOf(d.key)}`),
+      slug: slugify(`${d.title}-${d.m.name}-${keyOf(d.key)}`),
       title: d.title,
       description: d.description?.slice(0, 1500),
       categorySlug: d.category,

@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseLocal, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseLocal, plainText } from "./common";
 
 /**
  * City of Chicago open data (Socrata), no key needed:
@@ -68,11 +68,11 @@ const inChicago = (lat: number, lng: number) => lat > 41.6 && lat < 42.1 && lng 
 
 function venueOf(venues: Map<string, Venue>, name: string, address: string | undefined, zip: string | undefined, lat: number, lng: number, kind: string, syncedAt: string): string {
   const key = `${kind}|${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-  const id = `chi-v-${hueOf(key)}-${slugify(name).slice(0, 40)}`;
+  const id = `chi-v-${keyOf(key)}-${slugify(name).slice(0, 40)}`;
   if (!venues.has(id))
     venues.set(id, {
       id,
-      slug: slugify(`${name}-chicago-${hueOf(key)}`),
+      slug: slugify(`${name}-chicago-${keyOf(key)}`),
       name,
       address: [address, zip && `Chicago, IL ${zip}`].filter(Boolean).join(", ") || undefined,
       city: "Chicago",
@@ -113,7 +113,7 @@ export function normalizeChicago(library: CplRow[], parks: CpdRow[], syncedAt: s
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${title}-${branch}-${hueOf(id)}`),
+      slug: slugify(`${title}-${branch}-${keyOf(id)}`),
       title,
       description: plainText(r.description)?.slice(0, 1500),
       categorySlug: cat,

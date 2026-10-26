@@ -85,6 +85,8 @@ export function parseAmount(s: string | undefined | null): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+const codePoint = (n: number) => (n > 0 && n <= 0x10ffff && (n < 0xd800 || n > 0xdfff) ? String.fromCodePoint(n) : "");
+
 /** Strip HTML tags and collapse whitespace. */
 export function plainText(html: string | undefined | null): string | undefined {
   if (!html) return undefined;
@@ -92,8 +94,8 @@ export function plainText(html: string | undefined | null): string | undefined {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|li|h\d)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#(\d+);/g, (_, n) => codePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => codePoint(parseInt(n, 16)))
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
@@ -104,6 +106,13 @@ export function plainText(html: string | undefined | null): string | undefined {
     .replace(/\n\s*\n+/g, "\n\n")
     .trim();
   return t || undefined;
+}
+
+/** Short stable key for ids and slugs (32-bit FNV-1a in base 36); hueOf has only 360 values. */
+export function keyOf(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(36);
 }
 
 /** Stable hue for generated posters. */

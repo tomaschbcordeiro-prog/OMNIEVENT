@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, plainText, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, plainText, zonedDay } from "./common";
 import VENUES from "./data/berlin-venues.json";
 
 /**
@@ -78,7 +78,7 @@ export function normalizeBerlin(rows: BerlinEvent[], syncedAt: string, now = Dat
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-berlin-${hueOf(loc.referenceId)}`),
+        slug: slugify(`${name}-berlin-${keyOf(loc.referenceId)}`),
         name,
         city: "Berlin",
         cityId: nearestCityId(geo.lat, geo.lng),

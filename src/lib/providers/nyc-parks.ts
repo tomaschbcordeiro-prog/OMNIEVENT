@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseLocal, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseLocal, plainText } from "./common";
 
 /**
  * NYC Parks public events for the next 14 days (NYC Open Data): free concerts, tours,
@@ -62,11 +62,11 @@ export function normalizeNycParks(rows: NycRow[], syncedAt: string, now = Date.n
     const name = (r.location ?? r.parknames ?? "NYC park").replace(/\s*\(in [^)]*\)\s*$/, "").trim();
     const park = r.parknames?.split(",")[0]?.trim();
     const venueKey = `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `nyc-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `nyc-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${keyOf(venueKey)}`),
         name,
         address: park && park !== name ? park : undefined,
         city: "New York",

@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText } from "./common";
 import VENUES from "./data/brisbane-venues.json";
 
 /**
@@ -97,11 +97,11 @@ export function normalizeBrisbane(rows: BneSession[], syncedAt: string, now = Da
     const s0 = g.sessions[0];
     const r = g.first;
     const title = plainText(r.title)!;
-    const venueId = `bne-v-${hueOf(g.venue)}-${slugify(g.venue).slice(0, 40)}`;
+    const venueId = `bne-v-${keyOf(g.venue)}-${slugify(g.venue).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${g.venue}-brisbane-${hueOf(g.venue)}`),
+        slug: slugify(`${g.venue}-brisbane-${keyOf(g.venue)}`),
         name: g.venue,
         address: g.address,
         city: "Brisbane",
@@ -119,14 +119,14 @@ export function normalizeBrisbane(rows: BneSession[], syncedAt: string, now = Da
     const isFree = /^free\b/i.test(cost) || (!cost && /\bfree\b/i.test(g.cf["Event type"] ?? ""));
     const price = isFree ? undefined : parseAmount(cost);
     const multi = s0.end !== undefined && s0.end - s0.start > 36 * 3600000;
-    const id = `bne-e-${hueOf(key)}-${slugify(title).slice(0, 30)}`;
+    const id = `bne-e-${keyOf(key)}-${slugify(title).slice(0, 30)}`;
     const url = s0.url || "https://www.brisbane.qld.gov.au/whats-on";
     const bookings = plainText(g.cf.Bookings) ?? "";
     const registration = /book|regist/i.test(bookings) && !/no booking|not required/i.test(bookings);
     events.push({
       id,
       canonicalId: id,
-      slug: slugify(`${title}-brisbane-${hueOf(key)}`),
+      slug: slugify(`${title}-brisbane-${keyOf(key)}`),
       title,
       description: [plainText(r.description), bookings].filter(Boolean).join(" ").slice(0, 1500) || undefined,
       categorySlug: cat,

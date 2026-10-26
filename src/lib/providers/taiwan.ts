@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, parseLocal, plainText } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, parseLocal, plainText } from "./common";
 
 /**
  * Taiwan Ministry of Culture open data (cloud.culture.tw): concerts, theatre, dance,
@@ -75,11 +75,11 @@ export function normalizeTaiwan(rows: TwEvent[], syncedAt: string, now = Date.no
       const lng = Number(s.longitude);
       const city = s.location?.match(/^(.{2,3}[市縣])/)?.[1] ?? "";
       const name = s.locationName?.trim() || s.location?.trim() || "Venue";
-      const venueId = `tw-v-${hueOf(venueKey)}-${slugify(name).slice(0, 30) || "venue"}`;
+      const venueId = `tw-v-${keyOf(venueKey)}-${slugify(name).slice(0, 30) || "venue"}`;
       if (!venues.has(venueId))
         venues.set(venueId, {
           id: venueId,
-          slug: slugify(`${name}-${hueOf(venueKey)}`) || `venue-${hueOf(venueKey)}`,
+          slug: slugify(`${name}-${keyOf(venueKey)}`) || `venue-${keyOf(venueKey)}`,
           name,
           address: s.location?.trim() || undefined,
           city,
@@ -93,7 +93,7 @@ export function normalizeTaiwan(rows: TwEvent[], syncedAt: string, now = Date.no
         });
       const cat = CATEGORY[e.category ?? ""] ?? "culture";
       const multi = first.end !== undefined && first.end - first.start > 36 * 3600000;
-      const id = `tw-e-${e.UID}-${hueOf(venueKey)}`;
+      const id = `tw-e-${e.UID}-${keyOf(venueKey)}`;
       const priceText = s.price?.trim() ?? "";
       const isFree = /免費|免票|free/i.test(priceText);
       const price = isFree ? undefined : parseAmount(priceText);
@@ -101,7 +101,7 @@ export function normalizeTaiwan(rows: TwEvent[], syncedAt: string, now = Date.no
       events.push({
         id,
         canonicalId: id,
-        slug: `${slugify(e.title).slice(0, 60) || "event"}-tw-${hueOf(id)}`,
+        slug: `${slugify(e.title).slice(0, 60) || "event"}-tw-${keyOf(id)}`,
         title: e.title.trim(),
         description: [e.showUnit, plainText(e.descriptionFilterHtml)].filter(Boolean).join(". ").slice(0, 1500) || undefined,
         categorySlug: cat,

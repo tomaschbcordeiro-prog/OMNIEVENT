@@ -2,7 +2,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { fetchJson, hueOf, nearestCityId, parseAmount, plainText, sleep, zonedDay } from "./common";
+import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, plainText, sleep, zonedDay } from "./common";
 
 /**
  * Junta de Castilla y León open data: the regional cultural agenda, geolocated, including
@@ -69,11 +69,11 @@ export function normalizeCyl(rows: CylRow[], syncedAt: string, now = Date.now())
     const town = r.nombre_localidad?.trim() ?? "";
     const name = r.lugar_celebracion?.trim() || town;
     const venueKey = `${name}|${lat.toFixed(4)},${lng.toFixed(4)}`;
-    const venueId = `cyl-v-${hueOf(venueKey)}-${slugify(name).slice(0, 40)}`;
+    const venueId = `cyl-v-${keyOf(venueKey)}-${slugify(name).slice(0, 40)}`;
     if (!venues.has(venueId))
       venues.set(venueId, {
         id: venueId,
-        slug: slugify(`${name}-${town}-${hueOf(venueKey)}`),
+        slug: slugify(`${name}-${town}-${keyOf(venueKey)}`),
         name,
         address: [r.calle, r.cp].filter(Boolean).join(", ") || undefined,
         city: town,
