@@ -342,7 +342,7 @@ export const ticketmasterProvider: ProviderAdapter = {
     // month, and the cached answers build up across days instead of starting over daily.
     const now = new Date();
     const from = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
-    const months = Math.ceil(Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 730) / 30.4) + 1;
+    const months = Math.ceil(Number(process.env.TICKETMASTER_DAYS_AHEAD ?? 1830) / 30.4) + 1;
     const to = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + months, 1);
     // Only answers that really came from Ticketmaster (not the data cache) use the quota.
     // Per run and per server instance; answers are cached for the day, so each run continues

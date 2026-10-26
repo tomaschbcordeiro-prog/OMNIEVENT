@@ -11,8 +11,9 @@ import { fetchJson, hueOf, nearestCityId, parseAmount, plainText } from "./commo
  * libraries, museums, theatres and festivals, down to small villages, with each venue's
  * coordinates. No key needed.
  *
- * The export is read in weekly windows of start date (one request each) for the coming
- * year, plus one window for events that began earlier and are still running.
+ * The export is read in windows of start date (one request each): weekly for the coming
+ * year, then four-weekly up to five years ahead, plus one window for events that began
+ * earlier and are still running.
  */
 
 const API = "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/evenements-publics-openagenda/exports/json";
@@ -108,8 +109,9 @@ export function normalizeOpenAgenda(rows: OaRow[], syncedAt: string, now = Date.
     const start = Date.parse(r.firstdate_begin ?? "");
     const lastEnd = Date.parse(r.lastdate_end ?? r.firstdate_end ?? "");
     if (!Number.isFinite(start) || !Number.isFinite(lastEnd) || lastEnd < now) continue;
-    // Placeholder dates far ahead belong to performers' catalogues, not real dates.
-    if (start > now + 400 * 86400000) continue;
+    // Catalogue agendas list performers' shows with placeholder dates, not real dates.
+    if (/catalogue/i.test(r.originagenda_title ?? "")) continue;
+    if (start > now + 5 * 366 * 86400000) continue;
 
     let tz = "Europe/Paris";
     try {
@@ -210,7 +212,10 @@ export const openAgendaProvider: ProviderAdapter = {
     const today = Math.floor(Date.now() / day) * day;
     const weeks = Number(process.env.OPENAGENDA_WEEKS ?? 52);
     const windows: string[] = [`firstdate_begin < "${iso(today)}" AND lastdate_end >= "${iso(today)}"`];
-    for (let w = 0; w < weeks; w++) windows.push(`firstdate_begin >= "${iso(today + w * 7 * day)}" AND firstdate_begin < "${iso(today + (w + 1) * 7 * day)}"`);
+    const horizon = Number(process.env.OPENAGENDA_HORIZON_WEEKS ?? 261);
+    const range = (a: number, b: number) => `firstdate_begin >= "${iso(today + a * 7 * day)}" AND firstdate_begin < "${iso(today + b * 7 * day)}"`;
+    for (let w = 0; w < weeks; w++) windows.push(range(w, w + 1));
+    for (let w = weeks; w < horizon; w += 4) windows.push(range(w, Math.min(horizon, w + 4)));
     const rows: OaRow[] = [];
     let failures = 0;
     let lastError = "";

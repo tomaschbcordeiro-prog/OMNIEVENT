@@ -187,7 +187,7 @@ export const seatgeekProvider: ProviderAdapter = {
     const LIMIT = 5000;
     const HOUR = 3600000;
     const from = Math.floor(Date.now() / HOUR) * HOUR;
-    const to = from + Number(process.env.SEATGEEK_DAYS_AHEAD ?? 730) * 86400000;
+    const to = from + Number(process.env.SEATGEEK_DAYS_AHEAD ?? 1830) * 86400000;
     const iso = (t: number) => new Date(t).toISOString().slice(0, 19);
     type Task = { cc: string; start: number; end: number; page: number; per?: number };
     const countries = envList("SEATGEEK_COUNTRIES", DEFAULT_COUNTRIES);
