@@ -90,6 +90,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Taiwan Ministry of Culture | Concerts, theatre, dance, exhibitions and talks across Taiwan | nothing |
 | Ville de Montréal | Public events in Montréal libraries, cultural centres and parks | nothing |
 | kulturdaten.berlin | Cultural events across Berlin's districts | nothing |
+| Ajuntament de Barcelona | Barcelona's cultural and sports agenda | nothing |
 | football-data.org | Every scheduled match of 12 competitions (Premier League, Championship, LaLiga, Bundesliga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Brasileirão, Champions League, World Cup, Euros) at 185 hand-checked stadiums; a snapshot is shown until the key is set | `FOOTBALL_DATA_KEY` (free, <https://www.football-data.org/client/register>) for live updates |
 | Que faire à Paris (opendata.paris.fr) | City of Paris listings, ODbL | nothing |
 | Madrid cultural agenda (datos.madrid.es) | Municipal activities for the next 100 days | nothing |
@@ -113,7 +114,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin,barcelona npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 
