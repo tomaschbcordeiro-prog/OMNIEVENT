@@ -23,7 +23,7 @@ describe("Institut Valencià de Cultura", () => {
   it("regroups the flat feed", () => {
     const rows = groupIvc([{ titulo_evento: "A" }, { hora: "18:00" }, { titulo_evento: "B" }, { latitud: "39.4" }]);
     expect(rows).toEqual([{ titulo_evento: "A", hora: "18:00" }, { titulo_evento: "B", latitud: "39.4" }]);
-    expect(groupIvc(flat as Record<string, string>[]).length).toBeGreaterThan(20);
+    expect(groupIvc(flat as unknown as Record<string, unknown>[]).length).toBeGreaterThan(20);
   });
   it("joins sessions of a title at a venue", () => {
     const out = normalizeIvc([row(), row({ fecha_inicio: "30/10/2026", fecha_fin: "30/10/2026", hora: "20:30" })], "x", now);

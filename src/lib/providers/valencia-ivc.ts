@@ -31,14 +31,14 @@ export interface IvcRow {
 }
 
 /** The feed is a flat list of one-key objects; each event starts at "titulo_evento". */
-export function groupIvc(flat: Record<string, string>[]): IvcRow[] {
+export function groupIvc(flat: Record<string, unknown>[]): IvcRow[] {
   const rows: IvcRow[] = [];
   let cur: Record<string, string> | undefined;
   for (const kv of flat) {
     const [k, v] = Object.entries(kv)[0] ?? [];
     if (!k) continue;
     if (k === "titulo_evento") rows.push((cur = {}));
-    if (cur) cur[k] = typeof v === "string" ? v.trim() : v;
+    if (cur && typeof v === "string") cur[k] = v.trim();
   }
   return rows as IvcRow[];
 }
@@ -177,7 +177,7 @@ export const valenciaIvcProvider: ProviderAdapter = {
   refreshIntervalMs: 12 * 3600000,
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
-    const json = (await fetchJson("valencia-ivc", API, ctx, { revalidate: 0, timeoutMs: 60000 })) as { data?: Record<string, string>[] };
+    const json = (await fetchJson("valencia-ivc", API, ctx, { revalidate: 0, timeoutMs: 60000 })) as { data?: Record<string, unknown>[] };
     const batch = normalizeIvc(groupIvc(json.data ?? []), syncedAt);
     return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: batch.events.length > 0, finishedAt: new Date().toISOString() } };
   },
