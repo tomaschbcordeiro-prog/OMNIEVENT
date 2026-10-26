@@ -1,0 +1,582 @@
+[
+ {
+  "host": "calendar.agnesscott.edu",
+  "name": "Agnes Scott College"
+ },
+ {
+  "host": "calendar.amherst.edu",
+  "name": "Amherst College"
+ },
+ {
+  "host": "calendar.appstate.edu",
+  "name": "Appalachian State University"
+ },
+ {
+  "host": "calendar.auburn.edu",
+  "name": "Auburn University"
+ },
+ {
+  "host": "calendar.bowdoin.edu",
+  "name": "Bowdoin College"
+ },
+ {
+  "host": "calendar.colgate.edu",
+  "name": "Colgate University"
+ },
+ {
+  "host": "calendar.colorado.edu",
+  "name": "University of Colorado at Boulder"
+ },
+ {
+  "host": "calendar.cuanschutz.edu",
+  "name": "University of Colorado Anschutz Medical Campus"
+ },
+ {
+  "host": "calendar.dmu.edu",
+  "name": "Des Moines University"
+ },
+ {
+  "host": "calendar.drake.edu",
+  "name": "Drake University"
+ },
+ {
+  "host": "calendar.ecu.edu",
+  "name": "East Carolina University"
+ },
+ {
+  "host": "calendar.emporia.edu",
+  "name": "Emporia State University"
+ },
+ {
+  "host": "calendar.famu.edu",
+  "name": "Florida Agricultural and Mechanical University"
+ },
+ {
+  "host": "calendar.fau.edu",
+  "name": "Florida Atlantic University"
+ },
+ {
+  "host": "calendar.fiu.edu",
+  "name": "Florida International University"
+ },
+ {
+  "host": "calendar.fsu.edu",
+  "name": "Florida State University"
+ },
+ {
+  "host": "calendar.georgiasouthern.edu",
+  "name": "Georgia Southern University"
+ },
+ {
+  "host": "calendar.gsu.edu",
+  "name": "Georgia State University"
+ },
+ {
+  "host": "calendar.gvsu.edu",
+  "name": "Grand Valley State University"
+ },
+ {
+  "host": "calendar.gwu.edu",
+  "name": "George Washington University"
+ },
+ {
+  "host": "calendar.hamptonu.edu",
+  "name": "Hampton University"
+ },
+ {
+  "host": "calendar.hope.edu",
+  "name": "Hope College"
+ },
+ {
+  "host": "calendar.kennesaw.edu",
+  "name": "Kennesaw State University"
+ },
+ {
+  "host": "calendar.ku.edu",
+  "name": "University of Kansas"
+ },
+ {
+  "host": "calendar.lmunet.edu",
+  "name": "Lincoln Memorial University"
+ },
+ {
+  "host": "calendar.lr.edu",
+  "name": "Lenoir-Rhyne University"
+ },
+ {
+  "host": "calendar.lsu.edu",
+  "name": "Louisiana State University"
+ },
+ {
+  "host": "calendar.millsaps.edu",
+  "name": "Millsaps College"
+ },
+ {
+  "host": "calendar.mjc.edu",
+  "name": "Modesto Junior College"
+ },
+ {
+  "host": "calendar.mst.edu",
+  "name": "Missouri University of Science and Technology"
+ },
+ {
+  "host": "calendar.ncsu.edu",
+  "name": "North Carolina State University"
+ },
+ {
+  "host": "calendar.niu.edu",
+  "name": "Northern Illinois University"
+ },
+ {
+  "host": "calendar.northeastern.edu",
+  "name": "Northeastern University"
+ },
+ {
+  "host": "calendar.northwood.edu",
+  "name": "Northwood University"
+ },
+ {
+  "host": "calendar.oberlin.edu",
+  "name": "Oberlin College"
+ },
+ {
+  "host": "calendar.ohio.edu",
+  "name": "Ohio University"
+ },
+ {
+  "host": "calendar.oswego.edu",
+  "name": "State University of New York at Oswego"
+ },
+ {
+  "host": "calendar.pitt.edu",
+  "name": "University of Pittsburgh"
+ },
+ {
+  "host": "calendar.plu.edu",
+  "name": "Pacific Lutheran University"
+ },
+ {
+  "host": "calendar.slcc.edu",
+  "name": "Salt Lake Community College"
+ },
+ {
+  "host": "calendar.stephens.edu",
+  "name": "Stephens College"
+ },
+ {
+  "host": "calendar.stmarytx.edu",
+  "name": "St. Mary's University"
+ },
+ {
+  "host": "calendar.swcciowa.edu",
+  "name": "Southwestern Community College"
+ },
+ {
+  "host": "calendar.tamuk.edu",
+  "name": "Texas A&M University - Kingsville"
+ },
+ {
+  "host": "calendar.tccd.edu",
+  "name": "Tarrant County College"
+ },
+ {
+  "host": "calendar.tcu.edu",
+  "name": "Texas Christian University"
+ },
+ {
+  "host": "calendar.ua.edu",
+  "name": "The University of Alabama"
+ },
+ {
+  "host": "calendar.uab.edu",
+  "name": "University of Alabama at Birmingham"
+ },
+ {
+  "host": "calendar.ucsd.edu",
+  "name": "University of California, San Diego"
+ },
+ {
+  "host": "calendar.ucsf.edu",
+  "name": "University of California, San Francisco"
+ },
+ {
+  "host": "calendar.udallas.edu",
+  "name": "University of Dallas"
+ },
+ {
+  "host": "calendar.uga.edu",
+  "name": "University of Georgia"
+ },
+ {
+  "host": "calendar.umsl.edu",
+  "name": "University of Missouri - Saint Louis"
+ },
+ {
+  "host": "calendar.unca.edu",
+  "name": "University of North Carolina at Asheville"
+ },
+ {
+  "host": "calendar.und.edu",
+  "name": "University of North Dakota"
+ },
+ {
+  "host": "calendar.unt.edu",
+  "name": "University of North Texas"
+ },
+ {
+  "host": "calendar.up.edu",
+  "name": "University of Portland"
+ },
+ {
+  "host": "calendar.usc.edu",
+  "name": "University of Southern California"
+ },
+ {
+  "host": "calendar.usm.edu",
+  "name": "University of Southern Mississippi"
+ },
+ {
+  "host": "calendar.utdallas.edu",
+  "name": "University of Texas at Dallas"
+ },
+ {
+  "host": "calendar.utexas.edu",
+  "name": "The University of Texas at Austin"
+ },
+ {
+  "host": "calendar.utk.edu",
+  "name": "University of Tennessee, Knoxville"
+ },
+ {
+  "host": "calendar.utrgv.edu",
+  "name": "The University of Texas at Rio Grande Valley"
+ },
+ {
+  "host": "calendar.vcu.edu",
+  "name": "Virginia Commonwealth University"
+ },
+ {
+  "host": "calendar.waubonsee.edu",
+  "name": "Waubonsee Community College"
+ },
+ {
+  "host": "calendar.whitman.edu",
+  "name": "Whitman College"
+ },
+ {
+  "host": "calendar.yhc.edu",
+  "name": "Young Harris College"
+ },
+ {
+  "host": "events.aims.edu",
+  "name": "Aims Community College"
+ },
+ {
+  "host": "events.albany.edu",
+  "name": "State University of New York at Albany"
+ },
+ {
+  "host": "events.alliant.edu",
+  "name": "Alliant International University"
+ },
+ {
+  "host": "events.bc.edu",
+  "name": "Boston College"
+ },
+ {
+  "host": "events.bentley.edu",
+  "name": "Bentley University"
+ },
+ {
+  "host": "events.bgsu.edu",
+  "name": "Bowling Green State University"
+ },
+ {
+  "host": "events.boisestate.edu",
+  "name": "Boise State University"
+ },
+ {
+  "host": "events.bryant.edu",
+  "name": "Bryant University"
+ },
+ {
+  "host": "events.chaminade.edu",
+  "name": "Chaminade University of Honolulu"
+ },
+ {
+  "host": "events.chatham.edu",
+  "name": "Chatham College"
+ },
+ {
+  "host": "events.cornell.edu",
+  "name": "Cornell University"
+ },
+ {
+  "host": "events.cortland.edu",
+  "name": "State University of New York College at Cortland"
+ },
+ {
+  "host": "events.depaul.edu",
+  "name": "DePaul University"
+ },
+ {
+  "host": "events.easternct.edu",
+  "name": "Eastern Connecticut State University"
+ },
+ {
+  "host": "events.emmanuel.edu",
+  "name": "Emmanuel College"
+ },
+ {
+  "host": "events.fairfield.edu",
+  "name": "Fairfield University"
+ },
+ {
+  "host": "events.fredonia.edu",
+  "name": "State University of New York at Fredonia"
+ },
+ {
+  "host": "events.frostburg.edu",
+  "name": "Frostburg State University"
+ },
+ {
+  "host": "events.fscj.edu",
+  "name": "Florida State College at Jacksonville"
+ },
+ {
+  "host": "events.geneseo.edu",
+  "name": "State University of New York College at Geneseo"
+ },
+ {
+  "host": "events.goucher.edu",
+  "name": "Goucher College"
+ },
+ {
+  "host": "events.harpercollege.edu",
+  "name": "Harper College"
+ },
+ {
+  "host": "events.highpoint.edu",
+  "name": "High Point University"
+ },
+ {
+  "host": "events.howard.edu",
+  "name": "Howard University"
+ },
+ {
+  "host": "events.ithaca.edu",
+  "name": "Ithaca College"
+ },
+ {
+  "host": "events.k-state.edu",
+  "name": "Kansas State University"
+ },
+ {
+  "host": "events.lasell.edu",
+  "name": "Lasell College"
+ },
+ {
+  "host": "events.lonestar.edu",
+  "name": "Lone Star College System"
+ },
+ {
+  "host": "events.luc.edu",
+  "name": "Loyola University Chicago"
+ },
+ {
+  "host": "events.macomb.edu",
+  "name": "Macomb Community College"
+ },
+ {
+  "host": "events.marshall.edu",
+  "name": "Marshall University"
+ },
+ {
+  "host": "events.miami.edu",
+  "name": "University of Miami"
+ },
+ {
+  "host": "events.miamioh.edu",
+  "name": "Miami University of Ohio"
+ },
+ {
+  "host": "events.morehouse.edu",
+  "name": "Morehouse"
+ },
+ {
+  "host": "events.morgan.edu",
+  "name": "Morgan State University"
+ },
+ {
+  "host": "events.msjc.edu",
+  "name": "Mt. San Jacinto Community College District"
+ },
+ {
+  "host": "events.msmc.edu",
+  "name": "Mount Saint Mary College"
+ },
+ {
+  "host": "events.mtholyoke.edu",
+  "name": "Mount Holyoke College"
+ },
+ {
+  "host": "events.mtu.edu",
+  "name": "Michigan Technological University"
+ },
+ {
+  "host": "events.newhaven.edu",
+  "name": "University of New Haven"
+ },
+ {
+  "host": "events.northlandcollege.edu",
+  "name": "Northland Community and Technical College"
+ },
+ {
+  "host": "events.nsu.edu",
+  "name": "Norfolk State University"
+ },
+ {
+  "host": "events.oakton.edu",
+  "name": "Oakton Community College"
+ },
+ {
+  "host": "events.okbu.edu",
+  "name": "Oklahoma Baptist University"
+ },
+ {
+  "host": "events.okstate.edu",
+  "name": "Oklahoma State University"
+ },
+ {
+  "host": "events.oregonstate.edu",
+  "name": "Oregon State University"
+ },
+ {
+  "host": "events.pittstate.edu",
+  "name": "Pittsburg State University"
+ },
+ {
+  "host": "events.pointpark.edu",
+  "name": "Point Park University"
+ },
+ {
+  "host": "events.puc.edu",
+  "name": "Pacific Union College"
+ },
+ {
+  "host": "events.rochester.edu",
+  "name": "University of Rochester"
+ },
+ {
+  "host": "events.seattleu.edu",
+  "name": "Seattle University"
+ },
+ {
+  "host": "events.shsu.edu",
+  "name": "Sam Houston State University"
+ },
+ {
+  "host": "events.sjc.edu",
+  "name": "St. Joseph College (CT)"
+ },
+ {
+  "host": "events.sjsu.edu",
+  "name": "San Jose State University"
+ },
+ {
+  "host": "events.sou.edu",
+  "name": "Southern Oregon State College"
+ },
+ {
+  "host": "events.stanford.edu",
+  "name": "Stanford University"
+ },
+ {
+  "host": "events.towson.edu",
+  "name": "Towson University"
+ },
+ {
+  "host": "events.tri-c.edu",
+  "name": "Cuyahoga Community College District"
+ },
+ {
+  "host": "events.trinity.edu",
+  "name": "Trinity University"
+ },
+ {
+  "host": "events.twu.edu",
+  "name": "Texas Woman's University"
+ },
+ {
+  "host": "events.ucr.edu",
+  "name": "University of California, Riverside"
+ },
+ {
+  "host": "events.udel.edu",
+  "name": "University of Delaware"
+ },
+ {
+  "host": "events.uiw.edu",
+  "name": "University of the Incarnate Word"
+ },
+ {
+  "host": "events.umass.edu",
+  "name": "University of Massachusetts at Amherst"
+ },
+ {
+  "host": "events.unf.edu",
+  "name": "University of North Florida"
+ },
+ {
+  "host": "events.unr.edu",
+  "name": "University of Nevada, Reno"
+ },
+ {
+  "host": "events.uta.edu",
+  "name": "University of Texas at Arlington"
+ },
+ {
+  "host": "events.utmb.edu",
+  "name": "University of Texas Medical Branch"
+ },
+ {
+  "host": "events.utsouthwestern.edu",
+  "name": "University of Texas Southwestern Medical Center"
+ },
+ {
+  "host": "events.uvm.edu",
+  "name": "University of Vermont"
+ },
+ {
+  "host": "events.uwf.edu",
+  "name": "University of West Florida"
+ },
+ {
+  "host": "events.uwstout.edu",
+  "name": "University of Wisconsin - Stout"
+ },
+ {
+  "host": "events.warren-wilson.edu",
+  "name": "Warren Wilson College"
+ },
+ {
+  "host": "events.webster.edu",
+  "name": "Webster University"
+ },
+ {
+  "host": "events.western.edu",
+  "name": "Western State Colorado University"
+ },
+ {
+  "host": "events.westernu.edu",
+  "name": "Western University of Health Sciences"
+ },
+ {
+  "host": "events.wfu.edu",
+  "name": "Wake Forest University"
+ },
+ {
+  "host": "events.yale.edu",
+  "name": "Yale University"
+ }
+]
