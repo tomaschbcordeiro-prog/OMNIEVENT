@@ -91,6 +91,7 @@ Providers are adapters (`src/lib/providers/`). The store re-syncs each provider 
 | Ville de Montréal | Public events in Montréal libraries, cultural centres and parks | nothing |
 | Espoo Linked Events | Events of the City of Espoo (culture centres, libraries, sports, families) | nothing |
 | kulturdaten.berlin | Cultural events across Berlin's districts | nothing |
+| Portuguese municipal agendas | Ourém, Cantanhede, Arganil, Celorico da Beira, Figueira de Castelo Rodrigo, Marco de Canaveses, Santiago do Cacém, Trancoso | nothing |
 | Ajuntament de Barcelona | Barcelona's cultural and sports agenda | nothing |
 | Institut Valencià de Cultura | Theatre, music, dance and film across the Valencian Community | nothing |
 | City of Chicago | Chicago Public Library events and Park District events and drop-ins | nothing |
@@ -119,7 +120,7 @@ Runs in memory today. The production schema (PostgreSQL + PostGIS, Supabase-comp
 ```bash
 npm test                                   # 72 unit tests: parser, geo, time, provider mapping, store queries
 npm run build                              # then:
-DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin,barcelona,chicago,valencia-ivc,espoo,brisbane,localist npm start  # e2e flows expect demo data
+DISABLED_PROVIDERS=paris,madrid,lisbon,venue-calendars,football,bol,catalonia,euskadi,castilla-leon,cultura-portugal,openagenda,nyc-parks,zaragoza,helsinki,taiwan,montreal,berlin,barcelona,chicago,valencia-ivc,espoo,brisbane,localist,pt-municipios npm start  # e2e flows expect demo data
 node tests/e2e/smoke.mjs                   # 21 end-to-end browser flows (Playwright)
 ```
 
