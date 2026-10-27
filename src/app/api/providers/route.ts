@@ -2,6 +2,7 @@ import { ensureFresh, providerStatuses, dataSummary } from "@/lib/store";
 import { FX_SOURCE } from "@/lib/currency";
 import { handler, ok } from "@/lib/api";
 import { getStates, snapshotIndex } from "@/lib/shared-cache";
+import { storageStatus } from "@/lib/community/kv";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
@@ -27,5 +28,5 @@ export const GET = handler(async () => {
     }),
   );
   const providers = statuses.map((p, i) => ({ ...p, lastRun: p.lastRun ?? runs[i], lastRealRun: runs[i] }));
-  return ok({ providers, data: dataSummary(), shared, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } });
+  return ok({ providers, data: dataSummary(), storage: await storageStatus(), shared, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } });
 });

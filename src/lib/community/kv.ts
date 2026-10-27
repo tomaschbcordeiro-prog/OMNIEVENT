@@ -34,12 +34,27 @@ async function remote(cmds: Cmd[]): Promise<Val[]> {
     // A request that hangs must not stall whatever waits on it.
     signal: AbortSignal.timeout(20000),
   });
-  if (!res.ok) throw new Error(`community storage: HTTP ${res.status}`);
+  if (!res.ok) {
+    // Upstash explains refusals in the body (e.g. a plan's request limit reached).
+    const why = await res.text().catch(() => "");
+    throw new Error(`community storage: HTTP ${res.status}${why ? ` ${why.slice(0, 200)}` : ""}`);
+  }
   const out = (await res.json()) as { result?: Val; error?: string }[];
   return out.map((r) => {
     if (r.error) throw new Error(`community storage: ${r.error}`);
     return r.result;
   });
+}
+
+/** Whether the shared storage answers, with its error when it doesn't (no addresses or keys). */
+export async function storageStatus(): Promise<{ connected: boolean; ok: boolean; error?: string }> {
+  if (!persistent) return { connected: false, ok: false };
+  try {
+    await remote([["PING"]]);
+    return { connected: true, ok: true };
+  } catch (err) {
+    return { connected: true, ok: false, error: String((err as Error).message).split(URL_ ?? "\u0000").join("").split(TOKEN ?? "\u0000").join("").slice(0, 240) };
+  }
 }
 
 // ---- In-memory stand-in ----------------------------------------------------------------
