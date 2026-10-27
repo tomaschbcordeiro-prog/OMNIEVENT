@@ -284,5 +284,14 @@
 "Peniche":{"lat":39.3568749,
 "lng":-9.3786838},
 "Arouca":{"lat":40.9289214,
-"lng":-8.2441746}},
-"Norte de Portugal (vários locais)|Arouca":null}
+"lng":-8.2441746},
+"Golegã":{"lat":39.4017959,
+"lng":-8.4867361}},
+"Norte de Portugal (vários locais)|Arouca":null,
+"Casa do Povo do Pombalinho|Golegã":null,
+"Évora|Évora":{"lat":38.570774,
+"lng":-7.909281},
+"Teatro Camões (Estúdio 1)|Lisboa":{"lat":38.76097,
+"lng":-9.093313},
+"Mafra|Mafra":{"lat":38.964341,
+"lng":-9.340462}}
