@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ensureFresh, clusterEvents } from "@/lib/store";
+import { ensureFresh, clusterEvents, dataSummary } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
@@ -34,5 +34,6 @@ export const GET = handler(async (req: NextRequest) => {
   // Markers are ~36 px wide; groups closer than 44 px on screen are merged.
   const mergeDeg = v.data.z != null ? (44 * 360) / (512 * 2 ** v.data.z) : 0;
   const res = clusterEvents(parsed.filters, { lat: v.data.vlat, lng: v.data.vlng, radiusKm: v.data.vr, cellDeg: v.data.cell, mergeDeg });
-  return ok(res, { maxAge: 30 });
+  // Lets the globe say so when only fictional demo data is loaded.
+  return ok({ ...res, demoOnly: dataSummary().live === 0 }, { maxAge: 60, swr: 1800 });
 });

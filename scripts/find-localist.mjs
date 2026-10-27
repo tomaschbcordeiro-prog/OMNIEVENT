@@ -1,7 +1,8 @@
 // Finds public event calendars run on Localist: for every university domain in the
 // open university-domains list (US, Canada, UK, Ireland, Australia, New Zealand), tries
-// events.<domain> and calendar.<domain> for Localist's public API. Writes the calendars
-// that answer to src/lib/providers/data/localist-hosts.json (existing entries are kept).
+// events., calendar., cal., calendars., eventcalendar. and happenings.<domain> for
+// Localist's public API. Writes the calendars that answer to
+// src/lib/providers/data/localist-hosts.json (existing entries are kept).
 // Run: node scripts/find-localist.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -20,7 +21,7 @@ const unis = await (await fetch(LIST, { headers: { "User-Agent": UA } })).json()
 const candidates = new Map();
 for (const u of unis) {
   if (!["US", "CA", "GB", "AU", "IE", "NZ"].includes(u.alpha_two_code)) continue;
-  for (const d of u.domains ?? []) for (const p of ["events", "calendar"]) candidates.set(`${p}.${d.replace(/^www\./, "")}`, u.name);
+  for (const d of u.domains ?? []) for (const p of ["events", "calendar", "cal", "calendars", "eventcalendar", "happenings"]) candidates.set(`${p}.${d.replace(/^www\./, "")}`, u.name);
 }
 const queue = [...candidates.keys()].filter((h) => !known.has(h));
 console.log("candidates", queue.length);

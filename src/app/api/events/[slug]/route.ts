@@ -13,5 +13,5 @@ export const GET = handler(async (_req: NextRequest, ctx: { params: Promise<{ sl
   await ensureFresh();
   const ev = getEventView(decodeURIComponent(slug));
   if (!ev) return apiError(404, "not_found", "Event not found.");
-  return ok(ev, { maxAge: 60 });
+  return ok(ev, { maxAge: 120, swr: 1800 });
 });

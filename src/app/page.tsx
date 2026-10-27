@@ -1,14 +1,11 @@
 import { DiscoverClient } from "@/components/discover/discover-client";
-import { ensureFresh, dataSummary } from "@/lib/store";
 
-export const dynamic = "force-dynamic";
-
-export default async function DiscoverPage() {
-  await ensureFresh();
-  const s = dataSummary();
+// The globe's page renders at once; its events load from the API, so a server that is still
+// loading data never holds up the first paint.
+export default function DiscoverPage() {
   return (
     <main>
-      <DiscoverClient dataSummary={{ demo: s.demo, live: s.live }} />
+      <DiscoverClient />
     </main>
   );
 }

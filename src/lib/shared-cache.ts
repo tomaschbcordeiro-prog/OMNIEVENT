@@ -125,6 +125,19 @@ export async function getState<T>(key: string): Promise<T | undefined> {
   }
 }
 
+/** Several state values at once (missing ones are undefined). */
+export async function getStates<T>(keys: string[]): Promise<(T | undefined)[]> {
+  if (!persistent || !keys.length) return keys.map(() => undefined);
+  const vals = (await cmd<(string | null)[]>(["MGET", ...keys.map((k) => `state:${k}`)]).catch(() => [])) ?? [];
+  return keys.map((_, i) => {
+    try {
+      return vals[i] ? (JSON.parse(vals[i]!) as T) : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+}
+
 export async function setState(key: string, value: unknown, ttlSec = 7 * 86400): Promise<void> {
   if (!persistent) return;
   if (value === undefined) await pipe([["DEL", `state:${key}`]]).catch(() => {});

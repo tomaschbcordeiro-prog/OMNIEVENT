@@ -1,5 +1,13 @@
 [
  {
+  "host": "cal.berry.edu",
+  "name": "Berry College"
+ },
+ {
+  "host": "cal.lmu.edu",
+  "name": "Loyola Marymount University"
+ },
+ {
   "host": "calendar.agnesscott.edu",
   "name": "Agnes Scott College"
  },
@@ -270,6 +278,18 @@
  {
   "host": "calendar.yhc.edu",
   "name": "Young Harris College"
+ },
+ {
+  "host": "calendars.losmedanos.edu",
+  "name": "Los Medanos College"
+ },
+ {
+  "host": "calendars.uark.edu",
+  "name": "University of Arkansas"
+ },
+ {
+  "host": "eventcalendar.olemiss.edu",
+  "name": "University of Mississippi"
  },
  {
   "host": "events.aims.edu",
@@ -590,5 +610,9 @@
  {
   "host": "events.yale.edu",
   "name": "Yale University"
+ },
+ {
+  "host": "happenings.washu.edu",
+  "name": "Washington University in St. Louis"
  }
 ]

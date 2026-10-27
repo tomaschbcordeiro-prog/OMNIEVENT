@@ -61,7 +61,7 @@ function useReducedMotion(): boolean {
 
 const num = (s: string | null) => (s ?? "").split(",").map(Number);
 
-export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; live: number } }) {
+export function DiscoverClient() {
   const user = useUser();
   const reduced = useReducedMotion();
   const [webgl, setWebgl] = useState<boolean | null>(null);
@@ -72,6 +72,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
   const [flyTo, setFlyTo] = useState<FlyRequest>();
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [counts, setCounts] = useState<{ total: number; inView: number } | null>(null);
+  const [demoOnly, setDemoOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
@@ -222,9 +223,10 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
           const body = await res.json().catch(() => null);
           throw new Error(body?.error?.message ?? `Request failed (${res.status})`);
         }
-        const json = (await res.json()) as { clusters: Cluster[]; total: number; inView: number };
+        const json = (await res.json()) as { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean };
         setClusters(json.clusters);
         setCounts({ total: json.total, inView: json.inView });
+        setDemoOnly(!!json.demoOnly);
         setError(null);
       } catch (e) {
         if ((e as Error).name !== "AbortError") setError((e as Error).message);
@@ -610,7 +612,7 @@ export function DiscoverClient({ dataSummary }: { dataSummary: { demo: number; l
       <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
-        {dataSummary.live === 0 && <div className="mt-0.5 text-[#ffd98a]">Demo mode: all events shown are fictional</div>}
+        {demoOnly && <div className="mt-0.5 text-[#ffd98a]">Demo mode: all events shown are fictional</div>}
       </div>
 
       {(mapFailure || webgl === false) && (

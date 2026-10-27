@@ -15,5 +15,5 @@ export const GET = handler(async (req: NextRequest) => {
   if (!parsed.ok) return validationError(parsed.error);
   await ensureFresh();
   const result = searchEvents(parsed.filters);
-  return ok({ ...result, data: dataSummary() }, { maxAge: 30 });
+  return ok({ ...result, data: dataSummary() }, { maxAge: 60, swr: 1800 });
 });

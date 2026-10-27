@@ -1,6 +1,6 @@
 import "server-only";
 import { after } from "next/server";
-import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, sharedEnabled, snapshotIndex } from "./shared-cache";
+import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { descendantsOf } from "./categories";
@@ -148,6 +148,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // its full refresh interval (and not every few minutes, which would waste quota).
       state.lastSync.set(p.id, run.rateLimited && !batch.events.length ? Date.now() - p.refreshIntervalMs + 30 * 60000 : Date.now());
       state.runs.set(p.id, { ...run, provider: p.id, runId, startedAt, updated, imported: batch.events.length - updated });
+      // Every instance can then report how the last real run went, wherever it ran.
+      // (A crawl's idle turn — nothing read, nothing wrong — doesn't replace the last real one.)
+      if (shared && (fresh || run.error || !run.partial)) void setState(`run:${p.id}`, { ...state.runs.get(p.id), fresh }, 7 * 86400).catch(() => {});
       rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
       // Shared only when this run brought something (a run that found nothing new doesn't
@@ -163,6 +166,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       }
     } catch (err) {
       state.runs.set(p.id, { provider: p.id, runId, startedAt, finishedAt: new Date().toISOString(), imported: 0, updated: 0, failures: 1, rateLimited: false, ok: false, error: String(err) });
+      if (shared) void setState(`run:${p.id}`, state.runs.get(p.id), 7 * 86400).catch(() => {});
       // Back off before retrying a failing provider.
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 5 * 60000);
       log("error", "provider sync failed", { provider: p.id, runId, err: String(err) });
