@@ -91,9 +91,9 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
   if (!persistent) return undefined;
   // One chunk per request: a single reply carrying every chunk can exceed Redis' size limit.
   const parts: (string | null)[] = new Array(meta.n).fill(null);
-  for (let i = 0; i < meta.n; i += 4)
+  for (let i = 0; i < meta.n; i += 8)
     await Promise.all(
-      Array.from({ length: Math.min(4, meta.n - i) }, async (_, j) => {
+      Array.from({ length: Math.min(8, meta.n - i) }, async (_, j) => {
         parts[i + j] = await cmd<string | null>(["GET", `snap:${id}:${meta.ver}:${i + j}`]);
       }),
     );

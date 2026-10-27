@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
@@ -21,6 +21,7 @@ import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
 import { CategoryIcon, categoryLabel, DemoBadge, EmptyState, ErrorState, Poster, Price, SaveButton, ShapeGlyph, StatusBadge, Notice } from "../ui";
 import { FilterForm, ActiveFilters, datePresets } from "./filters";
+import { TimeBar } from "../earth/time-bar";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
 import { LayersPanel } from "../earth/layers-panel";
@@ -29,8 +30,11 @@ import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
 import { sellerSearches } from "@/lib/sellers";
 
-// MapLibre touches `window` on import, so the map only loads in the browser.
-const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthMap), { ssr: false, loading: () => null });
+// MapLibre touches `window` on import, so the map only loads in the browser. Its download
+// starts as soon as this page's script runs, not when the map first renders.
+const loadEarthMap = () => import("../earth/earth-map");
+if (typeof window !== "undefined") void loadEarthMap();
+const EarthMap = dynamic(() => loadEarthMap().then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
 type Selection = { kind: "cluster"; cluster: Cluster } | { kind: "event"; card: EventCard; from?: Cluster } | null;
@@ -71,7 +75,7 @@ export function DiscoverClient() {
   const [initialView, setInitialView] = useState<CameraState | null>(null);
   const [flyTo, setFlyTo] = useState<FlyRequest>();
   const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [counts, setCounts] = useState<{ total: number; inView: number } | null>(null);
+  const [counts, setCounts] = useState<{ total: number; inView: number; key: string } | null>(null);
   const [demoOnly, setDemoOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +85,8 @@ export function DiscoverClient() {
   const [showLayers, setShowLayers] = useState(false);
   const [base, setBase] = useState<BaseStyle>("map");
   const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
+  const [space, setSpace] = useState(false);
+  const [intro, setIntro] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [mapFailure, setMapFailure] = useState<string | null>(null);
@@ -116,6 +122,7 @@ export function DiscoverClient() {
     try {
       const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
       if (saved?.base === "map" || saved?.base === "satellite") setBase(saved.base);
+      if (saved?.space === true) setSpace(true);
       if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(narrow ? { terrain: false } : {}) });
       else if (narrow) setLayers({ ...DEFAULT_LAYERS, terrain: false });
     } catch {
@@ -125,15 +132,17 @@ export function DiscoverClient() {
     const m = sp.get("view") as ViewMode | null;
     setMode(!ok ? "list" : m === "map" || m === "list" ? m : "globe");
     if (sp.get("at") || sp.get("v") || sp.get("pin")) setAutoRotate(false);
+    // A fresh visit arrives from deep space; shared links open right where they point.
+    else setIntro(true);
   }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers, space }));
     } catch {
       // storage unavailable
     }
-  }, [base, layers]);
+  }, [base, layers, space]);
 
   // ---- keep URL shareable (debounced: Safari throws after 100 replaceState calls in 10 s) ----
   useEffect(() => {
@@ -204,9 +213,13 @@ export function DiscoverClient() {
   const zKey = Math.round(view.zoom * 2) / 2;
   const viewKey = radius == null ? `global:${cell}:${zKey}` : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${cell},${Math.round(radius)},${zKey}`;
   const filterKey = filtersToParams({ ...filters, page: undefined, sort: undefined }).toString();
+  const fetchedOnce = useRef(false);
   useEffect(() => {
     if (!initialView || mode === "list") return;
     const ctrl = new AbortController();
+    // The first load goes straight out; later ones wait for the camera or filters to settle.
+    const wait = fetchedOnce.current ? 200 : 0;
+    fetchedOnce.current = true;
     const t = setTimeout(async () => {
       setLoading(true);
       try {
@@ -225,7 +238,7 @@ export function DiscoverClient() {
         }
         const json = (await res.json()) as { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean };
         setClusters(json.clusters);
-        setCounts({ total: json.total, inView: json.inView });
+        setCounts({ total: json.total, inView: json.inView, key: filterKey });
         setDemoOnly(!!json.demoOnly);
         setError(null);
       } catch (e) {
@@ -233,7 +246,7 @@ export function DiscoverClient() {
       } finally {
         if (!ctrl.signal.aborted) setLoading(false);
       }
-    }, 200);
+    }, wait);
     return () => {
       clearTimeout(t);
       ctrl.abort();
@@ -347,6 +360,38 @@ export function DiscoverClient() {
   }, [filters.categories]);
 
   const selectedId = selection?.kind === "cluster" ? selection.cluster.id : undefined;
+  const liveInView = useMemo(() => clusters.reduce((n, c) => n + (c.live ?? 0), 0), [clusters]);
+
+  // ---- live hops: with "Live now" on, jump around the planet from one event on right now to the next
+  const [liveList, setLiveList] = useState<EventCard[]>([]);
+  const hopAt = useRef(0);
+  const liveKey = filters.live ? filtersToParams({ ...filters, near: undefined, nearLabel: undefined, page: undefined, sort: undefined }).toString() : "";
+  useEffect(() => {
+    setLiveList([]);
+    hopAt.current = 0;
+    if (!liveKey) return;
+    const ctrl = new AbortController();
+    fetch(`/api/events?${liveKey}&size=60`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j: { items: EventCard[] }) => {
+        // Shuffled, so each hop lands somewhere unexpected.
+        const items = [...j.items];
+        for (let i = items.length - 1; i > 0; i--) {
+          const k = Math.floor(Math.random() * (i + 1));
+          [items[i], items[k]] = [items[k], items[i]];
+        }
+        setLiveList(items);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [liveKey]);
+  const hopLive = useCallback(() => {
+    if (!liveList.length) return;
+    const c = liveList[hopAt.current++ % liveList.length];
+    setPlace(null);
+    setSelection({ kind: "event", card: c });
+    fly({ lat: c.lat, lng: c.lng, zoom: 12.5 });
+  }, [liveList, fly]);
   const nFilters = activeFilterCount(filters);
 
   const locate = () => {
@@ -380,7 +425,7 @@ export function DiscoverClient() {
   const tilted = view.pitch > 10;
 
   return (
-    <div ref={root} className="relative h-[100dvh] w-full overflow-hidden sky">
+    <div ref={root} className={`relative h-[100dvh] w-full overflow-hidden sky ${space && mode !== "list" ? "space" : ""}`}>
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
@@ -406,11 +451,13 @@ export function DiscoverClient() {
             flyTo={flyTo}
             autoRotate={autoRotate && !selection && !place && !filters.near && !pickMode && mode === "globe"}
             reducedMotion={reduced}
+            space={space}
+            intro={intro}
             onView={setView}
             onClusterClick={onClusterClick}
             onMapClick={onMapClick}
             onUserInteract={() => setAutoRotate(false)}
-            onReady={() => setMapReady(true)}
+            onReady={() => (setMapReady(true), setIntro(false))}
             onFatal={(r) => setMapFailure(r)}
           />
         )}
@@ -490,11 +537,6 @@ export function DiscoverClient() {
               <span className="chip sky-chip" data-active="true">Custom mix</span>
             )}
             <span className="w-px h-5 bg-white/60 mx-1 shrink-0" aria-hidden />
-            {datePresets().slice(0, 2).map((p) => (
-              <button key={p.id} type="button" className="chip sky-chip" aria-pressed={filters.from === p.from && filters.to === p.to} onClick={() => setFilters((f) => (f.from === p.from && f.to === p.to ? { ...f, from: undefined, to: undefined } : { ...f, from: p.from, to: p.to }))}>
-                {p.label}
-              </button>
-            ))}
             <button type="button" className="chip sky-chip" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
               <SlidersHorizontal size={14} aria-hidden />
               Filters{nFilters ? <span className="tnum rounded-full bg-cyan text-white px-1.5 text-[11px] leading-[18px]">{nFilters}</span> : null}
@@ -547,6 +589,21 @@ export function DiscoverClient() {
         {showLayers && mode !== "list" && (
           <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} />
         )}
+        {mode !== "list" && filters.live && liveList.length > 0 && !selection && (
+          <button type="button" onClick={hopLive} className="press panel-in inline-flex items-center gap-2 rounded-full bg-live text-white px-4 h-9 text-[13.5px] font-semibold shadow-[0_10px_24px_-10px_rgb(225_29_72_/_0.8)] hover:brightness-110">
+            <span className="live-dot live-dot--on" aria-hidden /> Jump to something on right now <span aria-hidden>→</span>
+          </button>
+        )}
+        {mode !== "list" && (
+          <TimeBar
+            filters={filters}
+            onChange={(patch) => setFilters((f) => ({ ...f, ...patch, page: undefined }))}
+            live={liveInView}
+            count={counts && counts.key === filterKey ? counts.inView : null}
+            loading={loading}
+            reduced={reduced}
+          />
+        )}
         <div className="surface-float rounded-[var(--radius-m)] p-1 flex gap-0.5" role="radiogroup" aria-label="View">
           {([
             ["globe", Globe2, "3D"],
@@ -561,7 +618,11 @@ export function DiscoverClient() {
               aria-label={m === "globe" ? "3D globe" : m === "map" ? "2D map" : "List"}
               disabled={m !== "list" && webgl === false}
               title={m !== "list" && webgl === false ? "Maps need WebGL, which isn't available on this device" : undefined}
-              onClick={() => setMode(m)}
+              onClick={() => {
+                // The list replaces the map; coming back, the map reopens where it was left.
+                if (m === "list" && mode !== "list") setInitialView(mapApi.current?.getCamera() ?? view);
+                setMode(m);
+              }}
               className={`btn btn-sm rounded-[7px] ${mode === m ? "bg-text text-white" : "btn-ghost"}`}
             >
               <Icon size={15} aria-hidden />
@@ -605,6 +666,14 @@ export function DiscoverClient() {
             <button className={`btn btn-secondary btn-sm ${showLayers ? "text-cyan border-cyan/50" : ""}`} aria-expanded={showLayers} onClick={() => setShowLayers((s) => !s)}>
               <Layers size={14} aria-hidden /> Layers
             </button>
+            <button
+              className={`btn btn-sm ${space ? "btn-primary" : "btn-secondary"}`}
+              aria-pressed={space}
+              onClick={() => setSpace((s) => !s)}
+              title="See Earth from orbit: a starry sky and the real night side of the planet"
+            >
+              <Sparkles size={14} aria-hidden /> Space
+            </button>
             <button className="btn btn-secondary btn-icon btn-sm hidden sm:inline-flex" aria-label={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
               {fullscreen ? <Minimize size={14} aria-hidden /> : <Maximize size={14} aria-hidden />}
             </button>
@@ -616,6 +685,11 @@ export function DiscoverClient() {
       {/* ---------- Status line ---------- */}
       <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
+        {!loading && liveInView > 0 && !filters.live && (
+          <div className="mt-0.5 inline-flex items-center gap-1.5 font-semibold text-white">
+            <span className="live-dot" aria-hidden /> {liveInView.toLocaleString()} on right now
+          </div>
+        )}
         <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
         {demoOnly && <div className="mt-0.5 text-[#ffd98a]">Demo mode: all events shown are fictional</div>}
       </div>
@@ -658,6 +732,7 @@ export function DiscoverClient() {
             if (view.zoom < 9 && !filters.near) fly({ lat: c.lat, lng: c.lng, zoom: 13 });
           }}
           onBack={selection.kind === "event" && selection.from ? () => setSelection({ kind: "cluster", cluster: selection.from! }) : undefined}
+          onNextLive={filters.live && liveList.length > 1 && selection.kind === "event" ? hopLive : undefined}
         />
       ) : place && mode !== "list" ? (
         <PlacePanel
@@ -886,7 +961,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   );
 }
 
-function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack }: { selection: NonNullable<Selection>; filters: SearchFilters; onClose: () => void; onSelectEvent: (c: EventCard) => void; onBack?: () => void }) {
+function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack, onNextLive }: { selection: NonNullable<Selection>; filters: SearchFilters; onClose: () => void; onSelectEvent: (c: EventCard) => void; onBack?: () => void; onNextLive?: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -902,7 +977,7 @@ function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack }: 
       {/* The panel stays put; its content slides in when the selection changes. */}
       <div key={selection.kind === "event" ? selection.card.id : selection.cluster.id} className="content-swap flex flex-col min-h-0 flex-1">
         {selection.kind === "event" ? (
-          <EventPreview card={selection.card} onClose={onClose} onBack={onBack} backLabel={selection.from?.label} />
+          <EventPreview card={selection.card} onClose={onClose} onBack={onBack} backLabel={selection.from?.label} onNextLive={onNextLive} />
         ) : (
           <ClusterList cluster={selection.cluster} filters={filters} onClose={onClose} onPick={onSelectEvent} />
         )}
@@ -937,6 +1012,11 @@ function ClusterList({ cluster, filters, onClose, onPick }: { cluster: Cluster; 
         <div className="min-w-0">
           <h2 className="t-h2 truncate">{cluster.label}</h2>
           <p className="t-small text-text-2 tnum"><CountUp value={total || cluster.count} /> matching events{city ? `, ${city.country}` : ""}</p>
+          {!!cluster.live && !filters.live && (
+            <p className="mt-1 inline-flex items-center gap-1.5 t-small font-semibold text-live tnum">
+              <span className="live-dot" aria-hidden /> {cluster.live.toLocaleString()} on right now
+            </p>
+          )}
         </div>
         <button className="btn btn-ghost btn-icon btn-sm -mr-1" aria-label="Close" onClick={onClose}>
           <X size={16} aria-hidden />
@@ -976,7 +1056,7 @@ function ClusterList({ cluster, filters, onClose, onPick }: { cluster: Cluster; 
   );
 }
 
-function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; onClose: () => void; onBack?: () => void; backLabel?: string }) {
+function EventPreview({ card, onClose, onBack, backLabel, onNextLive }: { card: EventCard; onClose: () => void; onBack?: () => void; backLabel?: string; onNextLive?: () => void }) {
   const user = useUser();
   const [detail, setDetail] = useState<EventView | null>(null);
   const [err, setErr] = useState(false);
@@ -1005,11 +1085,15 @@ function EventPreview({ card, onClose, onBack, backLabel }: { card: EventCard; o
         <button className="absolute right-2 top-2 btn btn-icon btn-sm bg-panel/85 backdrop-blur text-text" aria-label="Close preview" onClick={onClose}>
           <X size={16} aria-hidden />
         </button>
-        {onBack && (
+        {onBack ? (
           <button className="absolute left-2 top-2 btn btn-sm bg-panel/85 backdrop-blur text-text" onClick={onBack}>
             <ChevronLeft size={15} aria-hidden /> {backLabel ? `Back to ${backLabel}` : "Back"}
           </button>
-        )}
+        ) : onNextLive ? (
+          <button className="absolute left-2 top-2 btn btn-sm press bg-live text-white shadow-md" onClick={onNextLive}>
+            <span className="live-dot live-dot--on" aria-hidden /> Next live event <span aria-hidden>→</span>
+          </button>
+        ) : null}
         <div className="absolute left-3 bottom-2 flex gap-1.5">
           {card.isDemo && <DemoBadge />}
           <StatusBadge status={card.status} className="bg-panel/90" />

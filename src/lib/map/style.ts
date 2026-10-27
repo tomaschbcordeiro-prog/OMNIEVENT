@@ -1,4 +1,4 @@
-import type { StyleSpecification, LayerSpecification, ExpressionSpecification } from "maplibre-gl";
+import type { StyleSpecification, LayerSpecification, ExpressionSpecification, SkySpecification } from "maplibre-gl";
 
 /**
  * Map data providers and the single OMNIEVENT map style.
@@ -48,7 +48,50 @@ const L = (layer: LayerSpecification, meta: Meta): LayerSpecification => ({ ...l
 
 const name: ExpressionSpecification = ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
 
-export function buildStyle(): StyleSpecification {
+/** Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim. */
+export const DAY_SKY: SkySpecification = {
+  "sky-color": "#2A63CF",
+  "horizon-color": "#5F8BDE",
+  "fog-color": "#4F8BDA",
+  "sky-horizon-blend": 0.5,
+  "horizon-fog-blend": 0.35,
+  "fog-ground-blend": 0.1,
+  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.45, 5, 0.35, 8, 0],
+};
+
+/** Space view: Earth seen from orbit, a thin blue rim against a starry page. */
+export const SPACE_SKY: SkySpecification = {
+  "sky-color": "#0A1440",
+  "horizon-color": "#2F56B8",
+  "fog-color": "#2A4A9E",
+  "sky-horizon-blend": 0.6,
+  "horizon-fog-blend": 0.4,
+  "fog-ground-blend": 0.15,
+  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 5, 0.5, 8, 0],
+};
+
+/**
+ * Label colours for the space view: light text on a dark halo while the night side shows,
+ * back to the usual dark-on-white once the map is zoomed in to street level.
+ */
+export function labelPaint(space: boolean): Record<string, { color: string | ExpressionSpecification; halo: string | ExpressionSpecification }> {
+  const fade = (light: string, normal: string): string | ExpressionSpecification => (space ? ["interpolate", ["linear"], ["zoom"], 6, light, 9, normal] : normal);
+  const halo = (normal: string) => fade("rgba(6,12,38,0.85)", normal);
+  return {
+    "label-country": { color: fade("#F4F6FF", "#2B2350"), halo: halo("rgba(255,255,255,0.9)") },
+    "label-state": { color: fade("#D9DEFF", "#7A6A96"), halo: halo("rgba(255,255,255,0.85)") },
+    "label-city": { color: fade("#FFFFFF", "#0D1B33"), halo: halo("rgba(255,255,255,0.95)") },
+    "label-water": { color: fade("#A9D4FF", "#1F6FA8"), halo: halo("rgba(255,255,255,0.7)") },
+    "label-water-line": { color: fade("#A9D4FF", "#1F6FA8"), halo: halo("rgba(255,255,255,0.7)") },
+  };
+}
+
+/**
+ * The full style. With `initial`, layers that won't show start hidden and the sky matches,
+ * so the first load only downloads tiles for what is on screen (not satellite imagery
+ * behind the street map).
+ */
+export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; space?: boolean }): StyleSpecification {
   const sat = MAPTILER_KEY
     ? {
         type: "raster" as const,
@@ -145,20 +188,17 @@ export function buildStyle(): StyleSpecification {
     L({ id: "label-country", type: "symbol", source: "omt", "source-layer": "place", minzoom: 1.5, maxzoom: 9, filter: ["==", ["get", "class"], "country"], layout: { "text-field": name, "text-font": FONT_BOLD, "text-size": ["interpolate", ["linear"], ["zoom"], 2, 11, 6, 16], "text-max-width": 7 }, paint: { "text-color": "#2B2350", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.4 } }, { group: "labels" }),
   ];
 
+  if (initial) {
+    const style = { layers } as StyleSpecification;
+    const vis = layerVisibility(style, initial.base, { ...initial.layers, night: initial.layers.night || !!initial.space });
+    for (const l of layers) if (vis[l.id] === false) l.layout = { ...(l as { layout?: object }).layout, visibility: "none" } as never;
+  }
+
   return {
     version: 8,
     projection: { type: "globe" },
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-    // Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim.
-    sky: {
-      "sky-color": "#2A63CF",
-      "horizon-color": "#5F8BDE",
-      "fog-color": "#4F8BDA",
-      "sky-horizon-blend": 0.5,
-      "horizon-fog-blend": 0.35,
-      "fog-ground-blend": 0.1,
-      "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.45, 5, 0.35, 8, 0],
-    },
+    sky: initial?.space ? SPACE_SKY : DAY_SKY,
     light: { anchor: "map", position: [1.4, 200, 40], intensity: 0.25, color: "#FFFFFF" },
     sources: {
       omt: { type: "vector", url: "https://tiles.openfreemap.org/planet" },

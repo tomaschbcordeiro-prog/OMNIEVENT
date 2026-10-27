@@ -302,6 +302,8 @@ export interface Cluster {
   group?: { deg: number; keys: string[] };
   /** Up to 6 sample events for previews. */
   sample: EventCard[];
+  /** How many of its events are on right now. */
+  live?: number;
 }
 
 export interface SearchFilters {
@@ -334,6 +336,8 @@ export interface SearchFilters {
   sport?: string;
   competition?: string;
   source?: "all" | "demo" | "live";
+  /** Only events on right now (timed events that have started and not yet ended). */
+  live?: boolean;
   sort?: "relevance" | "date" | "price" | "distance" | "announced";
   page?: number;
   pageSize?: number;

@@ -44,6 +44,7 @@ export const filtersSchema = z
     sport: z.string().max(40).optional(),
     competition: z.string().max(80).optional(),
     source: z.enum(["all", "demo", "live"]).optional(),
+    live: z.enum(["1", "true"]).optional(),
     sort: z.enum(["relevance", "date", "price", "distance", "announced"]).optional(),
     page: z.coerce.number().int().min(1).max(500).optional(),
     size: z.coerce.number().int().min(1).max(100).optional(),
@@ -88,6 +89,7 @@ export function parseFilterParams(sp: URLSearchParams): { ok: true; filters: Sea
     sport: v.sport,
     competition: v.competition,
     source: v.source,
+    live: v.live ? true : undefined,
     sort: v.sort,
     page: v.page,
     pageSize: v.size,
@@ -138,6 +140,7 @@ export function filtersToParams(f: SearchFilters): URLSearchParams {
   set("sport", f.sport);
   set("competition", f.competition);
   set("source", f.source && f.source !== "all" ? f.source : undefined);
+  set("live", f.live);
   set("sort", f.sort);
   set("page", f.page && f.page > 1 ? f.page : undefined);
   set("size", f.pageSize);
@@ -148,7 +151,7 @@ export function filtersToParams(f: SearchFilters): URLSearchParams {
 export function activeFilterCount(f: SearchFilters): number {
   return [
     f.categories?.length,
-    f.from || f.to,
+    f.from || f.to || f.live,
     f.city || f.country || f.continent,
     f.near,
     f.tFrom || f.tTo,

@@ -9,6 +9,10 @@ export const maxDuration = 300;
 
 export const dynamic = "force-dynamic";
 
+// Answers are served from the CDN while they refresh; "on right now" answers go stale fast.
+const CACHE = { maxAge: 60, swr: 1800 };
+const LIVE_CACHE = { maxAge: 30, swr: 120 };
+
 const viewSchema = z.object({
   vlat: z.coerce.number().min(-90).max(90).optional(),
   vlng: z.coerce.number().min(-180).max(180).optional(),
@@ -35,5 +39,5 @@ export const GET = handler(async (req: NextRequest) => {
   const mergeDeg = v.data.z != null ? (44 * 360) / (512 * 2 ** v.data.z) : 0;
   const res = clusterEvents(parsed.filters, { lat: v.data.vlat, lng: v.data.vlng, radiusKm: v.data.vr, cellDeg: v.data.cell, mergeDeg });
   // Lets the globe say so when only fictional demo data is loaded.
-  return ok({ ...res, demoOnly: dataSummary().live === 0 }, { maxAge: 60, swr: 1800 });
+  return ok({ ...res, demoOnly: dataSummary().live === 0 }, parsed.filters.live ? LIVE_CACHE : CACHE);
 });

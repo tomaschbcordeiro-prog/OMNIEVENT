@@ -23,3 +23,15 @@ describe("map style", () => {
     expect(vis["border-country"]).toBe(true);
   });
 });
+
+describe("initial style", () => {
+  it("starts with only the chosen base's layers visible", () => {
+    const st = buildStyle({ base: "map", layers: DEFAULT_LAYERS });
+    const vis = (id: string) => (st.layers.find((l) => l.id === id) as { layout?: { visibility?: string } }).layout?.visibility ?? "visible";
+    expect(vis("satellite")).toBe("none");
+    expect(vis("water")).toBe("visible");
+    expect(vis("road-major-satellite")).toBe("none");
+    const sat = buildStyle({ base: "satellite", layers: DEFAULT_LAYERS });
+    expect((sat.layers.find((l) => l.id === "satellite") as { layout?: { visibility?: string } }).layout?.visibility).toBeUndefined();
+  });
+});

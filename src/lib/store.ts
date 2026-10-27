@@ -459,6 +459,19 @@ function eventIntervals(e: OmniEvent): [number, number][] {
   return [main, ...extra].filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
 }
 
+const LIVE_MAX_MS = 14 * 3600000;
+
+/**
+ * On right now: a timed event that has started and not yet ended. All-day listings, daily
+ * attractions and long runs (exhibitions, festivals over days) don't count, or "now" would
+ * mean every museum on Earth.
+ */
+export function isLiveNow(e: OmniEvent, now = Date.now()): boolean {
+  if (e.hoursUnknown || e.eventType === "daily_attraction" || e.status === "cancelled" || e.status === "postponed") return false;
+  if (!(Date.parse(e.start) <= now)) return false;
+  return eventIntervals(e).some(([a, b]) => a <= now && now < b && b - a <= LIVE_MAX_MS);
+}
+
 /**
  * Date/time filter. The search window is local wall-clock time interpreted in the venue's own
  * zone; an event matches when any of its scheduled intervals overlaps any day's window.
@@ -522,6 +535,7 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
   if (f.source === "demo" && !c.isDemo) return false;
   if (f.source === "live" && c.isDemo) return false;
   if (catSets?.length && !catSets.some((s) => s.has(c.categorySlug) || s.has(c.groupSlug))) return false;
+  if (f.live && !isLiveNow(e)) return false;
 
   // Dates and local times, evaluated in each event's own venue time zone.
   if (f.from || f.to || f.tFrom || f.tTo) {
@@ -691,19 +705,22 @@ export function clusterEvents(
 ): { clusters: Cluster[]; total: number; inView: number } {
   const catSets = catSetsFor(f);
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
-  const buckets = new Map<string, { cards: EventCard[]; sx: number; sy: number; sz: number }>();
+  const buckets = new Map<string, { cards: EventCard[]; sx: number; sy: number; sz: number; live: number }>();
   let total = 0;
   let inView = 0;
+  const now = Date.now();
   for (const c of state.cards.values()) {
     if (!matches(c, f, catSets) || !textScore(c, terms)) continue;
     total++;
     if (view.radiusKm != null && view.lat != null && view.lng != null && haversineKm(c.lat, c.lng, view.lat, view.lng) > view.radiusKm) continue;
     inView++;
     const key = view.cellDeg <= 0 ? `v:${state.events.get(c.id)?.venueId}` : gridKey(c.lat, c.lng, view.cellDeg);
-    const b = buckets.get(key) ?? { cards: [], sx: 0, sy: 0, sz: 0 };
+    const b = buckets.get(key) ?? { cards: [], sx: 0, sy: 0, sz: 0, live: 0 };
     const [x, y, z] = latLngToVec3(c.lat, c.lng);
     b.sx += x; b.sy += y; b.sz += z;
     b.cards.push(c);
+    const e = state.events.get(c.id);
+    if (e && isLiveNow(e, now)) b.live++;
     buckets.set(key, b);
   }
   const clusters: Cluster[] = [];
@@ -741,6 +758,7 @@ export function clusterEvents(
       cityId: Object.keys(cityCounts).length === 1 ? (getDestination(topCity) ? topCity : undefined) : undefined,
       venueId: view.cellDeg <= 0 ? state.events.get(b.cards[0].id)?.venueId : undefined,
       sample,
+      live: b.live,
     });
   }
   clusters.sort((a, b) => b.count - a.count);
@@ -788,6 +806,7 @@ function mergeClose(clusters: Cluster[], deg: number): Cluster[] {
     // The merged group must still cover every event of both parts.
     host.radiusKm = Math.max(before.r + haversineKm(host.lat, host.lng, before.lat, before.lng), (c.radiusKm ?? 0) + haversineKm(host.lat, host.lng, c.lat, c.lng));
     host.count = n;
+    host.live = (host.live ?? 0) + (c.live ?? 0);
     for (const [g, k] of Object.entries(c.groups)) host.groups[g] = (host.groups[g] ?? 0) + k;
     if (host.group && c.group) host.group.keys.push(...c.group.keys);
     host.dominant = Object.entries(host.groups).sort((a, b) => b[1] - a[1])[0][0];

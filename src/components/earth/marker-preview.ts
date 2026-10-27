@@ -54,6 +54,12 @@ function chip(group: string, text: string) {
   return c;
 }
 
+function liveLine(text: string) {
+  const p = el("p", "omni-card__live");
+  p.append(el("span", "live-dot"), document.createTextNode(text));
+  return p;
+}
+
 export function buildPreview(c: Cluster): HTMLElement {
   const root = el("div", "omni-card");
   const first = c.sample[0];
@@ -64,6 +70,7 @@ export function buildPreview(c: Cluster): HTMLElement {
     root.append(media(first, g));
     const body = el("div", "omni-card__body");
     body.append(chip(g, getCategory(first.categorySlug)?.name ?? groupName(g)));
+    if (c.live) body.append(liveLine("On right now"));
     body.append(el("p", "omni-card__title", first.title));
     body.append(el("p", "omni-card__meta", when(first)));
     body.append(el("p", "omni-card__meta omni-card__muted", `${first.venueName}, ${first.city}`));
@@ -83,6 +90,7 @@ export function buildPreview(c: Cluster): HTMLElement {
   for (const [g, n] of top) chips.append(chip(g, `${groupName(g)} ${n.toLocaleString("en")}`));
   body.append(el("p", "omni-card__title", c.label));
   body.append(el("p", "omni-card__meta", `${c.count.toLocaleString("en")} events here`));
+  if (c.live) body.append(liveLine(`${c.live.toLocaleString("en")} on right now`));
   body.append(chips);
   if (first) {
     const next = el("p", "omni-card__next");

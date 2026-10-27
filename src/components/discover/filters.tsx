@@ -272,6 +272,7 @@ export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f:
   if (f.q) chips.push({ k: "q", label: `“${f.q}”`, clear: { q: undefined } });
   f.categories?.forEach((c) => chips.push({ k: `c-${c}`, label: GROUPS.find((g) => g.slug === c)?.name ?? c.replace(/-/g, " "), clear: { categories: f.categories!.filter((x) => x !== c) } }));
   const day = (ymd?: string) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "…");
+  if (f.live) chips.push({ k: "live", label: "On now", clear: { live: undefined } });
   if (f.from || f.to) chips.push({ k: "date", label: f.from === f.to ? day(f.from) : `${day(f.from)} to ${day(f.to)}`, clear: { from: undefined, to: undefined } });
   if (f.city) chips.push({ k: "city", label: getDestination(f.city)?.name ?? f.city, clear: { city: undefined } });
   if (f.country) chips.push({ k: "country", label: COUNTRIES.find((c) => c.countryCode === f.country)?.name ?? f.country, clear: { country: undefined } });

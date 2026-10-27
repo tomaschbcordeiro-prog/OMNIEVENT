@@ -3,7 +3,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type Map as MLMap, type GeoJSONSource, type MapGeoJSONFeature, type ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { buildStyle, layerVisibility, type BaseStyle, type LayerState } from "@/lib/map/style";
+import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, type BaseStyle, type LayerState } from "@/lib/map/style";
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { geodesicCircle, circleBounds } from "@/lib/map/circle";
@@ -62,6 +62,10 @@ export interface EarthMapProps {
   flyTo?: FlyRequest;
   autoRotate?: boolean;
   reducedMotion?: boolean;
+  /** Space view: a dark orbital sky, with night shading on the globe. */
+  space?: boolean;
+  /** Arrive from deep space on first load (skipped for reduced motion). */
+  intro?: boolean;
   /** "embed": small in-page map (cooperative gestures, no globe chrome). */
   variant?: "full" | "embed";
   className?: string;
@@ -76,6 +80,8 @@ export interface EarthMapProps {
 
 const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place-minor", "label-poi", "label-road", "buildings-3d"];
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const LIVE = "#FF3B5C";
 
 const EVENT_LAYERS = ["event-selected", "event-hover", "event-markers"];
 
@@ -106,6 +112,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   const pulseCtl = useRef<{ start(): void; stop(): void } | null>(null);
   const selectedNow = useRef("");
   const popFrame = useRef(0);
+  const liveCtl = useRef<{ sync(): void; stop(): void } | null>(null);
 
   useImperativeHandle(ref, () => ({
     zoomBy(d) {
@@ -146,13 +153,15 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     const p = latest.current;
     const embed = p.variant === "embed";
     const mobile = window.matchMedia("(max-width: 640px)").matches;
+    // The intro starts far out, a third of the way round the planet, and glides in.
+    const intro = !!p.intro && !p.reducedMotion && !embed;
     let map: MLMap;
     try {
       map = new maplibregl.Map({
         container: box.current,
-        style: buildStyle(),
-        center: [p.initial.lng, p.initial.lat],
-        zoom: p.initial.zoom,
+        style: buildStyle({ base: p.base, layers: { ...p.layers, night: p.layers.night && !embed }, space: !!p.space && !embed }),
+        center: intro ? [p.initial.lng + 110, Math.max(-60, Math.min(60, p.initial.lat - 18))] : [p.initial.lng, p.initial.lat],
+        zoom: intro ? Math.max(0, p.initial.zoom - 1.2) : p.initial.zoom,
         pitch: p.initial.pitch,
         bearing: p.initial.bearing,
         maxPitch: 80,
@@ -208,6 +217,10 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         },
         metadata: { omni: { group: "events" } },
       });
+      // Events on right now: a red glow and two rings rippling out from the marker.
+      map.addLayer({ id: "event-live-glow", type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": LIVE, "circle-blur": 0.9, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "live"], 1]], 0, 18, 6, 34], "circle-opacity": 0.4, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
+      for (const id of ["event-live", "event-live-2"])
+        map.addLayer({ id, type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": "rgba(0,0,0,0)", "circle-radius": 16, "circle-stroke-color": LIVE, "circle-stroke-width": 2.2, "circle-stroke-opacity": 0.7, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
       // Hover from the results list: a dark ring with a soft glow.
       map.addLayer({ id: "highlight-glow", type: "circle", source: "highlight", paint: { "circle-radius": 30, "circle-color": "#1463FF", "circle-opacity": 0.18, "circle-blur": 0.8, "circle-pitch-alignment": "viewport" } });
       map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 21, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#0D1B33", "circle-stroke-width": 2.5, "circle-pitch-alignment": "viewport" } });
@@ -288,6 +301,10 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       setHighlight();
       latest.current.onReady?.();
       emitView();
+      if (intro) {
+        const i = latest.current.initial;
+        map.easeTo({ center: [i.lng, i.lat], zoom: i.zoom, duration: 2800, easing: easeInOutCubic, essential: false });
+      }
     });
 
     // ---- view reporting: only on settle, never per frame
@@ -405,6 +422,41 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       },
     };
 
+    // ---- live rings: two ripples half a cycle apart, about 30 frames a second, only while
+    // some marker is live; a still ring for reduced motion.
+    let liveFrame = 0;
+    let liveLast = 0;
+    const ripple2 = (t: number) => {
+      if (!map.getLayer("event-live")) return;
+      if (t - liveLast >= 33) {
+        liveLast = t;
+        for (const [id, phase] of [["event-live", 0], ["event-live-2", 0.5]] as const) {
+          const p = ((t / 2000 + phase) % 1 + 1) % 1;
+          const e = 1 - Math.pow(1 - p, 2);
+          map.setPaintProperty(id, "circle-radius", 13 + e * 26);
+          map.setPaintProperty(id, "circle-stroke-opacity", 0.85 * (1 - p));
+        }
+      }
+      liveFrame = requestAnimationFrame(ripple2);
+    };
+    liveCtl.current = {
+      sync() {
+        cancelAnimationFrame(liveFrame);
+        if (!map.getLayer("event-live")) return;
+        const any = latest.current.clusters.some((c) => (c.live ?? 0) > 0);
+        if (!any) return;
+        if (latest.current.reducedMotion) {
+          map.setPaintProperty("event-live", "circle-radius", 20);
+          map.setPaintProperty("event-live-2", "circle-stroke-opacity", 0);
+          return;
+        }
+        liveFrame = requestAnimationFrame(ripple2);
+      },
+      stop() {
+        cancelAnimationFrame(liveFrame);
+      },
+    };
+
     // ---- resilience
     map.on("webglcontextlost", () => latest.current.onFatal?.("webgl-context-lost"));
     map.on("error", (e) => {
@@ -420,6 +472,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     return () => {
       clearInterval(nightTimer);
       cancelAnimationFrame(pulseFrame);
+      cancelAnimationFrame(liveFrame);
       cancelAnimationFrame(popFrame.current);
       popup.remove();
       placeMarker.current?.remove();
@@ -437,10 +490,23 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   function applyAll() {
     const map = mapRef.current;
     if (!map || !ready.current) return;
-    const { base, layers, projection, variant } = latest.current;
-    const vis = layerVisibility(map.getStyle(), base, { ...layers, night: layers.night && variant !== "embed" });
+    const { base, layers, projection, variant, space } = latest.current;
+    const orbit = !!space && variant !== "embed";
+    // Seen from space, the night side of the planet is shaded in.
+    const vis = layerVisibility(map.getStyle(), base, { ...layers, night: (layers.night || orbit) && variant !== "embed" });
     for (const [id, on] of Object.entries(vis)) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     map.setProjection({ type: projection });
+    map.setSky(orbit ? SPACE_SKY : DAY_SKY);
+    if (map.getLayer("night")) {
+      map.setPaintProperty("night", "fill-color", orbit ? "#050B26" : "#1B2A5C");
+      // Three nested twilight bands stack up: deep night ends up about 70% shaded in space view.
+      map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.34 : 0.22, 7, orbit ? 0.22 : 0.12, 10, 0]);
+    }
+    for (const [id, p] of Object.entries(labelPaint(orbit))) {
+      if (!map.getLayer(id)) continue;
+      map.setPaintProperty(id, "text-color", p.color);
+      map.setPaintProperty(id, "text-halo-color", p.halo);
+    }
     const wantTerrain = layers.terrain && variant !== "embed";
     const hasTerrain = !!map.getTerrain();
     if (wantTerrain && !hasTerrain) map.setTerrain({ source: "dem", exaggeration: 1.25 });
@@ -461,12 +527,14 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
           count: c.count,
           dominant: c.dominant,
           label: c.label,
+          live: c.live ?? 0,
           // A single event is named after itself; a group after its place.
           title: c.count === 1 && c.sample[0] ? c.sample[0].title : c.label,
           icon: c.count > 1 ? `mc-${GROUP_HEX[c.dominant] ? c.dominant : "other"}-${shareBucket(c.count, c.groups[c.dominant] ?? c.count)}` : `m1-${GROUP_HEX[c.dominant] ? c.dominant : "other"}`,
         },
       })),
     });
+    liveCtl.current?.sync();
   }
 
   function setArea() {
@@ -497,7 +565,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     map.easeTo({ center: [c.lng - 10, c.lat], duration: 5000, easing: (t) => t, essential: true });
   }
 
-  useEffect(applyAll, [props.base, props.layers, props.projection]);  
+  useEffect(applyAll, [props.base, props.layers, props.projection, props.space]);  
   useEffect(setEvents, [props.clusters]);  
 
   // Selection: badge + pulse on the chosen marker; the others step back a little.

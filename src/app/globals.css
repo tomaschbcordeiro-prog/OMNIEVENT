@@ -39,6 +39,8 @@
   --radius-m: 10px;
   --radius-l: 16px;
   --header-h: 56px;
+  /* Events on right now. */
+  --live: #e11d48;
 }
 
 @theme inline {
@@ -60,6 +62,7 @@
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
+  --color-live: var(--live);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --radius-s: var(--radius-s);
   --radius-m: var(--radius-m);
@@ -575,6 +578,49 @@ select.field {
     radial-gradient(44rem 34rem at 6% 104%, rgb(168 140 255 / 0.22) 0%, transparent 60%),
     linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
 }
+/* Space view: night sky with stars that twinkle slowly; the globe's thin blue rim comes from the map. */
+.sky.space {
+  background:
+    radial-gradient(52rem 40rem at 50% 58%, rgb(46 92 220 / 0.22) 0%, transparent 62%),
+    radial-gradient(40rem 30rem at 92% -6%, rgb(150 100 255 / 0.16) 0%, transparent 64%),
+    linear-gradient(180deg, #03060f 0%, #071026 55%, #0c1a44 100%);
+}
+.sky.space::before,
+.sky.space::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+.sky.space::before {
+  background-image:
+    radial-gradient(1px 1px at 23px 41px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 141px 97px, rgb(255 255 255 / 0.75) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 211px 23px, rgb(210 225 255 / 0.9) 50%, transparent 51%),
+    radial-gradient(1px 1px at 67px 181px, rgb(255 255 255 / 0.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 173px 211px, rgb(255 240 220 / 0.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 251px 151px, rgb(255 255 255 / 0.55) 50%, transparent 51%);
+  background-size: 280px 260px;
+}
+.sky.space::after {
+  background-image:
+    radial-gradient(1.5px 1.5px at 51px 71px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 301px 41px, rgb(200 220 255 / 0.85) 50%, transparent 51%),
+    radial-gradient(2px 2px at 181px 291px, rgb(255 255 255 / 0.9) 50%, transparent 51%),
+    radial-gradient(1px 1px at 331px 231px, rgb(255 230 210 / 0.7) 50%, transparent 51%);
+  background-size: 380px 340px;
+  animation: twinkle 5s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Text that sits directly on the sky. */
 .on-sky {
   color: #fff;
@@ -936,5 +982,60 @@ select.field {
   from {
     opacity: 0;
     transform: translateY(18px) scale(0.96);
+  }
+}
+
+/* ---------------------------------------------------------------- live now */
+/* A red dot with a ring that keeps pinging outwards. */
+.live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--live);
+  flex-shrink: 0;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--live);
+  animation: live-ping 1.6s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+.live-dot--on {
+  background: #fff;
+}
+.live-dot--on::after {
+  border-color: #fff;
+}
+@keyframes live-ping {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.omni-card__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--live);
+}
+/* The time machine's day name, flipping in for each new day. */
+.time-flip {
+  animation: time-flip 420ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+@keyframes time-flip {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    filter: blur(4px);
   }
 }
