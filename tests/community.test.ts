@@ -102,3 +102,23 @@ describe("notifications", () => {
     expect(n.profiles[memberId(B)].name).toBe("Bruno Silva");
   });
 });
+
+describe("following", () => {
+  it("follows members, tells them, and shows their posts and plans", async () => {
+    const { toggleFollow, getFollowingFeed, getNotices } = await import("@/lib/community/service");
+    expect(await toggleFollow(A, memberId(B))).toEqual({ following: true, followers: 1 });
+    await expect(toggleFollow(A, memberId(A))).rejects.toThrow(/yourself/);
+    expect((await getNotices(memberId(B))).items[0]).toMatchObject({ type: "follow", by: memberId(A) });
+    await createPost(B, { target: T, text: "Doors open at 8" }, meta, "ip");
+    await setPlan(B, T, "going", meta);
+    await createPost(C, { target: T, text: "Not followed" }, meta, "ip");
+    const f = await getFollowingFeed(memberId(A));
+    expect(f.following).toBe(1);
+    expect(f.feed.map((x) => x.post.text)).toEqual(["Doors open at 8"]);
+    expect(f.plans[0]).toMatchObject({ by: memberId(B), meta: { target: T } });
+    const m = await getMember(memberId(B), memberId(A));
+    expect(m!.follow).toEqual({ followers: 1, following: 0, byViewer: true });
+    expect(await toggleFollow(A, memberId(B))).toEqual({ following: false, followers: 0 });
+    expect((await getFollowingFeed(memberId(A))).feed).toHaveLength(0);
+  });
+});

@@ -15,6 +15,7 @@ const NAV = [
   { href: "/events", key: "nav.events" },
   { href: "/categories", key: "nav.categories" },
   { href: "/destinations", key: "nav.destinations" },
+  { href: "/match", key: "nav.match" },
   { href: "/community", key: "nav.community" },
   { href: "/my-world", key: "nav.myworld" },
 ];

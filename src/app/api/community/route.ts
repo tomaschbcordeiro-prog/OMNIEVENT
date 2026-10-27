@@ -16,6 +16,8 @@ import {
   deleteAccount,
   accountInfo,
   idForUsername,
+  toggleFollow,
+  getFollowingFeed,
   reportPost,
   saveProfile,
   setPlan,
@@ -47,7 +49,8 @@ function fail(err: unknown) {
  * GET /api/community?view=home                   feed, trending, top rated, leaders
  * GET /api/community?view=member&id=<id|name>    a member's profile and posts (id or username)
  * GET /api/community?view=me                     the caller's own profile, account and unread count
- * GET /api/community?view=notifications          replies and likes on the caller's posts
+ * GET /api/community?view=notifications          replies, likes and new followers
+ * GET /api/community?view=following              posts and plans of the members the caller follows
  * GET /api/community?view=summaries&targets=a,b  counts for cards
  * GET /api/community?view=buzz                   trending events as cards
  */
@@ -70,6 +73,10 @@ export const GET = handler(async (req: Request) => {
     if (view === "me") {
       const profile = viewer ? ((await getProfile(viewer)) ?? null) : null;
       return ok({ profile, account: profile?.username ? ((await accountInfo(profile.id)) ?? null) : null, unread: profile ? await unreadNotices(profile.id) : 0 });
+    }
+    if (view === "following") {
+      if (!viewer) return apiError(401, "community", "Sign in to see who you follow.");
+      return ok(await getFollowingFeed(viewer));
     }
     if (view === "notifications") {
       if (!viewer) return apiError(401, "community", "Join the community first.");
@@ -144,6 +151,8 @@ export const POST = handler(async (req: Request) => {
       case "plan":
         await setPlan(secret, target, body.plan === "going" || body.plan === "interested" ? body.plan : "none", await needMeta());
         return ok({ ok: true });
+      case "follow":
+        return ok(await toggleFollow(secret, String(body.member ?? "")));
       case "like":
         return ok(await toggleLike(secret, String(body.post ?? "")));
       case "edit":

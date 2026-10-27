@@ -4,14 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Flame, Heart, MessageCircle, Sparkles, Star, Trophy, Users } from "lucide-react";
 import type { EventCard } from "@/lib/types";
-import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type PostKind, type PublicProfile, type TargetMeta } from "@/lib/community/types";
+import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type FollowingFeed, type PostKind, type PublicProfile, type TargetMeta } from "@/lib/community/types";
 import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
 import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
 
-type Filter = "all" | PostKind;
-const FILTERS: Filter[] = ["all", "review", "question", "tip", "meetup", "comment"];
+type Filter = "all" | "following" | PostKind;
+const FILTERS: ("all" | PostKind)[] = ["all", "review", "question", "tip", "meetup", "comment"];
 
 /** Points needed for each next badge, shown as progress on the member card. */
 const NEXT: { badge: string; need: (p: PublicProfile) => [number, number] }[] = [
@@ -48,8 +48,15 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
     return () => clearInterval(id);
   }, [load, profile?.id]);
 
-  const feed = (home?.feed ?? []).filter((f) => filter === "all" || f.post.kind === filter);
-  const quiet = home && home.feed.length === 0;
+  // "Following": the posts and plans of the members this person follows.
+  const [follow, setFollow] = useState<FollowingFeed | null>(null);
+  useEffect(() => {
+    if (filter !== "following" || !profile?.username) return;
+    communityGet<FollowingFeed>("view=following").then(setFollow, () => setFollow({ feed: [], plans: [], profiles: {}, following: 0 }));
+  }, [filter, profile?.username]);
+
+  const feed = filter === "following" ? (follow?.feed ?? []) : (home?.feed ?? []).filter((f) => filter === "all" || f.post.kind === filter);
+  const quiet = home && home.feed.length === 0 && filter !== "following";
 
   return (
     <main>
@@ -91,6 +98,11 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
             <h2 id="feed-h" className="t-h2 flex items-center gap-2"><MessageCircle size={20} className="text-cyan" aria-hidden />What people are saying</h2>
           </div>
           <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1" role="tablist" aria-label="Filter posts">
+            {profile?.username && (
+              <button role="tab" aria-selected={filter === "following"} onClick={() => setFilter("following")} className={`chip press shrink-0 ${filter === "following" ? "!bg-cyan !text-white !border-cyan" : ""}`}>
+                <Users size={14} aria-hidden /> Following
+              </button>
+            )}
             {FILTERS.map((f) => (
               <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)} className={`chip press shrink-0 ${filter === f ? "!bg-text !text-white !border-text" : ""}`}>
                 {f === "all" ? "Everything" : `${KIND_META[f].emoji} ${KIND_META[f].label}`}
@@ -124,10 +136,34 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
             </div>
           )}
 
-          {home && !quiet && feed.length === 0 && <p className="mt-4 t-small text-text-2">Nothing of this kind yet.</p>}
+          {filter === "following" && !follow && <div className="mt-4 grid gap-3" aria-hidden>{[0, 1].map((i) => <div key={i} className="skeleton h-24" />)}</div>}
+          {filter === "following" && follow && follow.following === 0 && (
+            <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+              <Users size={24} className="text-cyan" aria-hidden />
+              <p className="t-h3 mt-2">Follow people to see their plans here</p>
+              <p className="t-small text-text-2 mt-1">Open someone&apos;s profile (tap their name on any post, or in Top members) and press Follow. Their posts and the events they&apos;re going to will show up here.</p>
+            </div>
+          )}
+          {filter === "following" && follow && follow.plans.length > 0 && (
+            <ul className="mt-4 grid gap-2">
+              {follow.plans.map((pl) => (
+                <li key={`${pl.by}-${pl.meta.target}`}>
+                  <Link href={pl.meta.href} className="press flex items-center gap-3 rounded-[var(--radius-m)] border border-line bg-panel p-2.5 hover:border-cyan/40">
+                    <Avatar p={follow.profiles[pl.by]} size={34} />
+                    <span className="min-w-0 flex-1 t-small">
+                      <span className="block truncate"><strong>{follow.profiles[pl.by]?.name ?? "Someone"}</strong> is going to <strong>{pl.meta.title}</strong></span>
+                      <span className="block t-micro text-text-3 truncate">{pl.meta.sub ?? ""}{pl.meta.start ? ` · ${formatEventDate(pl.meta.start, pl.meta.timeZone ?? "UTC")}` : ""} · {ago(pl.at)}</span>
+                    </span>
+                    <span aria-hidden>🎟️</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {home && !quiet && feed.length === 0 && filter !== "following" && <p className="mt-4 t-small text-text-2">Nothing of this kind yet.</p>}
 
           <ul className="mt-4 grid gap-3">
-            {feed.map((f) => <FeedCard key={f.post.id} item={f} author={home!.profiles[f.post.author]} fresh={fresh.has(f.post.id)} me={profile} />)}
+            {feed.map((f) => <FeedCard key={f.post.id} item={f} author={(filter === "following" ? follow?.profiles : home?.profiles)?.[f.post.author]} fresh={fresh.has(f.post.id)} me={profile} />)}
           </ul>
         </section>
 

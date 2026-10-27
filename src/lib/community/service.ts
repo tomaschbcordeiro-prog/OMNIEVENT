@@ -18,6 +18,7 @@ import {
   type TargetMeta,
   type Thread,
   type AccountInfo,
+  type FollowingFeed,
   USERNAME_RE,
 } from "./types";
 
@@ -305,9 +306,13 @@ export async function deleteAccount(secret: string, input: Record<string, unknow
   await limit(`acct:${me.id}:signin`, 10, 900);
   const account = await getAccount(me.id);
   if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("That password isn't right.", 401);
-  const plans = ((await cmd<string[]>(["ZRANGE", `c:ugo:${me.id}`, 0, -1])) ?? []).filter(Boolean);
+  const [plansRaw, follows, followers] = await pipe([["ZRANGE", `c:ugo:${me.id}`, 0, -1], ["SMEMBERS", `c:fol:${me.id}`], ["SMEMBERS", `c:fby:${me.id}`]]);
+  const plans = ((plansRaw as string[]) ?? []).filter(Boolean);
   await pipe([
     ...plans.flatMap((t): Cmd[] => [["SREM", `c:go:${t}`, me.id], ["HINCRBY", `c:sum:${t}`, "going", -1]]),
+    ...((follows as string[]) ?? []).map((x): Cmd => ["SREM", `c:fby:${x}`, me.id]),
+    ...((followers as string[]) ?? []).map((x): Cmd => ["SREM", `c:fol:${x}`, me.id]),
+    ["DEL", `c:fol:${me.id}`, `c:fby:${me.id}`, `c:n:${me.id}`, `c:nu:${me.id}`],
     ["DEL", `c:acct:${me.id}`, `c:u:${me.id}`, `c:uc:${me.id}`, `c:up:${me.id}`, `c:ugo:${me.id}`, `c:uname:${account.username}`, `c:email:${account.email}`, sessionKey(secret)],
     ["ZREM", "c:karma", me.id],
     ["HINCRBY", "c:stat", "members", -1],
@@ -578,6 +583,49 @@ export async function markNoticesSeen(secret: string) {
   await cmd(["SET", `c:nu:${me.id}`, 0]);
 }
 
+// ---- Following ---------------------------------------------------------------------------
+
+/** Follows or unfollows a member; they hear about a new follower. */
+export async function toggleFollow(secret: string, targetId: string): Promise<{ following: boolean; followers: number }> {
+  const me = await requireProfile(secret);
+  if (targetId === me.id) throw new CommunityError("You can't follow yourself.");
+  if (!(await getProfile(targetId))) throw new CommunityError("No member with that name.", 404);
+  await limit(`u:${me.id}:follow`, 60, 3600);
+  const was = Number(await cmd(["SISMEMBER", `c:fol:${me.id}`, targetId])) === 1;
+  const cmds: Cmd[] = was
+    ? [["SREM", `c:fol:${me.id}`, targetId], ["SREM", `c:fby:${targetId}`, me.id]]
+    : [["SADD", `c:fol:${me.id}`, targetId], ["SADD", `c:fby:${targetId}`, me.id], ...notify(targetId, { type: "follow", by: me.id, post: "", target: "", at: now() })];
+  cmds.push(["SCARD", `c:fby:${targetId}`]);
+  const res = await pipe(cmds);
+  return { following: !was, followers: Number(res[res.length - 1] ?? 0) };
+}
+
+/** Posts and plans of the members the viewer follows, newest first. */
+export async function getFollowingFeed(viewer: string): Promise<FollowingFeed> {
+  const ids = (((await cmd<string[]>(["SMEMBERS", `c:fol:${viewer}`])) ?? []) as string[]).slice(0, 150);
+  if (!ids.length) return { feed: [], plans: [], profiles: {}, following: 0 };
+  const res = await pipe(ids.flatMap((id): Cmd[] => [["ZREVRANGE", `c:up:${id}`, 0, 9, "WITHSCORES"], ["ZREVRANGE", `c:ugo:${id}`, 0, 4, "WITHSCORES"]]));
+  const postScores: [string, number][] = [];
+  const planList: { by: string; target: string; t: number }[] = [];
+  ids.forEach((id, i) => {
+    const posts = (res[i * 2] as string[]) ?? [];
+    for (let j = 0; j + 1 < posts.length; j += 2) postScores.push([posts[j], Number(posts[j + 1])]);
+    const plans = (res[i * 2 + 1] as string[]) ?? [];
+    for (let j = 0; j + 1 < plans.length; j += 2) planList.push({ by: id, target: plans[j], t: Number(plans[j + 1]) });
+  });
+  postScores.sort((a, b) => b[1] - a[1]);
+  planList.sort((a, b) => b.t - a.t);
+  const posts = (await loadPosts(postScores.slice(0, 40).map(([id]) => id), viewer)).filter((p) => !p.deleted && !p.hidden);
+  const plans = planList.slice(0, 20);
+  const [meta, profiles] = await Promise.all([metas([...new Set([...posts.map((p) => p.target), ...plans.map((p) => p.target)])]), getProfiles([...posts.map((p) => p.author), ...plans.map((p) => p.by)])]);
+  return {
+    feed: posts.map((post) => ({ post, meta: meta[post.target] })),
+    plans: plans.filter((p) => meta[p.target]).map((p) => ({ by: p.by, at: new Date(p.t).toISOString(), meta: meta[p.target] })),
+    profiles,
+    following: ids.length,
+  };
+}
+
 // ---- Community home, profiles ------------------------------------------------------------
 
 /** What people engaged with most: this week counts fully, last week half, so the list moves without emptying on Mondays. */
@@ -625,10 +673,22 @@ export async function getHome(viewer?: string): Promise<CommunityHome> {
 export async function getMember(id: string, viewer?: string) {
   const profile = await getProfile(id);
   if (!profile) return undefined;
-  const [postIds, plans] = (await pipe([["ZREVRANGE", `c:up:${id}`, 0, 49], ["ZREVRANGE", `c:ugo:${id}`, 0, 49]])) as string[][];
-  const posts = (await loadPosts(postIds ?? [], viewer)).filter((p) => !p.deleted);
-  const meta = await metas([...new Set([...posts.map((p) => p.target), ...(plans ?? [])])]);
-  return { profile, posts: posts.map((post) => ({ post, meta: meta[post.target] })), plans: (plans ?? []).map((t) => meta[t]).filter(Boolean), persistent };
+  const [postIds, plans, followers, following, followed] = await pipe([
+    ["ZREVRANGE", `c:up:${id}`, 0, 49],
+    ["ZREVRANGE", `c:ugo:${id}`, 0, 49],
+    ["SCARD", `c:fby:${id}`],
+    ["SCARD", `c:fol:${id}`],
+    ["SISMEMBER", `c:fol:${viewer ?? "-"}`, id],
+  ]);
+  const posts = (await loadPosts((postIds as string[]) ?? [], viewer)).filter((p) => !p.deleted);
+  const meta = await metas([...new Set([...posts.map((p) => p.target), ...((plans as string[]) ?? [])])]);
+  return {
+    profile,
+    posts: posts.map((post) => ({ post, meta: meta[post.target] })),
+    plans: ((plans as string[]) ?? []).map((t) => meta[t]).filter(Boolean),
+    follow: { followers: Number(followers ?? 0), following: Number(following ?? 0), byViewer: Number(followed) === 1 },
+    persistent,
+  };
 }
 
 export { persistent };

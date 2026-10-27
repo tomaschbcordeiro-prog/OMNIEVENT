@@ -716,6 +716,38 @@ select.field {
       transition: none;
     }
   }
+  /* Event Match: round action buttons and the SAVE / PASS stamps on the swiped card. */
+  .match-btn {
+    display: inline-grid;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    box-shadow: 0 10px 24px -14px rgb(10 50 120 / 0.55);
+    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease;
+  }
+  .match-btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.05);
+  }
+  .match-btn:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+  .match-btn:disabled {
+    opacity: 0.4;
+  }
+  .match-stamp {
+    position: absolute;
+    top: 3.5rem;
+    border-width: 4px;
+    border-style: solid;
+    border-radius: 12px;
+    padding: 0.15rem 0.7rem;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: 0.06em;
+    background: rgb(255 255 255 / 0.85);
+    pointer-events: none;
+  }
   /* Event tiles lift on hover and their picture eases in a little. */
   .tile {
     transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease;

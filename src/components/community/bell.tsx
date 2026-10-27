@@ -57,23 +57,23 @@ export function NotificationBell({ className = "" }: { className?: string }) {
       </button>
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-24px))] surface-float rounded-[var(--radius-l)] p-2 panel-in">
-          <p className="px-2 pt-1 pb-2 t-small font-semibold">Activity on your posts</p>
+          <p className="px-2 pt-1 pb-2 t-small font-semibold">Your activity</p>
           {!data && <div className="skeleton h-16 m-2" aria-hidden />}
-          {data && data.items.length === 0 && <p className="px-2 pb-3 t-small text-text-2">Nothing yet. When someone replies to you or likes your post, it shows up here.</p>}
+          {data && data.items.length === 0 && <p className="px-2 pb-3 t-small text-text-2">Nothing yet. When someone replies to you, likes your post or follows you, it shows up here.</p>}
           <ul className="max-h-[60vh] overflow-auto scroll-thin grid gap-0.5">
             {data?.items.map((n, i) => {
               const by = data.profiles[n.by];
               return (
                 <li key={`${n.post}-${n.at}-${i}`}>
-                  <Link href={n.meta ? `${n.meta.href}#community` : "/community"} onClick={() => setOpen(false)} className={`flex gap-2.5 rounded-[var(--radius-m)] p-2 hover:bg-panel-2 ${i < (data.unread || 0) ? "bg-cyan/5" : ""}`}>
+                  <Link href={n.type === "follow" ? `/community/u/${by?.username ?? n.by}` : n.meta ? `${n.meta.href}#community` : "/community"} onClick={() => setOpen(false)} className={`flex gap-2.5 rounded-[var(--radius-m)] p-2 hover:bg-panel-2 ${i < (data.unread || 0) ? "bg-cyan/5" : ""}`}>
                     <Avatar p={by} size={32} />
                     <span className="min-w-0 t-small">
                       <span className="block">
-                        <strong>{by?.name ?? "Someone"}</strong> {n.type === "reply" ? "replied" : "liked your post"}
+                        <strong>{by?.name ?? "Someone"}</strong> {n.type === "reply" ? "replied" : n.type === "follow" ? "started following you" : "liked your post"}
                         {n.meta && <> on <strong>{n.meta.title}</strong></>}
                       </span>
                       {n.text && <span className="block text-text-2 truncate">“{n.text}”</span>}
-                      <span className="block t-micro text-text-3">{n.type === "like" ? "❤️ " : "💬 "}{ago(n.at)}</span>
+                      <span className="block t-micro text-text-3">{n.type === "like" ? "❤️ " : n.type === "follow" ? "👋 " : "💬 "}{ago(n.at)}</span>
                     </span>
                   </Link>
                 </li>

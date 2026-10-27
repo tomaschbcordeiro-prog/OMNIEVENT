@@ -116,7 +116,7 @@ export const KIND_META: Record<PostKind, { label: string; emoji: string; placeho
 };
 
 export interface Notice {
-  type: "reply" | "like";
+  type: "reply" | "like" | "follow";
   by: string;
   post: string;
   target: string;
@@ -140,3 +140,11 @@ export interface AccountInfo {
 }
 
 export const USERNAME_RE = /^[a-z0-9](?:[a-z0-9._]{1,18}[a-z0-9])$/;
+
+/** Activity of the members someone follows: their posts and the events they plan to go to. */
+export interface FollowingFeed {
+  feed: FeedItem[];
+  plans: { by: string; at: string; meta: TargetMeta }[];
+  profiles: Record<string, PublicProfile>;
+  following: number;
+}

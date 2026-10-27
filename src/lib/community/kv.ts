@@ -112,6 +112,8 @@ function local(c: Cmd): Val {
     }
     case "SCARD":
       return set_(k).size;
+    case "SMEMBERS":
+      return [...set_(k)];
     case "SISMEMBER":
       return set_(k).has(a[1]) ? 1 : 0;
     case "SMISMEMBER": {

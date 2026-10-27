@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarHeart, MessageCircle } from "lucide-react";
+import { CalendarHeart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
 import { BADGES, KIND_META, type FeedItem, type PublicProfile, type TargetMeta } from "@/lib/community/types";
-import { ago, communityGet, useMe } from "@/lib/community/client";
+import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
-import { Avatar, requireMember, Stars } from "./bits";
+import { Avatar, Burst, requireMember, Stars } from "./bits";
+import { toast } from "../toast";
 
-type Member = { profile: PublicProfile; posts: FeedItem[]; plans: TargetMeta[] };
+type Member = { profile: PublicProfile; posts: FeedItem[]; plans: TargetMeta[]; follow?: { followers: number; following: number; byViewer: boolean } };
 
 export function MemberPage({ id }: { id: string }) {
   const { profile: me } = useMe();
@@ -44,14 +45,18 @@ export function MemberPage({ id }: { id: string }) {
           </div>
         </div>
         <dl className="grid grid-cols-4 gap-2 text-center w-full sm:w-auto">
-          {([["Points", p.karma], ["Posts", p.counts.posts], ["Ratings", p.counts.reviews], ["Likes", p.counts.likes]] as const).map(([k, v]) => (
+          {([["Followers", m.follow?.followers ?? 0], ["Following", m.follow?.following ?? 0], ["Points", p.karma], ["Posts", p.counts.posts]] as const).map(([k, v]) => (
             <div key={k} className="rounded-[var(--radius-m)] bg-panel-2 px-3 py-2">
               <dd className="t-h3 tnum">{v}</dd>
               <dt className="t-micro text-text-3">{k}</dt>
             </div>
           ))}
         </dl>
-        {isMe && <button type="button" className="btn btn-secondary btn-sm" onClick={() => void requireMember(true, true)}>Edit profile</button>}
+        {isMe ? (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void requireMember(true, true)}>Edit profile</button>
+        ) : (
+          <FollowButton member={p} following={!!m.follow?.byViewer} onChange={(following, followers) => setM((x) => x && { ...x, follow: { following: x.follow?.following ?? 0, followers, byViewer: following } })} />
+        )}
       </header>
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[1fr_300px]">
@@ -90,5 +95,34 @@ export function MemberPage({ id }: { id: string }) {
         </section>
       </div>
     </main>
+  );
+}
+
+function FollowButton({ member, following, onChange }: { member: PublicProfile; following: boolean; onChange: (following: boolean, followers: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const click = async () => {
+    if (!(await requireMember())) return;
+    setBusy(true);
+    try {
+      const r = await communityPost<{ following: boolean; followers: number }>({ action: "follow", member: member.id });
+      onChange(r.following, r.followers);
+      if (r.following) {
+        setBurst((n) => n + 1);
+        toast({ emoji: member.avatar, title: `You follow ${member.firstName ?? member.name}`, body: "Their posts and plans now show under Following in the community." });
+      }
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Something went wrong", emoji: "⚠️" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="relative">
+      <button type="button" disabled={busy} aria-pressed={following} onClick={click} className={`btn btn-sm press ${following ? "btn-secondary" : "btn-primary"}`}>
+        {following ? <UserCheck size={15} aria-hidden /> : <UserPlus size={15} aria-hidden />} {following ? "Following" : "Follow"}
+      </button>
+      {burst > 0 && <Burst key={burst} />}
+    </span>
   );
 }

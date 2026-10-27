@@ -433,6 +433,11 @@ export function DiscoverClient() {
                 Spin the Earth, tap a glowing marker, or ask for anything, from a match in London to an exhibition in Tokyo.
               </span>
             </h1>
+            {!(view.zoom > 4 || place || mode === "list") && (
+              <Link href="/match" className="press mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 px-3.5 py-1.5 t-small font-semibold text-white">
+                <span aria-hidden>💘</span> New: swipe your next plan <span aria-hidden>→</span>
+              </Link>
+            )}
             <SearchBox
               className="mt-5"
               size="lg"

@@ -319,7 +319,7 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
                     }}
                     required
                   />
-                  {username && <span className={`absolute right-3 top-1/2 -translate-y-1/2 ${usernameOk ? "text-good" : "text-text-3"}`} aria-hidden>{usernameOk ? <Check size={16} /> : null}</span>}
+                  {username && <span className={`absolute right-3 top-1/2 -translate-y-1/2 ${usernameOk ? "text-ok" : "text-text-3"}`} aria-hidden>{usernameOk ? <Check size={16} /> : null}</span>}
                 </div>
                 <p id="acc-user-hint" className="t-micro text-text-3 mt-1">3 to 20 letters, numbers, dots or underscores. Your profile link: /community/u/{username || "username"}</p>
               </div>
