@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, snapshotIndex } from "./shared-cache";
+import { storageAvailable } from "./community/kv";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { CATEGORIES, descendantsOf, getCategory } from "./categories";
@@ -100,6 +101,13 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
     // One instance reads a source at a time; the others pick up its snapshot. An instance
     // with nothing at all from a source reads it anyway, except sources with a daily quota.
     let locked = false;
+    // Without the shared storage, instances can't share one read of a source with a daily
+    // quota: each would spend the quota on its own, so those wait for the storage instead.
+    if (shared && QUOTA_SOURCES.has(p.id) && !storageAvailable()) {
+      state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
+      state.syncing.delete(p.id);
+      return;
+    }
     if (shared) {
       locked = await acquireLock(`sync:${p.id}`, 330);
       if (!locked && (QUOTA_SOURCES.has(p.id) || state.providerData.has(p.id))) {

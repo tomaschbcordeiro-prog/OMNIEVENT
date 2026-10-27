@@ -41,6 +41,8 @@ const viewerOf = (req: Request) => memberOf(secretOf(req));
 
 function fail(err: unknown) {
   if (err instanceof CommunityError) return apiError(err.status, "community", err.message);
+  // The shared storage refusing or not answering: say so plainly instead of a generic error.
+  if (String((err as Error)?.message).startsWith("community storage")) return apiError(503, "storage_unavailable", "The community is taking a short break: its storage isn't answering right now. Accounts and posts are kept safe. Please try again later.");
   throw err;
 }
 

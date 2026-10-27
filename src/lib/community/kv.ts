@@ -25,18 +25,37 @@ const TOKEN = envEnding("KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_TOKEN");
 
 export const persistent = !!(URL_ && TOKEN);
 
+// When the storage refuses (a plan limit reached) or doesn't answer, it's left alone for a
+// while (two minutes, or 30 seconds after a timeout) instead of being asked on every request.
+let downUntil = 0;
+let downWhy = "";
+/** False while the shared storage is refusing or not answering. */
+export const storageAvailable = () => !persistent || Date.now() >= downUntil;
+const markDown = (why: string, ms: number) => {
+  downUntil = Date.now() + ms;
+  downWhy = why;
+};
+
 async function remote(cmds: Cmd[]): Promise<Val[]> {
-  const res = await fetch(`${URL_}/pipeline`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify(cmds.map((c) => c.map(String))),
-    cache: "no-store",
-    // A request that hangs must not stall whatever waits on it.
-    signal: AbortSignal.timeout(20000),
-  });
+  if (Date.now() < downUntil) throw new Error(`community storage: unavailable (${downWhy})`);
+  let res: Response;
+  try {
+    res = await fetch(`${URL_}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify(cmds.map((c) => c.map(String))),
+      cache: "no-store",
+      // A request that hangs must not stall whatever waits on it.
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch (err) {
+    markDown("no answer", 30000);
+    throw new Error(`community storage: ${String((err as Error).message).slice(0, 120)}`);
+  }
   if (!res.ok) {
     // Upstash explains refusals in the body (e.g. a plan's request limit reached).
     const why = await res.text().catch(() => "");
+    if (res.status === 403 || res.status === 429 || res.status >= 500) markDown(`HTTP ${res.status} ${why.slice(0, 200)}`.trim(), 2 * 60000);
     throw new Error(`community storage: HTTP ${res.status}${why ? ` ${why.slice(0, 200)}` : ""}`);
   }
   const out = (await res.json()) as { result?: Val; error?: string }[];
