@@ -686,7 +686,7 @@ export function DiscoverClient() {
       <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none hidden md:block" aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         {!loading && liveInView > 0 && !filters.live && (
-          <div className="mt-0.5 inline-flex items-center gap-1.5 font-semibold text-white">
+          <div className="mt-0.5 flex items-center justify-end gap-1.5 font-semibold text-white">
             <span className="live-dot" aria-hidden /> {liveInView.toLocaleString()} on right now
           </div>
         )}
