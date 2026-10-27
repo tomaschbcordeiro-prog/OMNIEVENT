@@ -1,5 +1,6 @@
 "use client";
 
+import { setRangeEdge } from "@/lib/date-range";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -429,11 +430,19 @@ function Trips({ cards }: { cards: Map<string, EventCard> }) {
         </div>
         <div>
           <label className="label" htmlFor="trip-from">From</label>
-          <input id="trip-from" type="date" className="field" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input id="trip-from" type="date" className="field" value={from} onChange={(e) => {
+            const r = setRangeEdge("from", e.target.value, { from, to });
+            setFrom(r.from ?? "");
+            setTo(r.to ?? "");
+          }} />
         </div>
         <div>
           <label className="label" htmlFor="trip-to">To</label>
-          <input id="trip-to" type="date" className="field" min={from} value={to} onChange={(e) => setTo(e.target.value)} />
+          <input id="trip-to" type="date" className="field" min={from} value={to} onChange={(e) => {
+            const r = setRangeEdge("to", e.target.value, { from, to });
+            setFrom(r.from ?? "");
+            setTo(r.to ?? "");
+          }} />
         </div>
         <button className="btn btn-primary" disabled={!name.trim()}>Create trip</button>
       </form>
@@ -496,11 +505,17 @@ function TripDetail({ trip, cards }: { trip: Trip; cards: Map<string, EventCard>
           </div>
           <div>
             <label className="label" htmlFor="ts">From</label>
-            <input id="ts" type="date" className="field" value={trip.start ?? ""} onChange={(e) => userActions.updateTrip(trip.id, { start: e.target.value || undefined })} />
+            <input id="ts" type="date" className="field" value={trip.start ?? ""} onChange={(e) => {
+              const r = setRangeEdge("from", e.target.value, { from: trip.start, to: trip.end });
+              userActions.updateTrip(trip.id, { start: r.from, end: r.to });
+            }} />
           </div>
           <div>
             <label className="label" htmlFor="te">To</label>
-            <input id="te" type="date" className="field" min={trip.start} value={trip.end ?? ""} onChange={(e) => userActions.updateTrip(trip.id, { end: e.target.value || undefined })} />
+            <input id="te" type="date" className="field" min={trip.start} value={trip.end ?? ""} onChange={(e) => {
+              const r = setRangeEdge("to", e.target.value, { from: trip.start, to: trip.end });
+              userActions.updateTrip(trip.id, { start: r.from, end: r.to });
+            }} />
           </div>
         </div>
         <div className="flex gap-2">

@@ -45,6 +45,13 @@ export const filtersSchema = z
     competition: z.string().max(80).optional(),
     source: z.enum(["all", "demo", "live"]).optional(),
     live: z.enum(["1", "true"]).optional(),
+    places: list.pipe(z.array(z.string().max(60).regex(/^[a-z0-9-]+$/)).max(20)).optional(),
+    any: z
+      .string()
+      .max(800)
+      .transform((s) => s.split("|").map((x) => x.trim()).filter(Boolean))
+      .pipe(z.array(z.string().max(80)).max(15))
+      .optional(),
     sort: z.enum(["relevance", "date", "price", "distance", "announced"]).optional(),
     page: z.coerce.number().int().min(1).max(500).optional(),
     size: z.coerce.number().int().min(1).max(100).optional(),
@@ -90,6 +97,8 @@ export function parseFilterParams(sp: URLSearchParams): { ok: true; filters: Sea
     competition: v.competition,
     source: v.source,
     live: v.live ? true : undefined,
+    places: v.places?.length ? v.places : undefined,
+    anyOf: v.any?.length ? v.any : undefined,
     sort: v.sort,
     page: v.page,
     pageSize: v.size,
@@ -141,6 +150,8 @@ export function filtersToParams(f: SearchFilters): URLSearchParams {
   set("competition", f.competition);
   set("source", f.source && f.source !== "all" ? f.source : undefined);
   set("live", f.live);
+  set("places", f.places);
+  set("any", f.anyOf?.join("|"));
   set("sort", f.sort);
   set("page", f.page && f.page > 1 ? f.page : undefined);
   set("size", f.pageSize);
@@ -152,7 +163,8 @@ export function activeFilterCount(f: SearchFilters): number {
   return [
     f.categories?.length,
     f.from || f.to || f.live,
-    f.city || f.country || f.continent,
+    f.city || f.country || f.continent || f.places?.length,
+    f.anyOf?.length,
     f.near,
     f.tFrom || f.tTo,
     f.minPrice != null || f.maxPrice != null,

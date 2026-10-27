@@ -37,7 +37,7 @@ interface TmVenue {
 interface TmAttraction { id: string; name: string; url?: string; images?: TmImage[]; classifications?: TmClass[] }
 export interface TmEvent {
   id: string; name: string; url?: string; info?: string; pleaseNote?: string; images?: TmImage[];
-  dates?: { start?: { localDate?: string; localTime?: string; dateTime?: string; dateTBD?: boolean; timeTBA?: boolean }; end?: { dateTime?: string }; timezone?: string; status?: { code?: string } };
+  dates?: { start?: { localDate?: string; localTime?: string; dateTime?: string; dateTBD?: boolean; timeTBA?: boolean }; end?: { dateTime?: string }; spanMultipleDays?: boolean; timezone?: string; status?: { code?: string } };
   sales?: { public?: { startDateTime?: string } };
   classifications?: TmClass[];
   priceRanges?: { type?: string; currency?: string; min?: number; max?: number }[];
@@ -145,6 +145,11 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
 
     const status = mapStatus(e.dates?.status?.code);
     const id = `tm-e-${e.id}`;
+    // An "end" days away only counts for runs Ticketmaster marks as spanning several days;
+    // on a single show it's a pass's or season's date, not when the show ends.
+    const endAt = e.dates?.end?.dateTime;
+    const long = !!endAt && Date.parse(endAt) - Date.parse(start) > 24 * 3600000;
+    const run = long && e.dates?.spanMultipleDays === true;
     events.push({
       id,
       canonicalId: id,
@@ -153,10 +158,10 @@ export function normalizeTmEvents(raw: TmEvent[], syncedAt: string): ProviderBat
       description: [e.info, e.pleaseNote].filter(Boolean).join("\n\n") || undefined,
       categorySlug: cat,
       groupSlug: group,
-      eventType: "single",
+      eventType: run ? "multi_day" : "single",
       venueId,
       start,
-      end: e.dates?.end?.dateTime,
+      end: long && !run ? undefined : endAt,
       timeZone: tz,
       status,
       ticketAccess: "ticketed",

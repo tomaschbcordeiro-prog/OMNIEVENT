@@ -13,7 +13,7 @@ import { CommunityPulse } from "../community/pulse";
 import { GLOBE_MODES, GROUPS, GROUP_HEX } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
-import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
+import { cardWhen, formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
 import { useUser, userActions } from "@/lib/user/store";
 import { DEFAULT_LAYERS, type BaseStyle, type LayerState } from "@/lib/map/style";
 import { HOME, altToZoom, cellForZoom, viewRadiusKm, zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
@@ -734,7 +734,7 @@ export function DiscoverClient() {
       </div>
 
       {/* ---------- Status line ---------- */}
-      <div className="absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none hidden md:block" aria-live="polite">
+      <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none ${mode === "list" ? "hidden" : "hidden md:block"}`} aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         {!loading && liveInView > 0 && !filters.live && (
           <div className="mt-0.5 flex items-center justify-end gap-1.5 font-semibold text-white">
@@ -886,7 +886,7 @@ function useEvents(params: string | null) {
 
 function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; onPick: (c: EventCard) => void; onHover: (c: EventCard | null) => void }) {
   const buzz = c.buzz;
-  const when = c.eventType === "daily_attraction" ? "Open daily" : new Date(c.start).getTime() < Date.now() && c.eventType === "multi_day" ? "On now" : formatEventDate(c.start, c.timeZone).replace(/ \d{4}$/, "");
+  const when = cardWhen(c).replace(/, \d\d:\d\d$/, "");
   return (
     <li>
       <button

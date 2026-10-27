@@ -1,5 +1,5 @@
 import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
-import { formatEventDate, formatEventTime, formatMoney } from "@/lib/format";
+import { cardWhen, formatMoney } from "@/lib/format";
 import type { Cluster, EventCard } from "@/lib/types";
 
 /**
@@ -17,12 +17,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 const groupName = (g: string) => getCategory(g)?.name.split(" &")[0] ?? "Other";
 
-function when(c: EventCard): string {
-  if (c.eventType === "daily_attraction") return "Open daily";
-  if (c.eventType === "multi_day" && Date.parse(c.start) < Date.now()) return "On now";
-  const date = formatEventDate(c.start, c.timeZone).replace(/ \d{4}$/, "");
-  return c.hoursUnknown ? date : `${date}, ${formatEventTime(c.start, c.timeZone)}`;
-}
+const when = (c: EventCard) => cardWhen(c);
 
 function price(c: EventCard): string | undefined {
   if (c.isFree) return "Free";

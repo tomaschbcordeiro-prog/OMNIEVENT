@@ -23,6 +23,20 @@ export function formatShortDate(iso: string, timeZone: string, locale = "en-GB")
   return { day: get("day"), month: get("month").replace(".", ""), weekday: get("weekday").replace(".", "") };
 }
 
+/**
+ * A card's date in one short line: "Open daily", "Until 16 Jan" (a run already on), or
+ * "Sat 26 Dec, 20:00" (the time left out when only the date is known).
+ */
+export function cardWhen(c: { start: string; timeZone: string; eventType: string; hoursUnknown?: boolean; until?: string; ongoing?: boolean }): string {
+  if (c.eventType === "daily_attraction") return "Open daily";
+  if (c.ongoing && c.until) {
+    const u = formatShortDate(c.until, c.timeZone);
+    return `Until ${Number(u.day)} ${u.month}`;
+  }
+  const d = formatShortDate(c.start, c.timeZone);
+  return `${d.weekday} ${Number(d.day)} ${d.month}${c.hoursUnknown ? "" : `, ${formatEventTime(c.start, c.timeZone)}`}`;
+}
+
 export function tzAbbrev(iso: string, timeZone: string, locale = "en-GB"): string {
   const parts = new Intl.DateTimeFormat(locale, { timeZoneName: "short", timeZone }).formatToParts(new Date(iso));
   return parts.find((p) => p.type === "timeZoneName")?.value ?? timeZone;

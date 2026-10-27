@@ -115,6 +115,10 @@ export function normalizeSeatGeek(raw: SgEvent[], syncedAt: string): ProviderBat
     const postponed = /postpone/i.test(e.status ?? "");
     const status = cancelled ? "cancelled" as const : postponed ? "postponed" as const : "on_sale" as const;
     const main = e.performers?.find((p) => p.primary) ?? e.performers?.[0];
+    // An end days after the start is only a run for festivals; on a single show it's not when it ends.
+    const end = utc(e.enddatetime_utc);
+    const long = !!end && end.getTime() - start.getTime() > 24 * 3600000;
+    const run = long && /festival/.test(e.type ?? "");
     events.push({
       id,
       canonicalId: id,
@@ -123,10 +127,10 @@ export function normalizeSeatGeek(raw: SgEvent[], syncedAt: string): ProviderBat
       description: e.description || undefined,
       categorySlug: cat,
       groupSlug: group,
-      eventType: "single",
+      eventType: run ? "multi_day" : "single",
       venueId,
       start: start.toISOString(),
-      end: utc(e.enddatetime_utc)?.toISOString(),
+      end: long && !run ? undefined : end?.toISOString(),
       timeZone: v.timezone || "UTC",
       status,
       statusNote: e.time_tbd ? "Start time to be confirmed." : undefined,

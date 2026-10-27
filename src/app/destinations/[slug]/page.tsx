@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { DateRangeFields } from "@/components/date-range";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ensureFresh, searchEvents, venuesInCity, cityStats, matchingCards } from "@/lib/store";
+import { ensureFresh, searchEvents, venuesInCity, cityStats, dayCounts } from "@/lib/store";
 import { getDestination, citiesIn, CONTINENTS } from "@/lib/destinations";
 import { parseFilterParams, filtersToParams } from "@/lib/search/params";
 import { GROUPS } from "@/lib/categories";
@@ -59,11 +60,9 @@ export default async function DestinationPage({ params, searchParams }: { params
   const tz = d.timeZone ?? "UTC";
   const startKey = user.from ?? localDateKey(new Date(), tz);
   const days = Math.min(31, user.to ? Math.round((Date.parse(user.to) - Date.parse(startKey)) / 86400000) + 1 : 14);
-  const all = matchingCards({ ...base, from: startKey, to: new Date(Date.parse(startKey) + (days - 1) * 86400000).toISOString().slice(0, 10) });
-  const perDay = Array.from({ length: Math.max(1, days) }, (_, i) => {
-    const key = new Date(Date.parse(startKey) + i * 86400000).toISOString().slice(0, 10);
-    return { key, n: all.filter((c) => c.eventType !== "daily_attraction" && localDateKey(c.start, c.timeZone) === key).length };
-  });
+  // The same counting as a search for that day (repeat performances and runs included).
+  const counts = dayCounts({ ...base, from: undefined, to: undefined }, {}, startKey, Math.max(1, days));
+  const perDay = counts.map((n, i) => ({ key: new Date(Date.parse(startKey) + i * 86400000).toISOString().slice(0, 10), n }));
   const maxDay = Math.max(1, ...perDay.map((p) => p.n));
   const groups = Object.entries(result.facets.groups).sort((a, b) => b[1] - a[1]);
   const venues = d.kind === "city" ? venuesInCity(d.id).slice(0, 8) : [];
@@ -105,14 +104,7 @@ export default async function DestinationPage({ params, searchParams }: { params
 
             <form className="mt-6 grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end rounded-[var(--radius-l)] border border-line p-4" action={`/destinations/${d.slug}`}>
               <p className="col-span-full t-h3">Your trip dates</p>
-              <div>
-                <label className="label" htmlFor="from">Arriving</label>
-                <input id="from" name="from" type="date" className="field" defaultValue={user.from} />
-              </div>
-              <div>
-                <label className="label" htmlFor="to">Leaving</label>
-                <input id="to" name="to" type="date" className="field" defaultValue={user.to} />
-              </div>
+              <DateRangeFields from={user.from} to={user.to} names={["from", "to"]} labels={["Arriving", "Leaving"]} idPrefix="trip" />
               {user.categories && <input type="hidden" name="cat" value={user.categories.join(",")} />}
               <button className="btn btn-primary col-span-full sm:col-span-1">Show events</button>
             </form>

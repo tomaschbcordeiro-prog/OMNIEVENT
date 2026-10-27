@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
-import { descendantsOf } from "./categories";
+import { CATEGORIES, descendantsOf, getCategory } from "./categories";
 import { convert } from "./currency";
 import { getDestination, CITIES } from "./destinations";
 import { haversineKm, gridKey, latLngToVec3 } from "./geo";
@@ -318,6 +318,41 @@ export function providerStatuses(): ProviderStatus[] {
 const norm = (s: string) =>
   s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+/**
+ * Works out each event's search text, local days and last end ahead of the first searches
+ * that need them, a few thousand at a time so requests keep being served meanwhile.
+ */
+let warmGen = 0;
+function warmUp() {
+  const gen = ++warmGen;
+  const cards = [...state.cards.values()];
+  let i = 0;
+  const step = () => {
+    if (gen !== warmGen) return;
+    const end = Math.min(cards.length, i + 4000);
+    for (; i < end; i++) {
+      const c = cards[i];
+      const e = state.events.get(c.id);
+      cardText(c);
+      if (e) {
+        lastEnd(e);
+        daySpans(e, isValidTimeZone(e.timeZone) ? e.timeZone : "UTC");
+      }
+    }
+    if (i < cards.length) setTimeout(step, 0);
+  };
+  setTimeout(step, 0);
+}
+
+// Ticket sellers sometimes give one show an "end" weeks or a year away (a pass's validity, a
+// season's last date). A single show doesn't last days, so that end is dropped; runs the
+// seller marks as such come in as multi-day events.
+const SELLERS = new Set(["ticketmaster", "seatgeek", "skiddle"]);
+function sane(e: OmniEvent): OmniEvent {
+  if (e.eventType === "single" && e.end && SELLERS.has(e.provenance.provider) && Date.parse(e.end) - Date.parse(e.start) > DAY) return { ...e, end: undefined };
+  return e;
+}
+
 function rebuildIndexes() {
   const events = new Map<string, OmniEvent>();
   const venues = new Map<string, Venue>();
@@ -361,7 +396,7 @@ function rebuildIndexes() {
         continue;
       }
       dedupe.set(key, e.id);
-      events.set(e.id, { ...e, canonicalId: e.id });
+      events.set(e.id, { ...sane(e), canonicalId: e.id });
       const day = `${norm(e.title)}|${Math.floor(new Date(e.start).getTime() / 86400000)}`;
       byTitleDay.set(day, [...(byTitleDay.get(day) ?? []), { id: e.id, lat: v.lat, lng: v.lng, provider: e.provenance.provider }]);
     }
@@ -389,6 +424,7 @@ function rebuildIndexes() {
   // A merged duplicate's own link leads to the event it was merged into.
   for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
   state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
+  warmUp();
   state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
 }
 
@@ -521,7 +557,7 @@ function dayNum(ymd: string): number {
 // Events are replaced (not changed) when sources refresh, so spans are cached per event object.
 const spanCache = new WeakMap<OmniEvent, Int32Array>();
 /**
- * The local calendar days each scheduled interval of an event touches, as [first, last] day
+ * The local calendar days each scheduled interval of an event is on, as [first, last] day
  * numbers in its venue's zone (a daily attraction: its first and last open day). Worked out
  * once per event, so date filters are plain number comparisons.
  */
@@ -535,9 +571,11 @@ function daySpans(e: OmniEvent, tz: string): Int32Array {
   } else {
     const ivs = eventIntervals(e);
     sp = new Int32Array(ivs.length * 2);
+    // A performance belongs to the day it starts (a club night from 23:30 to 05:00 is that
+    // evening's, not the next day's); a run of more than a day covers every day it spans.
     ivs.forEach(([a, b], i) => {
       sp![2 * i] = localDay(a, tz);
-      sp![2 * i + 1] = localDay(b - 1, tz);
+      sp![2 * i + 1] = b - a > DAY ? localDay(b - 1, tz) : sp![2 * i];
     });
   }
   spanCache.set(e, sp);
@@ -554,6 +592,48 @@ function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
   const sp = daySpans(e, tz);
   for (let i = 0; i < sp.length; i += 2) if (sp[i] <= to && sp[i + 1] >= from) return true;
   return false;
+}
+
+const endCache = new WeakMap<OmniEvent, number>();
+/** When the last scheduled performance (or the run) ends. */
+function lastEnd(e: OmniEvent): number {
+  let t = endCache.get(e);
+  if (t === undefined) {
+    t = e.eventType === "daily_attraction" ? Date.parse(e.end ?? "") : Math.max(-Infinity, ...eventIntervals(e).map((iv) => iv[1]));
+    if (!Number.isFinite(t)) t = Infinity; // open-ended
+    endCache.set(e, t);
+  }
+  return t;
+}
+
+/**
+ * The card as it should read for a search: dated by its first performance in the period
+ * asked for (without dates: the next one from now), with `until` for a run lasting more than
+ * a day and `ongoing` when that run began before the period. A weekly class found for
+ * January shows its January date, not the first one in October.
+ */
+export function present(c: EventCard, f: SearchFilters, now = Date.now()): EventCard {
+  const e = state.events.get(c.id);
+  if (!e || e.eventType === "daily_attraction") return c;
+  // One performance (the usual case): it matched, so it reads as it is.
+  if (!e.schedule?.length && (!e.end || Date.parse(e.end) - Date.parse(e.start) <= DAY)) return c;
+  const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
+  const ivs = eventIntervals(e);
+  const sp = daySpans(e, tz);
+  const dated = !!(f.from || f.to);
+  const from = f.from ? dayNum(f.from) : localDay(now, tz);
+  const to = f.to ? dayNum(f.to) : f.from ? from : Infinity;
+  let best = -1;
+  for (let i = 0; i < ivs.length; i++) {
+    const hit = dated ? sp[2 * i] <= to && sp[2 * i + 1] >= from : ivs[i][1] > now;
+    if (hit && (best < 0 || ivs[i][0] < ivs[best][0])) best = i;
+  }
+  if (best < 0) return c;
+  const [a, b] = ivs[best];
+  const long = b - a > DAY;
+  const ongoing = long && (dated ? sp[2 * best] < from : a < now);
+  if (a === Date.parse(c.start) && !long) return c;
+  return { ...c, start: new Date(a).toISOString(), until: long ? new Date(b).toISOString() : undefined, ongoing: ongoing || undefined };
 }
 
 /** Internals exposed to unit tests only. */
@@ -600,6 +680,43 @@ function matchesWhenSlow(e: OmniEvent, f: SearchFilters): boolean {
   return false;
 }
 
+/** In a destination: a city (or within 40 km of it), a country or a continent. */
+function inPlace(c: EventCard, e: OmniEvent, id: string): boolean {
+  const d = getDestination(id);
+  if (!d) return false;
+  if (d.kind === "city") return c.cityId === d.id || haversineKm(c.lat, c.lng, d.lat, d.lng) <= 40;
+  const cc = state.venues.get(e.venueId)?.countryCode;
+  if (d.kind === "country") return cc === d.countryCode;
+  return !!cc && getDestination(cc.toLowerCase())?.continent === d.id;
+}
+
+const phrases = new Map<string, { terms: string[]; cats?: Set<string> }>();
+/** A keyword or phrase: its words (all must match), and the category it names, if any. */
+function phrase(p: string) {
+  let x = phrases.get(p);
+  if (!x) {
+    const n = norm(p);
+    const cat = CATEGORIES.find((k) => k.slug === p || norm(k.name) === n || norm(k.slug) === n || k.keywords?.some((w) => norm(w) === n));
+    x = { terms: n.split(" ").filter((t) => t.length > 1), cats: cat ? descendantsOf(cat.slug) : undefined };
+    if (phrases.size > 2000) phrases.clear();
+    phrases.set(p, x);
+  }
+  return x;
+}
+/**
+ * A phrase naming a category ("theatre", "teatro") matches events filed under it, or with it in
+ * their title or performers (not a concert at a venue called "Theatre"); any other phrase
+ * matches the title, performers, category, venue or place.
+ */
+function matchesPhrase(c: EventCard, p: string): boolean {
+  const x = phrase(p);
+  if (!x.terms.length) return false;
+  if (!x.cats) return textScore(c, x.terms) > 0;
+  if (x.cats.has(c.categorySlug) || x.cats.has(c.groupSlug)) return true;
+  const t = cardText(c);
+  return x.terms.every((w) => t.title.includes(` ${w}`) || t.people.includes(` ${w}`));
+}
+
 export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[]): boolean {
   const e = state.events.get(c.id);
   if (!e) return false;
@@ -611,7 +728,7 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
   // Dates and local times, evaluated in each event's own venue time zone.
   if (f.from || f.to || f.tFrom || f.tTo) {
     if (!safeWhen(e, f)) return false;
-  } else if (!f.status?.includes("completed") && c.status === "completed") {
+  } else if (!f.status?.includes("completed") && (c.status === "completed" || lastEnd(e) < Date.now())) {
     return false; // hide past events by default
   }
 
@@ -628,6 +745,8 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
     }
   }
   if (f.country && state.venues.get(e.venueId)?.countryCode !== f.country.toUpperCase()) return false;
+  if (f.places?.length && !f.places.some((p) => inPlace(c, e, p))) return false;
+  if (f.anyOf?.length && !f.anyOf.some((p) => matchesPhrase(c, p))) return false;
   if (f.continent) {
     const v = state.venues.get(e.venueId);
     const cont = getDestination((v?.countryCode ?? "").toLowerCase())?.continent;
@@ -673,24 +792,44 @@ export function matches(c: EventCard, f: SearchFilters, catSets?: Set<string>[])
   return true;
 }
 
+/** A category's own name ("Stand-up comedy"), so keywords find events filed under it. */
+const categoryNames = (slug: string) => getCategory(slug)?.name ?? "";
+
+// Normalised text of each card for keyword search, worked out once per card.
+const textCache = new WeakMap<EventCard, { title: string; people: string; place: string; cat: string; words: string[] }>();
+function cardText(c: EventCard) {
+  let t = textCache.get(c);
+  if (!t) {
+    const title = ` ${norm(c.title)}`;
+    const people = ` ${c.people.map((p) => norm(p.name)).join(" ")}`;
+    t = {
+      title,
+      people,
+      place: ` ${norm(`${c.venueName} ${c.city} ${c.country}`)}`,
+      cat: ` ${norm(`${c.categorySlug} ${c.groupSlug} ${categoryNames(c.categorySlug)} ${c.sports?.competition ?? ""} ${c.sports?.sport ?? ""}`)}`,
+      words: `${title} ${people}`.split(" ").filter((w) => w.length >= 5),
+    };
+    textCache.set(c, t);
+  }
+  return t;
+}
+
+/**
+ * Keyword match. Every term must match (AND), at the start of a word, so "art" finds
+ * "Art Basel" and "artists" but not "party". Long words also forgive one typo.
+ */
 function textScore(c: EventCard, terms: string[]): number {
   if (!terms.length) return 1;
-  const title = norm(c.title);
-  const people = c.people.map((p) => norm(p.name)).join(" ");
-  const place = norm(`${c.venueName} ${c.city} ${c.country}`);
-  const cat = `${c.categorySlug} ${c.groupSlug} ${c.sports?.competition ?? ""} ${c.sports?.sport ?? ""}`.toLowerCase();
+  const x = cardText(c);
   let score = 0;
   for (const t of terms) {
+    const w = ` ${t}`;
     let s = 0;
-    if (title.includes(t)) s = title.startsWith(t) ? 6 : 4;
-    else if (people.includes(t)) s = 4;
-    else if (cat.includes(t)) s = 2;
-    else if (place.includes(t)) s = 1.5;
-    else if (t.length >= 4) {
-      // typo tolerance on whole words
-      const words = `${title} ${people}`.split(" ");
-      if (words.some((w) => Math.abs(w.length - t.length) <= 1 && levenshtein(w, t) <= 1)) s = 2;
-    }
+    if (x.title.includes(w)) s = x.title.startsWith(w) ? 6 : 4;
+    else if (x.people.includes(w)) s = 4;
+    else if (x.cat.includes(w)) s = 2;
+    else if (x.place.includes(w)) s = 1.5;
+    else if (t.length >= 6 && x.words.some((v) => Math.abs(v.length - t.length) <= 1 && levenshtein(v, t) <= 1)) s = 2;
     if (!s) return 0; // AND semantics
     score += s;
   }
@@ -725,7 +864,8 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
     if (!matches(c, f, catSets)) continue;
     const s = textScore(c, terms);
     if (!s) continue;
-    const item = f.near ? { ...c, distanceKm: haversineKm(c.lat, c.lng, f.near.lat, f.near.lng) } : c;
+    const shown = present(c, f);
+    const item = f.near ? { ...shown, distanceKm: haversineKm(c.lat, c.lng, f.near.lat, f.near.lng) } : shown;
     scored.push({ c: item, s });
     groups[c.groupSlug] = (groups[c.groupSlug] ?? 0) + 1;
     if (c.cityId) cities[c.cityId] = (cities[c.cityId] ?? 0) + 1;
@@ -734,26 +874,37 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   // Long runs that began before the period asked for (exhibitions, seasons) sort by when
   // the period starts, not by their opening years ago.
   const windowStart = f.from ? Date.parse(`${f.from}T00:00:00Z`) : Date.now() - 6 * 3600000;
-  const t = (c: EventCard) => Math.max(new Date(c.start).getTime(), windowStart);
-  const undated = (c: EventCard) => Number(c.eventType === "daily_attraction" || c.eventType === "multi_day" || !!c.hoursUnknown);
   const price = (c: EventCard) => (c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, f.currency ?? "USD") ?? Infinity : Infinity);
-  scored.sort((a, b) => {
+  // Sort keys worked out once per result (in flat arrays), not on every comparison.
+  const n = scored.length;
+  const T = new Float64Array(n);
+  const U = new Uint8Array(n);
+  const P = new Float64Array(n);
+  const A: string[] = sort === "announced" ? new Array(n) : [];
+  for (let i = 0; i < n; i++) {
+    const c = scored[i].c;
+    T[i] = c.ongoing ? windowStart : Math.max(Date.parse(c.start), windowStart);
+    // Always-open attractions and listings with dates only don't have a meaningful "next"
+    // start time, so they follow events with a real start time.
+    U[i] = Number(c.eventType === "daily_attraction" || !!c.ongoing || !!c.hoursUnknown);
+    if (sort === "price") P[i] = price(c);
+    if (sort === "announced") A[i] = state.events.get(c.id)?.announcedAt ?? "";
+  }
+  const order = Array.from({ length: n }, (_, i) => i);
+  order.sort((a, b) => {
     switch (sort) {
-      case "price": return price(a.c) - price(b.c) || t(a.c) - t(b.c);
-      case "distance": return (a.c.distanceKm ?? Infinity) - (b.c.distanceKm ?? Infinity);
-      case "announced": return (state.events.get(b.c.id)?.announcedAt ?? "").localeCompare(state.events.get(a.c.id)?.announcedAt ?? "");
-      case "relevance": return b.s - a.s || t(a.c) - t(b.c);
-      default:
-        // Always-open attractions and listings with dates only don't have a meaningful "next"
-        // start time, so they follow events with a real start time.
-        return undated(a.c) - undated(b.c) || t(a.c) - t(b.c);
+      case "price": return P[a] - P[b] || T[a] - T[b];
+      case "distance": return (scored[a].c.distanceKm ?? Infinity) - (scored[b].c.distanceKm ?? Infinity);
+      case "announced": return A[a] < A[b] ? 1 : A[a] > A[b] ? -1 : 0;
+      case "relevance": return scored[b].s - scored[a].s || T[a] - T[b];
+      default: return U[a] - U[b] || T[a] - T[b];
     }
   });
   const pageSize = Math.min(100, Math.max(1, f.pageSize ?? 24));
   const page = Math.max(1, f.page ?? 1);
-  const total = scored.length;
+  const total = n;
   return {
-    items: scored.slice((page - 1) * pageSize, page * pageSize).map((x) => x.c),
+    items: order.slice((page - 1) * pageSize, page * pageSize).map((i) => scored[i].c),
     total,
     page,
     pageSize,
@@ -862,7 +1013,7 @@ export function clusterEvents(
     const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0][0];
     const cityName = getDestination(topCity)?.name ?? b.cards[0].city;
     const extraCities = Object.keys(cityCounts).length - 1;
-    const sample = earliest(b.cards, 6);
+    const sample = earliest(b.cards, 6).map((c) => present(c, f));
     let radiusKm = 0;
     for (const c of b.cards) radiusKm = Math.max(radiusKm, haversineKm(lat, lng, c.lat, c.lng));
     clusters.push({
@@ -1081,7 +1232,8 @@ export function suggestEntities(q: string, limit = 6) {
   };
 }
 
-/** Unpaginated match for server-side aggregation (calendars, counts). Never sent to the browser in full. */
+
+/** Every card matching the filters, unsorted. */
 export function matchingCards(f: SearchFilters): EventCard[] {
   const catSets = catSetsFor(f);
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];

@@ -249,6 +249,10 @@ export interface EventCard {
   distanceKm?: number;
   editorialPick?: boolean;
   eventType: OmniEvent["eventType"];
+  /** End of the run shown, when it lasts more than a day (an exhibition, a festival, a season). */
+  until?: ISODate;
+  /** That run had already begun before the period searched (or before now): it's on, until `until`. */
+  ongoing?: boolean;
 }
 
 export interface Category {
@@ -338,6 +342,13 @@ export interface SearchFilters {
   source?: "all" | "demo" | "live";
   /** Only events on right now (timed events that have started and not yet ended). */
   live?: boolean;
+  /** In any of these places (destination ids: cities, countries, continents). */
+  places?: string[];
+  /**
+   * Matching any of these (each a keyword, phrase or category name): "jazz", "stand-up",
+   * "Coldplay". Combined with every other filter, e.g. places: jazz or blues, in Lisbon or Madrid.
+   */
+  anyOf?: string[];
   sort?: "relevance" | "date" | "price" | "distance" | "announced";
   page?: number;
   pageSize?: number;

@@ -1,5 +1,6 @@
 "use client";
 
+import { setRangeEdge } from "@/lib/date-range";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Crosshair, Info, Loader2, ListFilter, Bookmark, Check, Clock } from "lucide-react";
@@ -206,11 +207,11 @@ export function ExplorePanel({
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className="t-micro text-text-3">
               From
-              <input type="date" className="field !h-8 mt-1" value={filters.from ?? ""} onChange={(e) => set({ from: e.target.value || undefined, to: filters.to && e.target.value > filters.to ? e.target.value : filters.to ?? (e.target.value || undefined) })} />
+              <input type="date" className="field !h-8 mt-1" value={filters.from ?? ""} onChange={(e) => set(setRangeEdge("from", e.target.value, filters))} />
             </label>
             <label className="t-micro text-text-3">
               To
-              <input type="date" className="field !h-8 mt-1" min={filters.from} value={filters.to ?? ""} onChange={(e) => set({ to: e.target.value || undefined, from: filters.from ?? (e.target.value || undefined) })} />
+              <input type="date" className="field !h-8 mt-1" min={filters.from} value={filters.to ?? ""} onChange={(e) => set(setRangeEdge("to", e.target.value, filters))} />
             </label>
           </div>
         </fieldset>

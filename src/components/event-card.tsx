@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import type { EventCard as Card } from "@/lib/types";
-import { formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
+import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
 import { useUser } from "@/lib/user/store";
 
@@ -24,6 +24,17 @@ function DateBlock({ c }: { c: Card }) {
         <div className="text-[13px] font-semibold mt-1">daily</div>
       </div>
     );
+  // A run already on (an exhibition, a season): when it ends.
+  if (c.ongoing && c.until) {
+    const u = formatShortDate(c.until, c.timeZone);
+    return (
+      <div className="w-12 shrink-0 text-center leading-none tnum" aria-hidden>
+        <div className="text-[11px] text-ok font-semibold">Until</div>
+        <div className="text-xl font-semibold mt-0.5">{u.day}</div>
+        <div className="text-[11px] text-text-2 mt-0.5">{u.month}</div>
+      </div>
+    );
+  }
   return (
     <div className="w-12 shrink-0 text-center leading-none tnum" aria-hidden>
       <div className="text-[11px] text-text-3">{d.weekday}</div>
@@ -57,7 +68,7 @@ export function EventRow({
           <span className="truncate">
             {c.venueName}, {c.city}
           </span>
-          {c.eventType !== "daily_attraction" && !c.hoursUnknown && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
+          {c.eventType !== "daily_attraction" && !c.hoursUnknown && !c.ongoing && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
           {c.distanceKm != null && <span className="shrink-0">, {formatDistance(c.distanceKm)} away</span>}
         </p>
         {compact && (
@@ -103,7 +114,6 @@ export function EventRow({
 export function EventTile({ c }: { c: Card }) {
   const user = useUser();
   const people = peopleLine(c);
-  const d = formatShortDate(c.start, c.timeZone);
   return (
     <li className="tile group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
       <Link href={`/events/${c.slug}`} className="flex flex-col flex-1">
@@ -122,7 +132,7 @@ export function EventTile({ c }: { c: Card }) {
           <p className="font-semibold leading-snug line-clamp-2 group-hover:text-cyan transition-colors">{c.title}</p>
           {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
           <p className="t-small text-text-3 truncate tnum">
-            {c.eventType === "daily_attraction" ? "Open daily" : `${d.weekday} ${d.day} ${d.month}${c.hoursUnknown ? "" : `, ${formatEventTime(c.start, c.timeZone)}`}`}
+            {cardWhen(c)}
           </p>
           <p className="t-small text-text-3 truncate">
             {c.venueName}, {c.city}

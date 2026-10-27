@@ -2,24 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Heart, LocateFixed, MapPin, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUpRight, Heart, MapPin, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
-import { GROUPS } from "@/lib/categories";
-import { formatEventTime, formatShortDate } from "@/lib/format";
+import { cardWhen } from "@/lib/format";
+import { filtersToParams } from "@/lib/search/params";
+import { EMPTY_PLAN, planFromParams, planSentence, planToFilters, planToParams, type Plan, type PlaceChip } from "@/lib/match/plan";
+import { PlanBuilder } from "./plan-builder";
 import { userActions, useUser } from "@/lib/user/store";
 import { CategoryIcon, Poster, Price, categoryLabel } from "../ui";
-import { toast } from "../toast";
 
 /**
- * Event Match: one event at a time, as a card to swipe. Right (or ♥) saves it to My World,
- * left passes, up opens it. Cards already seen this week are skipped, so every visit shows
- * something new. Works with touch, mouse and the arrow keys.
+ * Event Match: first say what you're in the mood for (places, vibes, any word), then swipe
+ * one event at a time. Right (or ♥) saves it to My World, left passes, up opens it. Cards
+ * already seen this week are skipped, so every visit shows something new. Works with touch,
+ * mouse and the arrow keys. The plan lives in the address, so it can be shared.
  */
 
-type When = "tonight" | "weekend" | "month";
-type Where = { kind: "anywhere" } | { kind: "near"; lat: number; lng: number; label: string };
-
-const VIBES = ["music", "sports", "theatre", "comedy", "festivals", "exhibitions", "food-drink", "nightlife", "family", "outdoor"];
 const SEEN_KEY = "omnievent:match-seen:v1";
 const WEEK = 7 * 86400000;
 
@@ -40,25 +38,11 @@ function writeSeen(seen: Record<string, number>) {
   }
 }
 
-const ymd = (d: Date) => d.toISOString().slice(0, 10);
-function range(when: When): { from: string; to: string } {
-  const now = new Date();
-  if (when === "tonight") return { from: ymd(now), to: ymd(now) };
-  if (when === "weekend") {
-    const day = now.getDay();
-    const fri = new Date(now.getTime() + ((5 - day + 7) % 7) * 86400000);
-    const start = day === 0 || day === 6 ? now : fri;
-    const sun = new Date(start.getTime() + ((7 - start.getDay()) % 7) * 86400000);
-    return { from: ymd(start), to: ymd(sun) };
-  }
-  return { from: ymd(now), to: ymd(new Date(now.getTime() + 30 * 86400000)) };
-}
-
 export function MatchDeck() {
   const user = useUser();
-  const [when, setWhen] = useState<When>("weekend");
-  const [where, setWhere] = useState<Where>({ kind: "anywhere" });
-  const [vibe, setVibe] = useState<string | null>(null);
+  const [plan, setPlan] = useState<Plan>(EMPTY_PLAN);
+  const [stage, setStage] = useState<"build" | "swipe">("build");
+  const [popular, setPopular] = useState<PlaceChip[]>([]);
   const [deck, setDeck] = useState<EventCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<{ card: EventCard; saved: boolean }[]>([]);
@@ -69,7 +53,33 @@ export function MatchDeck() {
 
   useEffect(() => {
     seen.current = readSeen();
+    const q = new URLSearchParams(window.location.search);
+    setPlan(planFromParams(q));
+    if (q.get("go") === "1") setStage("swipe");
+    // The busiest cities, as quick ideas.
+    fetch("/api/destinations")
+      .then((r) => r.json())
+      .then((j: { destinations: { id: string; name: string; kind: string; stats?: { total: number } }[] }) =>
+        setPopular(j.destinations.filter((d) => d.kind === "city" && (d.stats?.total ?? 0) > 0).sort((a, b) => (b.stats?.total ?? 0) - (a.stats?.total ?? 0)).slice(0, 10).map((d) => ({ id: d.id, label: d.name }))),
+      )
+      .catch(() => {});
   }, []);
+
+  // The plan and the stage in the address (shareable; back works from the deck).
+  useEffect(() => {
+    const q = planToParams(plan);
+    if (stage === "swipe") q.set("go", "1");
+    const next = `/match${q.toString() ? `?${q}` : ""}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      try {
+        window.history.replaceState(window.history.state, "", next);
+      } catch {
+        // rate limited: the address is a convenience
+      }
+    }
+  }, [plan, stage]);
+
+  const filterKey = filtersToParams({ ...planToFilters(plan), page: undefined }).toString();
 
   // Pages of events, fetched as the deck runs low; a new search starts over.
   const gen = useRef(0);
@@ -82,18 +92,14 @@ export function MatchDeck() {
     fetching.current = true;
     setLoading(true);
     const g = gen.current;
-    const { from, to } = range(when);
     try {
       // Skip pages where everything was seen already, a few at a time.
       for (let tries = 0; tries < 4; tries++) {
         const page = nextPage.current++;
-        const p = new URLSearchParams({ from, to, size: "40", page: String(page), sort: "relevance" });
-        if (vibe) p.set("cat", vibe);
-        if (where.kind === "near") {
-          p.set("lat", where.lat.toFixed(3));
-          p.set("lng", where.lng.toFixed(3));
-          p.set("radius", "60");
-        }
+        const p = new URLSearchParams(filterKey);
+        p.set("size", "40");
+        p.set("page", String(page));
+        p.set("sort", "relevance");
         const json = (await (await fetch(`/api/events?${p}`)).json()) as { items?: EventCard[]; total?: number };
         if (g !== gen.current) return;
         const items = (json.items ?? []).filter((c) => !seen.current[c.id] && !savedIds.has(c.id));
@@ -116,7 +122,7 @@ export function MatchDeck() {
         setLoading(false);
       }
     }
-  }, [when, where, vibe, savedIds]);
+  }, [filterKey, savedIds]);
 
   useEffect(() => {
     gen.current++;
@@ -124,11 +130,11 @@ export function MatchDeck() {
     fetching.current = false;
     finished.current = false;
     setDeck([]);
-  }, [when, where, vibe]);
+  }, [filterKey]);
 
   useEffect(() => {
-    if (deck.length <= 4) void load();
-  }, [deck.length, load]);
+    if (stage === "swipe" && deck.length <= 4) void load();
+  }, [deck.length, load, stage]);
 
   const top = deck[0];
 
@@ -174,7 +180,7 @@ export function MatchDeck() {
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest("input, textarea, select")) return;
+      if (stage !== "swipe" || (e.target as HTMLElement)?.closest("input, textarea, select")) return;
       if (e.key === "ArrowRight") decide("right");
       else if (e.key === "ArrowLeft") decide("left");
       else if (e.key === "ArrowUp") decide("up");
@@ -184,15 +190,19 @@ export function MatchDeck() {
     return () => window.removeEventListener("keydown", key);
   });
 
-  const locate = () => {
-    if (where.kind === "near") return setWhere({ kind: "anywhere" });
-    if (!navigator.geolocation) return toast({ title: "Location isn't available in this browser", emoji: "📍" });
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setWhere({ kind: "near", lat: pos.coords.latitude, lng: pos.coords.longitude, label: "Near me" }),
-      () => toast({ title: "We couldn't get your location", body: "Showing events anywhere instead.", emoji: "📍" }),
-      { maximumAge: 600000, timeout: 10000 },
+  if (stage === "build")
+    return (
+      <div className="mx-auto max-w-[620px] px-4 pt-6 pb-10">
+        <div className="text-center">
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
+          <h1 className="t-h1 mt-3">Swipe your next plan</h1>
+          <p className="t-small text-text-2 mt-1">Tell us what you fancy, then swipe: right to save, left to pass, up to open.</p>
+        </div>
+        <div className="mt-5">
+          <PlanBuilder plan={plan} onChange={setPlan} onGo={() => setStage("swipe")} places={popular} />
+        </div>
+      </div>
     );
-  };
 
   return (
     <div className="mx-auto max-w-[520px] px-4 pt-6 pb-10">
@@ -202,26 +212,13 @@ export function MatchDeck() {
         <p className="t-small text-text-2 mt-1">Right to save it, left to pass, up to open. Arrow keys work too.</p>
       </div>
 
-      <div className="mt-5 grid gap-2">
-        <div className="flex flex-wrap justify-center gap-1.5">
-          {(["tonight", "weekend", "month"] as When[]).map((w) => (
-            <button key={w} type="button" aria-pressed={when === w} onClick={() => setWhen(w)} className={`chip press ${when === w ? "bg-text text-white border-text" : ""}`}>
-              {w === "tonight" ? "Tonight" : w === "weekend" ? "This weekend" : "Next 30 days"}
-            </button>
-          ))}
-          <button type="button" aria-pressed={where.kind === "near"} onClick={locate} className={`chip press ${where.kind === "near" ? "bg-cyan text-white border-cyan" : ""}`}>
-            <LocateFixed size={14} aria-hidden /> Near me
-          </button>
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 sm:justify-center sm:flex-wrap">
-          <button type="button" aria-pressed={!vibe} onClick={() => setVibe(null)} className={`chip press shrink-0 ${!vibe ? "bg-text text-white border-text" : ""}`}>Any vibe</button>
-          {VIBES.map((v) => (
-            <button key={v} type="button" aria-pressed={vibe === v} onClick={() => setVibe(vibe === v ? null : v)} className={`chip press shrink-0 ${vibe === v ? "bg-text text-white border-text" : ""}`}>
-              <CategoryIcon slug={v} size={13} /> {GROUPS.find((g) => g.slug === v)?.name.split(" &")[0] ?? v}
-            </button>
-          ))}
-        </div>
-      </div>
+      <button type="button" onClick={() => setStage("build")} className="press mt-5 w-full flex items-center gap-3 surface rounded-[16px] px-4 py-3 text-left hover:border-cyan/50 transition-colors" title="Change what you're looking for">
+        <span className="min-w-0 flex-1">
+          <span className="block t-micro text-text-3">Your plan</span>
+          <span className="block font-semibold truncate">{planSentence(plan)}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 t-small font-semibold text-cyan shrink-0"><Pencil size={14} aria-hidden /> Edit</span>
+      </button>
 
       <div className="relative mt-5 h-[min(560px,64dvh)]" aria-live="polite">
         {deck.slice(0, 3).reverse().map((c, i, arr) => {
@@ -245,11 +242,10 @@ export function MatchDeck() {
               <div>
                 <p className="text-4xl" aria-hidden>🎉</p>
                 <p className="t-h3 mt-2">You&apos;ve seen everything here</p>
-                <p className="t-small text-text-2 mt-1">Try other dates, another vibe or events anywhere.</p>
+                <p className="t-small text-text-2 mt-1">Widen the plan: other dates, more places or another vibe.</p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {when !== "month" && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setWhen("month")}>Next 30 days</button>}
-                  {vibe && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setVibe(null)}>Any vibe</button>}
-                  {where.kind === "near" && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setWhere({ kind: "anywhere" })}>Anywhere</button>}
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => setStage("build")}><Pencil size={14} aria-hidden /> Change the plan</button>
+                  {plan.when !== "any" && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPlan({ ...plan, when: "any" })}>Any time</button>}
                 </div>
               </div>
             )}
@@ -299,7 +295,6 @@ function SwipeCard({ card: c, fly, onDecide }: { card: EventCard; fly: "left" | 
   const user = useUser();
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
-  const d = formatShortDate(c.start, c.timeZone);
   const dx = fly === "left" ? -700 : fly === "right" ? 700 : drag?.x ?? 0;
   const dy = fly === "up" ? -800 : drag?.y ?? 0;
   const like = Math.max(0, Math.min(1, dx / 120));
@@ -335,21 +330,21 @@ function SwipeCard({ card: c, fly, onDecide }: { card: EventCard; fly: "left" | 
         start.current = null;
         setDrag(null);
       }}
-      aria-label={`${c.title}, ${d.weekday} ${d.day} ${d.month}, ${c.venueName}, ${c.city}`}
+      aria-label={`${c.title}, ${cardWhen(c)}, ${c.venueName}, ${c.city}`}
     >
       <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="lg" className="absolute inset-0 h-full w-full pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(0_0_0/0)_40%,rgb(5_12_30/0.88)_100%)] pointer-events-none" />
       <span className="match-stamp left-5 border-ok text-ok -rotate-12" style={{ opacity: like }} aria-hidden>SAVE</span>
       <span className="match-stamp right-5 border-bad text-bad rotate-12" style={{ opacity: nope }} aria-hidden>PASS</span>
       <div className="absolute left-4 top-4 flex gap-1.5">
-        <span className="rounded-full bg-white/90 px-2.5 py-1 t-micro font-semibold text-text tnum">{d.weekday} {d.day} {d.month}{c.hoursUnknown || c.eventType === "daily_attraction" ? "" : `, ${formatEventTime(c.start, c.timeZone)}`}</span>
+        <span className="rounded-full bg-white/90 px-2.5 py-1 t-micro font-semibold text-text tnum">{cardWhen(c)}</span>
       </div>
       <div className="absolute inset-x-0 bottom-0 p-5 text-white">
         <p className="flex items-center gap-1.5 t-small text-white/85"><CategoryIcon slug={c.categorySlug} size={14} /> {categoryLabel(c.categorySlug)}</p>
         <h2 className="text-[26px] leading-tight font-bold tracking-[-0.02em] mt-1 line-clamp-3 text-balance">{c.title}</h2>
         <p className="t-small text-white/85 mt-1.5 flex items-center gap-1"><MapPin size={14} aria-hidden /> <span className="truncate">{c.venueName}, {c.city}{c.distanceKm != null ? ` · ${Math.round(c.distanceKm)} km` : ""}</span></p>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="rounded-full bg-white/15 backdrop-blur px-3 py-1 t-small font-semibold">
+          <span className="rounded-full bg-white/90 text-text px-3 py-1 t-small font-semibold">
             <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} />
           </span>
           <Link href={`/events/${c.slug}`} className="t-small font-semibold underline-offset-2 hover:underline">Details →</Link>
