@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ensureFresh, dayCounts } from "@/lib/store";
+import { ensureFresh, dayCounts, dataReady } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
@@ -32,5 +32,5 @@ export const GET = handler(async (req: NextRequest) => {
   if (!v.success) return validationError(v.error);
   await ensureFresh();
   const counts = dayCounts(parsed.filters, { lat: v.data.vlat, lng: v.data.vlng, radiusKm: v.data.vr }, v.data.start, v.data.n);
-  return ok({ start: v.data.start, counts }, { maxAge: 120, swr: 1800 });
+  return ok({ start: v.data.start, counts }, { maxAge: 120, swr: 1800, partial: !dataReady() });
 });

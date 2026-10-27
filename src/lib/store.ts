@@ -293,6 +293,15 @@ export async function ensureFresh(): Promise<void> {
   }
 }
 
+/**
+ * True once this server holds every active source's data (or has given up on one). Before
+ * that, answers may be missing sources and mustn't be cached for other visitors.
+ */
+export function dataReady(): boolean {
+  if (state.hydrating) return false;
+  return activeProviders().every((p) => state.lastSync.has(p.id));
+}
+
 export async function forceSync(providerId?: string): Promise<SyncRun[]> {
   const providers = activeProviders().filter((p) => !providerId || p.id === providerId);
   await Promise.all(providers.map(syncProvider));

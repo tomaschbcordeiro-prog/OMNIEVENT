@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ensureFresh, searchEvents, dataSummary } from "@/lib/store";
+import { ensureFresh, searchEvents, dataSummary, dataReady } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
@@ -19,5 +19,5 @@ export const GET = handler(async (req: NextRequest) => {
   if (!parsed.ok) return validationError(parsed.error);
   await ensureFresh();
   const result = searchEvents(parsed.filters);
-  return ok({ ...result, data: dataSummary() }, parsed.filters.live ? LIVE_CACHE : CACHE);
+  return ok({ ...result, data: dataSummary() }, { ...(parsed.filters.live ? LIVE_CACHE : CACHE), partial: !dataReady() });
 });

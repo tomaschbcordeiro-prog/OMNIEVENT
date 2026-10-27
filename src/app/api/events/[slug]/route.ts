@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ensureFresh, getEventView } from "@/lib/store";
+import { ensureFresh, getEventView, dataReady } from "@/lib/store";
 import { handler, ok, apiError } from "@/lib/api";
 
 // Background data syncs keep running after the response, up to this many seconds.
@@ -13,5 +13,5 @@ export const GET = handler(async (_req: NextRequest, ctx: { params: Promise<{ sl
   await ensureFresh();
   const ev = getEventView(decodeURIComponent(slug));
   if (!ev) return apiError(404, "not_found", "Event not found.");
-  return ok(ev, { maxAge: 120, swr: 1800 });
+  return ok(ev, { maxAge: 120, swr: 1800, partial: !dataReady() });
 });

@@ -12,9 +12,14 @@ export function validationError(err: ZodError) {
   return apiError(400, "invalid_params", "One or more parameters are invalid.", err.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
 }
 
-export function ok<T>(data: T, init?: { maxAge?: number; swr?: number }) {
+/**
+ * JSON answer. With `maxAge`, the CDN may serve it to everyone for that long (and while it
+ * refreshes); `partial` answers (a server still loading its data) are never cached.
+ */
+export function ok<T>(data: T, init?: { maxAge?: number; swr?: number; partial?: boolean }) {
   const res = NextResponse.json(data);
-  if (init?.maxAge != null)
+  if (init?.partial) res.headers.set("Cache-Control", "no-store");
+  else if (init?.maxAge != null)
     res.headers.set("Cache-Control", `public, s-maxage=${init.maxAge}, stale-while-revalidate=${init.swr ?? init.maxAge * 5}`);
   return res;
 }
