@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { ensureFresh, searchEvents, clusterEvents, getEventView, dataSummary, getOffer } from "@/lib/store";
+import { ensureFresh, searchEvents, clusterEvents, getEventView, dataSummary, getOffer, dayCounts } from "@/lib/store";
 import { generateDemoData } from "@/lib/providers/demo";
 
 beforeAll(async () => {
@@ -44,6 +44,19 @@ describe("store queries", () => {
   });
   it("hides completed events by default", () => {
     expect(searchEvents({ pageSize: 100 }).items.some((c) => c.status === "completed")).toBe(false);
+  });
+  it("counts each day's events for the timeline, as the day's own search does", () => {
+    const start = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    const counts = dayCounts({ categories: ["music"] }, {}, start, 10);
+    expect(counts).toHaveLength(10);
+    expect(counts.some((n) => n > 0)).toBe(true);
+    counts.forEach((n, i) => {
+      const d = new Date(Date.parse(`${start}T12:00:00Z`) + i * 864e5).toISOString().slice(0, 10);
+      expect([d, n]).toEqual([d, clusterEvents({ categories: ["music"], from: d, to: d }, { cellDeg: 12 }).total]);
+    });
+    const near = dayCounts({}, { lat: 38.72, lng: -9.14, radiusKm: 30 }, start, 3);
+    const d0 = clusterEvents({ from: start, to: start }, { lat: 38.72, lng: -9.14, radiusKm: 30, cellDeg: 0 }).inView;
+    expect(near[0]).toBe(d0);
   });
   it("clusters at globe scale and venue scale", () => {
     const g = clusterEvents({}, { cellDeg: 12 });

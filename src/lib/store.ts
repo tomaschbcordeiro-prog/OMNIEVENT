@@ -489,7 +489,78 @@ function safeWhen(e: OmniEvent, f: SearchFilters): boolean {
   }
 }
 
+// A zone's UTC offset per UTC day (NaN on the rare days its clocks change), so most events
+// need no time-zone lookup of their own: one per zone and day is shared by all its events.
+const dayOffsets = new Map<string, Map<number, number>>();
+/** Day number (days since 1970-01-01) of the local calendar day an instant falls on in `tz`. */
+function localDay(t: number, tz: string): number {
+  const d = Math.floor(t / DAY);
+  let m = dayOffsets.get(tz);
+  if (!m) dayOffsets.set(tz, (m = new Map()));
+  let off = m.get(d);
+  if (off === undefined) {
+    const a = tzOffsetMs(d * DAY, tz);
+    off = a === tzOffsetMs((d + 1) * DAY, tz) ? a : NaN;
+    if (m.size > 20000) m.clear();
+    m.set(d, off);
+  }
+  return Math.floor((t + (Number.isNaN(off) ? tzOffsetMs(t, tz) : off)) / DAY);
+}
+const dayNums = new Map<string, number>();
+/** Day number of a YYYY-MM-DD date. */
+function dayNum(ymd: string): number {
+  let n = dayNums.get(ymd);
+  if (n === undefined) {
+    n = Math.floor(Date.parse(`${ymd}T00:00:00Z`) / DAY);
+    if (dayNums.size > 5000) dayNums.clear();
+    dayNums.set(ymd, n);
+  }
+  return n;
+}
+
+// Events are replaced (not changed) when sources refresh, so spans are cached per event object.
+const spanCache = new WeakMap<OmniEvent, Int32Array>();
+/**
+ * The local calendar days each scheduled interval of an event touches, as [first, last] day
+ * numbers in its venue's zone (a daily attraction: its first and last open day). Worked out
+ * once per event, so date filters are plain number comparisons.
+ */
+function daySpans(e: OmniEvent, tz: string): Int32Array {
+  let sp = spanCache.get(e);
+  if (sp) return sp;
+  if (e.eventType === "daily_attraction") {
+    const a = Date.parse(e.start);
+    const b = e.end ? Date.parse(e.end) : NaN;
+    sp = Int32Array.of(localDay(a, tz), localDay(Number.isFinite(b) ? b : a, tz));
+  } else {
+    const ivs = eventIntervals(e);
+    sp = new Int32Array(ivs.length * 2);
+    ivs.forEach(([a, b], i) => {
+      sp![2 * i] = localDay(a, tz);
+      sp![2 * i + 1] = localDay(b - 1, tz);
+    });
+  }
+  spanCache.set(e, sp);
+  return sp;
+}
+
 function matchesWhen(e: OmniEvent, f: SearchFilters): boolean {
+  if (f.tFrom || f.tTo) return matchesWhenSlow(e, f);
+  // Whole days only: an event matches when one of its intervals touches a day in the range.
+  const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
+  const from = f.from ? dayNum(f.from) : localDay(Date.now(), tz);
+  const to = f.to ? dayNum(f.to) : f.from ? from : from + 3650;
+  if (to < from || !Number.isFinite(Date.parse(e.start))) return false;
+  const sp = daySpans(e, tz);
+  for (let i = 0; i < sp.length; i += 2) if (sp[i] <= to && sp[i + 1] >= from) return true;
+  return false;
+}
+
+/** Internals exposed to unit tests only. */
+export const __testing = { matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f), matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f) };
+
+/** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */
+function matchesWhenSlow(e: OmniEvent, f: SearchFilters): boolean {
   const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
   const from = f.from ?? todayIn(tz);
   // No end date means everything scheduled, however far ahead.
@@ -699,6 +770,55 @@ function groupKeys(g: { keys: string[] }): Set<string> {
 }
 
 /** Viewport-aware clustering for the globe and 2D map. */
+/**
+ * How many events match on each of `n` local days from `start` (dates in the filters are
+ * ignored), within the view: the globe's timeline. One pass over the events.
+ */
+export function dayCounts(f: SearchFilters, view: { lat?: number; lng?: number; radiusKm?: number }, start: string, n: number): number[] {
+  const s0 = dayNum(start);
+  const days = Array.from({ length: n }, (_, i) => new Date((s0 + i) * DAY).toISOString().slice(0, 10));
+  // The whole range as the date filter: matching then works exactly as for a single day.
+  const base: SearchFilters = { ...f, from: days[0], to: days[n - 1], live: undefined, tFrom: undefined, tTo: undefined };
+  const windowed = !!(f.tFrom || f.tTo);
+  const catSets = catSetsFor(base);
+  const terms = base.q ? norm(base.q).split(" ").filter((t) => t.length > 1) : [];
+  const counts = new Array<number>(n).fill(0);
+  for (const c of state.cards.values()) {
+    if (!matches(c, base, catSets) || !textScore(c, terms)) continue;
+    if (view.radiusKm != null && view.lat != null && view.lng != null && haversineKm(c.lat, c.lng, view.lat, view.lng) > view.radiusKm) continue;
+    const e = state.events.get(c.id)!;
+    if (windowed) {
+      // Local time windows need the general matcher, day by day.
+      days.forEach((d, i) => {
+        if (safeWhen(e, { ...f, from: d, to: d })) counts[i]++;
+      });
+      continue;
+    }
+    const sp = daySpans(e, isValidTimeZone(e.timeZone) ? e.timeZone : "UTC");
+    let mask = 0;
+    for (let k = 0; k < sp.length; k += 2) {
+      const lo = Math.max(0, sp[k] - s0);
+      const hi = Math.min(n - 1, sp[k + 1] - s0);
+      for (let i = lo; i <= hi; i++) mask |= 1 << i;
+    }
+    for (let i = 0; mask; i++, mask >>>= 1) if (mask & 1) counts[i]++;
+  }
+  return counts;
+}
+
+/** The `n` earliest-starting cards, in order (one pass; big groups hold tens of thousands). */
+function earliest(cards: EventCard[], n: number): EventCard[] {
+  const top: EventCard[] = [];
+  for (const c of cards) {
+    if (top.length === n && c.start >= top[n - 1].start) continue;
+    let i = top.length - (top.length === n ? 1 : 0);
+    if (top.length === n) top.pop();
+    while (i > 0 && top[i - 1].start > c.start) i--;
+    top.splice(i, 0, c);
+  }
+  return top;
+}
+
 export function clusterEvents(
   f: SearchFilters,
   view: { lat?: number; lng?: number; radiusKm?: number; cellDeg: number; mergeDeg?: number },
@@ -742,7 +862,7 @@ export function clusterEvents(
     const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0][0];
     const cityName = getDestination(topCity)?.name ?? b.cards[0].city;
     const extraCities = Object.keys(cityCounts).length - 1;
-    const sample = [...b.cards].sort((a, c) => a.start.localeCompare(c.start)).slice(0, 6);
+    const sample = earliest(b.cards, 6);
     let radiusKm = 0;
     for (const c of b.cards) radiusKm = Math.max(radiusKm, haversineKm(lat, lng, c.lat, c.lng));
     clusters.push({
@@ -810,7 +930,7 @@ function mergeClose(clusters: Cluster[], deg: number): Cluster[] {
     for (const [g, k] of Object.entries(c.groups)) host.groups[g] = (host.groups[g] ?? 0) + k;
     if (host.group && c.group) host.group.keys.push(...c.group.keys);
     host.dominant = Object.entries(host.groups).sort((a, b) => b[1] - a[1])[0][0];
-    host.sample = [...host.sample, ...c.sample].sort((a, b) => a.start.localeCompare(b.start)).slice(0, 6);
+    host.sample = earliest([...host.sample, ...c.sample], 6);
     if (c.venueId || extra.has(host)) {
       const e = extra.get(host) ?? { base: host.label, venues: 0 };
       e.venues++;

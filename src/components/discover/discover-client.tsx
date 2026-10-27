@@ -37,6 +37,7 @@ if (typeof window !== "undefined") void loadEarthMap();
 const EarthMap = dynamic(() => loadEarthMap().then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
+type GeoAnswer = { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean };
 type Selection = { kind: "cluster"; cluster: Cluster } | { kind: "event"; card: EventCard; from?: Cluster } | null;
 
 // v2: the daytime map without night shading became the default.
@@ -213,36 +214,69 @@ export function DiscoverClient() {
   const zKey = Math.round(view.zoom * 2) / 2;
   const viewKey = radius == null ? `global:${cell}:${zKey}` : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${cell},${Math.round(radius)},${zKey}`;
   const filterKey = filtersToParams({ ...filters, page: undefined, sort: undefined }).toString();
-  const fetchedOnce = useRef(false);
-  useEffect(() => {
-    if (!initialView || mode === "list") return;
-    const ctrl = new AbortController();
-    // The first load goes straight out; later ones wait for the camera or filters to settle.
-    const wait = fetchedOnce.current ? 200 : 0;
-    fetchedOnce.current = true;
-    const t = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const p = new URLSearchParams(filterKey);
-        p.set("cell", String(cell));
-        p.set("z", String(zKey));
-        if (radius != null) {
-          p.set("vlat", view.lat.toFixed(4));
-          p.set("vlng", view.lng.toFixed(4));
-          p.set("vr", String(Math.ceil(radius)));
-        }
-        const res = await fetch(`/api/geo?${p}`, { signal: ctrl.signal });
+  /** The visible area as URL parameters ("" when the whole planet is in view). */
+  const viewQuery = radius == null ? "" : `vlat=${view.lat.toFixed(4)}&vlng=${view.lng.toFixed(4)}&vr=${Math.ceil(radius)}`;
+  const geoQuery = (fk: string) => [fk, `cell=${cell}&z=${zKey}`, viewQuery].filter(Boolean).join("&");
+
+  // Answers for the globe are kept for two minutes, so going back to a view or a day (or a
+  // day fetched ahead by the timeline) shows its events at once.
+  const geoCache = useRef(new Map<string, { at: number; data: GeoAnswer }>());
+  const geoInflight = useRef(new Map<string, Promise<GeoAnswer>>());
+  const loadGeo = useCallback((qs: string, signal?: AbortSignal): Promise<GeoAnswer> => {
+    const hit = geoCache.current.get(qs);
+    if (hit && Date.now() - hit.at < 120000) return Promise.resolve(hit.data);
+    const pending = geoInflight.current.get(qs);
+    if (pending) return pending;
+    const p = fetch(`/api/geo?${qs}`, { signal })
+      .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => null);
           throw new Error(body?.error?.message ?? `Request failed (${res.status})`);
         }
-        const json = (await res.json()) as { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean };
-        setClusters(json.clusters);
-        setCounts({ total: json.total, inView: json.inView, key: filterKey });
-        setDemoOnly(!!json.demoOnly);
-        setError(null);
+        return (await res.json()) as GeoAnswer;
+      })
+      .then((data) => {
+        const c = geoCache.current;
+        c.delete(qs);
+        c.set(qs, { at: Date.now(), data });
+        if (c.size > 80) c.delete(c.keys().next().value!);
+        return data;
+      })
+      .finally(() => geoInflight.current.delete(qs));
+    // Requests that can be cancelled (the current view's) aren't shared with prefetches.
+    if (!signal) geoInflight.current.set(qs, p);
+    return p;
+  }, []);
+
+  const fetchedOnce = useRef(false);
+  useEffect(() => {
+    if (!initialView || mode === "list") return;
+    const qs = geoQuery(filterKey);
+    const show = (json: GeoAnswer) => {
+      setClusters(json.clusters);
+      setCounts({ total: json.total, inView: json.inView, key: filterKey });
+      setDemoOnly(!!json.demoOnly);
+      setError(null);
+    };
+    const hit = geoCache.current.get(qs);
+    if (hit && Date.now() - hit.at < 120000) {
+      show(hit.data);
+      setLoading(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    // The first load goes straight out; later ones wait for the camera or filters to settle,
+    // unless the answer is already on its way (fetched ahead).
+    const pending = geoInflight.current.has(qs);
+    const wait = !fetchedOnce.current || pending ? 0 : 200;
+    fetchedOnce.current = true;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const json = await loadGeo(qs, pending ? undefined : ctrl.signal);
+        if (!ctrl.signal.aborted) show(json);
       } catch (e) {
-        if ((e as Error).name !== "AbortError") setError((e as Error).message);
+        if ((e as Error).name !== "AbortError" && !ctrl.signal.aborted) setError((e as Error).message);
       } finally {
         if (!ctrl.signal.aborted) setLoading(false);
       }
@@ -253,6 +287,20 @@ export function DiscoverClient() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewKey, filterKey, mode, initialView, retry]);
+
+  /** Fetch the globe's events for these days in the current view ahead of time, three at a time. */
+  const prefetchDays = useCallback(
+    (days: string[]) => {
+      const queue = days.map((d) => geoQuery(filtersToParams({ ...filters, live: undefined, from: d, to: d, page: undefined, sort: undefined }).toString()));
+      const next = (): Promise<void> => {
+        const qs = queue.shift();
+        return qs ? loadGeo(qs).catch(() => undefined).then(next) : Promise.resolve();
+      };
+      for (let i = 0; i < 3; i++) void next();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filters, viewKey, loadGeo],
+  );
 
   /** Programmatic camera move. The current view is remembered so "Previous view" can return to it. */
   const fly = useCallback((target: Omit<FlyRequest, "key">) => {
@@ -600,7 +648,10 @@ export function DiscoverClient() {
             onChange={(patch) => setFilters((f) => ({ ...f, ...patch, page: undefined }))}
             live={liveInView}
             count={counts && counts.key === filterKey ? counts.inView : null}
-            loading={loading}
+            ready={!!counts && counts.key === filterKey && !loading}
+            baseQuery={filtersToParams({ ...filters, live: undefined, from: undefined, to: undefined, page: undefined, sort: undefined }).toString()}
+            viewQuery={radius == null ? "" : `vlat=${view.lat.toFixed(2)}&vlng=${view.lng.toFixed(2)}&vr=${Math.ceil(radius / 10) * 10}`}
+            prefetch={prefetchDays}
             reduced={reduced}
           />
         )}
