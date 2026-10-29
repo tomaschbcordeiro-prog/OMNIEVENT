@@ -195,6 +195,11 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
   }, [firstName, lastName, usernameTouched, mode]);
 
   const usernameOk = USERNAME_RE.test(username);
+  // Errors are shown next to the field they're about; anything else under the form.
+  const [emailTouched, setEmailTouched] = useState(false);
+  const emailBad = emailTouched && email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const errField = mode === "signin" || !error ? null : /username/i.test(error) ? "user" : /e-?mail/i.test(error) ? "email" : /password/i.test(error) && mode !== "edit" ? "pw" : /\bname\b/i.test(error) ? "name" : null;
+  const fieldError = (f: string, id: string) => errField === f && <p id={id} role="alert" className="t-small text-bad mt-1">{error}</p>;
   const shownName = `${firstName} ${lastName}`.trim() || "Your name";
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -293,13 +298,14 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label htmlFor="acc-first" className="label">First name</label>
-                  <input id="acc-first" className="field w-full" value={firstName} maxLength={30} autoComplete="given-name" onChange={(e) => setFirstName(e.target.value)} required autoFocus={mode !== "edit"} />
+                  <input id="acc-first" className="field w-full" value={firstName} maxLength={30} autoComplete="given-name" onChange={(e) => setFirstName(e.target.value)} required autoFocus={mode !== "edit"} aria-invalid={errField === "name" || undefined} aria-describedby={errField === "name" ? "acc-name-err" : undefined} />
                 </div>
                 <div>
                   <label htmlFor="acc-last" className="label">Last name</label>
-                  <input id="acc-last" className="field w-full" value={lastName} maxLength={30} autoComplete="family-name" onChange={(e) => setLastName(e.target.value)} required />
+                  <input id="acc-last" className="field w-full" value={lastName} maxLength={30} autoComplete="family-name" onChange={(e) => setLastName(e.target.value)} required aria-invalid={errField === "name" || undefined} />
                 </div>
               </div>
+              {fieldError("name", "acc-name-err")}
               <div>
                 <label htmlFor="acc-user" className="label">Username</label>
                 <div className="relative">
@@ -312,7 +318,8 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
                     autoComplete="username"
                     autoCapitalize="none"
                     spellCheck={false}
-                    aria-describedby="acc-user-hint"
+                    aria-describedby={errField === "user" ? "acc-user-err acc-user-hint" : "acc-user-hint"}
+                    aria-invalid={errField === "user" || (usernameTouched && !!username && !usernameOk) || undefined}
                     onChange={(e) => {
                       setUsernameTouched(true);
                       setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""));
@@ -321,14 +328,21 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
                   />
                   {username && <span className={`absolute right-3 top-1/2 -translate-y-1/2 ${usernameOk ? "text-ok" : "text-text-3"}`} aria-hidden>{usernameOk ? <Check size={16} /> : null}</span>}
                 </div>
-                <p id="acc-user-hint" className="t-micro text-text-3 mt-1">3 to 20 letters, numbers, dots or underscores. Your profile link: /community/u/{username || "username"}</p>
+                {fieldError("user", "acc-user-err")}
+                <p id="acc-user-hint" className={`t-small mt-1 ${usernameTouched && username && !usernameOk ? "text-bad" : "text-text-3"}`}>3 to 20 letters, numbers, dots or underscores{usernameTouched && username && !usernameOk ? ", starting and ending with a letter or number" : ""}. Your profile link: /community/u/{username || "username"}</p>
               </div>
               <div>
                 <label htmlFor="acc-email" className="label">Email</label>
-                <input id="acc-email" type="email" className="field w-full" value={email} maxLength={254} autoComplete="email" onChange={(e) => setEmail(e.target.value)} required />
-                <p className="t-micro text-text-3 mt-1">Only you see it; it&apos;s how you sign in.</p>
+                <input id="acc-email" type="email" className="field w-full" value={email} maxLength={254} autoComplete="email" onChange={(e) => setEmail(e.target.value)} onBlur={() => setEmailTouched(true)} required aria-invalid={errField === "email" || emailBad || undefined} aria-describedby="acc-email-hint" />
+                {fieldError("email", "acc-email-err")}
+                <p id="acc-email-hint" className={`t-small mt-1 ${emailBad ? "text-bad" : "text-text-3"}`}>{emailBad ? "That doesn't look like an email address. Check for a typo, like a missing @ or dot." : "Only you see it; it's how you sign in."}</p>
               </div>
-              {mode !== "edit" && <PasswordField id="acc-pw" label="Password" value={password} onChange={setPassword} autoComplete="new-password" />}
+              {mode !== "edit" && (
+                <div>
+                  <PasswordField id="acc-pw" label="Password" value={password} onChange={setPassword} autoComplete="new-password" />
+                  {fieldError("pw", "acc-pw-err")}
+                </div>
+              )}
 
               <details className="group rounded-[var(--radius-m)] border border-line" open={mode === "edit"}>
                 <summary className="cursor-pointer list-none px-3 py-2.5 flex items-center justify-between t-small font-medium">
@@ -404,7 +418,7 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
             </div>
           )}
 
-          {error && <p role="alert" className="t-small text-bad mt-3">{error}</p>}
+          {error && !errField && <p role="alert" className="t-small text-bad mt-3">{error}</p>}
 
           <button type="submit" className="btn btn-primary w-full mt-5 press" disabled={busy}>
             {busy ? "One moment…" : { signup: "Create account", signin: "Sign in", complete: "Save my account", edit: "Save changes" }[mode]}

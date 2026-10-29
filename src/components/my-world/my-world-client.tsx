@@ -105,7 +105,12 @@ export function MyWorldClient() {
         {tab === "calendar" && <Calendar cards={cards} />}
         {tab === "trips" && <Trips cards={cards} />}
         {tab === "following" && <Following />}
-        {tab === "community" && <MyCommunity />}
+        {tab === "community" && (
+          <>
+            <h1 className="t-h1 mb-6">My community</h1>
+            <MyCommunity />
+          </>
+        )}
         {tab === "alerts" && <Alerts />}
         {tab === "account" && <Account />}
       </div>
@@ -137,6 +142,10 @@ function Overview({ cards, loading, onTab }: { cards: Map<string, EventCard>; lo
 
   return (
     <div className="grid gap-10">
+      <header>
+        <h1 className="t-h1">My World</h1>
+        <p className="t-lede text-text-2 mt-2">Your saved events, plans, trips and alerts in one place, with picks based on what you like.</p>
+      </header>
       {!user.onboarded && <Onboarding />}
       <section>
         <div className="flex items-baseline justify-between">
@@ -573,7 +582,7 @@ function TripDetail({ trip, cards }: { trip: Trip; cards: Map<string, EventCard>
           )}
         </div>
 
-        <aside className="grid gap-4 content-start">
+        <section className="grid gap-4 content-start">
           {events.length > 0 && (
             <ClusterMap className="h-64" clusters={clusters} initial={{ ...center, zoom: spread > 30 ? 1 : spread > 8 ? 3.5 : spread > 1 ? 6 : 11 }} onClusterClick={(c) => c.sample[0] && window.location.assign(`/events/${c.sample[0].slug}`)} />
           )}
@@ -598,7 +607,7 @@ function TripDetail({ trip, cards }: { trip: Trip; cards: Map<string, EventCard>
             <label className="label" htmlFor="tnotes">Notes</label>
             <textarea id="tnotes" className="field !h-24 py-2" value={trip.notes ?? ""} onChange={(e) => userActions.updateTrip(trip.id, { notes: e.target.value })} placeholder="Bookings, meeting points, reminders" />
           </div>
-        </aside>
+        </section>
       </div>
     </div>
   );

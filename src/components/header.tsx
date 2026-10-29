@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
@@ -23,7 +23,7 @@ const NAV = [
 /** Wordmark: a meridian ring around a single point — one planet, one place. */
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="OMNIEVENT home">
+    <Link href="/" className="flex items-center gap-2 shrink-0 py-2.5 -my-2.5" aria-label="OMNIEVENT home">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
         <circle cx="12" cy="12" r="10" fill="#1463FF" />
         <ellipse cx="12" cy="12" rx="4.2" ry="10" fill="none" stroke="#fff" strokeOpacity=".7" strokeWidth="1.3" />
@@ -39,6 +39,7 @@ export function Header() {
   const path = usePathname();
   const user = useUser();
   const [menu, setMenu] = useState(false);
+  const [search, setSearch] = useState(false);
   const t = (k: string) => translate(user.prefs.language, k);
   const isHome = path === "/";
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
@@ -65,13 +66,24 @@ export function Header() {
         </nav>
         </div>
         <div className="flex-1" />
-        {!isHome && <SearchBox className="hidden md:block w-full max-w-md" placeholder={t("search.placeholder")} />}
+        {/* On small laptops the full navigation and a search field don't both fit: search folds into a button. */}
+        {!isHome && <SearchBox className="hidden md:block lg:hidden xl:block w-full max-w-md" placeholder={t("search.placeholder")} />}
+        {!isHome && (
+          <button className="btn btn-ghost btn-icon hidden lg:inline-flex xl:hidden" aria-label={search ? "Close search" : "Search"} aria-expanded={search} onClick={() => setSearch((v) => !v)}>
+            {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}
+          </button>
+        )}
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <AccountMenu floating={isHome} />
         <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
           {menu ? <X size={19} aria-hidden /> : <Menu size={19} aria-hidden />}
         </button>
       </div>
+      {search && !isHome && (
+        <div className="hidden lg:block xl:hidden border-t border-line bg-panel shadow-lg px-6 py-3 panel-in">
+          <SearchBox className="mx-auto max-w-2xl" autoFocus placeholder={t("search.placeholder")} />
+        </div>
+      )}
       {menu && (
         <div className="lg:hidden border-t border-line bg-panel shadow-lg px-4 pb-4 pt-3 panel-in">
           {!isHome && <SearchBox className="mb-3" placeholder={t("search.placeholder")} />}

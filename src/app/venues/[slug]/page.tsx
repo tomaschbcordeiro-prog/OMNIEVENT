@@ -37,6 +37,11 @@ export default async function VenuePage({ params }: { params: P }) {
   return (
     <>
       <main className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8">
+        <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
+          <Link href="/destinations" className="inline-block py-1 hover:text-text">Destinations</Link>
+          {v.cityId && (<><span aria-hidden>/</span><Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link></>)}
+          <span aria-hidden>/</span><span className="py-1 text-text-2">Venue</span>
+        </nav>
         {v.provenance.isDemo && <div className="mb-5"><Notice tone="demo">This venue is fictional. Its location is a demonstration point near the real city centre.</Notice></div>}
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr] items-start">
           <div>

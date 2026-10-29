@@ -61,7 +61,8 @@ export function EventRow({
             {c.sports?.stage && <span className="text-text-3">, {c.sports.stage}</span>}
           </span>
         </div>
-        <p className="font-semibold leading-snug truncate mt-0.5 group-hover:text-cyan transition-colors">{c.title}</p>
+        {/* Phones wrap long titles onto two lines rather than cutting them off. */}
+        <p className={`font-semibold leading-snug mt-0.5 group-hover:text-cyan transition-colors ${compact ? "truncate" : "line-clamp-2 md:line-clamp-none md:truncate"}`}>{c.title}</p>
         {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
         <p className="t-small text-text-3 truncate flex items-center mt-0.5">
           <MapPin size={12} aria-hidden className="shrink-0 mr-1" />
@@ -71,13 +72,11 @@ export function EventRow({
           {c.eventType !== "daily_attraction" && !c.hoursUnknown && !c.ongoing && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
           {c.distanceKm != null && <span className="shrink-0">, {formatDistance(c.distanceKm)} away</span>}
         </p>
-        {compact && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+        <div className={`${compact ? "flex" : "flex md:hidden"} flex-wrap items-center gap-1.5 mt-1`}>
             <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-micro" />
             {c.isDemo && <DemoBadge />}
             {c.status !== "on_sale" && <StatusBadge status={c.status} />}
-          </div>
-        )}
+        </div>
       </div>
       <div className={`${compact ? "hidden" : "hidden md:flex"} flex-col items-end gap-1.5 shrink-0 text-right`}>
         <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" />
@@ -105,7 +104,6 @@ export function EventRow({
           {body}
         </Link>
       )}
-      {!compact && <div className="flex md:hidden flex-col items-end gap-1 shrink-0">{c.isDemo && <DemoBadge />}</div>}
       <SaveButton id={c.id} title={c.title} compact />
     </li>
   );

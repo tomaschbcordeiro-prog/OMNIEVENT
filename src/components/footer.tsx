@@ -17,32 +17,50 @@ export function Footer() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3 t-small">
-          <div>
-            <p className="font-semibold mb-2">Explore</p>
-            <ul className="grid gap-1.5 text-text-2">
-              <li><Link className="hover:text-text" href="/">Discover</Link></li>
-              <li><Link className="hover:text-text" href="/events">All events</Link></li>
-              <li><Link className="hover:text-text" href="/categories">Categories</Link></li>
-              <li><Link className="hover:text-text" href="/destinations">Destinations</Link></li>
-              <li><Link className="hover:text-text" href="/community">Community</Link></li>
-              <li><Link className="hover:text-text" href="/my-world">My World</Link></li>
-            </ul>
-          </div>
-          <div className="sm:col-span-2">
-            <p className="font-semibold mb-2">Data sources</p>
-            <ul className="grid gap-2 text-text-2">
-              {active.map((p) => (
-                <li key={p.id}>
-                  <span className="text-text">{p.name}</span>
-                  {p.isDemo && <span className="demo-badge ml-1.5">Demo</span>}
-                  <span className="block t-micro text-text-3">{p.coverage}</span>
-                  {p.attribution && <span className="block t-micro text-text-3">{p.attribution}</span>}
-                </li>
+          <nav aria-label="Explore">
+            <p className="font-semibold mb-1">Explore</p>
+            <ul className="text-text-2">
+              {[
+                ["/", "Discover"],
+                ["/events", "All events"],
+                ["/categories", "Categories"],
+                ["/destinations", "Destinations"],
+                ["/match", "Event Match"],
+                ["/community", "Community"],
+                ["/my-world", "My World"],
+              ].map(([href, label]) => (
+                <li key={href}><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href={href}>{label}</Link></li>
               ))}
             </ul>
-            <p className="t-micro text-text-3 mt-3 tnum">
-              {s.live.toLocaleString()} live and {s.demo.toLocaleString()} demo listings loaded. <Link href="/about/data" className="underline hover:text-text">How our data works</Link>
+          </nav>
+          <nav aria-label="About">
+            <p className="font-semibold mb-1">About</p>
+            <ul className="text-text-2">
+              <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about">About OMNIEVENT</Link></li>
+              <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about/data">How our data works</Link></li>
+            </ul>
+          </nav>
+          <div>
+            <p className="font-semibold mb-1">Data</p>
+            <p className="text-text-2 tnum py-1.5">
+              {s.total ? `${s.live.toLocaleString()} live${s.demo ? ` and ${s.demo.toLocaleString()} demo` : ""} listings from ${active.length} sources.` : `Listings from ${active.length} sources.`}
             </p>
+            {/* The full list is there for whoever wants it, without making every page end in a wall of text. */}
+            <details className="group">
+              <summary className="inline-flex items-center gap-1 py-1.5 cursor-pointer text-text-2 hover:text-text font-medium list-none">
+                <span className="group-open:rotate-90 transition-transform" aria-hidden>›</span> See every source
+              </summary>
+              <ul className="mt-2 grid gap-2 text-text-2">
+                {active.map((p) => (
+                  <li key={p.id}>
+                    <span className="text-text">{p.name}</span>
+                    {p.isDemo && <span className="demo-badge ml-1.5">Demo</span>}
+                    <span className="block t-micro text-text-3">{p.coverage}</span>
+                    {p.attribution && <span className="block t-micro text-text-3">{p.attribution}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>
         </div>
       </div>

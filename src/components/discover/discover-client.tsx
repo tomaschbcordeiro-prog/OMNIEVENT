@@ -524,7 +524,7 @@ export function DiscoverClient() {
           <div className="pointer-events-auto max-w-xl">
             <h1 className={`text-balance on-sky ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
               <span className="block t-display">One planet.<br />Every experience.</span>
-              <span className="block font-medium text-[1.0625rem] leading-snug mt-3 max-w-md text-white/95">
+              <span className="max-sm:sr-only block font-medium text-[1.0625rem] leading-snug mt-3 max-w-md text-white/95">
                 Spin the Earth, tap a glowing marker, or ask for anything, from a match in London to an exhibition in Tokyo.
               </span>
             </h1>
@@ -608,7 +608,7 @@ export function DiscoverClient() {
 
       {/* ---------- Filters drawer ---------- */}
       {showFilters && (
-        <aside className="absolute z-40 inset-x-0 bottom-0 max-h-[80dvh] sm:inset-auto sm:left-6 sm:top-[calc(var(--header-h)+12rem)] sm:bottom-6 sm:w-[380px] sm:max-h-none surface-float rounded-t-[var(--radius-l)] sm:rounded-[var(--radius-l)] flex flex-col panel-in" aria-label="Filters">
+        <section className="absolute z-40 inset-x-0 bottom-0 max-h-[80dvh] sm:inset-auto sm:left-6 sm:top-[calc(var(--header-h)+12rem)] sm:bottom-6 sm:w-[380px] sm:max-h-none surface-float rounded-t-[var(--radius-l)] sm:rounded-[var(--radius-l)] flex flex-col panel-in" aria-label="Filters">
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <p className="t-h3">Filters</p>
             <button className="btn btn-ghost btn-icon btn-sm" aria-label="Close filters" onClick={() => setShowFilters(false)}>
@@ -624,7 +624,7 @@ export function DiscoverClient() {
               Show {counts ? counts.total.toLocaleString() : ""} events
             </button>
           </div>
-        </aside>
+        </section>
       )}
 
       {/* ---------- List mode ---------- */}
@@ -682,17 +682,19 @@ export function DiscoverClient() {
           ))}
         </div>
         {mode !== "list" && (
+          // Phones get one row: pinching zooms and two fingers tilt or turn, so those buttons are
+          // left to larger screens.
           <div className="flex flex-wrap gap-1.5 max-w-[calc(100vw-2rem)]">
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom in" onClick={() => mapApi.current?.zoomBy(1)}>
+            <button className="btn btn-secondary btn-icon btn-sm max-sm:hidden" aria-label="Zoom in" onClick={() => mapApi.current?.zoomBy(1)}>
               <Plus size={15} aria-hidden />
             </button>
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Zoom out" onClick={() => mapApi.current?.zoomBy(-1)}>
+            <button className="btn btn-secondary btn-icon btn-sm max-sm:hidden" aria-label="Zoom out" onClick={() => mapApi.current?.zoomBy(-1)}>
               <Minus size={15} aria-hidden />
             </button>
-            <button className={`btn btn-secondary btn-icon btn-sm ${tilted ? "text-cyan" : ""}`} aria-label={tilted ? "Look straight down" : "Tilt for a 3D perspective"} aria-pressed={tilted} onClick={() => mapApi.current?.setPitch(tilted ? 0 : 60)}>
+            <button className={`btn btn-secondary btn-icon btn-sm max-sm:hidden ${tilted ? "text-cyan" : ""}`} aria-label={tilted ? "Look straight down" : "Tilt for a 3D perspective"} aria-pressed={tilted} onClick={() => mapApi.current?.setPitch(tilted ? 0 : 60)}>
               <Mountain size={15} aria-hidden />
             </button>
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Point north" title={`Heading ${Math.round(view.bearing)}°`} onClick={() => mapApi.current?.resetNorth()}>
+            <button className={`btn btn-secondary btn-icon btn-sm ${Math.abs(view.bearing) < 1 ? "max-sm:hidden" : ""}`} aria-label="Point north" title={`Heading ${Math.round(view.bearing)}°`} onClick={() => mapApi.current?.resetNorth()}>
               <Compass size={15} aria-hidden style={{ transform: `rotate(${-view.bearing}deg)` }} />
             </button>
             {mode === "globe" && (
@@ -709,21 +711,22 @@ export function DiscoverClient() {
               onClick={() => (near && !pickMode ? setPickMode(true) : setPickMode((p) => !p))}
               title="Pick a point on the map and search a radius around it"
             >
-              <Crosshair size={14} aria-hidden /> {near ? `${formatKm(near.radiusKm)} area` : "Explore an area"}
+              <Crosshair size={14} aria-hidden /> {near ? `${formatKm(near.radiusKm)} area` : <><span className="sm:hidden">Area</span><span className="max-sm:hidden">Explore an area</span></>}
             </button>
             <button className="btn btn-secondary btn-icon btn-sm" aria-label="Show events near me" title="Use my location (optional, not stored)" onClick={locate}>
               <LocateFixed size={15} aria-hidden />
             </button>
-            <button className={`btn btn-secondary btn-sm ${showLayers ? "text-cyan border-cyan/50" : ""}`} aria-expanded={showLayers} onClick={() => setShowLayers((s) => !s)}>
-              <Layers size={14} aria-hidden /> Layers
+            <button className={`btn btn-secondary btn-sm ${showLayers ? "text-cyan border-cyan/50" : ""}`} aria-label="Layers" aria-expanded={showLayers} onClick={() => setShowLayers((s) => !s)}>
+              <Layers size={14} aria-hidden /> <span className="max-sm:hidden">Layers</span>
             </button>
             <button
               className={`btn btn-sm ${space ? "btn-primary" : "btn-secondary"}`}
               aria-pressed={space}
               onClick={() => setSpace((s) => !s)}
               title="See Earth from orbit: a starry sky and the real night side of the planet"
+              aria-label="Space view"
             >
-              <Sparkles size={14} aria-hidden /> Space
+              <Sparkles size={14} aria-hidden /> <span className="max-sm:hidden">Space</span>
             </button>
             <button className="btn btn-secondary btn-icon btn-sm hidden sm:inline-flex" aria-label={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
               {fullscreen ? <Minimize size={14} aria-hidden /> : <Maximize size={14} aria-hidden />}
@@ -959,7 +962,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   };
 
   return (
-    <aside aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)] panel-slide">
+    <section aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)] panel-slide">
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
         <button className="flex-1 flex items-center gap-1.5 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           <span className="t-h3">Happening soon</span>
@@ -1008,7 +1011,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
           </section>
         </div>
       )}
-    </aside>
+    </section>
   );
 }
 
@@ -1020,7 +1023,7 @@ function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack, on
   }, [onClose]);
 
   return (
-    <aside
+    <section
       aria-label={selection.kind === "event" ? "Event preview" : "Events here"}
       className="absolute z-30 inset-x-0 bottom-0 max-h-[72dvh] lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:bottom-6 lg:w-[400px] lg:max-h-none surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] flex flex-col panel-slide"
     >
@@ -1033,7 +1036,7 @@ function SelectionPanel({ selection, filters, onClose, onSelectEvent, onBack, on
           <ClusterList cluster={selection.cluster} filters={filters} onClose={onClose} onPick={onSelectEvent} />
         )}
       </div>
-    </aside>
+    </section>
   );
 }
 

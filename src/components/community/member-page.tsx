@@ -32,7 +32,7 @@ export function MemberPage({ id }: { id: string }) {
   const upcoming = m.plans.filter((t) => !t.start || Date.parse(t.start) > Date.now() - 24 * 3600000);
   return (
     <main className="mx-auto max-w-[1000px] px-4 sm:px-6 pt-8">
-      <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4"><Link href="/community" className="hover:text-text">Community</Link></nav>
+      <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4"><Link href="/community" className="inline-block py-1 hover:text-text">Community</Link></nav>
       <header className="surface rounded-[var(--radius-l)] p-5 sm:p-6 flex flex-wrap items-center gap-5 panel-in">
         <Avatar p={p} size={88} />
         <div className="min-w-0 flex-1">

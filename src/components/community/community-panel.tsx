@@ -156,8 +156,8 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
       {error && <p role="alert" className="t-small text-bad mt-3">{error}</p>}
 
       {isEvent && mode === "event-upcoming" && (
-        <p className="mt-3 flex items-start gap-2 t-micro text-text-3">
-          <ShieldAlert size={14} className="shrink-0 mt-px" aria-hidden />
+        <p className="mt-3 flex items-start gap-2 t-small text-text-2">
+          <ShieldAlert size={16} className="shrink-0 mt-0.5" aria-hidden />
           Never pay strangers for tickets. Buy and resell only through official sellers or the resale platforms listed above.
         </p>
       )}

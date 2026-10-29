@@ -21,7 +21,7 @@ export default async function DestinationsPage() {
         <div className="grid gap-8 lg:grid-cols-[1fr_1.3fr] items-end">
           <div>
             <h1 className="t-display">Go where it&apos;s happening</h1>
-            <p className="t-body text-text-2 mt-2 measure">
+            <p className="t-lede text-text-2 mt-3">
               Pick a city to see everything on during your dates, from matches and concerts to museums and family days out. Then build a trip from several events across cities.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">

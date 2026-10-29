@@ -243,7 +243,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                 setActive(-1);
               }
             }}
-            className={`flex-1 min-w-0 bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-[17px]" : "text-sm"}`}
+            className={`flex-1 min-w-0 self-stretch bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-[17px]" : "text-base lg:text-sm"}`}
           />
           {q && (
             <button type="button" aria-label="Clear search" className="text-text-3 hover:text-text" onClick={() => (setQ(""), input.current?.focus())}>
@@ -276,6 +276,8 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                   id={`${listId}-${i}`}
                   role="option"
                   aria-selected={i === active}
+                  // Arrow keys move through suggestions (the field keeps focus), so Tab goes on to the page.
+                  tabIndex={-1}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={it.run}
                   onMouseEnter={() => setActive(i)}
@@ -302,7 +304,8 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
               <p className="text-[12px] text-text-3 mb-2">Try asking in plain words</p>
               <div className="flex flex-wrap gap-1.5">
                 {examples.map((ex) => (
-                  <button key={ex} type="button" className="chip" onMouseDown={(e) => e.preventDefault()} onClick={() => (setQ(ex), submit(ex))}>
+                  // Example searches are a shortcut for pointers; from the keyboard you type, and Tab goes on to the page.
+                  <button key={ex} type="button" tabIndex={-1} className="chip" onMouseDown={(e) => e.preventDefault()} onClick={() => (setQ(ex), submit(ex))}>
                     {ex}
                   </button>
                 ))}

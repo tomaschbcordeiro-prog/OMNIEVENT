@@ -54,7 +54,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <div className="mb-6">
           <h1 className="t-h1">{asked ? `Results for “${asked}”` : filters.near ? `Events near ${filters.nearLabel?.split(",")[0] ?? "the selected point"}` : "All events"}</h1>
           {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-1">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
-          <p className="t-body text-text-2 mt-1 measure">
+          <p className="t-lede text-text-2 mt-2">
             Every category in one search. Prices are what sellers advertise; we show whether fees are included when the seller tells us.
           </p>
         </div>

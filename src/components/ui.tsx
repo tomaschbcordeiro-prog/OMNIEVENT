@@ -50,15 +50,15 @@ export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number 
  * generated poster (no stock photos pretending to be the event).
  */
 export function Poster({
-  imageUrl, hue = 210, categorySlug, className = "", size = "md",
-}: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg" }) {
+  imageUrl, hue = 210, categorySlug, className = "", size = "md", priority = false,
+}: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg"; /** The page's main picture: loaded first, not lazily. */ priority?: boolean }) {
   // A picture that fails to load (moved or blocked by its source) falls back to the drawn poster.
   const [broken, setBroken] = useState(false);
   const group = groupOf(categorySlug);
   const accent = GROUP_HEX[group] ?? "#9AA8BA";
   if (imageUrl && !broken)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrl} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
+    return <img src={imageUrl} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
     <div

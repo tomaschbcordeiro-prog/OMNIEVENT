@@ -34,7 +34,7 @@ export function datePresets(): { id: string; label: string; from: string; to: st
  * Full filter form. Controlled: every change produces a new SearchFilters
  * object, which the parent writes to the URL and uses to re-query.
  */
-export function FilterForm({ f, onChange, showCategories = true }: { f: SearchFilters; onChange: (f: SearchFilters) => void; showCategories?: boolean }) {
+export function FilterForm({ f, onChange, showCategories = true, counts }: { f: SearchFilters; onChange: (f: SearchFilters) => void; showCategories?: boolean; counts?: Record<string, number> }) {
   const set = (patch: Partial<SearchFilters>) => onChange({ ...f, ...patch, page: undefined });
   const presets = datePresets();
   const activePreset = presets.find((p) => p.from === f.from && p.to === f.to)?.id;
@@ -58,6 +58,7 @@ export function FilterForm({ f, onChange, showCategories = true }: { f: SearchFi
                 >
                   <ShapeGlyph group={g.slug} size={9} />
                   {g.name.replace(" & Performing Arts", "").replace(" & Business", "")}
+                  {counts?.[g.slug] != null && !f.categories?.length && <span className={`tnum ${on ? "" : "text-text-3"}`}>{counts[g.slug].toLocaleString()}</span>}
                 </button>
               );
             })}

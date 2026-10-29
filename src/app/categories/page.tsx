@@ -22,7 +22,7 @@ export default async function CategoriesPage() {
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <h1 className="t-h1">What are you into?</h1>
-        <p className="t-body text-text-2 mt-1 measure">Pick a category to see what&apos;s on, where, and how much it costs. Counts show listed upcoming events from connected sources.</p>
+        <p className="t-lede text-text-2 mt-2">Pick a category to see what&apos;s on, where, and how much it costs. Counts show listed upcoming events from connected sources.</p>
 
         {/* The three largest worlds get room; everything else is a scannable index. */}
         <div className="mt-8 grid gap-3 md:grid-cols-3">

@@ -26,7 +26,7 @@ export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, offici
   }, []);
   const primary = !isFree && hasOffers ? { href: "#tickets", label: "Tickets", external: false } : officialUrl ? { href: officialUrl, label: isFree ? "Details" : "Tickets", external: true } : null;
   return (
-    <div className={`action-bar lg:hidden ${shown ? "is-shown" : ""}`} aria-hidden={!shown}>
+    <div className={`action-bar lg:hidden ${shown ? "is-shown" : ""}`} aria-hidden={!shown} inert={!shown}>
       <div className="flex items-center gap-2 px-4 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="t-micro text-text-3 truncate">{title}</p>

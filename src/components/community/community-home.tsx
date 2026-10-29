@@ -167,7 +167,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
           </ul>
         </section>
 
-        <aside className="grid gap-6 self-start lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+        <section className="grid gap-6 self-start lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
           <SideList icon={<Flame size={18} className="text-coral" aria-hidden />} title="Trending this week" empty="Plans and posts this week will show up here." items={home?.trending} render={(t) => (
             <>
               <span className="t-micro text-text-3 tnum flex gap-2">
@@ -200,7 +200,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               {Object.entries(BADGES).map(([id, b]) => {
                 const have = profile?.badges.includes(id);
                 return (
-                  <li key={id} className={`rounded-[var(--radius-m)] border p-2 ${have ? "border-sun/50 bg-sun/10" : "border-line opacity-80"}`} title={b.hint}>
+                  <li key={id} className={`rounded-[var(--radius-m)] border p-2 ${have ? "border-sun/50 bg-sun/10" : "border-dashed border-line-strong"}`} title={b.hint}>
                     <span className={`text-lg ${have ? "" : "grayscale"}`} aria-hidden>{b.emoji}</span>
                     <p className="t-small font-semibold leading-tight">{b.label}</p>
                     <p className="t-micro text-text-3 leading-tight">{b.hint}</p>
@@ -210,7 +210,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
             </ul>
             <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each like you get 2.</p>
           </section>
-        </aside>
+        </section>
       </div>
     </main>
   );

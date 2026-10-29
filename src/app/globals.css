@@ -15,11 +15,12 @@
   --line-strong: #c9d6e4;
   --text: #0d1b33;
   --text-2: #46597a;
-  --text-3: #6f819c;
-  --cyan: #1463ff;
-  --cyan-strong: #0a4fd6;
+  /* Every text colour reads at 4.5:1 or more on the page, panels and their tints (WCAG AA). */
+  --text-3: #596a84;
+  --cyan: #0f5ae6;
+  --cyan-strong: #0a49c2;
   --sun: #ffb800;
-  --violet: #7b4dff;
+  --violet: #6a3df0;
   --coral: #f0475a;
   --amber: #f59a0b;
   --emerald: #0fa979;
@@ -30,17 +31,17 @@
   --sky-mid: #4a7fe0;
   --sky-low: #93b4ee;
 
-  --ok: #0c9b6d;
-  --warn: #c77700;
-  --bad: #d92d43;
-  --info: #1463ff;
+  --ok: #087350;
+  --warn: #8a5200;
+  --bad: #c42538;
+  --info: #0f5ae6;
 
   --radius-s: 6px;
   --radius-m: 10px;
   --radius-l: 16px;
   --header-h: 56px;
   /* Events on right now. */
-  --live: #e11d48;
+  --live: #c8102e;
 }
 
 @theme inline {
@@ -123,11 +124,17 @@ body {
   font-weight: 600;
 }
 .t-body {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   line-height: 1.6;
 }
+/* An introduction under a page title: a little larger than body text, kept to a readable line. */
+.t-lede {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  max-width: 62ch;
+}
 .t-small {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 .t-micro {
@@ -189,7 +196,7 @@ body {
 .btn-primary {
   background: var(--cyan);
   color: #fff;
-  box-shadow: 0 6px 16px -8px rgb(20 99 255 / 0.7);
+  box-shadow: 0 6px 16px -8px rgb(15 90 230 / 0.7);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--cyan-strong);
@@ -221,6 +228,22 @@ body {
 }
 .btn-sm.btn-icon {
   width: 1.875rem;
+}
+/* Fingers need bigger targets than a mouse pointer: 44 px on touch screens (WCAG 2.2, 2.5.5). */
+@media (pointer: coarse) {
+  .btn,
+  .btn-sm,
+  .field {
+    min-height: 2.75rem;
+  }
+  .btn-icon,
+  .btn-sm.btn-icon {
+    min-width: 2.75rem;
+  }
+  .chip,
+  .chip.sky-chip {
+    min-height: 2.75rem;
+  }
 }
 
 .chip {
@@ -256,14 +279,15 @@ body {
 }
 
 .field {
-  height: 2.375rem;
+  height: 2.5rem;
   width: 100%;
   border-radius: var(--radius-s);
   background: var(--panel);
   border: 1px solid var(--line-strong);
   padding: 0 0.75rem;
   color: var(--text);
-  font-size: 0.875rem;
+  /* 16 px: smaller text makes phones zoom the page when the field is focused. */
+  font-size: 1rem;
 }
 .field::placeholder {
   color: var(--text-3);
@@ -271,7 +295,7 @@ body {
 .field:focus {
   outline: none;
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgb(20 99 255 / 0.15);
+  box-shadow: 0 0 0 3px rgb(15 90 230 / 0.18);
 }
 select.field {
   appearance: none;
@@ -282,7 +306,7 @@ select.field {
 }
 .label {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-2);
   margin-bottom: 0.375rem;
   font-weight: 500;
@@ -894,6 +918,12 @@ select.field {
   /* Stars grow under the pointer; filled ones are sun yellow. */
   .star-btn {
     transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  }
+  @media (pointer: coarse) {
+    .star-btn {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
   }
   .star-btn:hover,
   .star-btn:focus-visible {

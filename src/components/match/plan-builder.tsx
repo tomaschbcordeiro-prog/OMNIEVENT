@@ -250,6 +250,7 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
               <li key={s.key} id={`plan-s-${i}`} role="option" aria-selected={i === active}>
                 <button
                   type="button"
+                  tabIndex={-1}
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => pick(i)}
@@ -328,17 +329,18 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
       </div>
 
       {/* ---- go */}
-      <div className="mt-5 flex items-center gap-2">
-        <button type="button" className="btn btn-secondary" onClick={surprise} title="A random place and vibe">
+      {/* The main action comes first on phones, full width; the others sit beside it on wider screens. */}
+      <div className="mt-5 flex flex-wrap sm:flex-nowrap items-center gap-2">
+        <button type="button" className="btn btn-secondary order-2 sm:order-none" onClick={surprise} title="A random place and vibe">
           <Dices size={16} aria-hidden /> Surprise me
         </button>
         {!empty && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ ...plan, places: [], what: [], free: undefined, maxPrice: undefined, near: undefined })}>
+          <button type="button" className="btn btn-ghost order-3 sm:order-none" onClick={() => onChange({ ...plan, places: [], what: [], free: undefined, maxPrice: undefined, near: undefined })}>
             Clear
           </button>
         )}
-        <button type="button" className="btn btn-primary flex-1 justify-center h-11 text-[15px]" onClick={go} disabled={count === 0}>
-          {count === 0 ? "Nothing matches yet" : <>Start swiping{count ? <span className="tnum opacity-80">({count.toLocaleString()})</span> : null} <ArrowRight size={17} aria-hidden /></>}
+        <button type="button" className="btn btn-primary order-1 sm:order-none w-full sm:w-auto sm:flex-1 justify-center h-11 text-[15px]" onClick={go} disabled={count === 0}>
+          {count === 0 ? "Nothing matches yet" : <>Start swiping{count ? <span className="tnum font-medium">({count.toLocaleString()})</span> : null} <ArrowRight size={17} aria-hidden /></>}
         </button>
       </div>
       {count === 0 && (

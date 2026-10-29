@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
 import { rememberSearch } from "@/lib/search/session";
@@ -37,6 +37,15 @@ export function EventsBrowser({
     start(() => router.push(`${basePath ?? path}${p.toString() ? `?${p}` : ""}`, { scroll: false }));
   };
   const n = activeFilterCount(filters);
+  // The filter sheet closes with Escape, and takes focus when it opens.
+  const sheet = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!drawer) return;
+    sheet.current?.querySelector<HTMLElement>("button, input, select")?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawer(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawer]);
   // Keep the shared search in step so other pages can offer to continue it.
   // An empty search here never overwrites a richer one from another page.
   useEffect(() => {
@@ -46,15 +55,16 @@ export function EventsBrowser({
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block" aria-label="Filters">
+      <section className="hidden lg:block" aria-label="Filters">
         <div className="sticky top-[calc(var(--header-h)+1rem)] max-h-[calc(100dvh-var(--header-h)-2rem)] overflow-auto scroll-thin pr-2">
-          <FilterForm f={filters} onChange={go} showCategories={!hideCategoryStrip} />
+          <FilterForm f={filters} onChange={go} showCategories={!hideCategoryStrip} counts={facets?.groups} />
         </div>
-      </aside>
+      </section>
 
       <div className="min-w-0">
         {!hideCategoryStrip && (
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" role="group" aria-label="Quick categories">
+          // On wide screens the filter rail already lists the categories (with counts).
+          <div className="flex lg:hidden gap-1.5 overflow-x-auto no-scrollbar pb-3 -mx-1 px-1" role="group" aria-label="Quick categories">
             <button className="chip" aria-pressed={!filters.categories?.length} onClick={() => go({ ...filters, categories: undefined, page: undefined })}>
               All
             </button>
@@ -83,7 +93,7 @@ export function EventsBrowser({
             <SlidersHorizontal size={14} aria-hidden /> Filters{n ? <span className="text-cyan tnum">{n}</span> : null}
           </button>
           <label className="sr-only" htmlFor="sort">Sort by</label>
-          <select id="sort" className="field !h-[1.875rem] !w-auto !text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
+          <select id="sort" className="field lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
             <option value="date">Soonest first</option>
             <option value="relevance">Best match</option>
             <option value="price">Lowest price</option>
@@ -144,7 +154,7 @@ export function EventsBrowser({
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
           <button className="absolute inset-0 bg-text/40" aria-label="Close filters" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col bg-panel rounded-t-[var(--radius-l)] border-t border-line-strong panel-in">
+          <div ref={sheet} className="absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col bg-panel rounded-t-[var(--radius-l)] border-t border-line-strong panel-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-line">
               <p className="t-h3">Filters</p>
               <button className="btn btn-ghost btn-icon btn-sm" aria-label="Close" onClick={() => setDrawer(false)}>
@@ -152,7 +162,7 @@ export function EventsBrowser({
               </button>
             </div>
             <div className="overflow-auto p-4 flex-1">
-              <FilterForm f={filters} onChange={go} showCategories={!hideCategoryStrip} />
+              <FilterForm f={filters} onChange={go} showCategories={!hideCategoryStrip} counts={facets?.groups} />
             </div>
             <div className="p-4 border-t border-line">
               <button className="btn btn-primary w-full" onClick={() => setDrawer(false)}>

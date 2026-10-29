@@ -196,7 +196,7 @@ export function MatchDeck() {
         <div className="text-center">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
           <h1 className="t-h1 mt-3">Swipe your next plan</h1>
-          <p className="t-small text-text-2 mt-1">Tell us what you fancy, then swipe: right to save, left to pass, up to open.</p>
+          <p className="t-body text-text-2 mt-2">Tell us what you fancy, then swipe: right to save, left to pass, up to open.</p>
         </div>
         <div className="mt-5">
           <PlanBuilder plan={plan} onChange={setPlan} onGo={() => setStage("swipe")} places={popular} />
@@ -332,7 +332,7 @@ function SwipeCard({ card: c, fly, onDecide }: { card: EventCard; fly: "left" | 
       }}
       aria-label={`${c.title}, ${cardWhen(c)}, ${c.venueName}, ${c.city}`}
     >
-      <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="lg" className="absolute inset-0 h-full w-full pointer-events-none" />
+      <Poster priority title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="lg" className="absolute inset-0 h-full w-full pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(0_0_0/0)_40%,rgb(5_12_30/0.88)_100%)] pointer-events-none" />
       <span className="match-stamp left-5 border-ok text-ok -rotate-12" style={{ opacity: like }} aria-hidden>SAVE</span>
       <span className="match-stamp right-5 border-bad text-bad rotate-12" style={{ opacity: nope }} aria-hidden>PASS</span>

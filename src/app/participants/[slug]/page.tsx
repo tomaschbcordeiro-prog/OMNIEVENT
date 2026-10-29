@@ -39,6 +39,10 @@ export default async function ParticipantPage({ params }: { params: P }) {
   return (
     <>
       <main className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8">
+        <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
+          <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
+          <span aria-hidden>/</span><span className="py-1 text-text-2">{KIND[p.kind] ?? "Performer"}</span>
+        </nav>
         {p.provenance.isDemo && <div className="mb-5"><Notice tone="demo">This is a fictional profile created for demonstration.</Notice></div>}
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr] items-start">
           <div>
@@ -50,7 +54,7 @@ export default async function ParticipantPage({ params }: { params: P }) {
               <FollowButton kind="participant" id={p.slug} name={p.name} />
               {p.url && <a className="btn btn-secondary btn-sm" href={p.url} target="_blank" rel="noopener noreferrer">Official page</a>}
             </div>
-            <p className="t-micro text-text-3 mt-2">Following saves this to My World. Alerts need a notification service, which isn&apos;t connected yet.</p>
+            <p className="t-small text-text-2 mt-2">Following saves this to My World. Alerts need a notification service, which isn&apos;t connected yet.</p>
           </div>
           {res.total > 0 && <ClusterMap params={`participant=${encodeURIComponent(p.slug)}`} initial={{ lat: res.items[0].lat, lng: res.items[0].lng, zoom: 1.2 }} className="h-64" />}
         </div>

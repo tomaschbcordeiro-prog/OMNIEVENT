@@ -91,13 +91,13 @@ export default async function EventPage({ params }: { params: P }) {
       {!e.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(e)).replace(/</g, "\\u003c") }} />}
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap gap-1">
-          <Link href="/events" className="hover:text-text">Events</Link>
+          <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
           <span aria-hidden>/</span>
-          <Link href={`/categories/${group}`} className="hover:text-text">{getCategory(group)?.name}</Link>
+          <Link href={`/categories/${group}`} className="inline-block py-1 hover:text-text">{getCategory(group)?.name}</Link>
           {v.cityId && (
             <>
               <span aria-hidden>/</span>
-              <Link href={`/destinations/${v.cityId}`} className="hover:text-text">{v.city}</Link>
+              <Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link>
             </>
           )}
         </nav>
@@ -113,7 +113,8 @@ export default async function EventPage({ params }: { params: P }) {
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <article className="min-w-0">
             <div className="relative overflow-hidden rounded-[var(--radius-l)] border border-line">
-              <Poster title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className="aspect-[21/9] w-full" />
+              {/* A real picture gets room; without one, a short band keeps the title near the top. */}
+              <Poster priority title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className={e.imageUrl ? "aspect-[21/9] max-h-[420px] w-full" : "h-32 sm:h-40 w-full"} />
             </div>
 
             <header className="mt-6">
@@ -148,39 +149,39 @@ export default async function EventPage({ params }: { params: P }) {
             )}
 
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="flex gap-3">
-                <Clock size={18} className="text-text-3 mt-0.5 shrink-0" aria-hidden />
-                <div>
-                  <dt className="t-micro text-text-3">{isDaily ? "Opening" : "Date and local time"}</dt>
-                  <dd className="tnum">
-                    {isDaily ? (
-                      <>Open daily, until {formatEventDate(e.end!, e.timeZone)}</>
-                    ) : (
-                      <>
-                        {formatEventDate(e.start, e.timeZone)}
-                        {e.hoursUnknown ? (
-                          <span className="block text-text-2">Times not listed by the source, see the official page</span>
-                        ) : <span className="block">
-                          {formatEventTime(e.start, e.timeZone)}
-                          {e.end && e.eventType !== "multi_day" && <> to {formatEventTime(e.end, e.timeZone)}</>}{" "}
-                          <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)} ({e.timeZone.replace("_", " ")})</span>
-                        </span>}
-                        {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
-                      </>
-                    )}
-                    {e.durationMinutes && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">About {Math.round(e.durationMinutes / 15) * 15 >= 60 ? `${(Math.round(e.durationMinutes / 15) * 15) / 60} hours` : `${e.durationMinutes} minutes`}</span>}
-                  </dd>
-                </div>
+              <div className="relative pl-[30px]">
+                <dt className="t-micro text-text-3">
+                  <Clock size={18} className="absolute left-0 top-0.5 text-text-3" aria-hidden />
+                  {isDaily ? "Opening" : "Date and local time"}
+                </dt>
+                <dd className="tnum">
+                  {isDaily ? (
+                    <>Open daily, until {formatEventDate(e.end!, e.timeZone)}</>
+                  ) : (
+                    <>
+                      {formatEventDate(e.start, e.timeZone)}
+                      {e.hoursUnknown ? (
+                        <span className="block text-text-2">Times not listed by the source, see the official page</span>
+                      ) : <span className="block">
+                        {formatEventTime(e.start, e.timeZone)}
+                        {e.end && e.eventType !== "multi_day" && <> to {formatEventTime(e.end, e.timeZone)}</>}{" "}
+                        <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)} ({e.timeZone.replace("_", " ")})</span>
+                      </span>}
+                      {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
+                    </>
+                  )}
+                  {e.durationMinutes && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">About {Math.round(e.durationMinutes / 15) * 15 >= 60 ? `${(Math.round(e.durationMinutes / 15) * 15) / 60} hours` : `${e.durationMinutes} minutes`}</span>}
+                </dd>
               </div>
-              <div className="flex gap-3">
-                <MapPin size={18} className="text-text-3 mt-0.5 shrink-0" aria-hidden />
-                <div>
-                  <dt className="t-micro text-text-3">Venue</dt>
-                  <dd>
-                    <Link href={`/venues/${v.slug}`} className="hover:text-cyan">{v.name}</Link>
-                    <span className="block text-text-2 t-small">{[v.address, v.city, v.country].filter(Boolean).join(", ")}</span>
-                  </dd>
-                </div>
+              <div className="relative pl-[30px]">
+                <dt className="t-micro text-text-3">
+                  <MapPin size={18} className="absolute left-0 top-0.5 text-text-3" aria-hidden />
+                  Venue
+                </dt>
+                <dd>
+                  <Link href={`/venues/${v.slug}`} className="hover:text-cyan">{v.name}</Link>
+                  <span className="block text-text-2 t-small">{[v.address, v.city, v.country].filter(Boolean).join(", ")}</span>
+                </dd>
               </div>
             </dl>
 
@@ -306,20 +307,20 @@ export default async function EventPage({ params }: { params: P }) {
                 {sameVenue.length > 0 && (
                   <section aria-labelledby="same">
                     <h2 id="same" className="t-h3">Also at {v.name}</h2>
-                    <ul className="divide-y divide-line mt-2">{sameVenue.map((c) => <EventRow key={c.id} c={c} />)}</ul>
+                    <ul className="divide-y divide-line mt-2">{sameVenue.map((c) => <EventRow key={c.id} c={c} compact />)}</ul>
                   </section>
                 )}
                 {nearby.length > 0 && (
                   <section aria-labelledby="near">
                     <h2 id="near" className="t-h3">Nearby</h2>
-                    <ul className="divide-y divide-line mt-2">{nearby.map((c) => <EventRow key={c.id} c={c} />)}</ul>
+                    <ul className="divide-y divide-line mt-2">{nearby.map((c) => <EventRow key={c.id} c={c} compact />)}</ul>
                   </section>
                 )}
               </div>
             )}
           </article>
 
-          <aside className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start grid gap-4">
+          <section className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start grid gap-4">
             <div className="surface rounded-[var(--radius-l)] p-5">
               <p className="t-micro text-text-3">{e.isFree ? "Entry" : "Tickets"}</p>
               <p className="t-h2 mt-1">
@@ -333,7 +334,10 @@ export default async function EventPage({ params }: { params: P }) {
                   <a href="#tickets" className={`btn ${inactive ? "btn-secondary" : "btn-primary"} w-full`}>Compare ticket options</a>
                 )}
                 {e.officialUrl && (
-                  <a href={e.officialUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary w-full">Official event page</a>
+                  // With no offers to compare, the official page is the main way on.
+                  <a href={e.officialUrl} target="_blank" rel="noopener noreferrer" className={`btn ${!inactive && (e.isFree || e.offers.length === 0) ? "btn-primary" : "btn-secondary"} w-full`}>
+                    {e.isFree ? "Official page" : e.offers.length ? "Official event page" : "Tickets on the official page"} <ExternalLink size={14} aria-hidden />
+                  </a>
                 )}
                 <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
@@ -368,7 +372,7 @@ export default async function EventPage({ params }: { params: P }) {
                 <p className="text-warn mt-2">This information is more than two days old and may be out of date.</p>
               )}
             </div>
-          </aside>
+          </section>
         </div>
         <EventActionBar id={e.id} title={e.title} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
       </main>

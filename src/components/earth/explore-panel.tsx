@@ -147,7 +147,7 @@ export function ExplorePanel({
   const multiZone = (res?.zones.length ?? 0) > 1;
 
   return (
-    <aside aria-label="Explore nearby" className="absolute z-30 inset-x-0 bottom-0 max-h-[68dvh] lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:bottom-6 lg:w-[400px] lg:max-h-none surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] flex flex-col panel-slide">
+    <section aria-label="Explore nearby" className="absolute z-30 inset-x-0 bottom-0 max-h-[68dvh] lg:inset-auto lg:right-6 lg:top-[calc(var(--header-h)+0.5rem)] lg:bottom-6 lg:w-[400px] lg:max-h-none surface-float rounded-t-[var(--radius-l)] lg:rounded-[var(--radius-l)] flex flex-col panel-slide">
       <button className="lg:hidden mx-auto mt-1 py-2 px-6" aria-label={collapsed ? "Show filters and results" : "Show less"} aria-expanded={!collapsed} onClick={() => setCollapsed((c) => !c)}>
         <span className="block h-1 w-10 rounded-full bg-line-strong" aria-hidden />
       </button>
@@ -337,6 +337,6 @@ export function ExplorePanel({
         )}
         {saved && <p className="t-micro text-text-3">Saved in this browser. Find it in My World under Saved searches.</p>}
       </div>
-    </aside>
+    </section>
   );
 }

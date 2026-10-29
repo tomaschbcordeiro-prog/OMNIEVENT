@@ -114,7 +114,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4">
-          <Link href="/categories" className="hover:text-text">Categories</Link> <span aria-hidden>/</span> {cat.name}
+          <Link href="/categories" className="inline-block py-1 hover:text-text">Categories</Link> <span aria-hidden>/</span> {cat.name}
         </nav>
         <div className="grid gap-8 lg:grid-cols-[1fr_440px] items-start">
           <div>

@@ -76,9 +76,9 @@ export default async function DestinationPage({ params, searchParams }: { params
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap gap-1">
-          <Link href="/destinations" className="hover:text-text">Destinations</Link>
-          {d.kind === "city" && d.continent && (<><span aria-hidden>/</span><Link href={`/destinations/${d.continent}`} className="hover:text-text">{getDestination(d.continent)?.name}</Link></>)}
-          {parent && (<><span aria-hidden>/</span><Link href={`/destinations/${parent.slug}`} className="hover:text-text">{parent.name}</Link></>)}
+          <Link href="/destinations" className="inline-block py-1 hover:text-text">Destinations</Link>
+          {d.kind === "city" && d.continent && (<><span aria-hidden>/</span><Link href={`/destinations/${d.continent}`} className="inline-block py-1 hover:text-text">{getDestination(d.continent)?.name}</Link></>)}
+          {parent && (<><span aria-hidden>/</span><Link href={`/destinations/${parent.slug}`} className="inline-block py-1 hover:text-text">{parent.name}</Link></>)}
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] items-start">
@@ -115,7 +115,9 @@ export default async function DestinationPage({ params, searchParams }: { params
         <section className="mt-10" aria-labelledby="cal">
           <h2 id="cal" className="t-h3">{user.from ? "Events per day of your trip" : "Next two weeks"}</h2>
           <p className="t-micro text-text-3">Dated events per local day. Daily attractions are not counted.</p>
-          <ol className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${perDay.length}, minmax(0, 1fr))` }}>
+          {/* Each day stays at least 32 px wide (a comfortable tap); on phones the strip scrolls sideways. */}
+          <div className="mt-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          <ol className="grid gap-1" style={{ gridTemplateColumns: `repeat(${perDay.length}, minmax(32px, 1fr))` }}>
             {perDay.map((p) => {
               const dt = new Date(`${p.key}T12:00:00Z`);
               return (
@@ -133,6 +135,7 @@ export default async function DestinationPage({ params, searchParams }: { params
               );
             })}
           </ol>
+          </div>
         </section>
 
         {groups.length > 0 && (
@@ -158,7 +161,7 @@ export default async function DestinationPage({ params, searchParams }: { params
               <section key={h.title} aria-label={h.title}>
                 <div className="flex items-baseline justify-between">
                   <h2 className="t-h2 flex items-center gap-2"><CategoryIcon slug={h.cats[0]} size={18} />{h.title}</h2>
-                  <Link className="t-small text-text-2 hover:text-cyan" href={`/destinations/${d.slug}?${filtersToParams({ ...user, categories: h.cats }).toString()}#all`}>See all</Link>
+                  <Link className="inline-block py-2 t-small text-text-2 hover:text-cyan" href={`/destinations/${d.slug}?${filtersToParams({ ...user, categories: h.cats }).toString()}#all`}>See all</Link>
                 </div>
                 <ul className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   {items.map((c) => <EventTile key={c.id} c={c} />)}
