@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download, Share2,
-  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Lock, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users,
+  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users,
 } from "lucide-react";
 import type { EventCard, Cluster } from "@/lib/types";
 import { useUser, userActions, type Trip } from "@/lib/user/store";
@@ -19,6 +19,7 @@ import { EventRow } from "../event-card";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { ClusterMap } from "../cluster-map";
 import { MyCommunity } from "../community/my-community";
+import { AccountPanel } from "../community/account-panel";
 
 type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "following" | "community" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
@@ -699,11 +700,8 @@ function Account() {
     <section className="grid gap-10">
       <div>
         <h1 className="t-h1">Account</h1>
-        <div className="mt-4 rounded-[var(--radius-l)] border border-line p-5">
-          <p className="flex items-center gap-2 font-semibold"><Lock size={16} className="text-text-3" aria-hidden /> Sign-in isn&apos;t set up on this deployment</p>
-          <p className="t-small text-text-2 mt-1.5 measure">
-            You&apos;re in demo mode: everything in My World is kept in this browser only. Accounts with registration, login and password recovery switch on when an authentication provider (Supabase Auth) is configured. We don&apos;t simulate sign-in, so there is no fake login form here.
-          </p>
+        <div className="mt-4">
+          <AccountPanel />
         </div>
       </div>
 

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Flame, Heart, MessageCircle, Sparkles, Star, Trophy, Users } from "lucide-react";
+import { Flame, MessageCircle, ShieldCheck, Sparkles, Star, Trophy, Users } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type FollowingFeed, type PostKind, type PublicProfile, type TargetMeta } from "@/lib/community/types";
-import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
+import { ago, communityGet, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
 import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
+import { MeetupJoin, NewPostsPill, Reactions, RichText, useNewPosts } from "./interact";
 
 type Filter = "all" | "following" | PostKind;
 const FILTERS: ("all" | PostKind)[] = ["all", "review", "question", "tip", "meetup", "comment"];
@@ -44,9 +45,9 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
 
   useEffect(() => {
     void load();
-    const id = setInterval(() => document.visibilityState === "visible" && void load(), 15000);
-    return () => clearInterval(id);
   }, [load, profile?.id]);
+  // A light check for new posts; the feed reloads when the reader asks.
+  const newPosts = useNewPosts("view=feed-head", home ? (home.feed[0]?.post.id ?? null) : undefined);
 
   // "Following": the posts and plans of the members this person follows.
   const [follow, setFollow] = useState<FollowingFeed | null>(null);
@@ -162,8 +163,12 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
           )}
           {home && !quiet && feed.length === 0 && filter !== "following" && <p className="mt-4 t-small text-text-2">Nothing of this kind yet.</p>}
 
+          {filter !== "following" && <div className="mt-3"><NewPostsPill count={newPosts} onShow={() => void load()} /></div>}
           <ul className="mt-4 grid gap-3">
-            {feed.map((f) => <FeedCard key={f.post.id} item={f} author={(filter === "following" ? follow?.profiles : home?.profiles)?.[f.post.author]} fresh={fresh.has(f.post.id)} me={profile} />)}
+            {feed.map((f) => {
+              const profiles = (filter === "following" ? follow?.profiles : home?.profiles) ?? {};
+              return <FeedCard key={f.post.id} item={f} author={profiles[f.post.author]} profiles={profiles} fresh={fresh.has(f.post.id)} me={profile} />;
+            })}
           </ul>
         </section>
 
@@ -194,6 +199,15 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               ))}
             </ol>
           </section>
+          <section aria-labelledby="rules-h" className="rounded-[var(--radius-l)] border border-ok/30 bg-ok/5 p-4">
+            <h2 id="rules-h" className="t-h3 flex items-center gap-2"><ShieldCheck size={18} className="text-ok" aria-hidden />Keeping it friendly and safe</h2>
+            <ul className="mt-2 grid gap-1.5 t-small text-text-2">
+              <li>🎟️ No selling or swapping tickets: buy and resell only through official sellers.</li>
+              <li>📵 No phone numbers, emails or messaging handles in posts. Meet somewhere busy and public.</li>
+              <li>🤝 Be kind. Report anything that isn&apos;t, from the ⋯ menu on each post.</li>
+              <li>🚫 Block anyone you&apos;d rather not hear from: they can&apos;t reply to, mention or follow you.</li>
+            </ul>
+          </section>
           <section aria-labelledby="badge-h" className="rounded-[var(--radius-l)] border border-line p-4">
             <h2 id="badge-h" className="t-h3">Badges to earn</h2>
             <ul className="mt-2 grid grid-cols-2 gap-2">
@@ -208,7 +222,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
                 );
               })}
             </ul>
-            <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each like you get 2.</p>
+            <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each reaction you get 2.</p>
           </section>
         </section>
       </div>
@@ -286,23 +300,8 @@ function SideList({ icon, title, items, empty, render }: { icon: React.ReactNode
   );
 }
 
-function FeedCard({ item, author, fresh, me }: { item: FeedItem; author?: PublicProfile; fresh: boolean; me: PublicProfile | null }) {
+function FeedCard({ item, author, profiles, fresh, me }: { item: FeedItem; author?: PublicProfile; profiles: Record<string, PublicProfile>; fresh: boolean; me: PublicProfile | null }) {
   const { post, meta } = item;
-  const [liked, setLiked] = useState(!!post.liked);
-  const [likes, setLikes] = useState(post.likes ?? 0);
-  const like = async () => {
-    if (!(await requireMember(!!me))) return;
-    setLiked(!liked);
-    setLikes((n) => n + (liked ? -1 : 1));
-    try {
-      const r = await communityPost<{ liked: boolean; likes: number }>({ action: "like", post: post.id });
-      setLiked(r.liked);
-      setLikes(r.likes);
-    } catch {
-      setLiked(liked);
-      setLikes(post.likes ?? 0);
-    }
-  };
   return (
     <li className={`surface rounded-[var(--radius-l)] p-4 panel-in ${fresh ? "flash-new" : ""}`}>
       <div className="flex gap-3">
@@ -311,16 +310,15 @@ function FeedCard({ item, author, fresh, me }: { item: FeedItem; author?: Public
           <p className="t-small flex flex-wrap items-center gap-x-1.5">
             <MemberName p={author} />
             <span className="text-text-3">{post.parent ? "replied on" : post.kind === "review" ? "reviewed" : post.kind === "question" ? "asked about" : post.kind === "tip" ? "shared a tip on" : post.kind === "meetup" ? "suggested meeting at" : "posted on"}</span>
-            {meta ? <Link href={`${meta.href}#community`} className="font-semibold hover:text-cyan truncate max-w-full">{meta.title}</Link> : <span className="text-text-3">an event</span>}
+            {meta ? <Link href={`${meta.href}#community`} className="inline-block py-0.5 font-semibold hover:text-cyan truncate max-w-full">{meta.title}</Link> : <span className="text-text-3">an event</span>}
           </p>
           {meta?.sub && <p className="t-micro text-text-3 truncate">{meta.sub}{meta.start ? ` · ${formatEventDate(meta.start, meta.timeZone ?? "UTC")}` : ""}</p>}
           {post.rating && <Stars value={post.rating} size={14} className="mt-1.5" />}
-          {post.text && <p className="t-body mt-1.5 whitespace-pre-line break-words line-clamp-6">{post.text}</p>}
-          <div className="mt-2 flex items-center gap-3 t-micro text-text-3">
+          {post.text && <RichText text={post.text} className="t-body mt-1.5 line-clamp-6" />}
+          {post.kind === "meetup" && !post.parent && <MeetupJoin post={post} profiles={profiles} me={me} />}
+          <div className="mt-2 flex flex-wrap items-center gap-2 t-micro text-text-3">
             <span>{ago(post.createdAt)}</span>
-            <button type="button" onClick={like} aria-pressed={liked} aria-label={liked ? "Unlike" : "Like"} className={`inline-flex items-center gap-1 rounded px-1.5 py-1 hover:bg-panel-2 ${liked ? "text-coral" : ""}`}>
-              <Heart key={String(liked)} size={14} fill={liked ? "currentColor" : "none"} className={liked ? "pop" : ""} aria-hidden /> <span className="tnum">{likes || ""}</span>
-            </button>
+            <Reactions post={post} me={me} size="sm" />
             {meta && <Link href={`${meta.href}#community`} className="inline-flex items-center gap-1 rounded px-1.5 py-1 hover:bg-panel-2"><MessageCircle size={14} aria-hidden /> Reply</Link>}
           </div>
         </div>

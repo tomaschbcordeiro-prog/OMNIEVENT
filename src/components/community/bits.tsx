@@ -20,7 +20,7 @@ export function MemberName({ p, className = "" }: { p?: PublicProfile; className
   if (!p) return <span className={`text-text-3 ${className}`}>Former member</span>;
   const top = p.badges[p.badges.length - 1];
   return (
-    <Link href={`/community/u/${p.username ?? p.id}`} className={`font-semibold hover:text-cyan ${className}`} title={p.username ? `@${p.username}` : undefined}>
+    <Link href={`/community/u/${p.username ?? p.id}`} className={`inline-block py-0.5 font-semibold hover:text-cyan ${className}`} title={p.username ? `@${p.username}` : undefined}>
       {p.name}
       {top && top !== "newcomer" && (
         <span className="ml-1" title={BADGES[top]?.label}>

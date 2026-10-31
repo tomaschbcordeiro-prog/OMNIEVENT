@@ -180,6 +180,8 @@ function local(c: Cmd): Val {
     }
     case "HGET":
       return hash(k).get(a[1]) ?? null;
+    case "HMGET":
+      return a.slice(1).map((f) => hash(k).get(f) ?? null);
     case "HDEL": {
       const h = hash(k);
       return a.slice(1).reduce((n, x) => n + (h.delete(x) ? 1 : 0), 0);

@@ -83,6 +83,8 @@ const state: StoreState =
 
 /** Sources with a daily request quota: only ever read by one instance at a time. */
 const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
+/** Catalogues big or slow enough that reading them takes minutes of server time. */
+const HEAVY_SOURCES = new Set(["openagenda", "localist", "livewhale", "helsinki", "espoo", "berlin", "wikidata"]);
 /** When this instance last uploaded each source's snapshot. */
 const savedAt = new Map<string, number>();
 /** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
@@ -101,9 +103,10 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
     // One instance reads a source at a time; the others pick up its snapshot. An instance
     // with nothing at all from a source reads it anyway, except sources with a daily quota.
     let locked = false;
-    // Without the shared storage, instances can't share one read of a source with a daily
-    // quota: each would spend the quota on its own, so those wait for the storage instead.
-    if (shared && QUOTA_SOURCES.has(p.id) && !storageAvailable()) {
+    // Without the shared storage, instances can't share one read of a source: each would spend
+    // a daily quota, or minutes of server time on a big catalogue, on its own. Those wait for
+    // the storage instead; the smaller sources still load.
+    if (shared && (QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && !storageAvailable()) {
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
       state.syncing.delete(p.id);
       return;
@@ -335,32 +338,6 @@ export function providerStatuses(): ProviderStatus[] {
 const norm = (s: string) =>
   s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/**
- * Works out each event's search text, local days and last end ahead of the first searches
- * that need them, a few thousand at a time so requests keep being served meanwhile.
- */
-let warmGen = 0;
-function warmUp() {
-  const gen = ++warmGen;
-  const cards = [...state.cards.values()];
-  let i = 0;
-  const step = () => {
-    if (gen !== warmGen) return;
-    const end = Math.min(cards.length, i + 4000);
-    for (; i < end; i++) {
-      const c = cards[i];
-      const e = state.events.get(c.id);
-      cardText(c);
-      if (e) {
-        lastEnd(e);
-        daySpans(e, isValidTimeZone(e.timeZone) ? e.timeZone : "UTC");
-      }
-    }
-    if (i < cards.length) setTimeout(step, 0);
-  };
-  setTimeout(step, 0);
-}
-
 // Ticket sellers sometimes give one show an "end" weeks or a year away (a pass's validity, a
 // season's last date). A single show doesn't last days, so that end is dropped; runs the
 // seller marks as such come in as multi-day events.
@@ -441,7 +418,6 @@ function rebuildIndexes() {
   // A merged duplicate's own link leads to the event it was merged into.
   for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
   state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
-  warmUp();
   state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
 }
 

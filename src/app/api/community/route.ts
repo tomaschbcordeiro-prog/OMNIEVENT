@@ -29,6 +29,13 @@ import {
   getNotices,
   unreadNotices,
   markNoticesSeen,
+  react,
+  toggleJoin,
+  toggleBlock,
+  getBlocked,
+  signOutEverywhere,
+  threadHead,
+  feedHead,
 } from "@/lib/community/service";
 import { resolveTarget } from "@/lib/community/meta";
 
@@ -55,16 +62,27 @@ function fail(err: unknown) {
  * GET /api/community?view=following              posts and plans of the members the caller follows
  * GET /api/community?view=summaries&targets=a,b  counts for cards
  * GET /api/community?view=buzz                   trending events as cards
+ * GET /api/community?view=head&target=e:<id>     newest post and post count (cheap; for live updates)
+ * GET /api/community?view=feed-head              the same for the community feed
+ * GET /api/community?view=blocked                the members the caller has blocked
  */
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
   const view = url.searchParams.get("view") ?? "home";
   if (!rateLimit(`community:${clientKey(req)}`, 240)) return apiError(429, "rate_limited", "Too many requests.");
   try {
+    // Live-update checks are the same for everyone, so the CDN answers most of them.
+    if (view === "head") return ok(await threadHead(url.searchParams.get("target") ?? ""), { maxAge: 10, swr: 20 });
+    if (view === "feed-head") return ok(await feedHead(), { maxAge: 10, swr: 20 });
     const viewer = await viewerOf(req);
+    if (view === "blocked") {
+      if (!viewer) return apiError(401, "community", "Sign in first.");
+      return ok({ members: await getBlocked(viewer) });
+    }
     if (view === "thread") {
+      // Reading a conversation doesn't need the event catalogue loaded (that costs a cold
+      // server seconds of work); its title is refreshed from the catalogue when it's there.
       const target = url.searchParams.get("target") ?? "";
-      await ensureFresh();
       return ok(await getThread(target, viewer, resolveTarget(target)));
     }
     if (view === "member") {
@@ -109,7 +127,8 @@ export const GET = handler(async (req: Request) => {
  * POST /api/community  { action, … } — every action needs the browser's secret header.
  * signup { firstName, lastName, username, email, password, avatar?, hue?, bio? } · signin
  * { login, password } · signout · password { current, next } · profile { …fields to change } ·
- * delete-account { password }
+ * delete-account { password } · signout-all · react { post, emoji | null } · join { post } ·
+ * block { member } · report { post, reason }
  */
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
@@ -157,6 +176,14 @@ export const POST = handler(async (req: Request) => {
         return ok(await toggleFollow(secret, String(body.member ?? "")));
       case "like":
         return ok(await toggleLike(secret, String(body.post ?? "")));
+      case "react":
+        return ok(await react(secret, String(body.post ?? ""), body.emoji ?? null));
+      case "join":
+        return ok(await toggleJoin(secret, String(body.post ?? "")));
+      case "block":
+        return ok(await toggleBlock(secret, String(body.member ?? "")));
+      case "signout-all":
+        return ok({ ended: await signOutEverywhere(secret) });
       case "edit":
         return ok({ post: await editPost(secret, String(body.post ?? ""), body.text) });
       case "delete":
@@ -166,7 +193,7 @@ export const POST = handler(async (req: Request) => {
         await markNoticesSeen(secret);
         return ok({ ok: true });
       case "report":
-        await reportPost(secret, String(body.post ?? ""));
+        await reportPost(secret, String(body.post ?? ""), body.reason);
         return ok({ ok: true });
       default:
         return apiError(400, "unknown_action", "Unknown action.");

@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
-import { KIND_META, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
+import { MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
+import { KIND_META, REPORT_REASONS, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
+import { safetyProblem } from "@/lib/community/safety";
+import { MeetupJoin, NewPostsPill, Reactions, RichText, useMentions, useNewPosts } from "./interact";
 import { ago, communityGet, communityPost, CommunityRequestError, refreshMe, useMe } from "@/lib/community/client";
 import { Avatar, Burst, MemberName, requireMember, StarInput, Stars } from "./bits";
 import { BADGES } from "@/lib/community/types";
@@ -18,6 +20,7 @@ const DONE: Record<string, { title: string; emoji: string }> = {
   edit: { title: "Changes saved", emoji: "✏️" },
   delete: { title: "Post deleted", emoji: "🗑️" },
   report: { title: "Reported. Thanks for keeping it friendly", emoji: "🛡️" },
+  block: { title: "Blocked. You won't see them here any more", emoji: "🚫" },
 };
 
 /** Confirms the action, shows points earned, and celebrates any new badge. */
@@ -77,12 +80,13 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
     }
   }, [target]);
 
-  // Reload when the member changes (to show their likes and plans), and every 20 s while visible.
+  // Reload when the member changes (to show their reactions and plans). New posts by others are
+  // announced by a light check; the conversation reloads when the reader asks.
   useEffect(() => {
     void load();
-    const id = setInterval(() => document.visibilityState === "visible" && void load(), 20000);
-    return () => clearInterval(id);
   }, [load, profile?.id]);
+  const latest = thread ? (thread.posts.flatMap((p) => [p, ...(p.replies ?? [])]).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id ?? null) : undefined;
+  const newPosts = useNewPosts(`view=head&target=${encodeURIComponent(target)}`, latest);
 
   const act = async (body: Record<string, unknown>) => {
     if (!(await requireMember(!!profile))) return false;
@@ -144,7 +148,7 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
         }} />}
       </div>
 
-      <Composer mode={mode} profile={profile} onPost={async (body) => {
+      <Composer mode={mode} profile={profile} people={thread ? Object.values(thread.profiles).filter((p) => p.id !== profile?.id) : []} onPost={async (body) => {
         const ok = await act({ action: "post", ...body });
         if (ok) {
           setSort("new");
@@ -175,6 +179,7 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
             <p className="t-small text-text-2 mt-1">{mode === "event-upcoming" ? "Ask a question, share a tip, or find people to go with." : "Your review helps the next person decide."}</p>
           </div>
         )}
+        <NewPostsPill count={newPosts} onShow={() => { setSort("new"); void load(); }} />
         {posts.length > 0 && (
           <>
             <div className="flex items-center gap-1 mb-3" role="tablist" aria-label="Sort posts">
@@ -198,7 +203,8 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
 
 function sortPosts(posts: Post[], sort: Sort): Post[] {
   if (sort === "new") return posts;
-  const score = (p: Post) => (p.likes ?? 0) * 3 + (p.replies?.length ?? 0) * 2 + (p.kind === "review" || p.kind === "tip" ? 1 : 0) - (Date.now() - Date.parse(p.createdAt)) / (3 * 86400000);
+  const reacted = (p: Post) => Object.values(p.reactions ?? {}).reduce((a, b) => a + b, 0) || (p.likes ?? 0);
+  const score = (p: Post) => reacted(p) * 3 + (p.joins ?? 0) * 2 + (p.replies?.length ?? 0) * 2 + (p.kind === "review" || p.kind === "tip" ? 1 : 0) - (Date.now() - Date.parse(p.createdAt)) / (3 * 86400000);
   return [...posts].sort((a, b) => score(b) - score(a));
 }
 
@@ -308,14 +314,18 @@ function RatingCard({ thread, title, onRate }: { thread: Thread | null; title: s
 
 // ---- Writing -------------------------------------------------------------------------------
 
-function Composer({ mode, profile, onPost, parent, onDone, autoFocus }: { mode: PanelMode; profile: PublicProfile | null; onPost: (b: { kind: PostKind; text: string; rating?: number; parent?: string }) => Promise<boolean>; parent?: string; onDone?: () => void; autoFocus?: boolean }) {
+function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [] }: { mode: PanelMode; profile: PublicProfile | null; onPost: (b: { kind: PostKind; text: string; rating?: number; parent?: string }) => Promise<boolean>; parent?: string; onDone?: () => void; autoFocus?: boolean; people?: PublicProfile[] }) {
   const kinds = KINDS[mode];
   const [kind, setKind] = useState<PostKind>(parent ? "comment" : kinds[0]);
   const [text, setText] = useState("");
   const [rating, setRating] = useState(0);
   const [busy, setBusy] = useState(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+  const mentions = useMentions(text, setText, people);
+  // The same rules the server applies, said while typing rather than after sending.
+  const problem = text.trim().length > 6 ? safetyProblem(text) : undefined;
   const isReview = kind === "review" && !parent;
-  const ready = isReview ? rating > 0 : text.trim().length >= 2;
+  const ready = (isReview ? rating > 0 : text.trim().length >= 2) && !problem;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,24 +359,37 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus }: { mode: 
       <div className="flex items-start gap-2.5">
         {!parent && <Avatar p={profile} size={36} className="mt-0.5 hidden sm:inline-grid" />}
         <label className="sr-only" htmlFor={`compose-${parent ?? "top"}`}>{parent ? "Write a reply" : KIND_META[kind].label}</label>
-        <textarea
-          id={`compose-${parent ?? "top"}`}
-          className="field flex-1 min-h-[44px] resize-y py-2.5"
-          rows={parent ? 1 : 2}
-          maxLength={1200}
-          autoFocus={autoFocus}
-          placeholder={parent ? "Write a reply…" : isReview ? "Add a few words (optional)" : KIND_META[kind].placeholder}
-          value={text}
-          onFocus={() => !profile?.username && void requireMember(false)}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void submit(e);
-          }}
-        />
+        <div className="relative flex-1 min-w-0">
+          <textarea
+            ref={area}
+            id={`compose-${parent ?? "top"}`}
+            className="field w-full min-h-[44px] resize-y py-2.5"
+            rows={parent ? 1 : 2}
+            maxLength={1200}
+            autoFocus={autoFocus}
+            aria-invalid={!!problem || undefined}
+            aria-describedby={problem ? `compose-warn-${parent ?? "top"}` : undefined}
+            placeholder={parent ? "Write a reply… (@ to mention someone)" : isReview ? "Add a few words (optional)" : KIND_META[kind].placeholder}
+            value={text}
+            onFocus={() => !profile?.username && void requireMember(false)}
+            onChange={(e) => {
+              setText(e.target.value);
+              mentions.track(e);
+            }}
+            onSelect={mentions.track}
+            onKeyDown={(e) => {
+              if (mentions.onKeyDown(e)) return;
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void submit(e);
+            }}
+          />
+          {mentions.list(area.current)}
+        </div>
         <button type="submit" className="btn btn-primary btn-icon h-11 w-11 shrink-0" disabled={!ready || busy} aria-label={parent ? "Send reply" : "Post"}>
           <Send size={17} aria-hidden />
         </button>
       </div>
+      {problem && <p id={`compose-warn-${parent ?? "top"}`} role="alert" className="t-small text-bad mt-2 flex items-start gap-1.5"><ShieldAlert size={15} className="shrink-0 mt-0.5" aria-hidden />{problem}</p>}
+      {!parent && kind === "meetup" && !problem && <p className="t-small text-text-2 mt-2">👋 Suggest a busy, public spot and a time. People tap “I&apos;m in”, and you agree on details in the replies.</p>}
       {!parent && text.length > 900 && <p className="t-micro text-text-3 mt-1 text-right tnum">{1200 - text.length} left</p>}
     </form>
   );
@@ -378,32 +401,14 @@ type Act = (body: Record<string, unknown>) => Promise<boolean>;
 
 function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: Post; profiles: Record<string, PublicProfile>; me: PublicProfile | null; fresh: Set<string>; act: Act; reload: () => Promise<void>; isReply?: boolean }) {
   const author = profiles[post.author];
-  const [liked, setLiked] = useState(!!post.liked);
-  const [likes, setLikes] = useState(post.likes ?? 0);
   const [replying, setReplying] = useState(false);
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState<"" | "main" | "report">("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.text);
   const [reported, setReported] = useState(false);
-  useEffect(() => {
-    setLiked(!!post.liked);
-    setLikes(post.likes ?? 0);
-  }, [post.liked, post.likes]);
   const mine = me?.id === post.author;
-
-  const like = async () => {
-    if (!(await requireMember(!!me))) return;
-    setLiked(!liked);
-    setLikes((n) => n + (liked ? -1 : 1));
-    try {
-      const r = await communityPost<{ liked: boolean; likes: number }>({ action: "like", post: post.id });
-      setLiked(r.liked);
-      setLikes(r.likes);
-    } catch {
-      setLiked(liked);
-      setLikes(post.likes ?? 0);
-    }
-  };
+  // A post you reported disappears for you straight away.
+  if (reported) return null;
 
   return (
     <li className={`${isReply ? "" : "surface rounded-[var(--radius-l)] p-4"} ${fresh.has(post.id) ? "flash-new" : ""} ${isReply ? "rounded-[var(--radius-m)] p-2 -mx-2" : ""}`}>
@@ -421,20 +426,33 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: P
             <span className="text-text-3 t-micro">{ago(post.createdAt)}{post.editedAt ? " · edited" : ""}</span>
             {!post.deleted && (
               <div className="relative ml-auto">
-                <button type="button" className="btn btn-ghost btn-icon h-7 w-7" aria-label="More actions" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+                <button type="button" className="btn btn-ghost btn-icon h-8 w-8" aria-label="More actions" aria-haspopup="menu" aria-expanded={!!menu} onClick={() => setMenu((m) => (m ? "" : "main"))}>
                   <MoreHorizontal size={16} aria-hidden />
                 </button>
                 {menu && (
-                  <div className="absolute right-0 z-20 mt-1 w-40 surface-float rounded-[var(--radius-m)] p-1 panel-in" onMouseLeave={() => setMenu(false)}>
+                  <div role="menu" className="absolute right-0 z-20 mt-1 w-56 surface-float rounded-[var(--radius-m)] p-1 panel-in" onMouseLeave={() => setMenu("")} onKeyDown={(e) => e.key === "Escape" && setMenu("")}>
                     {mine ? (
                       <>
-                        <button type="button" className="w-full text-left rounded px-2.5 py-1.5 t-small hover:bg-panel-2" onClick={() => { setEditing(true); setMenu(false); }}>Edit</button>
-                        <button type="button" className="w-full text-left rounded px-2.5 py-1.5 t-small text-bad hover:bg-bad/5" onClick={async () => { setMenu(false); if (confirm("Delete this post?") && (await act({ action: "delete", post: post.id }))) void reload(); }}>Delete</button>
+                        <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small hover:bg-panel-2" onClick={() => { setEditing(true); setMenu(""); }}>Edit</button>
+                        <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small text-bad hover:bg-bad/5" onClick={async () => { setMenu(""); if (confirm("Delete this post?") && (await act({ action: "delete", post: post.id }))) void reload(); }}>Delete</button>
+                      </>
+                    ) : menu === "report" ? (
+                      <>
+                        <p className="px-2.5 pt-1.5 pb-1 t-micro font-semibold text-text-3">Why are you reporting it?</p>
+                        {Object.entries(REPORT_REASONS).map(([k, label]) => (
+                          <button key={k} role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small hover:bg-panel-2" onClick={async () => { setMenu(""); if (await act({ action: "report", post: post.id, reason: k })) setReported(true); }}>{label}</button>
+                        ))}
                       </>
                     ) : (
-                      <button type="button" disabled={reported} className="w-full text-left rounded px-2.5 py-1.5 t-small hover:bg-panel-2" onClick={async () => { setMenu(false); if (await act({ action: "report", post: post.id })) setReported(true); }}>
-                        {reported ? "Reported, thanks" : "Report"}
-                      </button>
+                      <>
+                        <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small hover:bg-panel-2" onClick={() => setMenu("report")}>Report this post…</button>
+                        {author && (
+                          <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small text-bad hover:bg-bad/5" onClick={async () => {
+                            setMenu("");
+                            if (confirm(`Block ${author.name}? You won't see their posts, and they can't reply to you, mention you, follow you or join your meet-ups.`) && (await act({ action: "block", member: author.id }))) void reload();
+                          }}>Block {author.name.split(" ")[0]}</button>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -452,14 +470,12 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: P
               </div>
             </form>
           ) : (
-            post.text && <p className={`mt-1 whitespace-pre-line break-words ${isReply ? "t-small" : "t-body"}`}>{post.text}</p>
+            post.text && <RichText text={post.text} className={`mt-1 ${isReply ? "t-small" : "t-body"}`} />
           )}
+          {!post.deleted && !isReply && post.kind === "meetup" && <MeetupJoin post={post} profiles={profiles} me={me} />}
           {!post.deleted && (
-            <div className="mt-2 flex items-center gap-1">
-              <button type="button" onClick={like} aria-pressed={liked} aria-label={liked ? "Unlike" : "Like"} className={`btn btn-ghost btn-sm h-8 px-2 ${liked ? "text-coral" : "text-text-3"}`}>
-                <Heart key={String(liked)} size={15} fill={liked ? "currentColor" : "none"} className={liked ? "pop" : ""} aria-hidden />
-                <span className="tnum">{likes || ""}</span>
-              </button>
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              <Reactions post={post} me={me} size={isReply ? "sm" : "md"} />
               {!isReply && (
                 <button type="button" onClick={async () => { if (await requireMember(!!me)) setReplying((r) => !r); }} className="btn btn-ghost btn-sm h-8 px-2 text-text-3">
                   <MessageCircle size={15} aria-hidden /> Reply
@@ -473,7 +489,7 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: P
             </ul>
           )}
           {replying && (
-            <Composer mode="city" profile={me} parent={post.id} autoFocus onDone={() => setReplying(false)} onPost={async (b) => {
+            <Composer mode="city" profile={me} parent={post.id} autoFocus people={Object.values(profiles).filter((p) => p.id !== me?.id)} onDone={() => setReplying(false)} onPost={async (b) => {
               const ok = await act({ action: "post", ...b });
               if (ok) await reload();
               return ok;

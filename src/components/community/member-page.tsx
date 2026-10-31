@@ -2,22 +2,36 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarHeart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
+import { Ban, CalendarHeart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
 import { BADGES, KIND_META, type FeedItem, type PublicProfile, type TargetMeta } from "@/lib/community/types";
 import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
 import { Avatar, Burst, requireMember, Stars } from "./bits";
+import { Reactions, RichText } from "./interact";
 import { toast } from "../toast";
 
-type Member = { profile: PublicProfile; posts: FeedItem[]; plans: TargetMeta[]; follow?: { followers: number; following: number; byViewer: boolean } };
+type Member = { profile: PublicProfile; posts: FeedItem[]; plans: TargetMeta[]; follow?: { followers: number; following: number; byViewer: boolean }; blockedByViewer?: boolean };
 
 export function MemberPage({ id }: { id: string }) {
   const { profile: me } = useMe();
   const [m, setM] = useState<Member | null | undefined>(undefined);
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     communityGet<Member>(`view=member&id=${encodeURIComponent(id)}`).then(setM, () => setM(null));
-  }, [id, me?.karma, me?.name, me?.avatar]);
+  }, [id, me?.karma, me?.name, me?.avatar, reload]);
+  const block = async () => {
+    if (!m || !(await requireMember())) return;
+    const blocking = !m.blockedByViewer;
+    if (blocking && !confirm(`Block ${m.profile.name}? You won't see their posts, and they can't reply to you, mention you, follow you or join your meet-ups.`)) return;
+    try {
+      await communityPost({ action: "block", member: m.profile.id });
+      toast({ title: blocking ? `${m.profile.firstName ?? m.profile.name} is blocked` : "Unblocked", emoji: blocking ? "🚫" : "👌" });
+      setReload((n) => n + 1);
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Something went wrong", emoji: "⚠️" });
+    }
+  };
 
   if (m === undefined) return <main className="mx-auto max-w-[1000px] px-4 sm:px-6 pt-10"><div className="skeleton h-40" aria-hidden /></main>;
   if (m === null)
@@ -55,9 +69,19 @@ export function MemberPage({ id }: { id: string }) {
         {isMe ? (
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => void requireMember(true, true)}>Edit profile</button>
         ) : (
-          <FollowButton member={p} following={!!m.follow?.byViewer} onChange={(following, followers) => setM((x) => x && { ...x, follow: { following: x.follow?.following ?? 0, followers, byViewer: following } })} />
+          <div className="flex flex-wrap gap-2">
+            {!m.blockedByViewer && <FollowButton member={p} following={!!m.follow?.byViewer} onChange={(following, followers) => setM((x) => x && { ...x, follow: { following: x.follow?.following ?? 0, followers, byViewer: following } })} />}
+            <button type="button" className={`btn btn-sm ${m.blockedByViewer ? "btn-secondary" : "btn-ghost text-text-3"}`} onClick={() => void block()}>
+              <Ban size={15} aria-hidden /> {m.blockedByViewer ? "Unblock" : "Block"}
+            </button>
+          </div>
         )}
       </header>
+      {m.blockedByViewer && (
+        <p className="mt-4 rounded-[var(--radius-m)] border border-line bg-panel-2 p-3 t-small text-text-2">
+          You blocked {p.firstName ?? p.name}. You don&apos;t see their posts, and they can&apos;t reply to you, mention you, follow you or join your meet-ups.
+        </p>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[1fr_300px]">
         <section aria-labelledby="posts-h">
@@ -70,8 +94,8 @@ export function MemberPage({ id }: { id: string }) {
                   {KIND_META[post.kind].emoji} {post.parent ? "Reply" : KIND_META[post.kind].label} on {meta ? <Link href={`${meta.href}#community`} className="font-semibold text-text hover:text-cyan">{meta.title}</Link> : "an event"} · {ago(post.createdAt)}
                 </p>
                 {post.rating && <Stars value={post.rating} size={14} className="mt-1.5" />}
-                {post.text && <p className="t-body mt-1 whitespace-pre-line break-words">{post.text}</p>}
-                {(post.likes ?? 0) > 0 && <p className="t-micro text-coral mt-1.5">♥ {post.likes}</p>}
+                {post.text && <RichText text={post.text} className="t-body mt-1" />}
+                <div className="mt-2"><Reactions post={post} me={me} size="sm" /></div>
               </li>
             ))}
           </ul>

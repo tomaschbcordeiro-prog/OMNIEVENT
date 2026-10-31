@@ -14,11 +14,14 @@ export function validationError(err: ZodError) {
 
 /**
  * JSON answer. With `maxAge`, the CDN may serve it to everyone for that long (and while it
- * refreshes); `partial` answers (a server still loading its data) are never cached.
+ * refreshes). `partial` answers (a server still loading its data) are kept only 15 seconds:
+ * long enough to spare the servers a burst of identical requests, short enough to be
+ * replaced by the full answer soon.
  */
 export function ok<T>(data: T, init?: { maxAge?: number; swr?: number; partial?: boolean }) {
   const res = NextResponse.json(data);
-  if (init?.partial) res.headers.set("Cache-Control", "no-store");
+  if (init?.partial && init.maxAge != null) res.headers.set("Cache-Control", "public, s-maxage=15, stale-while-revalidate=15");
+  else if (init?.partial) res.headers.set("Cache-Control", "no-store");
   else if (init?.maxAge != null)
     res.headers.set("Cache-Control", `public, s-maxage=${init.maxAge}, stale-while-revalidate=${init.swr ?? init.maxAge * 5}`);
   return res;
@@ -50,6 +53,10 @@ export function rateLimit(key: string, limit = 120, windowMs = 60000): boolean {
   return b.n <= limit;
 }
 
+/**
+ * The caller's address, for rate limits. The host's own headers come first (Vercel sets
+ * x-real-ip and overwrites x-forwarded-for), so a client can't pick its own key.
+ */
 export function clientKey(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "local";
+  return req.headers.get("x-real-ip") || req.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
 }

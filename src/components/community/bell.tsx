@@ -7,7 +7,17 @@ import type { Notices } from "@/lib/community/types";
 import { ago, communityGet, communityPost, refreshMe, setUnread, useMe } from "@/lib/community/client";
 import { Avatar } from "./bits";
 
-/** Replies and likes on the member's posts; checks for new ones every minute. */
+const NOTICE_TEXT: Record<string, (emoji?: string) => string> = {
+  reply: () => "replied",
+  like: () => "liked your post",
+  react: (e) => `reacted ${e ?? ""} to your post`,
+  mention: () => "mentioned you",
+  join: () => "is in for your meet-up",
+  follow: () => "started following you",
+};
+const NOTICE_ICON: Record<string, string> = { reply: "💬", like: "❤️", mention: "@", join: "👋", follow: "👋" };
+
+/** Replies, reactions, mentions, meet-up joins and new followers; checks for new ones every minute. */
 export function NotificationBell({ className = "" }: { className?: string }) {
   const { profile, unread } = useMe();
   const [open, setOpen] = useState(false);
@@ -59,7 +69,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
         <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-24px))] surface-float rounded-[var(--radius-l)] p-2 panel-in">
           <p className="px-2 pt-1 pb-2 t-small font-semibold">Your activity</p>
           {!data && <div className="skeleton h-16 m-2" aria-hidden />}
-          {data && data.items.length === 0 && <p className="px-2 pb-3 t-small text-text-2">Nothing yet. When someone replies to you, likes your post or follows you, it shows up here.</p>}
+          {data && data.items.length === 0 && <p className="px-2 pb-3 t-small text-text-2">Nothing yet. When someone replies, reacts, mentions you, joins your meet-up or follows you, it shows up here.</p>}
           <ul className="max-h-[60vh] overflow-auto scroll-thin grid gap-0.5">
             {data?.items.map((n, i) => {
               const by = data.profiles[n.by];
@@ -69,11 +79,11 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                     <Avatar p={by} size={32} />
                     <span className="min-w-0 t-small">
                       <span className="block">
-                        <strong>{by?.name ?? "Someone"}</strong> {n.type === "reply" ? "replied" : n.type === "follow" ? "started following you" : "liked your post"}
+                        <strong>{by?.name ?? "Someone"}</strong> {NOTICE_TEXT[n.type](n.emoji)}
                         {n.meta && <> on <strong>{n.meta.title}</strong></>}
                       </span>
                       {n.text && <span className="block text-text-2 truncate">“{n.text}”</span>}
-                      <span className="block t-micro text-text-3">{n.type === "like" ? "❤️ " : n.type === "follow" ? "👋 " : "💬 "}{ago(n.at)}</span>
+                      <span className="block t-micro text-text-3">{NOTICE_ICON[n.type] ?? n.emoji ?? "💬"} {ago(n.at)}</span>
                     </span>
                   </Link>
                 </li>

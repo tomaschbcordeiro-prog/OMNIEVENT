@@ -57,7 +57,31 @@ export interface Post {
   /** Filled in when read. */
   likes?: number;
   liked?: boolean;
+  /** Reactions by emoji (❤️ included), and the viewer's own. */
+  reactions?: Record<string, number>;
+  myReaction?: string;
+  /** Meet-ups: how many said "I'm in", a few of them, and whether the viewer did. */
+  joins?: number;
+  joined?: boolean;
+  joiners?: string[];
   replies?: Post[];
+}
+
+/** One reaction per member and post; ❤️ is the classic like. */
+export const REACTIONS = ["❤️", "🔥", "😂", "🙌", "😮"] as const;
+
+export const REPORT_REASONS: Record<string, string> = {
+  spam: "Spam or advertising",
+  scam: "Selling tickets or a scam",
+  rude: "Rude, hateful or harassing",
+  private: "Shares someone's private details",
+  other: "Something else",
+};
+
+/** What changed in a conversation, cheap to check often. */
+export interface ThreadHead {
+  posts: number;
+  latest: string | null;
 }
 
 export interface Summary {
@@ -116,13 +140,15 @@ export const KIND_META: Record<PostKind, { label: string; emoji: string; placeho
 };
 
 export interface Notice {
-  type: "reply" | "like" | "follow";
+  type: "reply" | "like" | "follow" | "mention" | "react" | "join";
   by: string;
   post: string;
   target: string;
   at: string;
-  /** Start of the reply, for replies. */
+  /** Start of the reply or mention. */
   text?: string;
+  /** The reaction, for reactions. */
+  emoji?: string;
 }
 
 export interface Notices {

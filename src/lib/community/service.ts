@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { cmd, pairs, persistent, pipe, type Cmd } from "./kv";
+import { safetyProblem } from "./safety";
 import {
   AVATARS,
   BADGES,
@@ -19,6 +20,9 @@ import {
   type Thread,
   type AccountInfo,
   type FollowingFeed,
+  type ThreadHead,
+  REACTIONS,
+  REPORT_REASONS,
   USERNAME_RE,
 } from "./types";
 
@@ -30,7 +34,11 @@ import {
  *   The browser keeps a random secret; signing in links it to the account (a session), so
  *   the same account works on any device. Profiles made before accounts existed (keyed by
  *   the secret's hash) keep working for reading and are completed into an account.
- * - Posts are plain text, rate-limited, and hidden after three reports.
+ * - Posts are plain text and rate-limited. Contact details, ticket selling, repeated posts and
+ *   (on a member's first day) links are refused; posts are hidden after three reports.
+ * - Members can block each other: a blocked member's posts disappear for the blocker, and
+ *   they can't reply to, react to, mention, follow or join the blocker's meet-ups.
+ * - Reactions (❤️ is the classic like), @mentions and "I'm in" on meet-ups notify people.
  * - Keys are prefixed `c:`; see each function for what it reads and writes.
  */
 
@@ -72,6 +80,18 @@ export function cleanText(raw: unknown, { min = 2, max = MAX_TEXT } = {}): strin
   if ((text.match(/https?:\/\//g) ?? []).length > 2) throw new CommunityError("Too many links in one post.");
   return text;
 }
+
+// ---- Safety --------------------------------------------------------------------------------
+
+/** Throws with the reason when a text breaks the safety rules (see ./safety). */
+export function checkSafety(text: string) {
+  const why = safetyProblem(text);
+  if (why) throw new CommunityError(why);
+}
+export { hasPhone } from "./safety";
+
+const LINK_RE = /https?:\/\/|www\./i;
+const textKey = (t: string) => createHash("sha256").update(t.toLowerCase().replace(/\s+/g, " ").trim()).digest("hex").slice(0, 16);
 
 // ---- Rate limits -----------------------------------------------------------------------
 
@@ -165,6 +185,19 @@ interface Account extends AccountInfo {
 
 const SESSION_TTL = 400 * 86400;
 const sessionKey = (secret: string) => `c:sess:${memberId(secret)}`;
+/** Every signed-in browser of an account, so they can all be signed out at once. */
+const sessionsOf = (id: string) => `c:ss:${id}`;
+const openSession = (secret: string, id: string): Cmd[] => [
+  ["SET", sessionKey(secret), id, "EX", SESSION_TTL],
+  ["SADD", sessionsOf(id), sessionKey(secret)],
+  ["EXPIRE", sessionsOf(id), SESSION_TTL],
+];
+/** Ends the account's sessions, except `keep`'s; returns how many ended. */
+async function endSessions(id: string, keep?: string): Promise<number> {
+  const all = (((await cmd<string[]>(["SMEMBERS", sessionsOf(id)])) ?? []) as string[]).filter((k) => k !== keep);
+  await pipe([...(all.length ? ([["DEL", ...all]] as Cmd[]) : []), ["DEL", sessionsOf(id)], ...(keep ? ([["SADD", sessionsOf(id), keep], ["EXPIRE", sessionsOf(id), SESSION_TTL]] as Cmd[]) : [])]);
+  return all.length;
+}
 const RESERVED = new Set(["admin", "administrator", "omnievent", "support", "help", "staff", "moderator", "mod", "root", "system", "null", "undefined", "me", "community", "official", "team"]);
 
 /** Who a browser secret is: the account it is signed in to, else its pre-account profile. */
@@ -194,10 +227,24 @@ export function cleanEmail(raw: unknown): string {
   return e;
 }
 
-function checkPassword(raw: unknown): string {
+// The passwords tried first in every attack, and what people pick for sites like this one.
+const COMMON = new Set([
+  "password", "password1", "password12", "password123", "passw0rd", "12345678", "123456789", "1234567890", "12341234", "87654321",
+  "11111111", "00000000", "qwertyui", "qwertyuiop", "qwerty123", "qwerty12", "1q2w3e4r", "1qaz2wsx", "abc12345", "abcd1234",
+  "iloveyou", "letmein1", "welcome1", "football", "sunshine", "princess", "admin123", "aaaaaaaa", "senha123", "contraseña",
+  "benfica1", "sporting", "fcporto1", "portugal", "lisboa123", "omnievent", "concerto", "festival", "tickets1", "bilhetes",
+]);
+
+function checkPassword(raw: unknown, who?: { username?: string; email?: string }): string {
   const pw = String(raw ?? "");
   if (pw.length < 8) throw new CommunityError("Use at least 8 characters for the password.");
   if (pw.length > 128) throw new CommunityError("That password is too long.");
+  const low = pw.toLowerCase();
+  if (COMMON.has(low) || /^(.)\1+$/.test(pw) || /^(?:0?123456789|abcdefgh)/.test(low))
+    throw new CommunityError("That password is too easy to guess. Try a few words together, like a short sentence.");
+  const local = who?.email?.split("@")[0];
+  if ((who?.username && who.username.length >= 4 && low.includes(who.username)) || (local && local.length >= 4 && low.includes(local)))
+    throw new CommunityError("Don't use your username or email in the password.");
   return pw.normalize("NFKC");
 }
 
@@ -243,7 +290,7 @@ export async function signUp(secret: string, input: Record<string, unknown>, ip:
   const lastName = personName(input.lastName, "Last name");
   const username = cleanUsername(input.username);
   const email = cleanEmail(input.email);
-  const password = checkPassword(input.password);
+  const password = checkPassword(input.password, { username, email });
   const current = await memberOf(secret);
   const prev = current ? json<Profile>(await cmd(["GET", `c:u:${current}`])) : undefined;
   if (prev?.username) throw new CommunityError("You're already signed in. Sign out first to create another account.", 409);
@@ -262,7 +309,7 @@ export async function signUp(secret: string, input: Record<string, unknown>, ip:
   const cmds: Cmd[] = [
     ["SET", `c:acct:${id}`, JSON.stringify(account)],
     ["SET", `c:u:${id}`, JSON.stringify(profile)],
-    ["SET", sessionKey(secret), id, "EX", SESSION_TTL],
+    ...openSession(secret, id),
   ];
   if (!prev) cmds.push(["HINCRBY", "c:stat", "members", 1], ["ZADD", "c:karma", 1, id]);
   await pipe(cmds);
@@ -278,13 +325,27 @@ export async function signIn(secret: string, input: Record<string, unknown>, ip:
   const id = await cmd(["GET", login.includes("@") ? `c:email:${login}` : `c:uname:${login}`]);
   await limit(`acct:${typeof id === "string" ? id : login}:signin`, 10, 900);
   const account = typeof id === "string" ? await getAccount(id) : undefined;
-  if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("Wrong email, username or password.", 401);
-  await cmd(["SET", sessionKey(secret), account.id, "EX", SESSION_TTL]);
+  const pw = String(input.password ?? "").normalize("NFKC");
+  // An unknown login takes as long to refuse as a wrong password, so timing doesn't reveal who has an account.
+  if (!account) await derive(pw, DUMMY_SALT);
+  if (!account || !(await passwordMatches(pw, account.pw))) throw new CommunityError("Wrong email, username or password.", 401);
+  await pipe(openSession(secret, account.id));
   return (await getProfile(account.id))!;
 }
+const DUMMY_SALT = randomBytes(16);
 
 export async function signOut(secret: string) {
-  if (typeof secret === "string" && secret.length >= 20) await cmd(["DEL", sessionKey(secret)]);
+  if (typeof secret !== "string" || secret.length < 20) return;
+  const id = await cmd(["GET", sessionKey(secret)]);
+  await pipe([["DEL", sessionKey(secret)], ...(typeof id === "string" ? ([["SREM", sessionsOf(id), sessionKey(secret)]] as Cmd[]) : [])]);
+}
+
+/** Signs the account out on every device, this one included. */
+export async function signOutEverywhere(secret: string): Promise<number> {
+  const me = await requireProfile(secret);
+  const ended = await endSessions(me.id);
+  await cmd(["DEL", sessionKey(secret)]);
+  return ended;
 }
 
 export async function changePassword(secret: string, input: Record<string, unknown>, ip: string) {
@@ -292,8 +353,10 @@ export async function changePassword(secret: string, input: Record<string, unkno
   await limit(`acct:${me.id}:signin`, 10, 900);
   const account = await getAccount(me.id);
   if (!account || !(await passwordMatches(String(input.current ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("Your current password isn't right.", 401);
-  account.pw = await hashPassword(checkPassword(input.next));
+  account.pw = await hashPassword(checkPassword(input.next, { username: account.username, email: account.email }));
   await cmd(["SET", `c:acct:${me.id}`, JSON.stringify(account)]);
+  // A new password signs out every other device: whoever knew the old one is out.
+  await endSessions(me.id, sessionKey(secret));
   void ip;
 }
 
@@ -306,13 +369,14 @@ export async function deleteAccount(secret: string, input: Record<string, unknow
   await limit(`acct:${me.id}:signin`, 10, 900);
   const account = await getAccount(me.id);
   if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("That password isn't right.", 401);
+  await endSessions(me.id);
   const [plansRaw, follows, followers] = await pipe([["ZRANGE", `c:ugo:${me.id}`, 0, -1], ["SMEMBERS", `c:fol:${me.id}`], ["SMEMBERS", `c:fby:${me.id}`]]);
   const plans = ((plansRaw as string[]) ?? []).filter(Boolean);
   await pipe([
     ...plans.flatMap((t): Cmd[] => [["SREM", `c:go:${t}`, me.id], ["HINCRBY", `c:sum:${t}`, "going", -1]]),
     ...((follows as string[]) ?? []).map((x): Cmd => ["SREM", `c:fby:${x}`, me.id]),
     ...((followers as string[]) ?? []).map((x): Cmd => ["SREM", `c:fol:${x}`, me.id]),
-    ["DEL", `c:fol:${me.id}`, `c:fby:${me.id}`, `c:n:${me.id}`, `c:nu:${me.id}`],
+    ["DEL", `c:fol:${me.id}`, `c:fby:${me.id}`, `c:n:${me.id}`, `c:nu:${me.id}`, `c:blk:${me.id}`, `c:urx:${me.id}`, `c:liked:${me.id}`],
     ["DEL", `c:acct:${me.id}`, `c:u:${me.id}`, `c:uc:${me.id}`, `c:up:${me.id}`, `c:ugo:${me.id}`, `c:uname:${account.username}`, `c:email:${account.email}`, sessionKey(secret)],
     ["ZREM", "c:karma", me.id],
     ["HINCRBY", "c:stat", "members", -1],
@@ -381,15 +445,39 @@ function tree(posts: Post[]): Post[] {
 async function loadPosts(ids: string[], viewer?: string): Promise<Post[]> {
   if (!ids.length) return [];
   const raw = (await cmd<unknown[]>(["MGET", ...ids.map((id) => `c:p:${id}`)])) ?? [];
-  const posts = raw.map((r) => json<Post>(r)).filter((p): p is Post => !!p && !p.hidden);
+  const hiddenFor = await blockedBy(viewer);
+  const posts = raw.map((r) => json<Post>(r)).filter((p): p is Post => !!p && !p.hidden && !hiddenFor.has(p.author));
+  if (!posts.length) return [];
   const targets = [...new Set(posts.map((p) => p.target))];
+  const meetups = posts.filter((p) => p.kind === "meetup" && !p.parent && !p.deleted);
+  const pid = posts.map((p) => p.id);
   const res = await pipe([
-    ...targets.map((t): Cmd => ["HGETALL", `c:lk:${t}`]),
-    ...(viewer && posts.length ? [["SMISMEMBER", `c:liked:${viewer}`, ...posts.map((p) => p.id)] as Cmd] : []),
+    ...targets.flatMap((t): Cmd[] => [["HGETALL", `c:lk:${t}`], ["HGETALL", `c:rx:${t}`]]),
+    ...(viewer ? ([["SMISMEMBER", `c:liked:${viewer}`, ...pid], ["HMGET", `c:urx:${viewer}`, ...pid]] as Cmd[]) : []),
+    ...meetups.flatMap((p): Cmd[] => [["SCARD", `c:mj:${p.id}`], ["SRANDMEMBER", `c:mj:${p.id}`, 5], ["SISMEMBER", `c:mj:${p.id}`, viewer ?? "-"]]),
   ]);
-  const likes: Record<string, string> = Object.assign({}, ...targets.map((_, i) => pairs(res[i])));
-  const mine = viewer && posts.length ? (res[targets.length] as number[]) : [];
-  return posts.map((p, i) => ({ ...p, likes: Number(likes[p.id] ?? 0), liked: !!mine[i] }));
+  const likes: Record<string, string> = Object.assign({}, ...targets.map((_, i) => pairs(res[i * 2])));
+  const rx: Record<string, string> = Object.assign({}, ...targets.map((_, i) => pairs(res[i * 2 + 1])));
+  let k = targets.length * 2;
+  const liked = viewer ? ((res[k++] as number[]) ?? []) : [];
+  const other = viewer ? ((res[k++] as (string | null)[]) ?? []) : [];
+  const joins = new Map<string, { n: number; who: string[]; me: boolean }>();
+  for (const p of meetups) {
+    joins.set(p.id, { n: Number(res[k] ?? 0), who: ((res[k + 1] as string[]) ?? []).filter((id) => !hiddenFor.has(id)), me: Number(res[k + 2]) === 1 });
+    k += 3;
+  }
+  return posts.map((p, i) => {
+    const reactions: Record<string, number> = {};
+    const hearts = Math.max(0, Number(likes[p.id] ?? 0));
+    if (hearts) reactions["❤️"] = hearts;
+    for (const e of REACTIONS) {
+      const n = Math.max(0, Number(rx[`${p.id}|${e}`] ?? 0));
+      if (n && e !== "❤️") reactions[e] = n;
+    }
+    const mine = liked[i] ? "❤️" : (other[i] ?? undefined) || undefined;
+    const j = joins.get(p.id);
+    return { ...p, likes: hearts, liked: !!liked[i], reactions, myReaction: mine, ...(j ? { joins: j.n, joiners: j.who, joined: j.me } : {}) };
+  });
 }
 
 export async function getThread(target: string, viewer?: string, meta?: TargetMeta): Promise<Thread> {
@@ -405,8 +493,9 @@ export async function getThread(target: string, viewer?: string, meta?: TargetMe
   const ratings = pairs(res[2]);
   const dist = [0, 0, 0, 0, 0];
   for (const v of Object.values(ratings)) if (Number(v) >= 1 && Number(v) <= 5) dist[Number(v) - 1]++;
-  const goingPeople = ((res[3] as string[]) ?? []).filter(Boolean);
-  const profiles = await getProfiles([...posts.map((p) => p.author), ...goingPeople]);
+  const hiddenFor = await blockedBy(viewer);
+  const goingPeople = ((res[3] as string[]) ?? []).filter((id) => id && !hiddenFor.has(id));
+  const profiles = await getProfiles([...posts.map((p) => p.author), ...posts.flatMap((p) => p.joiners ?? []), ...goingPeople]);
   // Keep the shared summary of where this lives up to date for feeds and trending lists.
   if (meta) void rememberMeta(meta).catch(() => {});
   return {
@@ -419,6 +508,25 @@ export async function getThread(target: string, viewer?: string, meta?: TargetMe
     profiles,
     persistent,
   };
+}
+
+/** The newest post and the post count: cheap enough to check every half minute. */
+export async function threadHead(target: string): Promise<ThreadHead> {
+  checkTarget(target);
+  const [latest, posts] = await pipe([["ZREVRANGE", `c:t:${target}`, 0, 0], ["HGET", `c:sum:${target}`, "posts"]]);
+  return { posts: Math.max(0, Number(posts ?? 0)), latest: ((latest as string[]) ?? [])[0] ?? null };
+}
+
+/** The same for the community-wide feed. */
+export async function feedHead(): Promise<ThreadHead> {
+  const [latest, posts] = await pipe([["ZREVRANGE", "c:feed", 0, 0], ["HGET", "c:stat", "posts"]]);
+  return { posts: Math.max(0, Number(posts ?? 0)), latest: ((latest as string[]) ?? [])[0] ?? null };
+}
+
+const MENTION_RE = /(^|[^\w@.])@([a-z0-9][a-z0-9._]{1,18}[a-z0-9])(?![\w.])/gi;
+/** Usernames mentioned in a text (up to five). */
+export function mentionsIn(text: string): string[] {
+  return [...new Set([...text.matchAll(MENTION_RE)].map((m) => m[2].toLowerCase()))].slice(0, 5);
 }
 
 export async function createPost(
@@ -438,11 +546,19 @@ export async function createPost(
   let replyTo: Post | undefined;
   if (input.parent) {
     const p = json<Post>(await cmd(["GET", `c:p:${String(input.parent)}`]));
-    if (!p || p.target !== input.target) throw new CommunityError("That conversation is gone.");
+    if (!p || p.target !== input.target || p.hidden) throw new CommunityError("That conversation is gone.");
+    if (p.author !== me.id && (await blocks(p.author, me.id))) throw new CommunityError("You can't reply to this member.", 403);
     parent = p.parent ?? p.id; // one level of replies
     replyTo = p;
   }
   const text = cleanText(input.text, { min: kind === "review" ? 0 : 2 });
+  checkSafety(text);
+  // A member's first day: no links (the usual spam pattern).
+  if (LINK_RE.test(text) && Date.now() - Date.parse(me.createdAt) < 86400000) throw new CommunityError("New members can share links after their first day. Describe it in words for now.");
+  // The same words twice in a day are almost always a mistake or spam.
+  const dupKey = `c:dup:${me.id}`;
+  const dup = textKey(text);
+  if (text && Number(await cmd(["SISMEMBER", dupKey, dup])) === 1) throw new CommunityError("You've already posted that today.");
   const post: Post = { id: randomBytes(8).toString("hex"), target: input.target, author: me.id, kind: parent ? "comment" : kind, text, rating: parent ? undefined : rating, parent, createdAt: now() };
   const t = Date.now();
   const cmds: Cmd[] = [
@@ -456,14 +572,30 @@ export async function createPost(
     ["HINCRBY", "c:stat", "posts", 1],
     ["ZINCRBY", "c:karma", kind === "review" ? 10 : 5, me.id],
     hot(post.target, 2),
+    ...(text ? ([["SADD", dupKey, dup], ["EXPIRE", dupKey, 86400]] as Cmd[]) : []),
   ];
+  const told = new Set<string>([me.id]);
   if (replyTo) {
     const n: Notice = { type: "reply", by: me.id, post: post.id, target: post.target, at: post.createdAt, text: text.slice(0, 120) };
-    cmds.push(...notify(replyTo.author, n));
+    cmds.push(...(await notice(replyTo.author, n)));
+    told.add(replyTo.author);
     // The author of the conversation hears about replies to other replies in it too.
     if (replyTo.parent) {
       const top = json<Post>(await cmd(["GET", `c:p:${replyTo.parent}`]));
-      if (top && top.author !== replyTo.author) cmds.push(...notify(top.author, n));
+      if (top && !told.has(top.author)) {
+        cmds.push(...(await notice(top.author, n)));
+        told.add(top.author);
+      }
+    }
+  }
+  // @mentions: each member named hears about it once.
+  const names = mentionsIn(text);
+  if (names.length) {
+    const found = (await cmd<(string | null)[]>(["MGET", ...names.map((u) => `c:uname:${u}`)])) ?? [];
+    for (const id of found) {
+      if (typeof id !== "string" || told.has(id)) continue;
+      told.add(id);
+      cmds.push(...(await notice(id, { type: "mention", by: me.id, post: post.id, target: post.target, at: post.createdAt, text: text.slice(0, 120) })));
     }
   }
   await pipe(cmds);
@@ -507,21 +639,59 @@ export async function setPlan(secret: string, target: string, plan: "going" | "i
   await rememberMeta(meta);
 }
 
-export async function toggleLike(secret: string, postId: string): Promise<{ liked: boolean; likes: number }> {
+/**
+ * Sets the member's reaction to a post (one per post; ❤️ is the classic like), or removes it
+ * with null. The author earns points and a notice for a new reaction, not for a change.
+ */
+export async function react(secret: string, postId: string, emoji: unknown): Promise<{ reactions: Record<string, number>; mine?: string }> {
   const me = await requireProfile(secret);
   const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
-  if (!post || post.deleted) throw new CommunityError("That post is gone.", 404);
-  await limit(`u:${me.id}:like`, 200, 3600);
-  const added = Number(await cmd(["SADD", `c:liked:${me.id}`, postId])) === 1;
-  if (!added) await cmd(["SREM", `c:liked:${me.id}`, postId]);
+  if (!post || post.deleted || post.hidden) throw new CommunityError("That post is gone.", 404);
+  const want = emoji == null || emoji === "" ? undefined : String(emoji);
+  if (want !== undefined && !(REACTIONS as readonly string[]).includes(want)) throw new CommunityError("Pick one of the reactions.");
   const self = post.author === me.id;
-  const [likes] = await pipe([
-    ["HINCRBY", `c:lk:${post.target}`, postId, added ? 1 : -1],
-    ...(self ? [] : ([["HINCRBY", `c:uc:${post.author}`, "likes", added ? 1 : -1], ["ZINCRBY", "c:karma", added ? 2 : -2, post.author]] as Cmd[])),
-    hot(post.target, added ? 0.5 : -0.5),
-    ...(added ? notify(post.author, { type: "like", by: me.id, post: postId, target: post.target, at: now() }) : []),
+  if (!self && want && (await blocks(post.author, me.id))) throw new CommunityError("You can't react to this member's posts.", 403);
+  await limit(`u:${me.id}:like`, 300, 3600);
+  const [liked, other] = await pipe([["SISMEMBER", `c:liked:${me.id}`, postId], ["HGET", `c:urx:${me.id}`, postId]]);
+  const prev = Number(liked) === 1 ? "❤️" : typeof other === "string" && other ? other : undefined;
+  if (prev !== want) {
+    const cmds: Cmd[] = [];
+    if (prev === "❤️") cmds.push(["SREM", `c:liked:${me.id}`, postId], ["HINCRBY", `c:lk:${post.target}`, postId, -1]);
+    else if (prev) cmds.push(["HDEL", `c:urx:${me.id}`, postId], ["HINCRBY", `c:rx:${post.target}`, `${postId}|${prev}`, -1]);
+    if (want === "❤️") cmds.push(["SADD", `c:liked:${me.id}`, postId], ["HINCRBY", `c:lk:${post.target}`, postId, 1]);
+    else if (want) cmds.push(["HSET", `c:urx:${me.id}`, postId, want], ["HINCRBY", `c:rx:${post.target}`, `${postId}|${want}`, 1]);
+    if (!self && !prev && want)
+      cmds.push(["HINCRBY", `c:uc:${post.author}`, "likes", 1], ["ZINCRBY", "c:karma", 2, post.author], hot(post.target, 0.5), ...(await notice(post.author, { type: want === "❤️" ? "like" : "react", emoji: want, by: me.id, post: postId, target: post.target, at: now() })));
+    if (!self && prev && !want) cmds.push(["HINCRBY", `c:uc:${post.author}`, "likes", -1], ["ZINCRBY", "c:karma", -2, post.author], hot(post.target, -0.5));
+    await pipe(cmds);
+  }
+  const [read] = await loadPosts([postId], me.id);
+  return { reactions: read?.reactions ?? {}, mine: want };
+}
+
+/** The classic like: ❤️ on, or off. */
+export async function toggleLike(secret: string, postId: string): Promise<{ liked: boolean; likes: number }> {
+  const me = await requireProfile(secret);
+  const liked = Number(await cmd(["SISMEMBER", `c:liked:${me.id}`, postId])) === 1;
+  const r = await react(secret, postId, liked ? null : "❤️");
+  return { liked: r.mine === "❤️", likes: r.reactions["❤️"] ?? 0 };
+}
+
+/** "I'm in" on a meet-up post; its author hears about new people joining. */
+export async function toggleJoin(secret: string, postId: string): Promise<{ joined: boolean; joins: number }> {
+  const me = await requireProfile(secret);
+  const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
+  if (!post || post.deleted || post.hidden || post.kind !== "meetup" || post.parent) throw new CommunityError("That meet-up is gone.", 404);
+  if (post.author === me.id) throw new CommunityError("It's your own meet-up.");
+  if (await blocks(post.author, me.id)) throw new CommunityError("You can't join this member's meet-ups.", 403);
+  await limit(`u:${me.id}:join`, 60, 3600);
+  const added = Number(await cmd(["SADD", `c:mj:${postId}`, me.id])) === 1;
+  if (!added) await cmd(["SREM", `c:mj:${postId}`, me.id]);
+  const res = await pipe([
+    ...(added ? await notice(post.author, { type: "join", by: me.id, post: postId, target: post.target, at: now() }) : []),
+    ["SCARD", `c:mj:${postId}`],
   ]);
-  return { liked: added, likes: Math.max(0, Number(likes)) };
+  return { joined: added, joins: Number(res[res.length - 1] ?? 0) };
 }
 
 export async function deletePost(secret: string, postId: string) {
@@ -545,19 +715,33 @@ export async function editPost(secret: string, postId: string, text: unknown): P
   const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
   if (!post || post.deleted) throw new CommunityError("That post is gone.", 404);
   if (post.author !== me.id) throw new CommunityError("You can only edit your own posts.", 403);
-  const next: Post = { ...post, text: cleanText(text, { min: post.kind === "review" ? 0 : 2 }), editedAt: now() };
+  const clean = cleanText(text, { min: post.kind === "review" ? 0 : 2 });
+  checkSafety(clean);
+  if (LINK_RE.test(clean) && !LINK_RE.test(post.text) && Date.now() - Date.parse(me.createdAt) < 86400000) throw new CommunityError("New members can share links after their first day. Describe it in words for now.");
+  const next: Post = { ...post, text: clean, editedAt: now() };
   await cmd(["SET", `c:p:${postId}`, JSON.stringify(next)]);
   return next;
 }
 
-export async function reportPost(secret: string, postId: string) {
+/**
+ * Reports a post with a reason. Three reports hide it for everyone; two are enough when both
+ * say it's a scam or shares private details.
+ */
+export async function reportPost(secret: string, postId: string, reason?: unknown) {
   const me = await requireProfile(secret);
   const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
   if (!post) return;
+  if (post.author === me.id) throw new CommunityError("You can't report your own post. You can edit or delete it.");
   await limit(`u:${me.id}:report`, 20, 3600);
-  await cmd(["SADD", `c:rep:${postId}`, me.id]);
-  const n = Number(await cmd(["SCARD", `c:rep:${postId}`]));
-  if (n >= 3 && !post.hidden) await pipe([["SET", `c:p:${postId}`, JSON.stringify({ ...post, hidden: true })], ["ZREM", "c:feed", postId]]);
+  const why = typeof reason === "string" && reason in REPORT_REASONS ? reason : "other";
+  const [, , n, reasons] = await pipe([
+    ["SADD", `c:rep:${postId}`, me.id],
+    ["HSET", `c:repr:${postId}`, me.id, why],
+    ["SCARD", `c:rep:${postId}`],
+    ["HGETALL", `c:repr:${postId}`],
+  ]);
+  const serious = Object.values(pairs(reasons)).filter((r) => r === "scam" || r === "private").length;
+  if ((Number(n) >= 3 || serious >= 2) && !post.hidden) await pipe([["SET", `c:p:${postId}`, JSON.stringify({ ...post, hidden: true })], ["ZREM", "c:feed", postId]]);
 }
 
 // ---- Notifications ---------------------------------------------------------------------
@@ -567,9 +751,55 @@ function notify(to: string, n: Notice): Cmd[] {
   return [["LPUSH", `c:n:${to}`, JSON.stringify(n)], ["LTRIM", `c:n:${to}`, 0, 49], ["INCR", `c:nu:${to}`]];
 }
 
+/** A notice, unless the recipient has blocked its sender. */
+async function notice(to: string, n: Notice): Promise<Cmd[]> {
+  if (to === n.by || (await blocks(to, n.by))) return [];
+  return notify(to, n);
+}
+
+// ---- Blocking ------------------------------------------------------------------------------
+
+/** True if `who` has blocked `by`. */
+async function blocks(who: string, by: string): Promise<boolean> {
+  return Number(await cmd(["SISMEMBER", `c:blk:${who}`, by])) === 1;
+}
+
+async function blockedBy(viewer?: string): Promise<Set<string>> {
+  if (!viewer) return new Set();
+  return new Set(((await cmd<string[]>(["SMEMBERS", `c:blk:${viewer}`])) ?? []) as string[]);
+}
+
+/** Blocks or unblocks a member. Blocking also ends following in both directions. */
+export async function toggleBlock(secret: string, targetId: string): Promise<{ blocked: boolean }> {
+  const me = await requireProfile(secret);
+  if (targetId === me.id) throw new CommunityError("You can't block yourself.");
+  if (!(await getProfile(targetId))) throw new CommunityError("No member with that name.", 404);
+  await limit(`u:${me.id}:block`, 60, 3600);
+  if (await blocks(me.id, targetId)) {
+    await cmd(["SREM", `c:blk:${me.id}`, targetId]);
+    return { blocked: false };
+  }
+  await pipe([
+    ["SADD", `c:blk:${me.id}`, targetId],
+    ["SREM", `c:fol:${me.id}`, targetId],
+    ["SREM", `c:fby:${targetId}`, me.id],
+    ["SREM", `c:fol:${targetId}`, me.id],
+    ["SREM", `c:fby:${me.id}`, targetId],
+  ]);
+  return { blocked: true };
+}
+
+/** The members someone has blocked, to manage the list. */
+export async function getBlocked(viewer: string): Promise<PublicProfile[]> {
+  const ids = [...(await blockedBy(viewer))];
+  const profiles = await getProfiles(ids);
+  return ids.map((id) => profiles[id]).filter(Boolean);
+}
+
 export async function getNotices(viewer: string): Promise<Notices> {
   const [raw, unread] = await pipe([["LRANGE", `c:n:${viewer}`, 0, 29], ["GET", `c:nu:${viewer}`]]);
-  const list = ((raw as string[]) ?? []).map((r) => json<Notice>(r)).filter((n): n is Notice => !!n);
+  const hidden = await blockedBy(viewer);
+  const list = ((raw as string[]) ?? []).map((r) => json<Notice>(r)).filter((n): n is Notice => !!n && !hidden.has(n.by));
   const [meta, profiles] = await Promise.all([metas([...new Set(list.map((n) => n.target))]), getProfiles(list.map((n) => n.by))]);
   return { items: list.map((n) => ({ ...n, meta: meta[n.target] })), unread: Number(unread ?? 0), profiles };
 }
@@ -592,6 +822,7 @@ export async function toggleFollow(secret: string, targetId: string): Promise<{ 
   if (!(await getProfile(targetId))) throw new CommunityError("No member with that name.", 404);
   await limit(`u:${me.id}:follow`, 60, 3600);
   const was = Number(await cmd(["SISMEMBER", `c:fol:${me.id}`, targetId])) === 1;
+  if (!was && ((await blocks(targetId, me.id)) || (await blocks(me.id, targetId)))) throw new CommunityError("You can't follow this member.", 403);
   const cmds: Cmd[] = was
     ? [["SREM", `c:fol:${me.id}`, targetId], ["SREM", `c:fby:${targetId}`, me.id]]
     : [["SADD", `c:fol:${me.id}`, targetId], ["SADD", `c:fby:${targetId}`, me.id], ...notify(targetId, { type: "follow", by: me.id, post: "", target: "", at: now() })];
@@ -617,7 +848,7 @@ export async function getFollowingFeed(viewer: string): Promise<FollowingFeed> {
   planList.sort((a, b) => b.t - a.t);
   const posts = (await loadPosts(postScores.slice(0, 40).map(([id]) => id), viewer)).filter((p) => !p.deleted && !p.hidden);
   const plans = planList.slice(0, 20);
-  const [meta, profiles] = await Promise.all([metas([...new Set([...posts.map((p) => p.target), ...plans.map((p) => p.target)])]), getProfiles([...posts.map((p) => p.author), ...plans.map((p) => p.by)])]);
+  const [meta, profiles] = await Promise.all([metas([...new Set([...posts.map((p) => p.target), ...plans.map((p) => p.target)])]), getProfiles([...posts.map((p) => p.author), ...posts.flatMap((p) => p.joiners ?? []), ...plans.map((p) => p.by)])]);
   return {
     feed: posts.map((post) => ({ post, meta: meta[post.target] })),
     plans: plans.filter((p) => meta[p.target]).map((p) => ({ by: p.by, at: new Date(p.t).toISOString(), meta: meta[p.target] })),
@@ -656,7 +887,7 @@ export async function getHome(viewer?: string): Promise<CommunityHome> {
   const rated = ((res[2] as string[]) ?? []).filter(Boolean);
   const leaderIds = ((res[3] as string[]) ?? []).filter(Boolean);
   const targets = [...new Set([...posts.map((p) => p.target), ...hotList, ...rated])];
-  const [meta, sums, profiles] = await Promise.all([metas(targets), summaries([...hotList, ...rated]), getProfiles([...posts.map((p) => p.author), ...leaderIds])]);
+  const [meta, sums, profiles] = await Promise.all([metas(targets), summaries([...hotList, ...rated]), getProfiles([...posts.map((p) => p.author), ...posts.flatMap((p) => p.joiners ?? []), ...leaderIds])]);
   const feed: FeedItem[] = posts.map((post) => ({ post, meta: meta[post.target] }));
   const withMeta = (ts: string[]) => ts.filter((t) => meta[t] && sums[t]).map((t) => ({ ...meta[t], ...sums[t] }));
   return {
@@ -673,20 +904,23 @@ export async function getHome(viewer?: string): Promise<CommunityHome> {
 export async function getMember(id: string, viewer?: string) {
   const profile = await getProfile(id);
   if (!profile) return undefined;
-  const [postIds, plans, followers, following, followed] = await pipe([
+  const [postIds, plans, followers, following, followed, blocked] = await pipe([
     ["ZREVRANGE", `c:up:${id}`, 0, 49],
     ["ZREVRANGE", `c:ugo:${id}`, 0, 49],
     ["SCARD", `c:fby:${id}`],
     ["SCARD", `c:fol:${id}`],
     ["SISMEMBER", `c:fol:${viewer ?? "-"}`, id],
+    ["SISMEMBER", `c:blk:${viewer ?? "-"}`, id],
   ]);
-  const posts = (await loadPosts((postIds as string[]) ?? [], viewer)).filter((p) => !p.deleted);
+  const blockedByViewer = Number(blocked) === 1;
+  const posts = blockedByViewer ? [] : (await loadPosts((postIds as string[]) ?? [], viewer)).filter((p) => !p.deleted);
   const meta = await metas([...new Set([...posts.map((p) => p.target), ...((plans as string[]) ?? [])])]);
   return {
     profile,
     posts: posts.map((post) => ({ post, meta: meta[post.target] })),
     plans: ((plans as string[]) ?? []).map((t) => meta[t]).filter(Boolean),
     follow: { followers: Number(followers ?? 0), following: Number(following ?? 0), byViewer: Number(followed) === 1 },
+    blockedByViewer,
     persistent,
   };
 }
