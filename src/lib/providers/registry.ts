@@ -19,6 +19,7 @@ import { chicagoProvider } from "./chicago";
 import { brisbaneProvider } from "./brisbane";
 import { localistProvider } from "./localist";
 import { liveWhaleProvider } from "./livewhale";
+import { mapasCulturaisProvider } from "./mapas-culturais";
 import { wikidataProvider } from "./wikidata";
 import { ptMunicipiosProvider } from "./pt-municipios";
 import { valenciaIvcProvider } from "./valencia-ivc";
@@ -33,7 +34,7 @@ import type { ProviderAdapter } from "./types";
  * Register new sources here. Each adapter is independent; the store merges and
  * de-duplicates their output. See src/lib/providers/README.md.
  */
-export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, bolProvider, culturaPortugalProvider, ptMunicipiosProvider, cataloniaProvider, barcelonaProvider, valenciaIvcProvider, euskadiProvider, castillaLeonProvider, zaragozaProvider, footballProvider, parisProvider, openAgendaProvider, nycParksProvider, chicagoProvider, localistProvider, liveWhaleProvider, helsinkiProvider, espooProvider, taiwanProvider, montrealProvider, brisbaneProvider, berlinProvider, madridProvider, wikidataProvider, demoProvider];
+export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, bolProvider, culturaPortugalProvider, ptMunicipiosProvider, cataloniaProvider, barcelonaProvider, valenciaIvcProvider, euskadiProvider, castillaLeonProvider, zaragozaProvider, footballProvider, parisProvider, openAgendaProvider, nycParksProvider, chicagoProvider, localistProvider, liveWhaleProvider, mapasCulturaisProvider, helsinkiProvider, espooProvider, taiwanProvider, montrealProvider, brisbaneProvider, berlinProvider, madridProvider, wikidataProvider, demoProvider];
 
 /** DISABLED_PROVIDERS=paris,madrid switches sources off without a code change. */
 const disabled = () => new Set((process.env.DISABLED_PROVIDERS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));

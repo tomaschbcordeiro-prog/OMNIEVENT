@@ -1,0 +1,1807 @@
+{
+ "rows": [
+  {
+   "id": 21366,
+   "name": "Loja do Mercado AlimentaCE",
+   "shortDescription": "A Loja do Mercado AlimentaCE é mais que um ponto de vendas, é um convite para conhecer, experimentar e vivenciar os sabores e saberes do Ceará. Com um mix diversificado de produtos de diferentes macro",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21366/file/7433506/cAEM9oKryLA7UG8kXxjL0unBCurSndiKdtHqJk0e-0f09a744e825275368f4ae61c6570e5c.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Integradas"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21366/",
+   "price": null,
+   "occurrence_id": 19226,
+   "event_id": 21366,
+   "starts_on": "2026-11-01",
+   "starts_at": "10:00:00",
+   "ends_on": null,
+   "ends_at": "15:00:00",
+   "rule": {
+    "spaceId": "5932",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "10:00",
+    "duration": 300,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 10h até 15h",
+    "price": "Gratuito",
+    "endsAt": "15:00"
+   },
+   "space": {
+    "id": 5932
+   },
+   "attendance": null,
+   "_reccurrence_string": "19226.2026-11-01.10:00:00..15:00:00"
+  },
+  {
+   "id": 21480,
+   "name": "Oficina Infantil \"Universo de cores\", com Talita Késsia e Fleuri Cardoso",
+   "shortDescription": "A partir de tintas guache nas cores primárias vermelho, azul e amarelo e juntamente do branco, as crianças experimentarão a criação de novas cores através de suas misturas em diferentes proporções. Co",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21480/file/7450984/WPjkGGdlBpedxeLer780qfzNhXTrlWQXeMtDvLJe-d2b7bfb9c3c03d7925ec574ab1fe6319.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Visuais"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21480/",
+   "price": null,
+   "occurrence_id": 19304,
+   "event_id": 21480,
+   "starts_on": "2026-11-01",
+   "starts_at": "10:00:00",
+   "ends_on": null,
+   "ends_at": "13:00:00",
+   "rule": {
+    "spaceId": "5870",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "10:00",
+    "duration": 180,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 10h até 13h",
+    "price": "Gratuito",
+    "endsAt": "13:00"
+   },
+   "space": {
+    "id": 5870
+   },
+   "attendance": null,
+   "_reccurrence_string": "19304.2026-11-01.10:00:00..13:00:00"
+  },
+  {
+   "id": 21206,
+   "name": "Pequenas Grandes Histórias | Contar e Encantar \"A folha que queria ser um barco\"",
+   "shortDescription": "A folha que queria ser um barco é uma apresentação de contação de histórias com dobradura (origami), na qual a narrativa e a transformação do papel acontecem simultaneamente. Enquanto a história é con",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21206/file/7398607/JKbqTjqYECL0I7p3fHMEyQSzWS6Ib7JrkPzqYu4h-066e8bdbdd2bc9d245a707c8fbc34703.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21206/",
+   "price": null,
+   "occurrence_id": 19084,
+   "event_id": 21206,
+   "starts_on": "2026-11-01",
+   "starts_at": "10:00:00",
+   "ends_on": null,
+   "ends_at": "11:00:00",
+   "rule": {
+    "spaceId": "5325",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "10:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 10h até 11h",
+    "price": "Gratuito",
+    "endsAt": "11:00"
+   },
+   "space": {
+    "id": 5325
+   },
+   "attendance": null,
+   "_reccurrence_string": "19084.2026-11-01.10:00:00..11:00:00"
+  },
+  {
+   "id": 21206,
+   "name": "Pequenas Grandes Histórias | Contar e Encantar \"A folha que queria ser um barco\"",
+   "shortDescription": "A folha que queria ser um barco é uma apresentação de contação de histórias com dobradura (origami), na qual a narrativa e a transformação do papel acontecem simultaneamente. Enquanto a história é con",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21206/file/7398607/JKbqTjqYECL0I7p3fHMEyQSzWS6Ib7JrkPzqYu4h-066e8bdbdd2bc9d245a707c8fbc34703.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21206/",
+   "price": null,
+   "occurrence_id": 19085,
+   "event_id": 21206,
+   "starts_on": "2026-11-01",
+   "starts_at": "10:00:00",
+   "ends_on": null,
+   "ends_at": "11:00:00",
+   "rule": {
+    "spaceId": "7866",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "10:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 10h até 11h",
+    "price": "Gratuito",
+    "endsAt": "11:00"
+   },
+   "space": {
+    "id": 7866
+   },
+   "attendance": null,
+   "_reccurrence_string": "19085.2026-11-01.10:00:00..11:00:00"
+  },
+  {
+   "id": 21481,
+   "name": "Espetáculo \"Tom e Raça\", com Companhia de Ritmos e Danças Populares",
+   "shortDescription": "Sob a direção do coreógrafo Ênio Marques, \"Tom e Raça\" convida o público a embarcar em uma verdadeira viagem sensorial e histórica pelos ritmos, toques e movimentos que\ncompõem o legado afro-brasileir",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21481/file/7450992/zkBsh0U8u4PDfiAmMdAz5sxbrmXu25LKrVn0IKos-2e44128cd2712043cade393826c93a67.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21481/",
+   "price": null,
+   "occurrence_id": 19305,
+   "event_id": 21481,
+   "starts_on": "2026-11-01",
+   "starts_at": "11:00:00",
+   "ends_on": null,
+   "ends_at": "12:00:00",
+   "rule": {
+    "spaceId": "5870",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "11:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 11h até 12h",
+    "price": "Gratuito",
+    "endsAt": "12:00"
+   },
+   "space": {
+    "id": 5870
+   },
+   "attendance": null,
+   "_reccurrence_string": "19305.2026-11-01.11:00:00..12:00:00"
+  },
+  {
+   "id": 21482,
+   "name": "Gingando na Estação, com Capoeira Angola",
+   "shortDescription": "O Grupo atua na valorização e difusão da Capoeira Angola como expressão da cultura popular e de matriz africana. Com forte atuação cultural na cidade, desenvolve ações que articulam ancestralidade, or",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21482/file/7450999/gKy2HgMOBfvwDBvSFpc8SOgJ30qG5HRczJuBxkKW-068d67dad83e738e8cd4a046a1e3e81d.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21482/",
+   "price": null,
+   "occurrence_id": 19306,
+   "event_id": 21482,
+   "starts_on": "2026-11-01",
+   "starts_at": "12:00:00",
+   "ends_on": null,
+   "ends_at": "14:30:00",
+   "rule": {
+    "spaceId": "5870",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "12:00",
+    "duration": 150,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 12h até 14h30",
+    "price": "Gratuito",
+    "endsAt": "14:30"
+   },
+   "space": {
+    "id": 5870
+   },
+   "attendance": null,
+   "_reccurrence_string": "19306.2026-11-01.12:00:00..14:30:00"
+  },
+  {
+   "id": 21236,
+   "name": "Contação de Histórias \"Histórias que o mar me contou\"",
+   "shortDescription": "Vamos nos aventurar pelos mares encantados da Rainha do Mar, Iemanjá: Orixá e deusa negra africana, protetora e guerreira da natureza. Desde criança, ela passou por muitas aventuras ao lado de seres e",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21236/file/7404422/FT8aBKHE8UTzZUPPKb4NnUggkKxZq1BxbGP02pg3-c81b69268dde761dd571082b280d349c.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Contadores de Histórias e Mediadores de Leitura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21236/",
+   "price": null,
+   "occurrence_id": 19122,
+   "event_id": 21236,
+   "starts_on": "2026-11-01",
+   "starts_at": "16:00:00",
+   "ends_on": null,
+   "ends_at": "17:00:00",
+   "rule": {
+    "spaceId": "425",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "16:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 16h até 17h",
+    "price": "Gratuito",
+    "endsAt": "17:00"
+   },
+   "space": {
+    "id": 425
+   },
+   "attendance": null,
+   "_reccurrence_string": "19122.2026-11-01.16:00:00..17:00:00"
+  },
+  {
+   "id": 21235,
+   "name": "Feira Fuxico no Dragão",
+   "shortDescription": "Uma feirinha que apresenta o trabalho de designers e artesãos da cidade, reunindo expositores de produtos criativos de moda e acessórios, artesanato, decoração e cordel.",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21235/file/7404404/bEHAnlFZ7PnCPghToHnCNDOhpnavzrAISJsavb1d-86f763f799323346a3cfc5262287528d.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": []
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21235/",
+   "price": null,
+   "occurrence_id": 19121,
+   "event_id": 21235,
+   "starts_on": "2026-11-01",
+   "starts_at": "16:00:00",
+   "ends_on": null,
+   "ends_at": "20:00:00",
+   "rule": {
+    "spaceId": "425",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "16:00",
+    "duration": 240,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 16h até 20h",
+    "price": "Gratuito",
+    "endsAt": "20:00"
+   },
+   "space": {
+    "id": 425
+   },
+   "attendance": null,
+   "_reccurrence_string": "19121.2026-11-01.16:00:00..20:00:00"
+  },
+  {
+   "id": 21578,
+   "name": "Brincando e Pintando no Dragão",
+   "shortDescription": "O tradicional programa do Dragão direcionado ao público infantil realiza brincadeiras e atividades lúdicas para crianças de todas as idades, com o acompanhamento de monitores, e promove apresentações ",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21578/file/7452816/VLW8hfV60WnhcxWb3rY9o79UIpwM4ph6ZRMWRIvd-66b856eb15b7e0912bb3d7e3aab17cd7.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Formação"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21578/",
+   "price": null,
+   "occurrence_id": 19397,
+   "event_id": 21578,
+   "starts_on": "2026-11-01",
+   "starts_at": "16:00:00",
+   "ends_on": null,
+   "ends_at": "19:00:00",
+   "rule": {
+    "spaceId": "7688",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "16:00",
+    "duration": 180,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 16h até 19h",
+    "price": "Gratuito",
+    "endsAt": "19:00"
+   },
+   "space": {
+    "id": 7688
+   },
+   "attendance": null,
+   "_reccurrence_string": "19397.2026-11-01.16:00:00..19:00:00"
+  },
+  {
+   "id": 21340,
+   "name": "X BIENAL DE DANÇA | “Menos da Metade”",
+   "shortDescription": "A obra acompanha o ciclo climático do Cerrado e sua devastação ambiental. Com coreografia de Henrique Rodovalho, o trabalho mergulha nas características do bioma do centro-oeste brasileiro; e os os oi",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21340/file/7429998/ugJnFgjWzNYrs1ImQwE4wca02Ys47nomO0HmOhz4-8af2646b32be6f630274cbd9b3fc1bf3.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21340/",
+   "price": null,
+   "occurrence_id": 19207,
+   "event_id": 21340,
+   "starts_on": "2026-11-01",
+   "starts_at": "18:00:00",
+   "ends_on": null,
+   "ends_at": "19:10:00",
+   "rule": {
+    "spaceId": "1235",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "18:00",
+    "duration": 70,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 18h até 19h10",
+    "price": "Gratuito",
+    "endsAt": "19:10"
+   },
+   "space": {
+    "id": 1235
+   },
+   "attendance": null,
+   "_reccurrence_string": "19207.2026-11-01.18:00:00..19:10:00"
+  },
+  {
+   "id": 21692,
+   "name": "X Bienal Internacional de Dança do Ceará- Espetáculo “SOUTE À BAGAGES”",
+   "shortDescription": "Que linguagem e estratégias um corpo inventa quando submetido às turbulências da viagem, a freadas bruscas, paradas inesperadas e ao que cai, desliza ou desmorona? Entre velocidades, lugares, tempos, ",
+   "classificacaoEtaria": "+10",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21692/file/7463611/NCGMUWBW2uaQHUaNmrbNb31gucjDJcdKbzHXwcYd-877010b5ab8dcf8646c8c5d9cc8c97da.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21692/",
+   "price": null,
+   "occurrence_id": 19467,
+   "event_id": 21692,
+   "starts_on": "2026-11-01",
+   "starts_at": "20:00:00",
+   "ends_on": null,
+   "ends_at": "21:00:00",
+   "rule": {
+    "spaceId": "5859",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "20:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 20h até 21h",
+    "price": "Gratuito",
+    "endsAt": "21:00"
+   },
+   "space": {
+    "id": 5859
+   },
+   "attendance": null,
+   "_reccurrence_string": "19467.2026-11-01.20:00:00..21:00:00"
+  },
+  {
+   "id": 21579,
+   "name": "X Bienal Internacional de Dança do Ceará de Par em Par - “AMOR”",
+   "shortDescription": "Para dançar é importante trabalhar a nossa respiração, o nosso fôlego, para amar também! Para amar é preciso saber agenciar um jogo de dar e receber, renunciar e insistir, ganhar e perder, na dança ta",
+   "classificacaoEtaria": "+16",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21579/file/7452822/bsl0SWQ6tLjTdvEL4GwGSVD0W53rzsBNrW06qMQT-6d326a22828968e7b9d17d258a122e29.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21579/",
+   "price": null,
+   "occurrence_id": 19398,
+   "event_id": 21579,
+   "starts_on": "2026-11-01",
+   "starts_at": "21:00:00",
+   "ends_on": null,
+   "ends_at": "21:55:00",
+   "rule": {
+    "spaceId": "7681",
+    "startsOn": "2026-11-01",
+    "until": "2026-11-01",
+    "startsAt": "21:00",
+    "duration": 55,
+    "frequency": "once",
+    "description": "Domingo, 01 de novembro das 21h até 21h55",
+    "price": "Gratuito",
+    "endsAt": "21:55"
+   },
+   "space": {
+    "id": 7681
+   },
+   "attendance": null,
+   "_reccurrence_string": "19398.2026-11-01.21:00:00..21:55:00"
+  },
+  {
+   "id": 12925,
+   "name": "Encontro dos músicos de Fortaleza",
+   "shortDescription": "Palco livre todos os estilos musicais.",
+   "classificacaoEtaria": "Livre",
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/12925/",
+   "price": null,
+   "occurrence_id": 10934,
+   "event_id": 12925,
+   "starts_on": "2026-11-02",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "23:30:00",
+   "rule": {
+    "spaceId": "7903",
+    "startsAt": "19:00",
+    "duration": 270,
+    "endsAt": "23:30",
+    "frequency": "weekly",
+    "startsOn": "2022-09-12",
+    "until": "2027-09-27",
+    "day": {
+     "1": "on"
+    },
+    "description": "Toda segunda-feira de 12 de setembro de 2022 a 27 de setembro de 2027 às 19:00 ",
+    "price": "Gratuito "
+   },
+   "space": {
+    "id": 7903
+   },
+   "attendance": null,
+   "_reccurrence_string": "10934.2026-11-02.19:00:00..23:30:00"
+  },
+  {
+   "id": 21736,
+   "name": "[FORMAÇÃO] \"Concerto - aula Zabumba Moderna\"",
+   "shortDescription": "Músico baterista e percussionista, que teve seus estudos iniciados em 1983 com formação técnica pelo Centro Profissionalizante de Criatividade Musical de Recife (CPCMR) . Tendo tocado e ministrado vár",
+   "classificacaoEtaria": "+18",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21736/file/7468987/7Pk8SMi85SPuJbX8vyuNquwPTdIeKStUV47rfkuU-accb5c90bf14ecc69ac240c010612e53.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Curso ou Oficina"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21736/",
+   "price": null,
+   "occurrence_id": 19497,
+   "event_id": 21736,
+   "starts_on": "2026-11-03",
+   "starts_at": "15:00:00",
+   "ends_on": null,
+   "ends_at": "19:00:00",
+   "rule": {
+    "spaceId": "7732",
+    "startsOn": "2026-11-03",
+    "until": "2026-11-04",
+    "startsAt": "15:00",
+    "duration": 240,
+    "frequency": "once",
+    "description": "03 - 04 de novembro 2026, 15h – 19h",
+    "price": "Gratuito",
+    "endsAt": "19:00"
+   },
+   "space": {
+    "id": 7732
+   },
+   "attendance": null,
+   "_reccurrence_string": "19497.2026-11-03.15:00:00..19:00:00"
+  },
+  {
+   "id": 21530,
+   "name": "Coral da Bece",
+   "shortDescription": "Coral da BECE | Regência: Apá Silvino\n\nO Coral da BECE é um espaço dedicado à prática do canto coletivo, à expressão artística e à convivência por meio da música. Sob a regência de Apá Silvino, os enc",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21530/file/7451643/8uHlnf8FIqXv3X40awbpgFzxv2FWu9cyVfP2Rghg-c814afc8050a340d703b18232b22450f.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21530/",
+   "price": null,
+   "occurrence_id": 19348,
+   "event_id": 21530,
+   "starts_on": "2026-11-03",
+   "starts_at": "15:30:00",
+   "ends_on": null,
+   "ends_at": "17:00:00",
+   "rule": {
+    "spaceId": "5912",
+    "startsOn": "2026-11-03",
+    "until": "2026-11-03",
+    "startsAt": "15:30",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Terça-feira, 03 de novembro das 15h30 até 17h",
+    "price": "Gratuito",
+    "endsAt": "17:00"
+   },
+   "space": {
+    "id": 5912
+   },
+   "attendance": null,
+   "_reccurrence_string": "19348.2026-11-03.15:30:00..17:00:00"
+  },
+  {
+   "id": 21530,
+   "name": "Coral da Bece",
+   "shortDescription": "Coral da BECE | Regência: Apá Silvino\n\nO Coral da BECE é um espaço dedicado à prática do canto coletivo, à expressão artística e à convivência por meio da música. Sob a regência de Apá Silvino, os enc",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21530/file/7451643/8uHlnf8FIqXv3X40awbpgFzxv2FWu9cyVfP2Rghg-c814afc8050a340d703b18232b22450f.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21530/",
+   "price": null,
+   "occurrence_id": 19349,
+   "event_id": 21530,
+   "starts_on": "2026-11-03",
+   "starts_at": "15:30:00",
+   "ends_on": null,
+   "ends_at": "17:00:00",
+   "rule": {
+    "spaceId": "5325",
+    "startsOn": "2026-11-03",
+    "until": "2026-11-03",
+    "startsAt": "15:30",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Terça-feira, 03 de novembro das 15h30 até 17h",
+    "price": "Gratuito",
+    "endsAt": "17:00"
+   },
+   "space": {
+    "id": 5325
+   },
+   "attendance": null,
+   "_reccurrence_string": "19349.2026-11-03.15:30:00..17:00:00"
+  },
+  {
+   "id": 21592,
+   "name": "Lançamento da Coleção Ceará Sem Fronteiras - CORPOS QUE CRIAM",
+   "shortDescription": "O Ceará Sem Fronteiras lança, nos dias 3, 4 e 5 de novembro, no Centro Dragão do Mar de Arte e Cultura, em Fortaleza, uma coleção formada por 15 livros de autores cearenses dedicados à arte, à cultura",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21592/file/7456004/9p5cwaGQswm5mSFUxycHLHPUjUUo0ZhhXPGCytIw-9a248e6f063a93f1d94f8db81d4110d3.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21592/",
+   "price": null,
+   "occurrence_id": 19404,
+   "event_id": 21592,
+   "starts_on": "2026-11-03",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "20:30:00",
+   "rule": {
+    "spaceId": "425",
+    "startsOn": "2026-11-03",
+    "until": "2026-11-03",
+    "startsAt": "19:00",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Terça-feira, 03 de novembro das 19h até 20h30",
+    "price": "Gratuito",
+    "endsAt": "20:30"
+   },
+   "space": {
+    "id": 425
+   },
+   "attendance": null,
+   "_reccurrence_string": "19404.2026-11-03.19:00:00..20:30:00"
+  },
+  {
+   "id": 11109,
+   "name": "Projeto GINGA MARABAIANO",
+   "shortDescription": "Projeto Ginga MARABAIANO: Sob coordenação do Contramestre Popeye e supervisão dos Mestres Jair, Inácio, Relações e Neguinho, o Projeto Ginga MARABAIANO promove a Capoeira como instrumento de inclusão ",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/11109/file/5459885/blob.-074a78190d9d7865225df78db21dc962.png"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Esporte",
+     "Ação Educativa",
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/11109/",
+   "price": null,
+   "occurrence_id": 9298,
+   "event_id": 11109,
+   "starts_on": "2026-11-03",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "21:00:00",
+   "rule": {
+    "spaceId": "6972",
+    "startsAt": "19:00",
+    "duration": 120,
+    "endsAt": "21:00",
+    "frequency": "weekly",
+    "startsOn": "2024-02-20",
+    "until": "2026-12-17",
+    "day": {
+     "2": "on",
+     "4": "on"
+    },
+    "description": "Toda ter e qui de 6 de agosto a 10 de dezembro de 2026 às 18:30",
+    "price": "É gratuita."
+   },
+   "space": {
+    "id": 6972
+   },
+   "attendance": null,
+   "_reccurrence_string": "9298.2026-11-03.19:00:00..21:00:00"
+  },
+  {
+   "id": 21571,
+   "name": "Teatro da Terça - Alzira - onde a poesia insiste em rasgar o caos",
+   "shortDescription": "Alzira grita e gargalha o riso sufocado das ancestrais. Devaneios, histórias e a loucura como resposta à opressão.\nO espetáculo solo de Sâmia Bittencourt, parte da investigação da bufonaria e da comic",
+   "classificacaoEtaria": "+16",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21571/file/7452756/8alD00tMcfClZzrxLLkxuzmNQIcmGvnCDjw6yxhr-5a43dae4c35a2fad907d80c2ba126cc8.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Teatro"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21571/",
+   "price": null,
+   "occurrence_id": 19390,
+   "event_id": 21571,
+   "starts_on": "2026-11-03",
+   "starts_at": "19:30:00",
+   "ends_on": null,
+   "ends_at": "20:10:00",
+   "rule": {
+    "spaceId": "7681",
+    "startsOn": "2026-11-03",
+    "until": "2026-11-03",
+    "startsAt": "19:30",
+    "duration": 40,
+    "frequency": "once",
+    "description": "Terça-feira, 03 de novembro das 19h30 até 20h10",
+    "price": "Pago",
+    "endsAt": "20:10"
+   },
+   "space": {
+    "id": 7681
+   },
+   "attendance": null,
+   "_reccurrence_string": "19390.2026-11-03.19:30:00..20:10:00"
+  },
+  {
+   "id": 21693,
+   "name": "Zona de Criação- Episódio 01: Aparição",
+   "shortDescription": "“Aparição” traz para a tela a pesquisa de mais de 20 anos do grupo Garajal com o teatro de rua, o circo e a cultura popular. Inspirado no Reisado dos Guerreiros de Jorge, o vídeo transforma os cantos,",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21693/file/7463617/FxBTQz2bNpnie2G9iyVVi4MXsvq3hl0CSuE427Ua-16a677ebb38aa57d4a4b68318e5d6353.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Cinema"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21693/",
+   "price": null,
+   "occurrence_id": 19468,
+   "event_id": 21693,
+   "starts_on": "2026-11-04",
+   "starts_at": "12:00:00",
+   "ends_on": null,
+   "ends_at": "12:30:00",
+   "rule": {
+    "spaceId": "8198",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "12:00",
+    "duration": 30,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 12h até 12h30",
+    "price": "Gratuito",
+    "endsAt": "12:30"
+   },
+   "space": {
+    "id": 8198
+   },
+   "attendance": null,
+   "_reccurrence_string": "19468.2026-11-04.12:00:00..12:30:00"
+  },
+  {
+   "id": 21560,
+   "name": "Exibição do documentário \"O que é passado não passou\" + Roda de conversa",
+   "shortDescription": "O documentário “O que é passado não passou”, realizado pela Associação de Engenheiros da Rede de Viação Cearense e dirigido pelo ferroviário Hamilton Pereira, convida o público a embarcar em uma viage",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21560/file/7452642/td9U2U3ItjUmHpUhAjtanr4eAzzBdaP0ajRq1SWC-762bb08404a6f27d181fa1336121e8a1.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Palestra, Debate ou Encontro"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21560/",
+   "price": null,
+   "occurrence_id": 19379,
+   "event_id": 21560,
+   "starts_on": "2026-11-04",
+   "starts_at": "14:00:00",
+   "ends_on": null,
+   "ends_at": "16:00:00",
+   "rule": {
+    "spaceId": "7975",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "14:00",
+    "duration": 120,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 14h até 16h",
+    "price": "Gratuito",
+    "endsAt": "16:00"
+   },
+   "space": {
+    "id": 7975
+   },
+   "attendance": null,
+   "_reccurrence_string": "19379.2026-11-04.14:00:00..16:00:00"
+  },
+  {
+   "id": 21729,
+   "name": "Ação de Cidadania - Uma Viagem Colorida Entre Sorrisos , Arte e Fantasia",
+   "shortDescription": "A Danny Pintura Facial é uma empresa especializada em entretenimento infantil, levando alegria, cor e diversão para eventos em Fortaleza e região. Atuamos com uma variedade de atrações que encantam cr",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21729/file/7467933/NdlYBPrpZ7X8OFeuli2Dc07icyjbSGiZOCzdQHKz-1ab863cea4236c5d3a63d6ca54769a3c.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Teatro"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21729/",
+   "price": null,
+   "occurrence_id": 19493,
+   "event_id": 21729,
+   "starts_on": "2026-11-04",
+   "starts_at": "16:00:00",
+   "ends_on": null,
+   "ends_at": "17:00:00",
+   "rule": {
+    "spaceId": "7777",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "16:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 16h até 17h",
+    "price": "Gratuito",
+    "endsAt": "17:00"
+   },
+   "space": {
+    "id": 7777
+   },
+   "attendance": null,
+   "_reccurrence_string": "19493.2026-11-04.16:00:00..17:00:00"
+  },
+  {
+   "id": 21728,
+   "name": "Ação de Cidadania | \"O Pocket Circo Show\" | SESC",
+   "shortDescription": "Prepare-se para uma aventura inesquecível com \"O Pocket Circo Show\", um espetáculo que mergulha o público no encantador mundo do circo. Com proezas surpreendentes de malabarismo, equilíbrio, mágica e ",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21728/file/7467920/f8FIgXUbJGKKT3M3DbxVv0xv5xn8RxcPFTQAlPMa-f5c36e4753a6fa5e81811827a08fb917.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Circenses"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21728/",
+   "price": null,
+   "occurrence_id": 19492,
+   "event_id": 21728,
+   "starts_on": "2026-11-04",
+   "starts_at": "17:00:00",
+   "ends_on": null,
+   "ends_at": "18:00:00",
+   "rule": {
+    "spaceId": "7777",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "17:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 17h até 18h",
+    "price": "Gratuito",
+    "endsAt": "18:00"
+   },
+   "space": {
+    "id": 7777
+   },
+   "attendance": null,
+   "_reccurrence_string": "19492.2026-11-04.17:00:00..18:00:00"
+  },
+  {
+   "id": 21372,
+   "name": "XXVI Festival de Artes e Cultura do Colégio Maria Ester",
+   "shortDescription": "Fortaleza é feita de história, cultura, arte e encanto… e neste ano, os alunos do Colégio Maria Ester irão celebrar tudo isso no Festival de Arte e Cultura 2026. Com o tema “300 Anos de Fortaleza: Ent",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21372/file/7435223/jiCTADqC4uL6PrNvRqV478MBVdtrJCOQBdW1Dp4F-bae3d9e19b65fea5c7cc1140e2179177.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Outros"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21372/",
+   "price": null,
+   "occurrence_id": 19232,
+   "event_id": 21372,
+   "starts_on": "2026-11-04",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "20:30:00",
+   "rule": {
+    "spaceId": "1235",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "19:00",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 19h até 20h30",
+    "price": "Gratuito",
+    "endsAt": "20:30"
+   },
+   "space": {
+    "id": 1235
+   },
+   "attendance": null,
+   "_reccurrence_string": "19232.2026-11-04.19:00:00..20:30:00"
+  },
+  {
+   "id": 21593,
+   "name": "Lançamento da Coleção Ceará Sem Fronteiras - TERRITÓRIOS EM DISPUTA",
+   "shortDescription": "O Ceará Sem Fronteiras lança, nos dias 3, 4 e 5 de novembro, no Centro Dragão do Mar de Arte e Cultura, em Fortaleza, uma coleção formada por 15 livros de autores cearenses dedicados à arte, à cultura",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21593/file/7456010/yI3eZ7xJGpNa3i8n38HmKTX02EShjGsKizubBZz9-726bc4358309ad166791218756b20d46.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21593/",
+   "price": null,
+   "occurrence_id": 19405,
+   "event_id": 21593,
+   "starts_on": "2026-11-04",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "20:30:00",
+   "rule": {
+    "spaceId": "425",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "19:00",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 19h até 20h30",
+    "price": "Gratuito",
+    "endsAt": "20:30"
+   },
+   "space": {
+    "id": 425
+   },
+   "attendance": null,
+   "_reccurrence_string": "19405.2026-11-04.19:00:00..20:30:00"
+  },
+  {
+   "id": 21572,
+   "name": "Quarta do Circo - Há algo a perceber na ternura enganada em preces fatigadas",
+   "shortDescription": "“Há algo a perceber na ternura enganada em preces fatigadas” é um espetáculo circense em Trapézio de um ponto. A obra trabalha a levitação e encantamento com movimentos acrobáticos tendo como base de ",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21572/file/7452768/k2MywAwFPJqEAUZqaTxwT25omQV1vU2jCig8uoIu-c8bc8f88a6d09064ebf09a733676898a.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Circenses"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21572/",
+   "price": null,
+   "occurrence_id": 19391,
+   "event_id": 21572,
+   "starts_on": "2026-11-04",
+   "starts_at": "19:30:00",
+   "ends_on": null,
+   "ends_at": "20:05:00",
+   "rule": {
+    "spaceId": "7681",
+    "startsOn": "2026-11-04",
+    "until": "2026-11-04",
+    "startsAt": "19:30",
+    "duration": 35,
+    "frequency": "once",
+    "description": "Quarta-feira, 04 de novembro das 19h30 até 20h05",
+    "price": "Pago",
+    "endsAt": "20:05"
+   },
+   "space": {
+    "id": 7681
+   },
+   "attendance": null,
+   "_reccurrence_string": "19391.2026-11-04.19:30:00..20:05:00"
+  },
+  {
+   "id": 21367,
+   "name": "Loja do Mercado AlimentaCE",
+   "shortDescription": "A Loja do Mercado AlimentaCE é mais que um ponto de vendas, é um convite para conhecer, experimentar e vivenciar os sabores e saberes do Ceará. Com um mix diversificado de produtos de diferentes macro",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21367/file/7433513/V7zP3u8L4pm4PCP2BNNLEtcHXioD68b2mlc5BRFp-51d7834202b5e9d83ed75df89fab5e73.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Integradas"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21367/",
+   "price": null,
+   "occurrence_id": 19227,
+   "event_id": 21367,
+   "starts_on": "2026-11-05",
+   "starts_at": "12:00:00",
+   "ends_on": null,
+   "ends_at": "18:00:00",
+   "rule": {
+    "spaceId": "5932",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "12:00",
+    "duration": 360,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 12h até 18h",
+    "price": "Gratuito",
+    "endsAt": "18:00"
+   },
+   "space": {
+    "id": 5932
+   },
+   "attendance": null,
+   "_reccurrence_string": "19227.2026-11-05.12:00:00..18:00:00"
+  },
+  {
+   "id": 21655,
+   "name": "Roda de Conversa com a escritora Cleide Amorim",
+   "shortDescription": "A atividade é destinado aos estudantes do curso de Letras da FECLESC/UECE.",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21655/file/7463421/gwSgYVwtcgqyARhPgjjhbyWaOF7J5gynWDQEFLSw-ed4900e358167451e74c69542aff8eb3.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Palestra, Debate ou Encontro"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21655/",
+   "price": null,
+   "occurrence_id": 19428,
+   "event_id": 21655,
+   "starts_on": "2026-11-05",
+   "starts_at": "13:00:00",
+   "ends_on": null,
+   "ends_at": "15:00:00",
+   "rule": {
+    "spaceId": "5325",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "13:00",
+    "duration": 120,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 13h até 15h",
+    "price": "Gratuito",
+    "endsAt": "15:00"
+   },
+   "space": {
+    "id": 5325
+   },
+   "attendance": null,
+   "_reccurrence_string": "19428.2026-11-05.13:00:00..15:00:00"
+  },
+  {
+   "id": 21474,
+   "name": "Festival Internacional de Circo do Ceará | Espetáculo Número: Se desconcierta el concierto",
+   "shortDescription": "Fundindo costumes argentinos e peruanos, acontece um show de palhaço, manipulação e música ao vivo, cujo tempero principal é a cumplicidade com o público. Deixando de lado a palavra, essa dupla improv",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21474/file/7456389/GElZ532IwfWWD8f6zIhZaNGHnJhshVdbPbyM268i-9abcfeb154a39f502adae1eeb64aedd0.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Circenses"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21474/",
+   "price": null,
+   "occurrence_id": 19298,
+   "event_id": 21474,
+   "starts_on": "2026-11-05",
+   "starts_at": "15:00:00",
+   "ends_on": null,
+   "ends_at": "16:00:00",
+   "rule": {
+    "spaceId": "7732",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "15:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 15h até 16h",
+    "price": "Gratuito",
+    "endsAt": "16:00"
+   },
+   "space": {
+    "id": 7732
+   },
+   "attendance": null,
+   "_reccurrence_string": "19298.2026-11-05.15:00:00..16:00:00"
+  },
+  {
+   "id": 21704,
+   "name": "Programa a Ceu Aberto | Apresentação Zabumba Moderna, com participantes da oficina e Eder O Rocha (PE)",
+   "shortDescription": "A apresentação é o resultado  da oficina realizada nos dias 03 e 04 de novembro, onde  Eder “O” Rocha   trabalhou com os participantes, o Zabumba Moderno, conceito desenvolvido por ele, músico pernamb",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21704/file/7467016/IkNLPihPGcSqDMxFWMEr5zAGmEsE8iq1Injbc6rJ-e44b031ae28d3d1b3a60f6b3b8db58a0.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21704/",
+   "price": null,
+   "occurrence_id": 19476,
+   "event_id": 21704,
+   "starts_on": "2026-11-05",
+   "starts_at": "17:00:00",
+   "ends_on": null,
+   "ends_at": "18:00:00",
+   "rule": {
+    "spaceId": "7734",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "17:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 17h até 18h",
+    "price": "Gratuito",
+    "endsAt": "18:00"
+   },
+   "space": {
+    "id": 7734
+   },
+   "attendance": null,
+   "_reccurrence_string": "19476.2026-11-05.17:00:00..18:00:00"
+  },
+  {
+   "id": 21373,
+   "name": "CONVOCATÓRIA | \"O Número MAIS Difícil do Circo\"",
+   "shortDescription": "O espetáculo acompanha o irreverente e charlatanesco Palhaço Currulepe na sua maior proeza até o momento: revelar e executar o tão temido (e desconhecido) “número mais difícil do circo”. É com essa pr",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21373/file/7435245/BFgrwYznzwhoU5w58lS72Grqx8xfMohi81TTtwmQ-f71dfe46f182f86787fc764253ec22dd.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Circenses"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21373/",
+   "price": null,
+   "occurrence_id": 19233,
+   "event_id": 21373,
+   "starts_on": "2026-11-05",
+   "starts_at": "17:00:00",
+   "ends_on": null,
+   "ends_at": "18:00:00",
+   "rule": {
+    "spaceId": "6268",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "17:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 17h até 18h",
+    "price": "Gratuito",
+    "endsAt": "18:00"
+   },
+   "space": {
+    "id": 6268
+   },
+   "attendance": null,
+   "_reccurrence_string": "19233.2026-11-05.17:00:00..18:00:00"
+  },
+  {
+   "id": 21594,
+   "name": "Lançamento da Coleção Ceará Sem Fronteiras - POÉTICAS DO TEMPO E DE SI",
+   "shortDescription": "O Ceará Sem Fronteiras lança, nos dias 3, 4 e 5 de novembro, no Centro Dragão do Mar de Arte e Cultura, em Fortaleza, uma coleção formada por 15 livros de autores cearenses dedicados à arte, à cultura",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21594/file/7456016/sYFxOFPrIoHUIF5SDpGfX3uhwpYLJMtlszLdEsXA-cef4339a366dce002196e41dd27bbcd8.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21594/",
+   "price": null,
+   "occurrence_id": 19406,
+   "event_id": 21594,
+   "starts_on": "2026-11-05",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "20:30:00",
+   "rule": {
+    "spaceId": "425",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "19:00",
+    "duration": 90,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 19h até 20h30",
+    "price": "Gratuito",
+    "endsAt": "20:30"
+   },
+   "space": {
+    "id": 425
+   },
+   "attendance": null,
+   "_reccurrence_string": "19406.2026-11-05.19:00:00..20:30:00"
+  },
+  {
+   "id": 11109,
+   "name": "Projeto GINGA MARABAIANO",
+   "shortDescription": "Projeto Ginga MARABAIANO: Sob coordenação do Contramestre Popeye e supervisão dos Mestres Jair, Inácio, Relações e Neguinho, o Projeto Ginga MARABAIANO promove a Capoeira como instrumento de inclusão ",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/11109/file/5459885/blob.-074a78190d9d7865225df78db21dc962.png"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Esporte",
+     "Ação Educativa",
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/11109/",
+   "price": null,
+   "occurrence_id": 9298,
+   "event_id": 11109,
+   "starts_on": "2026-11-05",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "21:00:00",
+   "rule": {
+    "spaceId": "6972",
+    "startsAt": "19:00",
+    "duration": 120,
+    "endsAt": "21:00",
+    "frequency": "weekly",
+    "startsOn": "2024-02-20",
+    "until": "2026-12-17",
+    "day": {
+     "2": "on",
+     "4": "on"
+    },
+    "description": "Toda ter e qui de 6 de agosto a 10 de dezembro de 2026 às 18:30",
+    "price": "É gratuita."
+   },
+   "space": {
+    "id": 6972
+   },
+   "attendance": null,
+   "_reccurrence_string": "9298.2026-11-05.19:00:00..21:00:00"
+  },
+  {
+   "id": 21733,
+   "name": "LANÇAMENTO | MiniDoc “CPBT 35 Anos – História que segue em cena”",
+   "shortDescription": "A produção (2026, 45min) celebra os 35 anos do Curso Princípios Básicos de Teatro (CPBT), destacando sua trajetória e sua profunda ligação com o Theatro José de Alencar (TJA) por meio de memórias e re",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21733/file/7468041/tcUbRBxT8Yxrlzn7HAkbGUblee4OyG1pIkONCDlD-1a4af533def8d5e8429ffe0e3cf926e0.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Cinema"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21733/",
+   "price": null,
+   "occurrence_id": 19494,
+   "event_id": 21733,
+   "starts_on": "2026-11-05",
+   "starts_at": "19:00:00",
+   "ends_on": null,
+   "ends_at": "22:00:00",
+   "rule": {
+    "spaceId": "1235",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "19:00",
+    "duration": 180,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 19h até 22h",
+    "price": "Gratuito",
+    "endsAt": "22:00"
+   },
+   "space": {
+    "id": 1235
+   },
+   "attendance": null,
+   "_reccurrence_string": "19494.2026-11-05.19:00:00..22:00:00"
+  },
+  {
+   "id": 21573,
+   "name": "Quinta com Dança - E aí, População! um sampler de danças escuras",
+   "shortDescription": "Fundamentada nas epistemologias periféricas, \"E aí População! - um sampler de danças escuras\", criação colaborativa de Um Artista Periférico, Clau Moreira e Mateus Fazeno Rock, apresenta uma obra cêni",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21573/file/7452780/t0yI6DHmNhpnnOYP5FsOJ4OqhJ52JglL5MY3GVtd-b14e5691479bd093d110c9c5725d1bbd.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Dança"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21573/",
+   "price": null,
+   "occurrence_id": 19392,
+   "event_id": 21573,
+   "starts_on": "2026-11-05",
+   "starts_at": "19:30:00",
+   "ends_on": null,
+   "ends_at": "20:20:00",
+   "rule": {
+    "spaceId": "7681",
+    "startsOn": "2026-11-05",
+    "until": "2026-11-05",
+    "startsAt": "19:30",
+    "duration": 50,
+    "frequency": "once",
+    "description": "Quinta-feira, 05 de novembro das 19h30 até 20h20",
+    "price": "Pago",
+    "endsAt": "20:20"
+   },
+   "space": {
+    "id": 7681
+   },
+   "attendance": null,
+   "_reccurrence_string": "19392.2026-11-05.19:30:00..20:20:00"
+  },
+  {
+   "id": 21362,
+   "name": "Lançamento livro Nagual - Fabio Mattos",
+   "shortDescription": "Lançamento do fotolivro Nagual, de Graciela Iturbide, é uma realização do Instituto Mirante de Cultura e Arte, no contexto da exposição de mesmo nome, inaugurada inicialmente no Centro Cultural do Car",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21362/file/7433366/LOjowc3MykPJ5WjGVdkYyzCy0jBLo8NPza9EwCd5-bcfd2a3fafe400d03762f6728fece2b0.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Palestra, Debate ou Encontro"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21362/",
+   "price": null,
+   "occurrence_id": 19223,
+   "event_id": 21362,
+   "starts_on": "2026-11-06",
+   "starts_at": "00:00:00",
+   "ends_on": null,
+   "ends_at": "00:00:00",
+   "rule": {
+    "spaceId": "7950",
+    "startsOn": "2026-11-06",
+    "until": "2026-11-06",
+    "startsAt": "00:00",
+    "duration": 0,
+    "frequency": "once",
+    "description": "Sexta-feira, 06 de novembro",
+    "price": "Gratuito",
+    "endsAt": "00:00"
+   },
+   "space": {
+    "id": 7950
+   },
+   "attendance": null,
+   "_reccurrence_string": "19223.2026-11-06.00:00:00..00:00:00"
+  },
+  {
+   "id": 21368,
+   "name": "Loja do Mercado AlimentaCE",
+   "shortDescription": "A Loja do Mercado AlimentaCE é mais que um ponto de vendas, é um convite para conhecer, experimentar e vivenciar os sabores e saberes do Ceará. Com um mix diversificado de produtos de diferentes macro",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21368/file/7433520/aZlIPPHiK1OvmotwwJ3ChTWlB3rStOOLoTdzoror-78dce34459762e3b01708a4367d9536b.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Artes Integradas"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21368/",
+   "price": null,
+   "occurrence_id": 19228,
+   "event_id": 21368,
+   "starts_on": "2026-11-06",
+   "starts_at": "12:00:00",
+   "ends_on": null,
+   "ends_at": "19:00:00",
+   "rule": {
+    "spaceId": "5932",
+    "startsOn": "2026-11-06",
+    "until": "2026-11-06",
+    "startsAt": "12:00",
+    "duration": 420,
+    "frequency": "once",
+    "description": "Sexta-feira, 06 de novembro das 12h até 19h",
+    "price": "Gratuito",
+    "endsAt": "19:00"
+   },
+   "space": {
+    "id": 5932
+   },
+   "attendance": null,
+   "_reccurrence_string": "19228.2026-11-06.12:00:00..19:00:00"
+  },
+  {
+   "id": 21656,
+   "name": "A Hora da História | Mediação de Leitura com Rosa Cristina",
+   "shortDescription": "No programa A Hora da História, Rosa Cristina reúne a criançada para sessões de contação de histórias no Setor Infantil. Utilizando o acervo infantojuvenil da Bece, Rosa transporta os ouvintes para mu",
+   "classificacaoEtaria": "Livre",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21656/file/7463431/ST6AwlYBTvXhg6gHUvPQ3djELt0svV1WL8UT5K1t-d23eab6c5919b12d2cb962c4cb7eeed9.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Livro e Literatura"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21656/",
+   "price": null,
+   "occurrence_id": 19429,
+   "event_id": 21656,
+   "starts_on": "2026-11-06",
+   "starts_at": "16:00:00",
+   "ends_on": null,
+   "ends_at": "16:30:00",
+   "rule": {
+    "spaceId": "5936",
+    "startsOn": "2026-11-06",
+    "until": "2026-11-06",
+    "startsAt": "16:00",
+    "duration": 30,
+    "frequency": "once",
+    "description": "Sexta-feira, 06 de novembro das 16h até 16h30",
+    "price": "Gratuito",
+    "endsAt": "16:30"
+   },
+   "space": {
+    "id": 5936
+   },
+   "attendance": null,
+   "_reccurrence_string": "19429.2026-11-06.16:00:00..16:30:00"
+  },
+  {
+   "id": 21375,
+   "name": "CANDLELIGHT | “Disney: Canções de Amor”",
+   "shortDescription": "\"Candlelight - Disney Canções de Amor\" é o concerto perfeito para fãs da Disney! Viva o universo Disney com versões ao vivo das suas canções de amor favoritas, apresentadas em arranjos clássicos sob a",
+   "classificacaoEtaria": "+10",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21375/file/7435265/RoEJE8A22nfjgulsUYcY966T63ngLegVHvKVtZBl-45f0e408340525b9c3dceff1a72d1a3b.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Música"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21375/",
+   "price": null,
+   "occurrence_id": 19235,
+   "event_id": 21375,
+   "starts_on": "2026-11-06",
+   "starts_at": "17:00:00",
+   "ends_on": null,
+   "ends_at": "18:00:00",
+   "rule": {
+    "spaceId": "1235",
+    "startsOn": "2026-11-06",
+    "until": "2026-11-06",
+    "startsAt": "17:00",
+    "duration": 60,
+    "frequency": "once",
+    "description": "Sexta-feira, 06 de novembro das 17h até 18h",
+    "price": "Pago",
+    "endsAt": "18:00"
+   },
+   "space": {
+    "id": 1235
+   },
+   "attendance": null,
+   "_reccurrence_string": "19235.2026-11-06.17:00:00..18:00:00"
+  },
+  {
+   "id": 21617,
+   "name": "Sessão \"A Quinca, o Pititi e Albireo\"",
+   "shortDescription": "A Quinca e o Pititi são duas crianças que fazem uma viagem sideral passando bem pertinho dos planetas do Sistema Solar, das Galáxias, das Nebulosas e até dos Buracos Negros. Seguindo a orientação do A",
+   "classificacaoEtaria": "+10",
+   "@files:avatar.avatarBig": {
+    "url": "https://mapacultural.secult.ce.gov.br/files/event/21617/file/7458119/AHMXEa0uedo5fEEcGfDnh8sTYC9638pWysT8KQ5j-298a97261fba9d1045d815c9a67edbdb.jpg"
+   },
+   "terms": {
+    "tag": [],
+    "linguagem": [
+     "Outros"
+    ]
+   },
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/evento/21617/",
+   "price": null,
+   "occurrence_id": 19411,
+   "event_id": 21617,
+   "starts_on": "2026-11-06",
+   "starts_at": "18:00:00",
+   "ends_on": null,
+   "ends_at": "18:40:00",
+   "rule": {
+    "spaceId": "517",
+    "startsOn": "2026-11-06",
+    "until": "2026-11-06",
+    "startsAt": "18:00",
+    "duration": 40,
+    "frequency": "once",
+    "description": "Sexta-feira, 06 de novembro das 18h até 18h40. Semanal Sexta-feira, começando de sexta-feira, 06 de novembro, até sexta-feira, 27 de novembro",
+    "price": "Pago",
+    "endsAt": "18:40"
+   },
+   "space": {
+    "id": 517
+   },
+   "attendance": null,
+   "_reccurrence_string": "19411.2026-11-06.18:00:00..18:40:00"
+  }
+ ],
+ "spaces": [
+  {
+   "id": 425,
+   "location": {
+    "latitude": "-3.72281585137137",
+    "longitude": "-38.520040512085"
+   },
+   "name": "Arena Dragão do Mar",
+   "endereco": "Rua Dragão do Mar , 81 , Praia de Iracema, 60060-390, FORTALEZA, CE",
+   "En_Municipio": "FORTALEZA",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/425/"
+  },
+  {
+   "id": 517,
+   "location": {
+    "latitude": "-3.72095297120734",
+    "longitude": "-38.5200619697571"
+   },
+   "name": "Planetário Rubens de Azevedo",
+   "endereco": "Rua Dragão do Mar, 81 , Praia de Iracema, 60060-390, Fortaleza, CE",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/517/"
+  },
+  {
+   "id": 1235,
+   "location": {
+    "latitude": "-3.727786",
+    "longitude": "-38.5317064"
+   },
+   "name": "Palco Principal do TJA",
+   "endereco": "Rua Liberato Barroso, , Centro, Fortaleza, undefined, CE, 60030-160",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/1235/"
+  },
+  {
+   "id": 5325,
+   "location": {
+    "latitude": "-3.7215927",
+    "longitude": "-38.5265147"
+   },
+   "name": "Biblioteca Pública Estadual do Ceará (Bece)",
+   "endereco": "Avenida Presidente Castelo Branco, 255 , Moura Brasil, 60010-000, Fortaleza, CE",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5325/"
+  },
+  {
+   "id": 5859,
+   "location": {
+    "latitude": "-3.72180946832379",
+    "longitude": "-38.5211133956909"
+   },
+   "name": "Teatro B. de Paiva",
+   "endereco": "Rua Boris, 90 c , Praia de Iracema, 60060-390, Fortaleza, CE",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5859/",
+   "En_Municipio": null
+  },
+  {
+   "id": 5870,
+   "location": {
+    "latitude": "-3.7216756407042473",
+    "longitude": "-38.529701828956604"
+   },
+   "name": "Gare",
+   "endereco": "Rua Doutor João Moreira, 540 , Centro, 60030-000, Fortaleza, CE",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5870/",
+   "En_Municipio": null
+  },
+  {
+   "id": 5912,
+   "location": {
+    "latitude": "-3.7215927",
+    "longitude": "-38.5265147"
+   },
+   "name": "Espaço Multiuso",
+   "endereco": "Avenida Presidente Castelo Branco, 255 , Moura Brasil, 60010-000, Fortaleza, CE",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5912/",
+   "En_Municipio": null
+  },
+  {
+   "id": 5932,
+   "location": {
+    "latitude": "-3.7216809938094224",
+    "longitude": "-38.52988958358765"
+   },
+   "name": "Loja",
+   "endereco": "Rua Vinte e Quatro de Maio, , Centro, Fortaleza, undefined, CE, 60020-000",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5932/",
+   "En_Municipio": null
+  },
+  {
+   "id": 5936,
+   "location": {
+    "latitude": "-3.7215927",
+    "longitude": "-38.5265147"
+   },
+   "name": "Setor Infantil da Bece",
+   "endereco": "Avenida Presidente Castelo Branco, 255 , Moura Brasil, 60010-000, Fortaleza, CE",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/5936/",
+   "En_Municipio": null
+  },
+  {
+   "id": 6268,
+   "location": {
+    "latitude": "0",
+    "longitude": "0"
+   },
+   "name": "Calçada do Teatro Jose de Alencar",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/6268/",
+   "endereco": null,
+   "En_Municipio": null
+  },
+  {
+   "id": 6972,
+   "location": {
+    "latitude": "-3.7787176",
+    "longitude": "-38.5125324"
+   },
+   "name": "Projeto Ginga MARABAIANO",
+   "En_Municipio": "Fortaleza",
+   "endereco": "Rua dos Antares s/n, CITS AEROLÂNDIA, Aerolândia, Fortaleza, undefined, CE, 60850-410",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/6972/"
+  },
+  {
+   "id": 7681,
+   "location": {
+    "latitude": "-3.7214824",
+    "longitude": "-38.5201971"
+   },
+   "name": "Teatro",
+   "En_Municipio": "Fortaleza",
+   "endereco": "Rua Dragão do Mar, , Praia de Iracema, Fortaleza, undefined, CE, 60060-390",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7681/"
+  },
+  {
+   "id": 7688,
+   "location": {
+    "latitude": "0",
+    "longitude": "0"
+   },
+   "name": "Praça Verde",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7688/",
+   "endereco": null
+  },
+  {
+   "id": 7732,
+   "location": {
+    "latitude": "-3.7269001",
+    "longitude": "-38.5296251"
+   },
+   "name": "Teatro",
+   "endereco": "Rua Senador Pompeu, , Centro, Fortaleza, undefined, CE, 60025-000",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7732/"
+  },
+  {
+   "id": 7734,
+   "location": {
+    "latitude": "-3.7269001",
+    "longitude": "-38.5296251"
+   },
+   "name": "Pátio",
+   "endereco": "Rua Senador Pompeu, , Centro, Fortaleza, undefined, CE, 60025-000",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7734/"
+  },
+  {
+   "id": 7777,
+   "location": {
+    "latitude": "-3.7269001",
+    "longitude": "-38.5296251"
+   },
+   "name": "Rua (itinerante)",
+   "endereco": "Rua Senador Pompeu, , Centro, Fortaleza, undefined, CE, 60025-000",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7777/"
+  },
+  {
+   "id": 7866,
+   "location": {
+    "latitude": "-3.7060511",
+    "longitude": "-38.5748513"
+   },
+   "name": "Multiuso 3 e hall",
+   "endereco": "Avenida Presidente Castelo Branco, , Moura Brasil, Fortaleza, undefined, CE, 60010-000",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7866/"
+  },
+  {
+   "id": 7903,
+   "location": {
+    "latitude": "-3.8268646654647034",
+    "longitude": "-38.55967126546602"
+   },
+   "name": "Quintal prime",
+   "endereco": "Rua A, Ao lado da quadra , Dendê, Fortaleza, undefined, CE, 60714-750",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7903/"
+  },
+  {
+   "id": 7950,
+   "location": {
+    "latitude": "0",
+    "longitude": "0"
+   },
+   "name": "Praça Sonora",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7950/",
+   "endereco": null,
+   "En_Municipio": null
+  },
+  {
+   "id": 7975,
+   "location": {
+    "latitude": "0",
+    "longitude": "0"
+   },
+   "name": "Associação dos Ferroviários Aposentados do Ceará (AFAC)",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/7975/",
+   "endereco": null,
+   "En_Municipio": null
+  },
+  {
+   "id": 8198,
+   "location": {
+    "latitude": "-3.7216542",
+    "longitude": "-38.5210077"
+   },
+   "name": "YouTube HCPD",
+   "endereco": "Rua Bóris, , Centro, Fortaleza, undefined, CE, 60060-190",
+   "En_Municipio": "Fortaleza",
+   "singleUrl": "https://mapacultural.secult.ce.gov.br/espaco/8198/"
+  }
+ ]
+}

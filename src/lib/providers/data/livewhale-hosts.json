@@ -16,12 +16,24 @@
   "name": "Clarkson University"
  },
  {
+  "host": "calendar.fit.edu",
+  "name": "Florida Institute of Technology"
+ },
+ {
   "host": "calendar.gvltec.edu",
   "name": "Greenville Technical College"
  },
  {
   "host": "calendar.longwood.edu",
   "name": "Longwood University"
+ },
+ {
+  "host": "calendar.louisiana.edu",
+  "name": "University of Louisiana at Lafeyette"
+ },
+ {
+  "host": "calendar.mines.edu",
+  "name": "Colorado School of Mines"
  },
  {
   "host": "calendar.missouri.edu",
@@ -56,6 +68,10 @@
   "name": "University of Akron"
  },
  {
+  "host": "calendar.uams.edu",
+  "name": "University of Arkansas for Medical Sciences"
+ },
+ {
   "host": "calendar.uc.edu",
   "name": "University of Cincinnati"
  },
@@ -66,6 +82,10 @@
  {
   "host": "calendar.ufl.edu",
   "name": "University of Florida"
+ },
+ {
+  "host": "calendar.ulm.edu",
+  "name": "University of Louisiana at Monroe"
  },
  {
   "host": "calendar.umkc.edu",
@@ -122,6 +142,10 @@
  {
   "host": "events.iu.edu",
   "name": "Indiana University"
+ },
+ {
+  "host": "events.jwu.edu",
+  "name": "Johnson & Wales University"
  },
  {
   "host": "events.macalester.edu",
@@ -186,6 +210,14 @@
  {
   "host": "events.uvic.ca",
   "name": "University of Victoria"
+ },
+ {
+  "host": "events.uww.edu",
+  "name": "University of Wisconsin - Whitewater"
+ },
+ {
+  "host": "events.vanderbilt.edu",
+  "name": "Vanderbilt University"
  },
  {
   "host": "events.wesleyan.edu",
