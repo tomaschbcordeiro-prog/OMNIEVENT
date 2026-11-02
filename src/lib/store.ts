@@ -917,12 +917,17 @@ function groupKeys(g: { keys: string[] }): Set<string> {
 /** Viewport-aware clustering for the globe and 2D map. */
 /**
  * A random handful of matching events for "Spin the globe", each in a different city where
- * possible. Real events with a picture and a start time are likelier picks than listings
- * without, always-open attractions or ongoing runs. `random` is injectable for tests.
+ * possible. Real shows, concerts, games and parties with a picture and a start time are
+ * likelier picks than workshops, listings without a picture or time, and always-open
+ * attractions. `random` is injectable for tests.
  */
+const LIVELY = new Set(["music", "theatre", "comedy", "festivals", "nightlife", "sports", "cinema", "exhibitions", "food-drink", "attractions"]);
+
 export function sampleEvents(f: SearchFilters, n: number, random = Math.random): EventCard[] {
   const catSets = catSetsFor(f);
-  const weight = (c: EventCard) => (c.imageUrl ? 4 : 1) * (c.hoursUnknown ? 0.4 : 1) * (c.eventType === "daily_attraction" ? 0.15 : 1) * (c.isDemo ? 0.05 : 1);
+  // Nights out first: a concert or a match is a better surprise than a library workshop.
+  const weight = (c: EventCard) =>
+    (c.imageUrl ? 4 : 1) * (LIVELY.has(c.groupSlug) ? 4 : 1) * (c.hoursUnknown ? 0.4 : 1) * (c.eventType === "daily_attraction" ? 0.15 : 1) * (c.isDemo ? 0.05 : 1);
   // Weighted sampling without replacement (Efraimidis–Spirakis): keep the largest keys.
   const keyed: { c: EventCard; k: number }[] = [];
   for (const c of state.cards.values()) {
