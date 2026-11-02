@@ -1,8 +1,8 @@
 /** Community data shared by the server and the browser. */
 
-/** e: event id, v: venue slug, p: participant slug, d: destination (city) id. */
-export type TargetKind = "e" | "v" | "p" | "d";
-export const TARGET_RE = /^(e|v|p|d):[A-Za-z0-9._~:-]{1,160}$/;
+/** e: event id, v: venue slug, p: participant slug, d: destination (city) id, k: club id (its wall). */
+export type TargetKind = "e" | "v" | "p" | "d" | "k";
+export const TARGET_RE = /^(e|v|p|d|k):[A-Za-z0-9._~:-]{1,160}$/;
 
 export type PostKind = "comment" | "question" | "tip" | "meetup" | "review";
 export const POST_KINDS: PostKind[] = ["comment", "question", "tip", "meetup", "review"];
@@ -25,7 +25,7 @@ export interface Profile {
 
 export interface PublicProfile extends Profile {
   karma: number;
-  counts: { posts: number; reviews: number; likes: number; going: number; duels: number };
+  counts: { posts: number; reviews: number; likes: number; going: number; duels: number; founded: number };
   badges: string[];
 }
 
@@ -126,6 +126,7 @@ export const BADGES: Record<string, { label: string; emoji: string; hint: string
   helper: { label: "Helpful", emoji: "🤝", hint: "Got 10 likes" },
   regular: { label: "Regular", emoji: "🎟️", hint: "Planned to go to 5 events" },
   duelist: { label: "Duelist", emoji: "⚔️", hint: "Played the daily duel on 7 days" },
+  founder: { label: "Club founder", emoji: "👑", hint: "Started a club" },
   storyteller: { label: "Storyteller", emoji: "📣", hint: "Wrote 25 posts" },
   legend: { label: "Local legend", emoji: "🏆", hint: "Earned 250 points" },
 };
@@ -141,12 +142,12 @@ export const KIND_META: Record<PostKind, { label: string; emoji: string; placeho
 };
 
 export interface Notice {
-  type: "reply" | "like" | "follow" | "mention" | "react" | "join";
+  type: "reply" | "like" | "follow" | "mention" | "react" | "join" | "club";
   by: string;
   post: string;
   target: string;
   at: string;
-  /** Start of the reply or mention. */
+  /** Start of the reply or mention; for club notices, what happened ("asked to join"). */
   text?: string;
   /** The reaction, for reactions. */
   emoji?: string;
@@ -219,4 +220,83 @@ export interface Duel {
   yesterday?: { city: string; winners: (DuelSide & { pct: number; votes: number })[] };
   /** When the next duel starts (midnight UTC). */
   nextAt: string;
+}
+
+// ---- Clubs ----------------------------------------------------------------------------------
+
+export type ClubRole = "owner" | "admin" | "member";
+export type ClubPrivacy = "open" | "request";
+
+/** Crests a club can pick (no free text, so nothing to moderate). */
+export const CLUB_EMOJIS = ["🎷", "🎸", "🎧", "🎻", "🥁", "🎤", "🎭", "🎬", "🎨", "📚", "⚽", "🏀", "🎾", "🏃", "🚴", "🧗", "🍷", "🍜", "☕", "🍸", "🪩", "🌙", "🌍", "🏛️", "🎪", "🎟️", "🔥", "💜", "🌈", "✨", "🦄", "🐙", "🦊", "🌻", "🌊", "⛰️"];
+
+/** A club as everyone sees it. */
+export interface Club {
+  id: string;
+  slug: string;
+  name: string;
+  emoji: string;
+  /** Hue of the club's colours, 0–359. */
+  hue: number;
+  tagline: string;
+  about?: string;
+  /** Top-level categories the club is into (music, theatre…). */
+  vibes: string[];
+  /** Its members' own words for what they love ("jazz", "techno", "indie films"). */
+  tags: string[];
+  cityId?: string;
+  city?: string;
+  privacy: ClubPrivacy;
+  owner: string;
+  createdAt: string;
+}
+
+/** A club in a list: counts, a few faces, and the viewer's place in it. */
+export interface ClubCard extends Club {
+  members: number;
+  picks: number;
+  faces: PublicProfile[];
+  myRole?: ClubRole;
+  requested?: boolean;
+}
+
+/** An event shared with a club, kept as it was when shared (reading it needs no catalogue). */
+export interface ClubPick {
+  id: string;
+  slug: string;
+  title: string;
+  start: string;
+  until?: string;
+  timeZone: string;
+  venueName: string;
+  city: string;
+  imageUrl?: string;
+  hue?: number;
+  categorySlug: string;
+  groupSlug: string;
+  by: string;
+  at: string;
+  votes: number;
+  voted: boolean;
+}
+
+/** A club's page. What a viewer sees depends on the club's privacy and their role. */
+export interface ClubPage {
+  club: ClubCard;
+  /** Members and the wall are shown to everyone in open clubs, to members only otherwise. */
+  inside: boolean;
+  members: { profile: PublicProfile; role: ClubRole; since: string }[];
+  /** Join requests, for owners and admins. */
+  requests: { profile: PublicProfile; at: string }[];
+  picks: ClubPick[];
+  /** What the club is into, from its vibes and the events members share. */
+  taste: { group: string; share: number }[];
+  profiles: Record<string, PublicProfile>;
+}
+
+export interface ClubDirectory {
+  mine: ClubCard[];
+  popular: ClubCard[];
+  fresh: ClubCard[];
+  total: number;
 }

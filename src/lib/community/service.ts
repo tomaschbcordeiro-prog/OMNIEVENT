@@ -52,7 +52,7 @@ export const memberId = (secret: string) => createHash("sha256").update(`omni:${
 
 const now = () => new Date().toISOString();
 const week = (t = Date.now()) => Math.floor(t / (7 * 86400000));
-const json = <T,>(v: unknown): T | undefined => {
+export const json = <T,>(v: unknown): T | undefined => {
   if (typeof v !== "string") return undefined;
   try {
     return JSON.parse(v) as T;
@@ -110,6 +110,7 @@ function badgesFor(c: PublicProfile["counts"], karma: number): string[] {
   if (c.likes >= 10) out.push("helper");
   if (c.going >= 5) out.push("regular");
   if (c.duels >= 7) out.push("duelist");
+  if (c.founded >= 1) out.push("founder");
   if (c.posts >= 25) out.push("storyteller");
   if (karma >= 250) out.push("legend");
   return out.filter((b) => b in BADGES);
@@ -124,7 +125,7 @@ export async function getProfiles(ids: string[]): Promise<Record<string, PublicP
     const p = json<Profile>(res[i * 3]);
     if (!p) return;
     const c = pairs(res[i * 3 + 1]);
-    const counts = { posts: Number(c.posts ?? 0), reviews: Number(c.reviews ?? 0), likes: Number(c.likes ?? 0), going: Number(c.going ?? 0), duels: Number(c.duels ?? 0) };
+    const counts = { posts: Number(c.posts ?? 0), reviews: Number(c.reviews ?? 0), likes: Number(c.likes ?? 0), going: Number(c.going ?? 0), duels: Number(c.duels ?? 0), founded: Number(c.founded ?? 0) };
     const karma = Math.round(Number(res[i * 3 + 2] ?? 0));
     out[id] = { ...p, karma, counts, badges: badgesFor(counts, karma) };
   });
@@ -167,7 +168,7 @@ export async function saveProfile(secret: string, input: Record<string, unknown>
   return (await getProfile(id))!;
 }
 
-async function requireProfile(secret: string): Promise<Profile> {
+export async function requireProfile(secret: string): Promise<Profile> {
   const id = await memberOf(secret);
   const p = id ? json<Profile>(await cmd(["GET", `c:u:${id}`])) : undefined;
   if (!p) throw new CommunityError("Create an account or sign in first.", 401);
@@ -562,17 +563,16 @@ export async function createPost(
   if (text && Number(await cmd(["SISMEMBER", dupKey, dup])) === 1) throw new CommunityError("You've already posted that today.");
   const post: Post = { id: randomBytes(8).toString("hex"), target: input.target, author: me.id, kind: parent ? "comment" : kind, text, rating: parent ? undefined : rating, parent, createdAt: now() };
   const t = Date.now();
+  // A club's wall stays in the club: its posts don't go to the community feed or trending.
+  const club = post.target.startsWith("k:");
   const cmds: Cmd[] = [
     ["SET", `c:p:${post.id}`, JSON.stringify(post)],
     ["ZADD", `c:t:${post.target}`, t, post.id],
-    ["ZADD", `c:up:${me.id}`, t, post.id],
-    ["ZADD", "c:feed", t, post.id],
-    ["ZREMRANGEBYRANK", "c:feed", 0, -401],
+    ...(club ? [] : ([["ZADD", `c:up:${me.id}`, t, post.id], ["ZADD", "c:feed", t, post.id], ["ZREMRANGEBYRANK", "c:feed", 0, -401], hot(post.target, 2)] as Cmd[])),
     ["HINCRBY", `c:sum:${post.target}`, "posts", 1],
     ["HINCRBY", `c:uc:${me.id}`, "posts", 1],
     ["HINCRBY", "c:stat", "posts", 1],
     ["ZINCRBY", "c:karma", kind === "review" ? 10 : 5, me.id],
-    hot(post.target, 2),
     ...(text ? ([["SADD", dupKey, dup], ["EXPIRE", dupKey, 86400]] as Cmd[]) : []),
   ];
   const told = new Set<string>([me.id]);
@@ -711,6 +711,18 @@ export async function deletePost(secret: string, postId: string) {
   ]);
 }
 
+/** A club's owner or admins removing a post from its wall (the caller checks the role). */
+export async function removeWallPost(target: string, postId: string) {
+  const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
+  if (!post || post.target !== target) throw new CommunityError("That post isn't on this club's wall.", 404);
+  if (post.deleted) return;
+  await pipe([
+    ["SET", `c:p:${postId}`, JSON.stringify({ ...post, text: "", deleted: true, rating: undefined })],
+    ["HINCRBY", `c:uc:${post.author}`, "posts", -1],
+    ["HINCRBY", `c:sum:${post.target}`, "posts", -1],
+  ]);
+}
+
 export async function editPost(secret: string, postId: string, text: unknown): Promise<Post> {
   const me = await requireProfile(secret);
   const post = json<Post>(await cmd(["GET", `c:p:${postId}`]));
@@ -753,7 +765,7 @@ function notify(to: string, n: Notice): Cmd[] {
 }
 
 /** A notice, unless the recipient has blocked its sender. */
-async function notice(to: string, n: Notice): Promise<Cmd[]> {
+export async function notice(to: string, n: Notice): Promise<Cmd[]> {
   if (to === n.by || (await blocks(to, n.by))) return [];
   return notify(to, n);
 }

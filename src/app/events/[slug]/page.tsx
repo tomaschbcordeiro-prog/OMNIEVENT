@@ -9,6 +9,7 @@ import { EventRow } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
+import { ShareToClub } from "@/components/clubs/share-to-club";
 import type { EventView } from "@/lib/types";
 import { sellerSearches } from "@/lib/sellers";
 import { CommunityPanel } from "@/components/community/community-panel";
@@ -345,6 +346,7 @@ export default async function EventPage({ params }: { params: P }) {
                   <AddToTrip eventId={e.id} />
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />
+                  {!inactive && !e.provenance.isDemo && <ShareToClub eventId={e.id} title={e.title} />}
                 </div>
               </div>
             </div>

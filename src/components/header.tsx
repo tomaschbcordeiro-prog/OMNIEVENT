@@ -17,6 +17,7 @@ const NAV = [
   { href: "/destinations", key: "nav.destinations" },
   { href: "/match", key: "nav.match" },
   { href: "/community", key: "nav.community" },
+  { href: "/clubs", key: "nav.clubs", premium: true },
   { href: "/my-world", key: "nav.myworld" },
 ];
 
@@ -54,14 +55,20 @@ export function Header() {
         <Logo />
         <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-2">
           {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              aria-current={isActive(n.href) ? "page" : undefined}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
-            >
-              {t(n.key)}
-            </Link>
+            n.premium ? (
+              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-premium mx-0.5 px-2.5 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
+              </Link>
+            ) : (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={isActive(n.href) ? "page" : undefined}
+                className={`px-2 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
+              >
+                {t(n.key)}
+              </Link>
+            )
           ))}
         </nav>
         </div>
@@ -89,8 +96,15 @@ export function Header() {
           {!isHome && <SearchBox className="mb-3" placeholder={t("search.placeholder")} />}
           <nav aria-label="Main mobile" className="grid gap-1">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={`px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
-                {t(n.key)}
+              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
+                {n.premium ? (
+                  <>
+                    <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
+                    <span className="ml-auto rounded-full bg-[#2a1450] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#ffe29a]">New</span>
+                  </>
+                ) : (
+                  t(n.key)
+                )}
               </Link>
             ))}
           </nav>

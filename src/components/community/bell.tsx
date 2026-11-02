@@ -14,8 +14,9 @@ const NOTICE_TEXT: Record<string, (emoji?: string) => string> = {
   mention: () => "mentioned you",
   join: () => "is in for your meet-up",
   follow: () => "started following you",
+  club: () => "",
 };
-const NOTICE_ICON: Record<string, string> = { reply: "💬", like: "❤️", mention: "@", join: "👋", follow: "👋" };
+const NOTICE_ICON: Record<string, string> = { reply: "💬", like: "❤️", mention: "@", join: "👋", follow: "👋", club: "✦" };
 
 /** Replies, reactions, mentions, meet-up joins and new followers; checks for new ones every minute. */
 export function NotificationBell({ className = "" }: { className?: string }) {
@@ -79,10 +80,10 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                     <Avatar p={by} size={32} />
                     <span className="min-w-0 t-small">
                       <span className="block">
-                        <strong>{by?.name ?? "Someone"}</strong> {NOTICE_TEXT[n.type](n.emoji)}
-                        {n.meta && <> on <strong>{n.meta.title}</strong></>}
+                        <strong>{by?.name ?? "Someone"}</strong> {n.type === "club" ? n.text : NOTICE_TEXT[n.type]?.(n.emoji)}
+                        {n.meta && <> {n.type === "club" ? "" : "on "}<strong>{n.meta.title}</strong></>}
                       </span>
-                      {n.text && <span className="block text-text-2 truncate">“{n.text}”</span>}
+                      {n.text && n.type !== "club" && <span className="block text-text-2 truncate">“{n.text}”</span>}
                       <span className="block t-micro text-text-3">{NOTICE_ICON[n.type] ?? n.emoji ?? "💬"} {ago(n.at)}</span>
                     </span>
                   </Link>

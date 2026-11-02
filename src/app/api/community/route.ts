@@ -40,6 +40,7 @@ import {
 } from "@/lib/community/service";
 import { resolveTarget } from "@/lib/community/meta";
 import { getDuel, voteDuel, type DuelSource } from "@/lib/community/duel";
+import { clubMeta, wallAccess } from "@/lib/community/clubs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -94,6 +95,12 @@ export const GET = handler(async (req: Request) => {
       // Reading a conversation doesn't need the event catalogue loaded (that costs a cold
       // server seconds of work); its title is refreshed from the catalogue when it's there.
       const target = url.searchParams.get("target") ?? "";
+      // A club's wall: open clubs for everyone, request-only clubs for their members.
+      if (target.startsWith("k:")) {
+        const w = await wallAccess(target, viewer);
+        if (!w.read) return apiError(403, "community", "This club's wall is for its members.");
+        return ok(await getThread(target, viewer, clubMeta(w.club)));
+      }
       return ok(await getThread(target, viewer, resolveTarget(target)));
     }
     if (view === "member") {
@@ -153,6 +160,13 @@ export const POST = handler(async (req: Request) => {
   const secret = secretOf(req);
   const target = String(body.target ?? "");
   const needMeta = async () => {
+    if (target.startsWith("k:")) {
+      // Only members post on a club's wall; ratings and plans don't apply to clubs.
+      const w = await wallAccess(target, await memberOf(secret));
+      if (!w.post) throw new CommunityError("Join the club to post on its wall.", 403);
+      if (body.action !== "post") throw new CommunityError("Clubs can't be rated or planned.");
+      return clubMeta(w.club);
+    }
     await ensureFresh();
     const meta = resolveTarget(target);
     if (!meta) throw new CommunityError("We couldn't find that event or place. Reload the page and try again.", 404);

@@ -181,6 +181,15 @@ export async function communityPost<T>(body: Record<string, unknown>): Promise<T
   return parse<T>(await fetch("/api/community", { method: "POST", headers: headers(create), body: JSON.stringify(body) }));
 }
 
+/** Clubs: the same key and error handling, on /api/clubs. */
+export async function clubsGet<T>(query = ""): Promise<T> {
+  return parse<T>(await fetch(`/api/clubs${query ? `?${query}` : ""}`, { headers: headers(false), cache: "no-store" }));
+}
+
+export async function clubsPost<T>(body: Record<string, unknown>): Promise<T> {
+  return parse<T>(await fetch("/api/clubs", { method: "POST", headers: headers(false), body: JSON.stringify(body) }));
+}
+
 /** Short relative time: "now", "5m", "3h", "2d", then a date. */
 export function ago(iso: string): string {
   const s = (Date.now() - Date.parse(iso)) / 1000;

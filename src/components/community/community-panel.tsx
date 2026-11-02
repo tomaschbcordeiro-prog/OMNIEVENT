@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
 import { KIND_META, REPORT_REASONS, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
 import { safetyProblem } from "@/lib/community/safety";
@@ -36,7 +36,7 @@ async function reward(key: string) {
   }
 }
 
-export type PanelMode = "event-upcoming" | "event-past" | "place" | "person" | "city";
+export type PanelMode = "event-upcoming" | "event-past" | "place" | "person" | "city" | "club";
 
 const KINDS: Record<PanelMode, PostKind[]> = {
   "event-upcoming": ["comment", "question", "tip", "meetup"],
@@ -44,6 +44,7 @@ const KINDS: Record<PanelMode, PostKind[]> = {
   place: ["review", "tip", "question", "comment"],
   person: ["review", "comment", "question"],
   city: ["comment", "tip", "question", "meetup"],
+  club: ["comment", "meetup", "tip", "question"],
 };
 
 const INTRO: Record<PanelMode, string> = {
@@ -52,11 +53,28 @@ const INTRO: Record<PanelMode, string> = {
   place: "Rate this venue and share tips: entrances, seats, food, getting there.",
   person: "Fans rate and talk about this performer or team.",
   city: "Locals and visitors swap tips about what's on here.",
+  club: "Members chat, swap tips and plan to go together.",
 };
 
 type Sort = "top" | "new";
 
-export function CommunityPanel({ target, mode, title }: { target: string; mode: PanelMode; title: string }) {
+export function CommunityPanel({
+  target,
+  mode,
+  title,
+  heading = "Community",
+  locked,
+  onModerate,
+}: {
+  target: string;
+  mode: PanelMode;
+  title: string;
+  heading?: string;
+  /** Shown instead of the composer when the viewer can read but not post (a club's non-members). */
+  locked?: ReactNode;
+  /** Lets a club's owner and admins take other members' posts off the wall. */
+  onModerate?: (postId: string) => Promise<boolean>;
+}) {
   const { profile } = useMe();
   const [thread, setThread] = useState<Thread | null>(null);
   const [error, setError] = useState("");
@@ -104,15 +122,15 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
 
   const posts = thread ? sortPosts(thread.posts, sort) : [];
   const isEvent = mode === "event-upcoming" || mode === "event-past";
-  const canRate = mode !== "event-upcoming" && mode !== "city";
+  const canRate = mode !== "event-upcoming" && mode !== "city" && mode !== "club";
 
   return (
-    <section id="community" aria-labelledby="community-h" className="mt-12 scroll-mt-24">
+    <section id="community" aria-labelledby="community-h" className={`${mode === "club" ? "" : "mt-12"} scroll-mt-24`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="community-h" className="t-h2 flex items-center gap-2">
             <Users size={20} className="text-cyan" aria-hidden />
-            Community
+            {heading}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/10 px-2 py-0.5 text-[11px] font-semibold text-ok">
               <span className="live-dot" aria-hidden /> Live
             </span>
@@ -148,14 +166,16 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
         }} />}
       </div>
 
-      <Composer mode={mode} profile={profile} people={thread ? Object.values(thread.profiles).filter((p) => p.id !== profile?.id) : []} onPost={async (body) => {
-        const ok = await act({ action: "post", ...body });
-        if (ok) {
-          setSort("new");
-          await load();
-        }
-        return ok;
-      }} />
+      {locked ?? (
+        <Composer mode={mode} profile={profile} people={thread ? Object.values(thread.profiles).filter((p) => p.id !== profile?.id) : []} onPost={async (body) => {
+          const ok = await act({ action: "post", ...body });
+          if (ok) {
+            setSort("new");
+            await load();
+          }
+          return ok;
+        }} />
+      )}
 
       {error && <p role="alert" className="t-small text-bad mt-3">{error}</p>}
 
@@ -176,7 +196,7 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
           <div className="rounded-[var(--radius-l)] border border-dashed border-line-strong p-6 text-center">
             <Sparkles size={22} className="mx-auto text-sun" aria-hidden />
             <p className="font-semibold mt-2">Be the first to say something</p>
-            <p className="t-small text-text-2 mt-1">{mode === "event-upcoming" ? "Ask a question, share a tip, or find people to go with." : "Your review helps the next person decide."}</p>
+            <p className="t-small text-text-2 mt-1">{mode === "club" ? "Say hi to the club, or suggest something to go to together." : mode === "event-upcoming" ? "Ask a question, share a tip, or find people to go with." : "Your review helps the next person decide."}</p>
           </div>
         )}
         <NewPostsPill count={newPosts} onShow={() => { setSort("new"); void load(); }} />
@@ -191,7 +211,7 @@ export function CommunityPanel({ target, mode, title }: { target: string; mode: 
             </div>
             <ul className="grid gap-3">
               {posts.map((p) => (
-                <PostItem key={p.id} post={p} profiles={thread!.profiles} me={profile} fresh={fresh} act={act} reload={load} />
+                <PostItem key={p.id} post={p} profiles={thread!.profiles} me={profile} fresh={fresh} act={act} reload={load} onModerate={onModerate} />
               ))}
             </ul>
           </>
@@ -369,7 +389,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
             autoFocus={autoFocus}
             aria-invalid={!!problem || undefined}
             aria-describedby={problem ? `compose-warn-${parent ?? "top"}` : undefined}
-            placeholder={parent ? "Write a reply… (@ to mention someone)" : isReview ? "Add a few words (optional)" : KIND_META[kind].placeholder}
+            placeholder={parent ? "Write a reply… (@ to mention someone)" : isReview ? "Add a few words (optional)" : mode === "club" && kind === "comment" ? "Say something to the club…" : KIND_META[kind].placeholder}
             value={text}
             onFocus={() => !profile?.username && void requireMember(false)}
             onChange={(e) => {
@@ -399,7 +419,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
 
 type Act = (body: Record<string, unknown>) => Promise<boolean>;
 
-function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: Post; profiles: Record<string, PublicProfile>; me: PublicProfile | null; fresh: Set<string>; act: Act; reload: () => Promise<void>; isReply?: boolean }) {
+function PostItem({ post, profiles, me, fresh, act, reload, isReply, onModerate }: { post: Post; profiles: Record<string, PublicProfile>; me: PublicProfile | null; fresh: Set<string>; act: Act; reload: () => Promise<void>; isReply?: boolean; onModerate?: (postId: string) => Promise<boolean> }) {
   const author = profiles[post.author];
   const [replying, setReplying] = useState(false);
   const [menu, setMenu] = useState<"" | "main" | "report">("");
@@ -445,6 +465,9 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: P
                       </>
                     ) : (
                       <>
+                        {onModerate && (
+                          <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small text-bad hover:bg-bad/5" onClick={async () => { setMenu(""); if (confirm("Take this post off the club's wall?") && (await onModerate(post.id))) void reload(); }}>Remove from the wall</button>
+                        )}
                         <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small hover:bg-panel-2" onClick={() => setMenu("report")}>Report this post…</button>
                         {author && (
                           <button role="menuitem" type="button" className="w-full text-left rounded px-2.5 py-2 t-small text-bad hover:bg-bad/5" onClick={async () => {
@@ -485,7 +508,7 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply }: { post: P
           )}
           {!isReply && (post.replies?.length ?? 0) > 0 && (
             <ul className="mt-2 grid gap-1 border-l-2 border-line pl-3">
-              {post.replies!.map((r) => <PostItem key={r.id} post={r} profiles={profiles} me={me} fresh={fresh} act={act} reload={reload} isReply />)}
+              {post.replies!.map((r) => <PostItem key={r.id} post={r} profiles={profiles} me={me} fresh={fresh} act={act} reload={reload} isReply onModerate={onModerate} />)}
             </ul>
           )}
           {replying && (
