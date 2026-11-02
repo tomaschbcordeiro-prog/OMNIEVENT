@@ -52,10 +52,12 @@ describe("filters only let through what was asked for", () => {
     for (const c of items) expect([c.title, c.start, c.until, inPeriod(c, from, to)]).toEqual([c.title, c.start, c.until, true]);
   });
 
-  it("date order follows the dates shown", () => {
-    const [from, to] = ranges[2];
+  // Every day of the coming week as well as the ranges above: events in time zones ahead of
+  // UTC (Sydney, Tokyo) often start on the previous UTC day, and must still sort by start.
+  const days = Array.from({ length: 7 }, (_, i): [string, string] => [ymd(Date.now() + i * DAY), ymd(Date.now() + i * DAY)]);
+  it.each([...ranges, ...days])("date order follows the dates shown, %s to %s", (from, to) => {
     const items = all({ from, to, sort: "date" }).filter((c) => !c.ongoing && !c.hoursUnknown && c.eventType !== "daily_attraction");
-    for (let i = 1; i < items.length; i++) expect(Date.parse(items[i].start)).toBeGreaterThanOrEqual(Date.parse(items[i - 1].start));
+    for (let i = 1; i < items.length; i++) expect([items[i].title, Date.parse(items[i].start) >= Date.parse(items[i - 1].start)]).toEqual([items[i].title, true]);
   });
 
   it("without dates, nothing that has already ended shows", () => {

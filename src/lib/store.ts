@@ -865,7 +865,8 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   }
   const sort = f.sort ?? (terms.length ? "relevance" : "date");
   // Long runs that began before the period asked for (exhibitions, seasons) sort by when
-  // the period starts, not by their opening years ago.
+  // the period starts, not by their opening years ago. Everything else sorts by the start
+  // shown, even when it falls before midnight UTC of the first day (a Sydney morning).
   const windowStart = f.from ? Date.parse(`${f.from}T00:00:00Z`) : Date.now() - 6 * 3600000;
   const price = (c: EventCard) => (c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, f.currency ?? "USD") ?? Infinity : Infinity);
   // Sort keys worked out once per result (in flat arrays), not on every comparison.
@@ -876,7 +877,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   const A: string[] = sort === "announced" ? new Array(n) : [];
   for (let i = 0; i < n; i++) {
     const c = scored[i].c;
-    T[i] = c.ongoing ? windowStart : Math.max(Date.parse(c.start), windowStart);
+    T[i] = c.ongoing ? windowStart : Date.parse(c.start);
     // Always-open attractions and listings with dates only don't have a meaningful "next"
     // start time, so they follow events with a real start time.
     U[i] = Number(c.eventType === "daily_attraction" || !!c.ongoing || !!c.hoursUnknown);
