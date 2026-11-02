@@ -25,7 +25,7 @@ export interface Profile {
 
 export interface PublicProfile extends Profile {
   karma: number;
-  counts: { posts: number; reviews: number; likes: number; going: number };
+  counts: { posts: number; reviews: number; likes: number; going: number; duels: number };
   badges: string[];
 }
 
@@ -125,6 +125,7 @@ export const BADGES: Record<string, { label: string; emoji: string; hint: string
   critic: { label: "Critic", emoji: "⭐", hint: "Rated 5 places or events" },
   helper: { label: "Helpful", emoji: "🤝", hint: "Got 10 likes" },
   regular: { label: "Regular", emoji: "🎟️", hint: "Planned to go to 5 events" },
+  duelist: { label: "Duelist", emoji: "⚔️", hint: "Played the daily duel on 7 days" },
   storyteller: { label: "Storyteller", emoji: "📣", hint: "Wrote 25 posts" },
   legend: { label: "Local legend", emoji: "🏆", hint: "Earned 250 points" },
 };
@@ -173,4 +174,49 @@ export interface FollowingFeed {
   plans: { by: string; at: string; meta: TargetMeta }[];
   profiles: Record<string, PublicProfile>;
   following: number;
+}
+
+// ---- Daily duel ---------------------------------------------------------------------------
+
+/** An event as the daily duel shows it, kept with the duel so reading it needs no catalogue. */
+export interface DuelSide {
+  id: string;
+  slug: string;
+  title: string;
+  start: string;
+  timeZone: string;
+  hoursUnknown?: boolean;
+  venueName: string;
+  city: string;
+  imageUrl?: string;
+  hue?: number;
+  categorySlug: string;
+  groupSlug: string;
+  isFree?: boolean;
+}
+
+export type DuelPick = "a" | "b";
+
+export interface DuelRound {
+  a: DuelSide;
+  b: DuelSide;
+  /** How everyone voted: only once the viewer has picked, so nobody just follows the crowd. */
+  votes?: { a: number; b: number };
+  mine?: DuelPick;
+}
+
+/** Today's duel: a few rounds of "this or that" between events in one city, the same for everyone. */
+export interface Duel {
+  day: string;
+  cityId: string;
+  city: string;
+  rounds: DuelRound[];
+  /** People who played today. */
+  players: number;
+  /** Days in a row the viewer played (today included once played), and their best run. */
+  streak: { days: number; best: number; playedToday: boolean };
+  /** Yesterday's winners, with their share of the votes. */
+  yesterday?: { city: string; winners: (DuelSide & { pct: number; votes: number })[] };
+  /** When the next duel starts (midnight UTC). */
+  nextAt: string;
 }

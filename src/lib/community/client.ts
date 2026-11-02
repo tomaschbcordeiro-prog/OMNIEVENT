@@ -176,7 +176,9 @@ export async function communityGet<T>(query: string): Promise<T> {
 }
 
 export async function communityPost<T>(body: Record<string, unknown>): Promise<T> {
-  return parse<T>(await fetch("/api/community", { method: "POST", headers: headers(body.action === "signup" || body.action === "signin"), body: JSON.stringify(body) }));
+  // Signing up or in, and playing the daily duel, give a browser its key when it has none.
+  const create = body.action === "signup" || body.action === "signin" || body.action === "duel";
+  return parse<T>(await fetch("/api/community", { method: "POST", headers: headers(create), body: JSON.stringify(body) }));
 }
 
 /** Short relative time: "now", "5m", "3h", "2d", then a date. */

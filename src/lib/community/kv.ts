@@ -178,6 +178,12 @@ function local(c: Cmd): Val {
       }
       return n;
     }
+    case "HSETNX": {
+      const h = hash(k);
+      if (h.has(a[1])) return 0;
+      h.set(a[1], a[2]);
+      return 1;
+    }
     case "HGET":
       return hash(k).get(a[1]) ?? null;
     case "HMGET":

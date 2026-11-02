@@ -10,6 +10,7 @@ import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
 import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
 import { MeetupJoin, NewPostsPill, Reactions, RichText, useNewPosts } from "./interact";
+import { DailyDuel } from "./duel";
 
 type Filter = "all" | "following" | PostKind;
 const FILTERS: ("all" | PostKind)[] = ["all", "review", "question", "tip", "meetup", "comment"];
@@ -17,6 +18,7 @@ const FILTERS: ("all" | PostKind)[] = ["all", "review", "question", "tip", "meet
 /** Points needed for each next badge, shown as progress on the member card. */
 const NEXT: { badge: string; need: (p: PublicProfile) => [number, number] }[] = [
   { badge: "voice", need: (p) => [p.counts.posts, 1] },
+  { badge: "duelist", need: (p) => [p.counts.duels ?? 0, 7] },
   { badge: "regular", need: (p) => [p.counts.going, 5] },
   { badge: "critic", need: (p) => [p.counts.reviews, 5] },
   { badge: "helper", need: (p) => [p.counts.likes, 10] },
@@ -95,6 +97,9 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
         <section aria-labelledby="feed-h" className="min-w-0">
+          <div className="mb-8">
+            <DailyDuel />
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="feed-h" className="t-h2 flex items-center gap-2"><MessageCircle size={20} className="text-cyan" aria-hidden />What people are saying</h2>
           </div>
@@ -222,7 +227,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
                 );
               })}
             </ul>
-            <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each reaction you get 2.</p>
+            <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each reaction you get 2, the daily duel 1.</p>
           </section>
         </section>
       </div>

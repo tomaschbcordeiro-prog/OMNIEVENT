@@ -95,7 +95,7 @@ const textKey = (t: string) => createHash("sha256").update(t.toLowerCase().repla
 
 // ---- Rate limits -----------------------------------------------------------------------
 
-async function limit(key: string, max: number, windowSec: number) {
+export async function limit(key: string, max: number, windowSec: number) {
   const bucket = `c:rl:${key}:${Math.floor(Date.now() / (windowSec * 1000))}`;
   const [n] = await pipe([["INCR", bucket], ["EXPIRE", bucket, windowSec]]);
   if (Number(n) > max) throw new CommunityError("You're going a bit fast. Try again in a few minutes.", 429);
@@ -109,6 +109,7 @@ function badgesFor(c: PublicProfile["counts"], karma: number): string[] {
   if (c.reviews >= 5) out.push("critic");
   if (c.likes >= 10) out.push("helper");
   if (c.going >= 5) out.push("regular");
+  if (c.duels >= 7) out.push("duelist");
   if (c.posts >= 25) out.push("storyteller");
   if (karma >= 250) out.push("legend");
   return out.filter((b) => b in BADGES);
@@ -123,7 +124,7 @@ export async function getProfiles(ids: string[]): Promise<Record<string, PublicP
     const p = json<Profile>(res[i * 3]);
     if (!p) return;
     const c = pairs(res[i * 3 + 1]);
-    const counts = { posts: Number(c.posts ?? 0), reviews: Number(c.reviews ?? 0), likes: Number(c.likes ?? 0), going: Number(c.going ?? 0) };
+    const counts = { posts: Number(c.posts ?? 0), reviews: Number(c.reviews ?? 0), likes: Number(c.likes ?? 0), going: Number(c.going ?? 0), duels: Number(c.duels ?? 0) };
     const karma = Math.round(Number(res[i * 3 + 2] ?? 0));
     out[id] = { ...p, karma, counts, badges: badgesFor(counts, karma) };
   });

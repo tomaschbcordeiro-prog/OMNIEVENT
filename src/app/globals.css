@@ -1087,3 +1087,65 @@ select.field {
 .reaction-pick:focus-visible {
   transform: scale(1.25) translateY(-2px);
 }
+
+/* The daily duel: posters lean in under the pointer, the VS badge breathes, the streak flickers. */
+.duel-side {
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2), filter 300ms ease, opacity 300ms ease, box-shadow 220ms ease;
+}
+@media (hover: hover) {
+  .duel-side[data-side="a"]:not(:disabled):hover {
+    transform: rotate(-1.5deg) translateY(-4px) scale(1.02);
+  }
+  .duel-side[data-side="b"]:not(:disabled):hover {
+    transform: rotate(1.5deg) translateY(-4px) scale(1.02);
+  }
+}
+.duel-side[data-state="won"] {
+  transform: scale(1.03);
+  box-shadow: 0 0 0 3px var(--sun), 0 18px 40px -12px rgb(10 30 80 / 0.45);
+}
+.duel-side[data-state="lost"] {
+  transform: scale(0.96);
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+.vs-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  animation: vs-breathe 1.8s ease-in-out infinite;
+}
+/* On phones the badge sits over the pictures, clear of the titles below them. */
+@media (max-width: 639px) {
+  .vs-badge {
+    top: 34%;
+  }
+}
+@keyframes vs-breathe {
+  50% {
+    transform: translate(-50%, -50%) scale(1.12) rotate(-6deg);
+  }
+}
+.duel-bar > span {
+  transition: width 900ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.flame {
+  display: inline-block;
+  animation: flame 1.2s ease-in-out infinite alternate;
+  transform-origin: 50% 90%;
+}
+@keyframes flame {
+  to {
+    transform: scale(1.15) rotate(4deg);
+  }
+}
+.duel-in {
+  animation: duel-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+@keyframes duel-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}

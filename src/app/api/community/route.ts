@@ -1,4 +1,5 @@
-import { ensureFresh, getCard } from "@/lib/store";
+import { ensureFresh, getCard, searchEvents } from "@/lib/store";
+import { getDestination } from "@/lib/destinations";
 import { apiError, clientKey, handler, ok, rateLimit } from "@/lib/api";
 import {
   CommunityError,
@@ -38,6 +39,7 @@ import {
   feedHead,
 } from "@/lib/community/service";
 import { resolveTarget } from "@/lib/community/meta";
+import { getDuel, voteDuel, type DuelSource } from "@/lib/community/duel";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -53,6 +55,13 @@ function fail(err: unknown) {
   throw err;
 }
 
+/** A city's events of the coming week for the daily duel (only read when a day's duel is made). */
+const duelSource: DuelSource = async (cityId, from, to) => {
+  await ensureFresh();
+  const cards = [1, 2, 3].flatMap((page) => searchEvents({ city: cityId, from, to, sort: "date", page, pageSize: 100 }).items);
+  return { city: getDestination(cityId)?.name ?? cityId, cards };
+};
+
 /**
  * GET /api/community?view=thread&target=e:<id>   conversation, ratings and plans
  * GET /api/community?view=home                   feed, trending, top rated, leaders
@@ -65,6 +74,7 @@ function fail(err: unknown) {
  * GET /api/community?view=head&target=e:<id>     newest post and post count (cheap; for live updates)
  * GET /api/community?view=feed-head              the same for the community feed
  * GET /api/community?view=blocked                the members the caller has blocked
+ * GET /api/community?view=duel                   today's daily duel, with the caller's picks
  */
 export const GET = handler(async (req: Request) => {
   const url = new URL(req.url);
@@ -75,6 +85,7 @@ export const GET = handler(async (req: Request) => {
     if (view === "head") return ok(await threadHead(url.searchParams.get("target") ?? ""), { maxAge: 10, swr: 20 });
     if (view === "feed-head") return ok(await feedHead(), { maxAge: 10, swr: 20 });
     const viewer = await viewerOf(req);
+    if (view === "duel") return ok({ duel: (await getDuel(viewer, duelSource)) ?? null });
     if (view === "blocked") {
       if (!viewer) return apiError(401, "community", "Sign in first.");
       return ok({ members: await getBlocked(viewer) });
@@ -128,7 +139,7 @@ export const GET = handler(async (req: Request) => {
  * signup { firstName, lastName, username, email, password, avatar?, hue?, bio? } · signin
  * { login, password } · signout · password { current, next } · profile { …fields to change } ·
  * delete-account { password } · signout-all · react { post, emoji | null } · join { post } ·
- * block { member } · report { post, reason }
+ * block { member } · report { post, reason } · duel { day, round, pick: "a" | "b" }
  */
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
@@ -192,6 +203,8 @@ export const POST = handler(async (req: Request) => {
       case "seen":
         await markNoticesSeen(secret);
         return ok({ ok: true });
+      case "duel":
+        return ok(await voteDuel(secret, body, ip));
       case "report":
         await reportPost(secret, String(body.post ?? ""), body.reason);
         return ok({ ok: true });
