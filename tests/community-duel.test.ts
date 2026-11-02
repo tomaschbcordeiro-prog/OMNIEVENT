@@ -63,6 +63,11 @@ describe("picking the rounds", () => {
     expect(pickRounds("2026-11-03", [...cards].reverse())).toEqual(r);
     expect(pickRounds("2026-11-04", cards)).not.toEqual(r);
   });
+  it("prefers shows, concerts and games to workshops and toddler mornings", () => {
+    const quiet = Array.from({ length: 8 }, (_, i) => card(40 + i, { groupSlug: i % 2 ? "education" : "family", categorySlug: i % 2 ? "creative-workshops" : "family-shows" }));
+    const r = pickRounds("2026-11-03", [...quiet, ...cards]);
+    for (const x of r) for (const s of [x.a, x.b]) expect(["education", "family"]).not.toContain(s.groupSlug);
+  });
   it("leaves out cancelled, online, always-open and repeated events, and prefers real ones with pictures", () => {
     const bad = [card(20, { status: "cancelled" }), card(21, { online: true }), card(22, { eventType: "daily_attraction" }), card(23, { title: "Event 0" })];
     const r = pickRounds("2026-11-03", [...bad, ...cards, card(30, { isDemo: true }), card(31, { imageUrl: undefined })]);

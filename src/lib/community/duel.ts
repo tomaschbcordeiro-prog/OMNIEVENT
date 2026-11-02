@@ -20,7 +20,9 @@ import { CommunityError, getProfile, limit, memberOf } from "./service";
 export const ROUNDS = 3;
 const TTL = 9 * 86400;
 /** Cities with plenty on, in the order the duel visits them. */
-export const DUEL_CITIES = ["lisbon", "madrid", "paris", "porto", "barcelona", "london", "berlin", "new-york", "valencia", "amsterdam", "chicago", "rome", "helsinki", "montreal"];
+export const DUEL_CITIES = ["lisbon", "madrid", "paris", "porto", "barcelona", "london", "berlin", "new-york", "valencia", "amsterdam", "chicago", "rome"];
+/** Nights out people argue about; workshops, talks and toddler mornings only fill gaps. */
+const LIVELY = new Set(["music", "theatre", "comedy", "festivals", "nightlife", "sports", "cinema", "exhibitions", "food-drink", "attractions"]);
 
 const DAY = 86400000;
 export const dayOf = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
@@ -44,8 +46,9 @@ const side = (c: EventCard): DuelSide => ({
 });
 
 /**
- * Picks the day's rounds from a city's coming events: real ones with a picture first, each
- * round two different kinds of thing (a concert against a play, say), no event twice.
+ * Picks the day's rounds from a city's coming events: real ones with a picture first, and
+ * shows, concerts, games and parties before workshops and talks; each round two different
+ * kinds of thing (a concert against a play, say), no event twice.
  * Pure: the same day and events always give the same rounds.
  */
 export function pickRounds(day: string, cards: EventCard[]): DuelRound[] {
@@ -58,7 +61,7 @@ export function pickRounds(day: string, cards: EventCard[]): DuelRound[] {
   });
   const real = ok.filter((c) => !c.isDemo);
   const pool = (real.length >= ROUNDS * 2 ? real : ok)
-    .map((c) => ({ c, r: rank(day, c.id) + (c.imageUrl ? 0 : 2 ** 32) }))
+    .map((c) => ({ c, r: rank(day, c.id) + (c.imageUrl ? 0 : 2 ** 33) + (LIVELY.has(c.groupSlug) ? 0 : 2 ** 32) }))
     .sort((x, y) => x.r - y.r)
     .map((x) => x.c);
   const rounds: DuelRound[] = [];
@@ -96,7 +99,7 @@ export type DuelSource = (cityId: string, from: string, to: string) => Promise<{
 
 /** The day's duel as kept, making it on first use. */
 async function stored(day: string, source?: DuelSource): Promise<Stored | undefined> {
-  const have = json<Stored>(await cmd(["GET", `c:duel:${day}`]));
+  const have = json<Stored>(await cmd(["GET", `c:dl:${day}`]));
   if (have || !source) return have;
   const n = dayNumber(day);
   const to = dayOf(Date.parse(`${day}T00:00:00Z`) + 7 * DAY);
@@ -106,8 +109,8 @@ async function stored(day: string, source?: DuelSource): Promise<Stored | undefi
     const rounds = pickRounds(day, cards);
     if (rounds.length < ROUNDS) continue;
     // Whoever saves first wins, so every server shows the same duel.
-    await cmd(["SET", `c:duel:${day}`, JSON.stringify({ day, cityId, city, rounds }), "NX", "EX", TTL]);
-    return json<Stored>(await cmd(["GET", `c:duel:${day}`]));
+    await cmd(["SET", `c:dl:${day}`, JSON.stringify({ day, cityId, city, rounds }), "NX", "EX", TTL]);
+    return json<Stored>(await cmd(["GET", `c:dl:${day}`]));
   }
   return undefined;
 }
@@ -127,7 +130,7 @@ export async function getDuel(viewer: string | undefined, source?: DuelSource, n
     ["HGETALL", `c:dc:${day}`],
     viewer ? ["HMGET", `c:dv:${day}`, ...duel.rounds.map((_, i) => `${i}:${viewer}`)] : ["GET", "c:none"],
     viewer ? ["GET", `c:dstk:${viewer}`] : ["GET", "c:none"],
-    ["GET", `c:duel:${yesterday}`],
+    ["GET", `c:dl:${yesterday}`],
     ["HGETALL", `c:dc:${yesterday}`],
   ]);
   const counts = pairs(res[0]);
