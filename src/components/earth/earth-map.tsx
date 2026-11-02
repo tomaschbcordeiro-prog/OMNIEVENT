@@ -38,6 +38,11 @@ export interface EarthMapHandle {
   getCamera(): CameraState | null;
   /** Fit a search circle inside the part of the map not covered by panels. */
   frameCircle(lat: number, lng: number, km: number): void;
+  /**
+   * "Spin the globe": a few fast turns that slow down like a wheel of fortune, then a dive to
+   * the place. Resolves true on landing, false when someone grabs the map first.
+   */
+  spinTo(lat: number, lng: number, zoom: number, opts?: { ms?: number; offset?: [number, number] }): Promise<boolean>;
 }
 
 export interface EarthMapProps {
@@ -109,6 +114,9 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   latest.current = props;
   const placeMarker = useRef<maplibregl.Marker | null>(null);
   const spinning = useRef(false);
+  /** A "Spin the globe" turn in progress (its frames don't report the view), and its stop flag. */
+  const tour = useRef(false);
+  const tourStop = useRef(false);
   const pulseCtl = useRef<{ start(): void; stop(): void } | null>(null);
   const selectedNow = useRef("");
   const popFrame = useRef(0);
@@ -138,6 +146,48 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       } catch (err) {
         console.error("frame failed", err);
       }
+    },
+    spinTo(lat, lng, zoom, { ms = 3200, offset = [0, 0] as [number, number] } = {}) {
+      const m = mapRef.current;
+      if (!m) return Promise.resolve(false);
+      spinning.current = false;
+      m.stop();
+      if (latest.current.reducedMotion) {
+        m.jumpTo({ center: [lng, lat], zoom });
+        // jumpTo has no offset: shift the place clear of the panels in one step.
+        if (offset[0] || offset[1]) m.panBy([-offset[0], -offset[1]], { duration: 0 });
+        return Promise.resolve(true);
+      }
+      return new Promise<boolean>((resolve) => {
+        tour.current = true;
+        tourStop.current = false;
+        const from = m.getCenter();
+        const z0 = m.getZoom();
+        // Far enough out to see the planet turn; two turns and a bit, always eastwards.
+        const zOut = Math.min(z0, latest.current.projection === "globe" ? 1.4 : 1.2);
+        const ahead = (((lng - from.lng) % 360) + 360) % 360;
+        const total = 720 + ahead;
+        const t0 = performance.now();
+        const done = (landed: boolean) => {
+          tour.current = false;
+          resolve(landed);
+        };
+        const frame = (now: number) => {
+          if (tourStop.current || mapRef.current !== m) return done(false);
+          const k = Math.min(1, (now - t0) / ms);
+          // Quick start, long slow finish: a wheel running out of speed.
+          const e = 1 - Math.pow(1 - k, 4);
+          const zk = Math.min(1, k / 0.2);
+          const lngNow = from.lng + total * e;
+          m.jumpTo({ center: [((((lngNow + 180) % 360) + 360) % 360) - 180, from.lat + (lat * 0.85 - from.lat) * easeInOutCubic(k)], zoom: z0 + (zOut - z0) * easeOutCubic(zk) });
+          if (k < 1) return void requestAnimationFrame(frame);
+          // Landed over the place: dive in.
+          tour.current = false;
+          m.once("moveend", () => resolve(!tourStop.current));
+          m.flyTo({ center: [lng, lat], zoom, offset, curve: 1.5, speed: 1.4, maxDuration: 2200, essential: false });
+        };
+        requestAnimationFrame(frame);
+      });
     },
     getCamera() {
       const m = mapRef.current;
@@ -314,6 +364,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       latest.current.onView?.({ lat: c.lat, lng: c.wrap().lng, zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] });
     };
     map.on("moveend", () => {
+      // A spin's frames each end a move; the view is reported once it lands.
+      if (tour.current) return;
       if (spinning.current && latest.current.autoRotate) return spin();
       emitView();
     });
@@ -321,6 +373,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     // ---- any direct manipulation stops auto-rotation for good
     const interact = () => {
       spinning.current = false;
+      tourStop.current = true;
       latest.current.onUserInteract?.();
     };
     map.on("mousedown", interact);

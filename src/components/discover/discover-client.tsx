@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
@@ -26,6 +26,7 @@ import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
 import { LayersPanel } from "../earth/layers-panel";
 import { ExplorePanel } from "../earth/explore-panel";
+import { GlobeSpin } from "../earth/globe-spin";
 import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
 import { sellerSearches } from "@/lib/sellers";
@@ -98,6 +99,9 @@ export function DiscoverClient() {
   const [pickMode, setPickMode] = useState(false);
   const [hovered, setHovered] = useState<{ lat: number; lng: number } | null>(null);
   const [focusedVenue, setFocusedVenue] = useState<string | null>(null);
+  // "Spin the globe": open while its panel shows; each press of a spin button bumps the token.
+  const [spinOpen, setSpinOpen] = useState(false);
+  const [spinToken, setSpinToken] = useState(0);
   const flyKey = useRef(0);
   const history = useRef<CameraState[]>([]);
   const mapApi = useRef<EarthMapHandle>(null);
@@ -442,6 +446,25 @@ export function DiscoverClient() {
   }, [liveList, fly]);
   const nFilters = activeFilterCount(filters);
 
+  const startSpin = () => {
+    setSelection(null);
+    setPlace(null);
+    setPickMode(false);
+    setShowFilters(false);
+    if (mode === "list") setMode("globe");
+    setSpinOpen(true);
+    setSpinToken((t) => t + 1);
+  };
+  const spinTo = useCallback((lat: number, lng: number) => {
+    setAutoRotate(false);
+    setHovered(null);
+    // Land where the spin panel doesn't cover: left of it on large screens, above it on phones.
+    const offset: [number, number] = window.innerWidth >= 1024 ? [-190, 0] : [0, -Math.round(window.innerHeight * 0.2)];
+    return mapApi.current?.spinTo(lat, lng, 12.5, { offset }) ?? Promise.resolve(true);
+  }, []);
+  const onSpinLand = useCallback((c: EventCard) => setHovered({ lat: c.lat, lng: c.lng }), []);
+  const closeSpin = useCallback(() => (setSpinOpen(false), setHovered(null)), []);
+
   const locate = () => {
     if (!navigator.geolocation) return setError("Location isn't available in this browser.");
     navigator.geolocation.getCurrentPosition(
@@ -529,9 +552,14 @@ export function DiscoverClient() {
               </span>
             </h1>
             {!(view.zoom > 4 || place || mode === "list") && (
-              <Link href="/match" className="press mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 px-3.5 py-1.5 t-small font-semibold text-white">
-                <span aria-hidden>💘</span> New: swipe your next plan <span aria-hidden>→</span>
-              </Link>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-text hover:brightness-105">
+                  <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
+                </button>
+                <Link href="/match" className="press inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 px-3.5 py-1.5 t-small font-semibold text-white">
+                  <span aria-hidden>💘</span> <span className="sm:hidden">Swipe a plan</span><span className="max-sm:hidden">Swipe your next plan</span> <span aria-hidden>→</span>
+                </Link>
+              </div>
             )}
             <SearchBox
               className="mt-5"
@@ -702,6 +730,9 @@ export function DiscoverClient() {
                 {autoRotate && !reduced ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
               </button>
             )}
+            <button className="btn btn-icon btn-sm spin-cta text-text" aria-label="Spin the globe" title="Spin the globe: land on a random event somewhere in the world" onClick={startSpin}>
+              <Dices size={15} aria-hidden />
+            </button>
             <button className="btn btn-secondary btn-icon btn-sm" aria-label="Reset to whole-planet view" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME }))}>
               <RotateCcw size={14} aria-hidden />
             </button>
@@ -775,8 +806,22 @@ export function DiscoverClient() {
         </div>
       )}
 
-      {/* ---------- Right: selection, place, or discovery ---------- */}
-      {selection ? (
+      {/* ---------- Right: spin, selection, place, or discovery ---------- */}
+      {spinOpen && mode !== "list" ? (
+        <GlobeSpin
+          token={spinToken}
+          ready={mapReady}
+          reduced={reduced}
+          spin={spinTo}
+          onLand={onSpinLand}
+          onClose={closeSpin}
+          onOpen={(c) => {
+            closeSpin();
+            setSelection({ kind: "event", card: c });
+            fly({ lat: c.lat, lng: c.lng, zoom: 13 });
+          }}
+        />
+      ) : selection ? (
         <SelectionPanel
           selection={selection}
           filters={filters}

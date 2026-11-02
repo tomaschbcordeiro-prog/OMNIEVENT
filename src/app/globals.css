@@ -1149,3 +1149,55 @@ select.field {
     transform: translateY(16px) scale(0.97);
   }
 }
+
+/* Spin the globe: the die tumbles while the planet turns, place names flick past like a
+   slot machine, and the call to action gives a little shake now and then. */
+.spin-die[data-rolling] {
+  display: inline-block;
+  animation: die-roll 600ms linear infinite;
+}
+@keyframes die-roll {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin-reel {
+  animation: spin-reel 160ms ease-out both;
+}
+@keyframes spin-reel {
+  from {
+    opacity: 0.2;
+    transform: translateY(-60%);
+    filter: blur(2px);
+  }
+}
+.spin-cta {
+  background: linear-gradient(100deg, var(--sun), #ff8a3d 55%, var(--coral));
+  box-shadow: 0 10px 26px -10px rgb(240 71 90 / 0.75);
+}
+.spin-cta > .spin-cta-die {
+  display: inline-block;
+  animation: cta-shake 5s ease-in-out 2.5s infinite;
+}
+.spin-cta:hover > .spin-cta-die {
+  animation: die-roll 700ms linear infinite;
+}
+@keyframes cta-shake {
+  0%,
+  86%,
+  100% {
+    transform: none;
+  }
+  88% {
+    transform: rotate(-22deg) scale(1.15);
+  }
+  91% {
+    transform: rotate(18deg) scale(1.15);
+  }
+  94% {
+    transform: rotate(-10deg);
+  }
+  97% {
+    transform: rotate(6deg);
+  }
+}

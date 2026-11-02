@@ -916,6 +916,35 @@ function groupKeys(g: { keys: string[] }): Set<string> {
 
 /** Viewport-aware clustering for the globe and 2D map. */
 /**
+ * A random handful of matching events for "Spin the globe", each in a different city where
+ * possible. Real events with a picture and a start time are likelier picks than listings
+ * without, always-open attractions or ongoing runs. `random` is injectable for tests.
+ */
+export function sampleEvents(f: SearchFilters, n: number, random = Math.random): EventCard[] {
+  const catSets = catSetsFor(f);
+  const weight = (c: EventCard) => (c.imageUrl ? 4 : 1) * (c.hoursUnknown ? 0.4 : 1) * (c.eventType === "daily_attraction" ? 0.15 : 1) * (c.isDemo ? 0.05 : 1);
+  // Weighted sampling without replacement (Efraimidis–Spirakis): keep the largest keys.
+  const keyed: { c: EventCard; k: number }[] = [];
+  for (const c of state.cards.values()) {
+    if (c.status === "cancelled" || c.status === "postponed" || c.online || !matches(c, f, catSets)) continue;
+    keyed.push({ c, k: Math.pow(random(), 1 / weight(c)) });
+  }
+  keyed.sort((a, b) => b.k - a.k);
+  const out: EventCard[] = [];
+  const cities = new Set<string>();
+  // Different cities first, then fill up if there aren't enough.
+  for (const pass of [0, 1])
+    for (const { c } of keyed) {
+      if (out.length >= n) break;
+      const city = c.cityId ?? `${c.city}|${c.country}`;
+      if (out.includes(c) || (pass === 0 && cities.has(city))) continue;
+      cities.add(city);
+      out.push(c);
+    }
+  return out.map((c) => present(c, f));
+}
+
+/**
  * How many events match on each of `n` local days from `start` (dates in the filters are
  * ignored), within the view: the globe's timeline. One pass over the events.
  */
