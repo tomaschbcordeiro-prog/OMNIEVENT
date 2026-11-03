@@ -206,7 +206,8 @@ export const skiddleProvider: ProviderAdapter = {
     let lastError = "";
     const countries = envList("SKIDDLE_COUNTRIES", DEFAULT_COUNTRIES);
     const cities = [...citiesIn(countries), ...(countries.includes("GB") ? EXTRA_CITIES : [])];
-    const pages = Math.max(1, Number(process.env.SKIDDLE_CITY_PAGES ?? 3));
+    // Up to 1,000 events around each city, in date order: the whole calendar, not just this week.
+    const pages = Math.max(1, Number(process.env.SKIDDLE_CITY_PAGES ?? 10));
     for (const c of cities) {
       for (let page = 0; page < pages && raw.length < ctx.maxEvents; page++) {
         const url = new URL(BASE);

@@ -27,6 +27,9 @@ export const GET = handler(async () => {
       return [id, { left: c?.queue?.length ?? 0, lastComplete: done ? new Date(done).toISOString() : null }];
     }),
   );
+  // What Ticketmaster says it lists per country, to compare with what we hold.
+  const [tmTotals] = await getStates<{ at: string; countries: Record<string, number> }>(["ticketmaster:totals"]);
+  if (tmTotals) Object.assign(crawl.ticketmaster, { listed: tmTotals });
   const providers = statuses.map((p, i) => ({ ...p, lastRun: p.lastRun ?? runs[i], lastRealRun: runs[i] }));
   return ok({ providers, data: dataSummary(), storage: await storageStatus(), shared, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } });
 });

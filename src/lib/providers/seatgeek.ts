@@ -9,14 +9,16 @@ import { getState, setState } from "../shared-cache";
  * SeatGeek Platform API (https://platform.seatgeek.com).
  *
  * - Requires SEATGEEK_CLIENT_ID (free, from seatgeek.com/account/develop).
- * - Coverage: mostly the US and Canada; SeatGeek is a primary seller for some teams and a
+ * - Coverage: mostly the US and Canada (Europe, Mexico and Australia/NZ are read too); SeatGeek is a primary seller for some teams and a
  *   resale marketplace for the rest, so offers are labelled "marketplace".
  * - `stats.lowest_price` is a listing price that changes constantly; we show it as "from"
  *   and never mark fees as included.
  */
 
 const BASE = "https://api.seatgeek.com/2/events";
-const DEFAULT_COUNTRIES = ["US", "CA"];
+// SeatGeek is mostly North American, but it also lists events in these markets; a country
+// with nothing listed costs one request.
+const DEFAULT_COUNTRIES = ["US", "CA", "MX", "GB", "IE", "AU", "NZ", "DE", "FR", "ES", "IT", "NL", "BE", "PT", "AT", "CH"];
 
 interface SgPerformer { id: number; name: string; slug?: string; url?: string; image?: string; type?: string; primary?: boolean; home_team?: boolean; away_team?: boolean }
 interface SgVenue {

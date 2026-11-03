@@ -277,7 +277,7 @@ export type CrawlTask = { cc: string; start: number; end: number; page: number }
 export async function crawlCatalogue(
   fetchPage: FetchPage,
   countries: string[],
-  { from, to, maxCalls, onError, onEvents, resume, deadline = Infinity }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void; resume?: CrawlTask[]; deadline?: number },
+  { from, to, maxCalls, onError, onEvents, onTotal, resume, deadline = Infinity }: { from: number; to: number; maxCalls: number; onError?: (err: unknown, what: string) => boolean; onEvents: (events: TmEvent[]) => void; onTotal?: (cc: string, total: number) => void; resume?: CrawlTask[]; deadline?: number },
 ): Promise<{ calls: number; truncated: number; complete: boolean; remaining: CrawlTask[] }> {
   let calls = 0;
   let truncated = 0;
@@ -288,7 +288,9 @@ export async function crawlCatalogue(
   const deferred: Task[] = [];
   const call = async (t: Task) => {
     calls++;
-    return fetchPage({ countryCode: t.cc, startDateTime: iso(t.start), endDateTime: iso(t.end), size: String(PAGE_SIZE), page: String(t.page), sort: "date,asc" });
+    // Every language: without `locale` the API only answers events listed in English, which
+    // leaves out most of continental Europe (German, Dutch, Spanish, Italian… listings).
+    return fetchPage({ countryCode: t.cc, startDateTime: iso(t.start), endDateTime: iso(t.end), size: String(PAGE_SIZE), page: String(t.page), sort: "date,asc", locale: "*" });
   };
   const worker = async () => {
     while (queue.length && !stopped) {
@@ -306,6 +308,8 @@ export async function crawlCatalogue(
         continue;
       }
       const total = json.page?.totalElements ?? 0;
+      // How many events Ticketmaster lists for the whole country, for the status page.
+      if (t.page === 0 && t.start === from && t.end === to) onTotal?.(t.cc, total);
       if (t.page === 0 && total > MAX_PER_QUERY && t.end - t.start > HOUR) {
         // Too many for one query: halve the window on a whole hour and try each half.
         const mid = t.start + Math.max(1, Math.floor((t.end - t.start) / 2 / HOUR)) * HOUR;
@@ -388,8 +392,10 @@ export const ticketmasterProvider: ProviderAdapter = {
     const done = await getState<number>("ticketmaster:complete");
     if (!resume && done && Date.now() - done < 12 * 3600000)
       return { batch: { events: [], venues: [], participants: [], offers: [] }, run: { imported: 0, updated: 0, failures: 0, rateLimited: false, ok: true, partial: true, finishedAt: new Date().toISOString() } };
+    const totals: Record<string, number> = {};
     const crawl = await crawlCatalogue(fetchPage, countries, {
       resume,
+      onTotal: (cc, n) => (totals[cc] = n),
       // Servers stop a request's work after five minutes; stop before, save, continue next run.
       deadline: Date.now() + Number(process.env.TICKETMASTER_RUN_SECONDS ?? 220) * 1000,
       onEvents,
@@ -414,6 +420,10 @@ export const ticketmasterProvider: ProviderAdapter = {
     });
     ctx.log("ticketmaster crawl", { calls: crawl.calls, networkCalls, events: events.size, complete: crawl.complete, truncated: crawl.truncated, resumed: !!resume });
     await setState("ticketmaster:crawl", crawl.remaining.length ? { from, to, countries: countries.join(","), queue: crawl.remaining } : undefined, 40 * 86400);
+    if (Object.keys(totals).length) {
+      const prev = (await getState<{ at: string; countries: Record<string, number> }>("ticketmaster:totals"))?.countries ?? {};
+      await setState("ticketmaster:totals", { at: new Date().toISOString(), countries: { ...prev, ...totals } }, 40 * 86400);
+    }
     if (!crawl.remaining.length) await setState("ticketmaster:complete", Date.now());
     const batch: ProviderBatch = { events: [...events.values()], venues: [...venues.values()], participants: [...participants.values()], offers: [...offers.values()] };
     const notes = [

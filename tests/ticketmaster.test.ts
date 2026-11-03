@@ -84,6 +84,13 @@ describe("full-catalogue crawl", () => {
     expect(maxSeen).toBeLessThanOrEqual(1000);
     expect(r.calls).toBeLessThan(80);
   });
+  it("asks for listings in every language, and reports each country's total once", async () => {
+    const locales = new Set<string>();
+    const totals: Record<string, number> = {};
+    await crawlCatalogue(async (p) => (locales.add(p.locale), fetchPage(p)), ["US", "PT"], { from, to, maxCalls: 1000, onEvents: () => {}, onTotal: (cc, n) => (totals[cc] = n) });
+    expect([...locales]).toEqual(["*"]);
+    expect(totals).toEqual({ US: 4500 + 900, PT: 120 });
+  });
   it("stops at the call budget and reports it", async () => {
     const r = await crawlCatalogue(fetchPage, ["US"], { from, to, maxCalls: 5, onEvents: () => {} });
     expect(r.complete).toBe(false);
