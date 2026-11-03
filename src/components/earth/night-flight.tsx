@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Pause, Play, Plane, Share2, SkipBack, SkipForward, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { haversineKm } from "@/lib/geo";
+import { getDestination } from "@/lib/destinations";
 import { sphereCentre } from "@/lib/map/arc";
 import type { EarthMapHandle } from "./earth-map";
 import { Poster, SaveButton } from "../ui";
@@ -33,7 +34,7 @@ const GROUP_EMOJI: Record<string, string> = {
   exhibitions: "🎨", attractions: "🎡", "food-drink": "🍷", nightlife: "🪩", family: "🧸", outdoor: "🥾", education: "📚", fashion: "👗", culture: "🏛️",
 };
 const emojiOf = (c: EventCard) => GROUP_EMOJI[c.groupSlug] ?? "✨";
-const placeOf = (c: EventCard) => c.city || c.country;
+const placeOf = (c: EventCard) => c.city || (c.cityId && getDestination(c.cityId)?.name) || c.country;
 /** A three-letter tag for a place, boarding-pass style. */
 const codeOf = (c: EventCard) => placeOf(c).normalize("NFD").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "???";
 

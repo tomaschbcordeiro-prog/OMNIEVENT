@@ -42,6 +42,8 @@ describe("night flight", () => {
       expect(c.eventType).not.toBe("daily_attraction");
       expect(c.hoursUnknown).toBeFalsy();
       expect(c.online).toBe(false);
+      // Without a vibe, nights out only: shows, concerts, matches, parties.
+      expect(["music", "theatre", "comedy", "festivals", "nightlife", "sports", "cinema", "food-drink"]).toContain(c.groupSlug);
     }
   });
 

@@ -3,7 +3,7 @@ import { slugify } from "../destinations";
 import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
-import { hueOf, keyOf, nearestCityId, parseLocal, sleep } from "./common";
+import { hueOf, keyOf, nearestCityId, parseLocal, plainText, sleep } from "./common";
 import SNAPSHOT from "./data/bol-events.json";
 import GEOCODED from "./data/bol-venues.json";
 
@@ -162,7 +162,7 @@ export function normalizeBol(raw: BolEvent[], syncedAt: string, now = Date.now()
       venues.set(venueId, {
         id: venueId,
         slug: slugify(`${loc.name ?? "local"}-${loc.address?.addressLocality ?? ""}-${keyOf(venueKey)}`),
-        name: loc.name ?? "Venue",
+        name: plainText(loc.name) ?? "Venue",
         address: [loc.address?.streetAddress, loc.address?.postalCode].filter((x) => x && x !== "-").join(", ") || undefined,
         city: loc.address?.addressLocality ?? "",
         cityId: nearestCityId(geo.lat, geo.lng),
@@ -186,7 +186,8 @@ export function normalizeBol(raw: BolEvent[], syncedAt: string, now = Date.now()
       id,
       canonicalId: id,
       slug: slugify(`${e.name}-${loc.address?.addressLocality ?? ""}-${e.productID.replace(/\D/g, "")}`),
-      title: e.name.trim(),
+      // Some listings arrive with HTML entities in the name (&#34;…&#34;).
+      title: plainText(e.name) ?? e.name.trim(),
       categorySlug: cat,
       groupSlug: groupOf(cat),
       eventType: longRun ? "multi_day" : "single",

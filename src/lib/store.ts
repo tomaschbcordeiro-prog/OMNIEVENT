@@ -958,6 +958,8 @@ export function sampleEvents(f: SearchFilters, n: number, random = Math.random):
   return out.map((c) => present(c, f));
 }
 
+/** What Night Flight stops at when no vibe is chosen: shows, concerts, matches, parties. */
+const NIGHT_OUT = new Set(["music", "theatre", "comedy", "festivals", "nightlife", "sports", "cinema", "food-drink"]);
 /** Evenings Night Flight visits: local start times from 17:00 to midnight. */
 const EVENING_FROM = 17 * 60;
 const FLIGHT_BANDS = 12;
@@ -975,13 +977,14 @@ export function nightFlight(opts: { n?: number; groups?: string[]; now?: number;
   const now = opts.now ?? Date.now();
   const random = opts.random ?? Math.random;
   const catSets = opts.groups?.length ? opts.groups.map((g) => descendantsOf(g)) : undefined;
-  const weight = (c: EventCard) => (c.imageUrl ? 5 : 1) * (LIVELY.has(c.groupSlug) ? 4 : 1) * (c.isDemo ? 0.02 : 1);
+  // A place to stop needs a name on the card; a night out beats a club meeting.
+  const weight = (c: EventCard) => (c.imageUrl ? 5 : 1) * (c.city ? 1 : 0.1) * (c.isDemo ? 0.02 : 1);
   type Stop = { c: EventCard; at: number; local: number; k: number };
   const pool: Stop[] = [];
   for (const c of state.cards.values()) {
     if (c.status === "cancelled" || c.status === "postponed" || c.online || c.hoursUnknown || c.eventType === "daily_attraction") continue;
     if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng) || !isValidTimeZone(c.timeZone)) continue;
-    if (catSets && !catSets.some((s) => s.has(c.categorySlug) || s.has(c.groupSlug))) continue;
+    if (catSets ? !catSets.some((s) => s.has(c.categorySlug) || s.has(c.groupSlug)) : !NIGHT_OUT.has(c.groupSlug)) continue;
     const e = state.events.get(c.id);
     if (!e) continue;
     // The first performance in the window that falls in a local evening (repeat shows too).

@@ -65,4 +65,9 @@ describe("BOL", () => {
     expect(m).toMatchObject({ eventType: "multi_day", isFree: true, hoursUnknown: true });
     expect(out.venues[0]).toMatchObject({ name: "Teatro Viriato", countryCode: "PT", timeZone: "Europe/Lisbon" });
   });
+
+  it("decodes HTML entities in names", () => {
+    const out = normalizeBol([ev({ productID: "1_9", name: "&#34;A Birra do Morto&#34; &amp; amigos" })], "2026-10-25T12:00:00Z", Date.parse("2026-10-25T12:00:00Z"), {});
+    expect(out.events[0].title).toBe('"A Birra do Morto" & amigos');
+  });
 });
