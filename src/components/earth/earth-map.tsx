@@ -7,6 +7,7 @@ import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, type BaseS
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { geodesicCircle, circleBounds } from "@/lib/map/circle";
+import { along, arcAngle, greatCircle, sphereCentre } from "@/lib/map/arc";
 import { GROUP_HEX } from "@/lib/categories";
 import type { Cluster } from "@/lib/types";
 import { SHARE_BUCKETS, badgeImage, clusterMarker, shareBucket, singleMarker } from "./marker-art";
@@ -43,6 +44,18 @@ export interface EarthMapHandle {
    * the place. Resolves true on landing, false when someone grabs the map first.
    */
   spinTo(lat: number, lng: number, zoom: number, opts?: { ms?: number; offset?: [number, number] }): Promise<boolean>;
+  /** Night Flight: a route's stops ([lng, lat]) and how many have been reached; null clears it. */
+  setFlight(route: { stops: [number, number][]; reached: number } | null): void;
+  /**
+   * Night Flight: fly the great circle to a stop behind a glowing comet that draws the route,
+   * pulling out mid-flight and tilting in on arrival, then turn slowly round the place.
+   * Resolves true on arrival, false when someone grabs the map first.
+   */
+  flyLeg(from: [number, number] | null, to: [number, number], opts?: { zoom?: number; pitch?: number; orbitMs?: number }): Promise<boolean>;
+  /** Pull back to see a whole route at once. */
+  viewRoute(points: [number, number][], zoom: number): void;
+  /** Stop any camera move in progress, a flight leg included (it resolves false). */
+  halt(): void;
 }
 
 export interface EarthMapProps {
@@ -83,6 +96,8 @@ export interface EarthMapProps {
   onCamera?: (zoom: number, lat: number) => void;
   /** Screen space on the right taken by a side panel: the map centres in the rest. */
   padRight?: number;
+  /** Screen space at the bottom taken by a panel (phones). */
+  padBottom?: number;
   onReady?: () => void;
   onFatal?: (reason: string) => void;
 }
@@ -91,6 +106,10 @@ const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const LIVE = "#FF3B5C";
+const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+const wrapLng = (x: number) => ((((x + 180) % 360) + 360) % 360) - 180;
+/** The signed turn from bearing a to bearing b, the short way round. */
+const turn = (a: number, b: number) => ((((b - a + 180) % 360) + 360) % 360) - 180;
 
 const EVENT_LAYERS = ["event-selected", "event-hover", "event-markers"];
 
@@ -125,6 +144,9 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   const selectedNow = useRef("");
   const popFrame = useRef(0);
   const liveCtl = useRef<{ sync(): void; stop(): void } | null>(null);
+  const flight = useRef<{ stops: [number, number][]; reached: number } | null>(null);
+  /** Bumped by every flight leg and camera takeover: an older leg's frames stop at once. */
+  const legGen = useRef(0);
 
   useImperativeHandle(ref, () => ({
     zoomBy(d) {
@@ -193,6 +215,87 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         requestAnimationFrame(frame);
       });
     },
+    setFlight(route) {
+      flight.current = route ? { stops: route.stops.map((s) => [s[0], s[1]] as [number, number]), reached: route.reached } : null;
+      drawFlight();
+      drawLeg(null);
+    },
+    flyLeg(from, to, { zoom = 11.5, pitch = 52, orbitMs = 9000 } = {}) {
+      const m = mapRef.current;
+      if (!m) return Promise.resolve(false);
+      const gen = ++legGen.current;
+      spinning.current = false;
+      m.stop();
+      const c0 = m.getCenter();
+      const start: [number, number] = from ?? [c0.lng, c0.lat];
+      const line = greatCircle(start, to, 96);
+      const km = arcAngle(start, to) * 6371;
+      const orbit = () => {
+        if (orbitMs > 0 && mapRef.current === m && gen === legGen.current) m.easeTo({ bearing: m.getBearing() + 26, zoom: m.getZoom() + 0.45, duration: orbitMs, easing: (t) => t, essential: false });
+      };
+      if (latest.current.reducedMotion) {
+        m.jumpTo({ center: to, zoom, pitch: 0, bearing: 0 });
+        return Promise.resolve(true);
+      }
+      return new Promise<boolean>((resolve) => {
+        tour.current = true;
+        tourStop.current = false;
+        const z0 = m.getZoom();
+        const p0 = m.getPitch();
+        const b0 = m.getBearing();
+        // Out far enough to see the way: the whole planet for an ocean, a region for a hop.
+        const zMid = Math.min(zoom, Math.max(1.3, Math.min(6, 11.9 - 2.57 * Math.log10(Math.max(km, 50)))));
+        const ms = Math.max(2600, Math.min(6400, 2300 + km * 0.36));
+        const cruisePitch = 18;
+        const arriveBearing = -16;
+        const t0 = performance.now();
+        const frame = (now: number) => {
+          // A newer leg (or another camera move) took over: it owns the camera and the comet.
+          if (gen !== legGen.current) return resolve(false);
+          if (tourStop.current || mapRef.current !== m) {
+            tour.current = false;
+            drawLeg(null);
+            return resolve(false);
+          }
+          const k = Math.min(1, (now - t0) / ms);
+          const e = easeInOutCubic(k);
+          const pos = along(line, e);
+          // Two halves: climb out (zoom out, level off, face north), then descend and tilt in.
+          const h = easeInOutCubic(k < 0.5 ? k * 2 : (k - 0.5) * 2);
+          const z = k < 0.5 ? z0 + (zMid - z0) * h : zMid + (zoom - zMid) * h;
+          const p = k < 0.5 ? p0 + (cruisePitch - p0) * h : cruisePitch + (pitch - cruisePitch) * h;
+          const b = k < 0.5 ? b0 + turn(b0, 0) * h : arriveBearing * h;
+          m.jumpTo({ center: [wrapLng(pos[0]), pos[1]], zoom: z, pitch: p, bearing: b });
+          drawLeg([...line.slice(0, Math.floor(e * (line.length - 1)) + 1), pos]);
+          if (k < 1) return void requestAnimationFrame(frame);
+          tour.current = false;
+          resolve(true);
+          orbit();
+        };
+        requestAnimationFrame(frame);
+      });
+    },
+    halt() {
+      legGen.current++;
+      tour.current = false;
+      tourStop.current = true;
+      spinning.current = false;
+      mapRef.current?.stop();
+      drawLeg(null);
+    },
+    viewRoute(points, zoom) {
+      const m = mapRef.current;
+      if (!m || !points.length) return;
+      legGen.current++;
+      tour.current = false;
+      spinning.current = false;
+      m.stop();
+      drawLeg(null);
+      const [lng, lat] = sphereCentre(points);
+      const o = { center: [lng, Math.max(-45, Math.min(45, lat))] as [number, number], zoom, pitch: 0, bearing: 0 };
+      if (latest.current.reducedMotion) m.jumpTo(o);
+      else m.flyTo({ ...o, curve: 1.4, speed: 1.1, maxDuration: 3200, essential: false });
+    },
     getCamera() {
       const m = mapRef.current;
       if (!m) return null;
@@ -233,7 +336,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       return;
     }
     mapRef.current = map;
-    map.setPadding({ top: 0, bottom: 0, left: 0, right: p.padRight ?? 0 });
+    map.setPadding({ top: 0, bottom: p.padBottom ?? 0, left: 0, right: p.padRight ?? 0 });
     // Exposed for automated browser tests (read-only use).
     (window as unknown as { __omniMaps?: MLMap[] }).__omniMaps = [...((window as unknown as { __omniMaps?: MLMap[] }).__omniMaps ?? []), map];
     map.getCanvas().setAttribute("aria-label", p.ariaLabel ?? "Interactive map");
@@ -348,12 +451,41 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         metadata: { omni: { group: "events" } },
       });
 
+      // Night Flight: the planned route (dashed), the legs flown (a golden trail), the stops,
+      // and the leg in flight, fading in behind a comet head.
+      map.addSource("flight", { type: "geojson", data: EMPTY });
+      map.addSource("flight-live", { type: "geojson", data: EMPTY, lineMetrics: true });
+      const round = { "line-cap": "round", "line-join": "round" } as const;
+      const isLine: ExpressionSpecification = ["==", ["geometry-type"], "LineString"];
+      const isPoint: ExpressionSpecification = ["==", ["geometry-type"], "Point"];
+      map.addLayer({ id: "flight-plan", type: "line", source: "flight", filter: ["==", ["get", "kind"], "plan"], layout: round, paint: { "line-color": "#FFD978", "line-width": 1.8, "line-opacity": 0.8, "line-dasharray": [1.2, 2.2] } });
+      map.addLayer({ id: "flight-trail-glow", type: "line", source: "flight", filter: ["==", ["get", "kind"], "trail"], layout: round, paint: { "line-color": "#FFB800", "line-width": 9, "line-blur": 7, "line-opacity": 0.5 } });
+      map.addLayer({ id: "flight-trail", type: "line", source: "flight", filter: ["==", ["get", "kind"], "trail"], layout: round, paint: { "line-color": "#FFD978", "line-width": 2.4 } });
+      map.addLayer({ id: "flight-leg-glow", type: "line", source: "flight-live", filter: isLine, layout: round, paint: { "line-width": 11, "line-blur": 8, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(255,184,0,0)", 1, "rgba(255,184,0,0.65)"] } });
+      map.addLayer({ id: "flight-leg", type: "line", source: "flight-live", filter: isLine, layout: round, paint: { "line-width": 2.8, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(255,217,120,0.1)", 0.75, "rgba(255,217,120,0.95)", 1, "#FFF6D8"] } });
+      map.addLayer({
+        id: "flight-stops",
+        type: "circle",
+        source: "flight",
+        filter: ["==", ["get", "kind"], "stop"],
+        paint: {
+          "circle-radius": ["case", ["==", ["get", "reached"], 1], 5, 3.5],
+          "circle-color": ["case", ["==", ["get", "reached"], 1], "#FFC94D", "rgba(255,217,120,0.4)"],
+          "circle-stroke-color": "#FFF6D8",
+          "circle-stroke-width": 1.5,
+          "circle-pitch-alignment": "map",
+        },
+      });
+      map.addLayer({ id: "flight-head-glow", type: "circle", source: "flight-live", filter: isPoint, paint: { "circle-radius": 24, "circle-color": "#FFC94D", "circle-blur": 1, "circle-opacity": 0.8, "circle-pitch-alignment": "viewport" } });
+      map.addLayer({ id: "flight-head", type: "circle", source: "flight-live", filter: isPoint, paint: { "circle-radius": 5, "circle-color": "#FFFFFF", "circle-stroke-color": "#FFC94D", "circle-stroke-width": 2, "circle-pitch-alignment": "viewport" } });
+
       ready.current = true;
       applyAll();
       setEvents();
       applySelection();
       setArea();
       setHighlight();
+      drawFlight();
       latest.current.onReady?.();
       emitView();
       if (intro) {
@@ -613,6 +745,30 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     (map.getSource("highlight") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: h ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [h.lng, h.lat] } }] : [] });
   }
 
+  function drawFlight() {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const f = flight.current;
+    const features: GeoJSON.Feature[] = [];
+    if (f) {
+      for (let i = 1; i < f.stops.length; i++) features.push({ type: "Feature", properties: { kind: i <= f.reached ? "trail" : "plan" }, geometry: { type: "LineString", coordinates: greatCircle(f.stops[i - 1], f.stops[i], 64) } });
+      f.stops.forEach((s, i) => features.push({ type: "Feature", properties: { kind: "stop", reached: i <= f.reached ? 1 : 0 }, geometry: { type: "Point", coordinates: s } }));
+    }
+    (map.getSource("flight") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features });
+  }
+
+  /** The leg in flight, up to the comet's head (its last point); null clears it. */
+  function drawLeg(line: [number, number][] | null) {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const head = line?.[line.length - 1];
+    (map.getSource("flight-live") as GeoJSONSource | undefined)?.setData(
+      line && line.length > 1 && head
+        ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: line } }, { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: head } }] }
+        : EMPTY,
+    );
+  }
+
   function spin() {
     const map = mapRef.current;
     if (!map || !latest.current.autoRotate || latest.current.reducedMotion || latest.current.projection !== "globe" || map.getZoom() > 4) {
@@ -755,11 +911,14 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     const map = mapRef.current;
     if (!map) return;
     const right = props.padRight ?? 0;
-    if (Math.abs((map.getPadding().right ?? 0) - right) < 1) return;
-    const padding = { top: 0, bottom: 0, left: 0, right };
-    if (latest.current.reducedMotion) map.setPadding(padding);
+    const bottom = props.padBottom ?? 0;
+    const now = map.getPadding();
+    if (Math.abs((now.right ?? 0) - right) < 1 && Math.abs((now.bottom ?? 0) - bottom) < 1) return;
+    const padding = { top: 0, bottom, left: 0, right };
+    // A camera move in progress (a flight) takes the new padding at once rather than being stopped.
+    if (latest.current.reducedMotion || tour.current || map.isMoving()) map.setPadding(padding);
     else map.easeTo({ padding, duration: 500 });
-  }, [props.padRight]);
+  }, [props.padRight, props.padBottom]);
 
   // ---- camera requests (search results, cluster clicks, resets). User input interrupts them.
   useEffect(() => {

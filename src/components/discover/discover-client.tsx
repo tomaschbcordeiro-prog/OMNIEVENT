@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices, Info,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices, Info, Plane,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
@@ -27,6 +27,7 @@ import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
 import { LayersPanel } from "../earth/layers-panel";
 import { ExplorePanel } from "../earth/explore-panel";
 import { GlobeSpin } from "../earth/globe-spin";
+import { NightFlight, flightPadBottom } from "../earth/night-flight";
 import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
 import { sellerSearches } from "@/lib/sellers";
@@ -120,6 +121,12 @@ export function DiscoverClient() {
   // "Spin the globe": open while its panel shows; each press of a spin button bumps the token.
   const [spinOpen, setSpinOpen] = useState(false);
   const [spinToken, setSpinToken] = useState(0);
+  // "Night Flight": the cinematic tour; the planet turns again at its finale.
+  const [flightOn, setFlightOn] = useState(false);
+  const [flightSpin, setFlightSpin] = useState(false);
+  const [flightGrab, setFlightGrab] = useState(0);
+  const spaceBefore = useRef(false);
+  const flightAsked = useRef(false);
   const flyKey = useRef(0);
   const history = useRef<CameraState[]>([]);
   const mapApi = useRef<EarthMapHandle>(null);
@@ -130,7 +137,9 @@ export function DiscoverClient() {
     const ok = hasWebGL();
     setWebgl(ok);
     const sp = new URLSearchParams(window.location.search);
-    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style"].includes(k))));
+    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style", "flight"].includes(k))));
+    // A shared Night Flight link takes off as soon as the globe is ready.
+    flightAsked.current = sp.get("flight") === "1" && ok;
     if (p.ok) setFilters(p.filters);
     const narrow = window.innerWidth < 640;
     // The whole planet, as big as the screen allows.
@@ -162,11 +171,12 @@ export function DiscoverClient() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers, space }));
+      // A flight turns space view on for itself; the visitor's own choice is what's kept.
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers, space: flightOn ? spaceBefore.current : space }));
     } catch {
       // storage unavailable
     }
-  }, [base, layers, space]);
+  }, [base, layers, space, flightOn]);
 
   // ---- keep URL shareable (debounced: Safari throws after 100 replaceState calls in 10 s) ----
   useEffect(() => {
@@ -484,6 +494,46 @@ export function DiscoverClient() {
   const onSpinLand = useCallback((c: EventCard) => setHovered({ lat: c.lat, lng: c.lng }), []);
   const closeSpin = useCallback(() => (setSpinOpen(false), setHovered(null)), []);
 
+  const startFlight = () => {
+    setSelection(null);
+    setPlace(null);
+    setPickMode(false);
+    setShowFilters(false);
+    setShowLayers(false);
+    setShowLegend(false);
+    setSpinOpen(false);
+    setHovered(null);
+    setHint(false);
+    setAutoRotate(false);
+    if (mode === "list") setMode("globe");
+    if (!flightOn) spaceBefore.current = space;
+    // Night falls: the starry sky and the real night side of the planet, for the whole flight.
+    setSpace(true);
+    setFlightOn(true);
+  };
+  const exitFlight = useCallback(() => {
+    setFlightOn(false);
+    setFlightSpin(false);
+    setHovered(null);
+    setSpace(spaceBefore.current);
+  }, []);
+  const getMap = useCallback(() => mapApi.current, []);
+  const onFlightStop = useCallback((c: EventCard | null) => setHovered(c ? { lat: c.lat, lng: c.lng } : null), []);
+  const onFlightOpen = useCallback(
+    (c: EventCard) => {
+      exitFlight();
+      setSelection({ kind: "event", card: c });
+      fly({ lat: c.lat, lng: c.lng, zoom: 13 });
+    },
+    [exitFlight, fly],
+  );
+  useEffect(() => {
+    if (!mapReady || !flightAsked.current) return;
+    flightAsked.current = false;
+    startFlight();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady]);
+
   const locate = () => {
     if (!navigator.geolocation) return setError("Location isn't available in this browser.");
     navigator.geolocation.getCurrentPosition(
@@ -519,8 +569,8 @@ export function DiscoverClient() {
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
       {/* Behind the planet: a glow of light and a soft shadow below, so it floats. */}
-      {mode === "globe" && mapReady && cam && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space} shift={padRight} />}
-      {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} />}
+      {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space} shift={padRight} />}
+      {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && !flightOn && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} />}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (
           <EarthMap
@@ -542,16 +592,17 @@ export function DiscoverClient() {
             highlight={hovered}
             framePadding={typeof window !== "undefined" && window.innerWidth >= 1024 ? { top: 200, right: 40, bottom: 110, left: 60 } : { top: 190, right: 30, bottom: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.5), left: 30 }}
             flyTo={flyTo}
-            autoRotate={autoRotate && !selection && !place && !filters.near && !pickMode && mode === "globe"}
+            autoRotate={flightOn ? flightSpin : autoRotate && !selection && !place && !filters.near && !pickMode && mode === "globe"}
             reducedMotion={reduced}
             space={space}
             intro={intro}
             onView={setView}
             onClusterClick={onClusterClick}
             onMapClick={onMapClick}
-            onUserInteract={() => (setAutoRotate(false), setHint(false))}
+            onUserInteract={() => (setAutoRotate(false), setHint(false), flightOn && setFlightGrab((g) => g + 1))}
             onCamera={(zoom, lat) => setCam((c) => (c && Math.abs(c.zoom - zoom) < 0.02 && Math.abs(c.lat - lat) < 1 ? c : { zoom, lat }))}
             padRight={padRight}
+            padBottom={flightOn ? flightPadBottom() : 0}
             onReady={() => (setMapReady(true), setIntro(false))}
             onFatal={(r) => setMapFailure(r)}
           />
@@ -566,7 +617,7 @@ export function DiscoverClient() {
       </div>
 
       {/* ---------- Top: purpose + search + modes ---------- */}
-      <div className="pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px]">
+      <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
         {/* A compact column in the corner: the globe is the page. */}
         <div className="max-w-[min(34rem,100%)]">
           <div className="pointer-events-auto">
@@ -580,6 +631,9 @@ export function DiscoverClient() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-text hover:brightness-105">
                   <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
+                </button>
+                <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
+                  <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight <span className="nf-cta-new" aria-label="new">NEW</span>
                 </button>
                 <Link href="/match" className="press inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 px-3.5 py-1.5 t-small font-semibold text-white">
                   <span aria-hidden>💘</span> <span className="sm:hidden">Swipe a plan</span><span className="max-sm:hidden">Swipe your next plan</span> <span aria-hidden>→</span>
@@ -686,7 +740,7 @@ export function DiscoverClient() {
       )}
 
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
-      <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"}`}>
+      <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"} ${flightOn ? "hidden" : ""}`}>
         {showLayers && mode !== "list" && (
           <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} />
         )}
@@ -764,6 +818,9 @@ export function DiscoverClient() {
               <button type="button" className="dock-btn dock-btn--spin" aria-label="Spin the globe" title="Spin the globe: land on a random event somewhere in the world" onClick={startSpin}>
                 <Dices size={16} aria-hidden />
               </button>
+              <button type="button" className="dock-btn dock-btn--flight" aria-label="Night Flight" title="Night Flight: a cinematic tour of tonight round the planet" onClick={startFlight}>
+                <Plane size={16} aria-hidden />
+              </button>
               <button
                 type="button"
                 className="dock-btn"
@@ -796,7 +853,7 @@ export function DiscoverClient() {
       </div>
 
       {/* ---------- Status line ---------- */}
-      <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none ${mode === "list" ? "hidden" : "hidden md:block"}`} aria-live="polite">
+      <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none ${mode === "list" || flightOn ? "hidden" : "hidden md:block"}`} aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         {!loading && liveInView > 0 && !filters.live && (
           <div className="mt-0.5 flex items-center justify-end gap-1.5 font-semibold text-white">
@@ -834,8 +891,19 @@ export function DiscoverClient() {
         </div>
       )}
 
-      {/* ---------- Right: spin, selection, place, or discovery ---------- */}
-      {spinOpen && mode !== "list" ? (
+      {/* ---------- Right: night flight, spin, selection, place, or discovery ---------- */}
+      {flightOn && mode !== "list" ? (
+        <NightFlight
+          map={getMap}
+          ready={mapReady}
+          reduced={reduced}
+          interrupt={flightGrab}
+          onStop={onFlightStop}
+          onFinale={setFlightSpin}
+          onOpen={onFlightOpen}
+          onExit={exitFlight}
+        />
+      ) : spinOpen && mode !== "list" ? (
         <GlobeSpin
           token={spinToken}
           ready={mapReady}

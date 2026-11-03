@@ -958,6 +958,70 @@ export function sampleEvents(f: SearchFilters, n: number, random = Math.random):
   return out.map((c) => present(c, f));
 }
 
+/** Evenings Night Flight visits: local start times from 17:00 to midnight. */
+const EVENING_FROM = 17 * 60;
+const FLIGHT_BANDS = 12;
+const FLIGHT_MIN_KM = 350;
+
+/**
+ * "Night Flight": a route round the planet through tonight. Timed events starting within the
+ * next day at 17:00–23:59 local time (or begun in the last hour), one per band of longitude
+ * and city first, the most vivid likelier (a picture, a concert, a match, a show). Stops are
+ * ordered by when evening reaches them, east to west, so the route follows nightfall.
+ * `random` and `now` are injectable for tests.
+ */
+export function nightFlight(opts: { n?: number; groups?: string[]; now?: number; random?: () => number } = {}): EventCard[] {
+  const n = Math.max(1, Math.min(16, opts.n ?? 10));
+  const now = opts.now ?? Date.now();
+  const random = opts.random ?? Math.random;
+  const catSets = opts.groups?.length ? opts.groups.map((g) => descendantsOf(g)) : undefined;
+  const weight = (c: EventCard) => (c.imageUrl ? 5 : 1) * (LIVELY.has(c.groupSlug) ? 4 : 1) * (c.isDemo ? 0.02 : 1);
+  type Stop = { c: EventCard; at: number; local: number; k: number };
+  const pool: Stop[] = [];
+  for (const c of state.cards.values()) {
+    if (c.status === "cancelled" || c.status === "postponed" || c.online || c.hoursUnknown || c.eventType === "daily_attraction") continue;
+    if (!Number.isFinite(c.lat) || !Number.isFinite(c.lng) || !isValidTimeZone(c.timeZone)) continue;
+    if (catSets && !catSets.some((s) => s.has(c.categorySlug) || s.has(c.groupSlug))) continue;
+    const e = state.events.get(c.id);
+    if (!e) continue;
+    // The first performance in the window that falls in a local evening (repeat shows too).
+    let at = NaN;
+    let local = 0;
+    for (const [a, b] of eventIntervals(e)) {
+      if (a < now - 3600000 || a > now + DAY || b - a > LIVE_MAX_MS) continue;
+      const mins = Math.floor((((a + tzOffsetMs(a, c.timeZone)) % DAY) + DAY) % DAY / 60000);
+      if (mins < EVENING_FROM) continue;
+      if (Number.isNaN(at) || a < at) {
+        at = a;
+        local = mins;
+      }
+    }
+    if (!Number.isFinite(at)) continue;
+    pool.push({ c, at, local, k: Math.pow(random(), 1 / weight(c)) });
+  }
+  pool.sort((a, b) => b.k - a.k);
+  const out: Stop[] = [];
+  const cities = new Set<string>();
+  const band = (s: Stop) => Math.floor((((s.c.lng + 180) % 360) + 360) % 360 / (360 / FLIGHT_BANDS));
+  const bands = new Set<number>();
+  // One per band of longitude first, then anywhere far enough from the stops so far, then any new city.
+  for (const pass of [0, 1, 2])
+    for (const s of pool) {
+      if (out.length >= n) break;
+      const city = s.c.cityId ?? `${s.c.city}|${s.c.country}`;
+      if (cities.has(city)) continue;
+      if (pass === 0 && bands.has(band(s))) continue;
+      if (pass <= 1 && out.some((o) => haversineKm(o.c.lat, o.c.lng, s.c.lat, s.c.lng) < FLIGHT_MIN_KM)) continue;
+      cities.add(city);
+      bands.add(band(s));
+      out.push(s);
+    }
+  // When evening reaches each place: the instant of 20:00 local on the stop's day.
+  const dusk = (s: Stop) => s.at - (s.local - 20 * 60) * 60000;
+  out.sort((a, b) => dusk(a) - dusk(b) || a.at - b.at);
+  return out.map((s) => (Date.parse(s.c.start) === s.at ? s.c : { ...s.c, start: new Date(s.at).toISOString(), until: undefined, ongoing: undefined }));
+}
+
 /**
  * How many events match on each of `n` local days from `start` (dates in the filters are
  * ignored), within the view: the globe's timeline. One pass over the events.
