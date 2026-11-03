@@ -105,6 +105,13 @@ body {
   letter-spacing: -0.045em;
   font-weight: 750;
 }
+/* The globe page's headline: big enough to greet, small enough to leave the planet in view. */
+.t-hero {
+  font-size: clamp(1.875rem, 1.1rem + 2.1vw, 2.875rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 750;
+}
 .t-h1 {
   font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
   line-height: 1.08;
@@ -652,12 +659,14 @@ select.field {
 }
 /* Chips that sit on the sky: solid white so they read against any blue. */
 .chip.sky-chip {
-  background: rgb(255 255 255 / 0.92);
-  border-color: rgb(255 255 255 / 0.95);
+  background: rgb(255 255 255 / 0.86);
+  border-color: rgb(255 255 255 / 0.9);
   color: var(--text);
   box-shadow: 0 4px 14px -8px rgb(10 50 120 / 0.5);
-  height: 2.125rem;
-  padding: 0 0.875rem;
+  backdrop-filter: blur(8px);
+  height: 1.875rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 .chip.sky-chip:hover {
@@ -1333,4 +1342,109 @@ select.field {
 .club-card:hover .club-shine::after,
 .club-shine:hover::after {
   transform: translateX(120%);
+}
+
+/* ---- The globe page: the planet floats in light, the controls stay out of its way ---------- */
+.globe-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(214 236 255 / 0.62) 0%, rgb(170 214 255 / 0.32) 38%, rgb(140 190 255 / 0.12) 62%, transparent 100%);
+  transition: width 450ms cubic-bezier(0.2, 0.9, 0.3, 1), height 450ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  animation: halo-breathe 7s ease-in-out infinite;
+}
+.globe-halo--space {
+  background: radial-gradient(closest-side, rgb(90 150 255 / 0.4) 0%, rgb(60 110 230 / 0.18) 45%, transparent 100%);
+}
+@keyframes halo-breathe {
+  50% {
+    opacity: 0.8;
+  }
+}
+.globe-shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(8 28 90 / 0.4), rgb(8 28 90 / 0.14) 60%, transparent);
+  filter: blur(6px);
+  transition: width 450ms cubic-bezier(0.2, 0.9, 0.3, 1), height 450ms ease, transform 450ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@layer components {
+/* Frosted glass for everything that floats over the planet. */
+.glass-dock {
+  background: rgb(255 255 255 / 0.74);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid rgb(255 255 255 / 0.75);
+  box-shadow: 0 12px 32px -16px rgb(10 40 110 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.6);
+}
+.dock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  color: var(--text-2);
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.dock-btn:hover:not(:disabled) {
+  background: rgb(15 90 230 / 0.1);
+  color: var(--text);
+}
+.dock-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.dock-btn:disabled {
+  opacity: 0.4;
+}
+.dock-btn:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+.dock-btn[aria-checked="true"] {
+  background: var(--text);
+  color: #fff;
+}
+.dock-btn[aria-pressed="true"] {
+  background: rgb(15 90 230 / 0.13);
+  color: var(--cyan-strong);
+}
+.dock-btn--spin {
+  background: linear-gradient(120deg, var(--sun), #ff8a3d 60%, var(--coral));
+  color: var(--text);
+}
+.dock-btn--spin:hover:not(:disabled) {
+  background: linear-gradient(120deg, var(--sun), #ff8a3d 60%, var(--coral));
+  filter: brightness(1.06);
+}
+.dock-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.25rem;
+  background: rgb(10 30 80 / 0.14);
+}
+@media (pointer: coarse) {
+  .dock-btn {
+    height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+}
+.globe-hint {
+  transform: translateX(-50%);
+  animation: hint-in 600ms 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.96);
+  }
 }

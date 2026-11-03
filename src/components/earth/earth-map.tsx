@@ -79,6 +79,10 @@ export interface EarthMapProps {
   onClusterClick?: (c: Cluster) => void;
   onMapClick?: (c: MapClick) => void;
   onUserInteract?: () => void;
+  /** Zoom and centre latitude whenever the camera settles, even while the planet turns. */
+  onCamera?: (zoom: number, lat: number) => void;
+  /** Screen space on the right taken by a side panel: the map centres in the rest. */
+  padRight?: number;
   onReady?: () => void;
   onFatal?: (reason: string) => void;
 }
@@ -229,6 +233,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       return;
     }
     mapRef.current = map;
+    map.setPadding({ top: 0, bottom: 0, left: 0, right: p.padRight ?? 0 });
     // Exposed for automated browser tests (read-only use).
     (window as unknown as { __omniMaps?: MLMap[] }).__omniMaps = [...((window as unknown as { __omniMaps?: MLMap[] }).__omniMaps ?? []), map];
     map.getCanvas().setAttribute("aria-label", p.ariaLabel ?? "Interactive map");
@@ -366,6 +371,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     map.on("moveend", () => {
       // A spin's frames each end a move; the view is reported once it lands.
       if (tour.current) return;
+      latest.current.onCamera?.(map.getZoom(), map.getCenter().lat);
       if (spinning.current && latest.current.autoRotate) return spin();
       emitView();
     });
@@ -744,6 +750,17 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     placeMarker.current.setLngLat([props.place.lng, props.place.lat]).addTo(map);
   }, [props.place]);
 
+  // ---- the side panel's room: the map's centre moves beside it (smoothly when it changes)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const right = props.padRight ?? 0;
+    if (Math.abs((map.getPadding().right ?? 0) - right) < 1) return;
+    const padding = { top: 0, bottom: 0, left: 0, right };
+    if (latest.current.reducedMotion) map.setPadding(padding);
+    else map.easeTo({ padding, duration: 500 });
+  }, [props.padRight]);
+
   // ---- camera requests (search results, cluster clicks, resets). User input interrupts them.
   useEffect(() => {
     const map = mapRef.current;
@@ -759,7 +776,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     if (finite(f.bearing)) extra.bearing = f.bearing;
     try {
       if (f.bbox && f.bbox.every(finite) && (f.bbox[2] - f.bbox[0] > 0.002 || f.bbox[3] - f.bbox[1] > 0.002)) {
-        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: { top: 140, bottom: 80, left: 60, right: window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, duration: reduced ? 0 : 900, easing: easeOutCubic, ...extra });
+        // The map's own padding already keeps clear of a side panel.
+        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: { top: 140, bottom: 80, left: 60, right: latest.current.padRight ? 40 : window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, duration: reduced ? 0 : 900, easing: easeOutCubic, ...extra });
         return;
       }
       if (!finite(f.lat) || !finite(f.lng)) return;

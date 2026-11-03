@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices, Info,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
@@ -16,7 +16,7 @@ import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/sea
 import { cardWhen, formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
 import { useUser, userActions } from "@/lib/user/store";
 import { DEFAULT_LAYERS, type BaseStyle, type LayerState } from "@/lib/map/style";
-import { HOME, altToZoom, cellForZoom, viewRadiusKm, zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
+import { HOME, altToZoom, cellForZoom, fitGlobeZoom, globeRadiusPx, viewRadiusKm, zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
 import { CategoryIcon, categoryLabel, DemoBadge, EmptyState, ErrorState, Poster, Price, SaveButton, ShapeGlyph, StatusBadge, Notice } from "../ui";
@@ -85,12 +85,30 @@ export function DiscoverClient() {
   const [place, setPlace] = useState<SelectedPlace | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   const [base, setBase] = useState<BaseStyle>("map");
   const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
   const [space, setSpace] = useState(false);
   const [intro, setIntro] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  // Where the camera really is (the view state pauses while the planet turns), for the glow.
+  const [cam, setCam] = useState<{ zoom: number; lat: number } | null>(null);
+  // On large screens the side panel takes the right: the map centres in the room left of it.
+  const [padRight, setPadRight] = useState(0);
+  useEffect(() => {
+    const on = () => setPadRight(window.innerWidth >= 1024 ? 400 : 0);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  // A first-visit hint on how to handle the globe; gone at the first touch or after a while.
+  const [hint, setHint] = useState(true);
+  useEffect(() => {
+    if (!mapReady) return;
+    const t = setTimeout(() => setHint(false), 9000);
+    return () => clearTimeout(t);
+  }, [mapReady]);
   const [mapFailure, setMapFailure] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
@@ -115,7 +133,8 @@ export function DiscoverClient() {
     const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style"].includes(k))));
     if (p.ok) setFilters(p.filters);
     const narrow = window.innerWidth < 640;
-    let iv: CameraState = { ...HOME, zoom: narrow ? 1 : HOME.zoom };
+    // The whole planet, as big as the screen allows.
+    let iv: CameraState = { ...HOME, zoom: fitGlobeZoom(window.innerWidth - (window.innerWidth >= 1024 ? 400 : 0), window.innerHeight) };
     const at = num(sp.get("at"));
     const v = num(sp.get("v"));
     if (at.length >= 3 && at.slice(0, 3).every(Number.isFinite)) iv = { lat: at[0], lng: at[1], zoom: at[2], bearing: at[3] || 0, pitch: at[4] || 0 };
@@ -459,7 +478,7 @@ export function DiscoverClient() {
     setAutoRotate(false);
     setHovered(null);
     // Land where the spin panel doesn't cover: left of it on large screens, above it on phones.
-    const offset: [number, number] = window.innerWidth >= 1024 ? [-190, 0] : [0, -Math.round(window.innerHeight * 0.2)];
+    const offset: [number, number] = window.innerWidth >= 1024 ? [0, 0] : [0, -Math.round(window.innerHeight * 0.2)];
     return mapApi.current?.spinTo(lat, lng, 12.5, { offset }) ?? Promise.resolve(true);
   }, []);
   const onSpinLand = useCallback((c: EventCard) => setHovered({ lat: c.lat, lng: c.lng }), []);
@@ -499,6 +518,9 @@ export function DiscoverClient() {
     <div ref={root} className={`relative h-[100dvh] w-full overflow-hidden sky ${space && mode !== "list" ? "space" : ""}`}>
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
+      {/* Behind the planet: a glow of light and a soft shadow below, so it floats. */}
+      {mode === "globe" && mapReady && cam && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space} shift={padRight} />}
+      {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} />}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (
           <EarthMap
@@ -518,7 +540,7 @@ export function DiscoverClient() {
             onSearchAreaMove={(lat, lng) => setFilters((f) => (f.near ? { ...f, near: { ...f.near, lat, lng }, nearLabel: undefined } : f))}
             pickMode={pickMode}
             highlight={hovered}
-            framePadding={typeof window !== "undefined" && window.innerWidth >= 1024 ? { top: 200, right: 440, bottom: 110, left: 60 } : { top: 190, right: 30, bottom: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.5), left: 30 }}
+            framePadding={typeof window !== "undefined" && window.innerWidth >= 1024 ? { top: 200, right: 40, bottom: 110, left: 60 } : { top: 190, right: 30, bottom: Math.round((typeof window !== "undefined" ? window.innerHeight : 800) * 0.5), left: 30 }}
             flyTo={flyTo}
             autoRotate={autoRotate && !selection && !place && !filters.near && !pickMode && mode === "globe"}
             reducedMotion={reduced}
@@ -527,7 +549,9 @@ export function DiscoverClient() {
             onView={setView}
             onClusterClick={onClusterClick}
             onMapClick={onMapClick}
-            onUserInteract={() => setAutoRotate(false)}
+            onUserInteract={() => (setAutoRotate(false), setHint(false))}
+            onCamera={(zoom, lat) => setCam((c) => (c && Math.abs(c.zoom - zoom) < 0.02 && Math.abs(c.lat - lat) < 1 ? c : { zoom, lat }))}
+            padRight={padRight}
             onReady={() => (setMapReady(true), setIntro(false))}
             onFatal={(r) => setMapFailure(r)}
           />
@@ -543,12 +567,13 @@ export function DiscoverClient() {
 
       {/* ---------- Top: purpose + search + modes ---------- */}
       <div className="pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px]">
-        <div className="max-w-[1220px]">
-          <div className="pointer-events-auto max-w-xl">
+        {/* A compact column in the corner: the globe is the page. */}
+        <div className="max-w-[min(34rem,100%)]">
+          <div className="pointer-events-auto">
             <h1 className={`text-balance on-sky ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
-              <span className="block t-display">One planet.<br />Every experience.</span>
-              <span className="max-sm:sr-only block font-medium text-[1.0625rem] leading-snug mt-3 max-w-md text-white/95">
-                Spin the Earth, tap a glowing marker, or ask for anything, from a match in London to an exhibition in Tokyo.
+              <span className="block t-hero">One planet. <span className="text-white/80">Every experience.</span></span>
+              <span className="max-sm:sr-only block font-medium text-[0.9375rem] leading-snug mt-1.5 text-white/90">
+                Spin it, tap a glowing marker, or ask for anything.
               </span>
             </h1>
             {!(view.zoom > 4 || place || mode === "list") && (
@@ -562,7 +587,7 @@ export function DiscoverClient() {
               </div>
             )}
             <SearchBox
-              className="mt-5"
+              className="mt-3.5"
               size="lg"
               mapCenter={{ lat: view.lat, lng: view.lng }}
               onQuery={(p) => applyParsed(p)}
@@ -683,88 +708,91 @@ export function DiscoverClient() {
             reduced={reduced}
           />
         )}
-        <div className="surface-float rounded-[var(--radius-m)] p-1 flex gap-0.5" role="radiogroup" aria-label="View">
-          {([
-            ["globe", Globe2, "3D"],
-            ["map", MapIcon, "2D"],
-            ["list", List, "List"],
-          ] as const).map(([m, Icon, label]) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              aria-label={m === "globe" ? "3D globe" : m === "map" ? "2D map" : "List"}
-              disabled={m !== "list" && webgl === false}
-              title={m !== "list" && webgl === false ? "Maps need WebGL, which isn't available on this device" : undefined}
-              onClick={() => {
-                // The list replaces the map; coming back, the map reopens where it was left.
-                if (m === "list" && mode !== "list") setInitialView(mapApi.current?.getCamera() ?? view);
-                setMode(m);
-              }}
-              className={`btn btn-sm rounded-[7px] ${mode === m ? "bg-text text-white" : "btn-ghost"}`}
-            >
-              <Icon size={15} aria-hidden />
-              {label}
-            </button>
-          ))}
-        </div>
-        {mode !== "list" && (
-          // Phones get one row: pinching zooms and two fingers tilt or turn, so those buttons are
-          // left to larger screens.
-          <div className="flex flex-wrap gap-1.5 max-w-[calc(100vw-2rem)]">
-            <button className="btn btn-secondary btn-icon btn-sm max-sm:hidden" aria-label="Zoom in" onClick={() => mapApi.current?.zoomBy(1)}>
-              <Plus size={15} aria-hidden />
-            </button>
-            <button className="btn btn-secondary btn-icon btn-sm max-sm:hidden" aria-label="Zoom out" onClick={() => mapApi.current?.zoomBy(-1)}>
-              <Minus size={15} aria-hidden />
-            </button>
-            <button className={`btn btn-secondary btn-icon btn-sm max-sm:hidden ${tilted ? "text-cyan" : ""}`} aria-label={tilted ? "Look straight down" : "Tilt for a 3D perspective"} aria-pressed={tilted} onClick={() => mapApi.current?.setPitch(tilted ? 0 : 60)}>
-              <Mountain size={15} aria-hidden />
-            </button>
-            <button className={`btn btn-secondary btn-icon btn-sm ${Math.abs(view.bearing) < 1 ? "max-sm:hidden" : ""}`} aria-label="Point north" title={`Heading ${Math.round(view.bearing)}°`} onClick={() => mapApi.current?.resetNorth()}>
-              <Compass size={15} aria-hidden style={{ transform: `rotate(${-view.bearing}deg)` }} />
-            </button>
-            {mode === "globe" && (
-              <button className="btn btn-secondary btn-icon btn-sm" aria-label={autoRotate ? "Stop auto-rotation" : "Start auto-rotation"} aria-pressed={autoRotate} onClick={() => (setAutoRotate((a) => !a), autoRotate ? null : (setPlace(null), setSelection(null)))} disabled={reduced}>
-                {autoRotate && !reduced ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
+        {showLegend && mode !== "list" && !showLayers && <LegendPanel onClose={() => setShowLegend(false)} />}
+        {/* One slim glass dock: view, camera and map tools as icons, their names on hover. */}
+        <div className="glass-dock flex items-center gap-0.5 rounded-full p-1 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="toolbar" aria-label="Map controls">
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="View">
+            {([
+              ["globe", Globe2, "3D globe"],
+              ["map", MapIcon, "2D map"],
+              ["list", List, "List"],
+            ] as const).map(([m, Icon, label]) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                aria-label={label}
+                disabled={m !== "list" && webgl === false}
+                title={m !== "list" && webgl === false ? "Maps need WebGL, which isn't available on this device" : label}
+                onClick={() => {
+                  // The list replaces the map; coming back, the map reopens where it was left.
+                  if (m === "list" && mode !== "list") setInitialView(mapApi.current?.getCamera() ?? view);
+                  setMode(m);
+                }}
+                className="dock-btn"
+              >
+                <Icon size={16} aria-hidden />
               </button>
-            )}
-            <button className="btn btn-icon btn-sm spin-cta text-text" aria-label="Spin the globe" title="Spin the globe: land on a random event somewhere in the world" onClick={startSpin}>
-              <Dices size={15} aria-hidden />
-            </button>
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Reset to whole-planet view" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME }))}>
-              <RotateCcw size={14} aria-hidden />
-            </button>
-            <button
-              className={`btn btn-sm ${pickMode || near ? "btn-primary" : "btn-secondary"}`}
-              aria-pressed={pickMode}
-              onClick={() => (near && !pickMode ? setPickMode(true) : setPickMode((p) => !p))}
-              title="Pick a point on the map and search a radius around it"
-            >
-              <Crosshair size={14} aria-hidden /> {near ? `${formatKm(near.radiusKm)} area` : <><span className="sm:hidden">Area</span><span className="max-sm:hidden">Explore an area</span></>}
-            </button>
-            <button className="btn btn-secondary btn-icon btn-sm" aria-label="Show events near me" title="Use my location (optional, not stored)" onClick={locate}>
-              <LocateFixed size={15} aria-hidden />
-            </button>
-            <button className={`btn btn-secondary btn-sm ${showLayers ? "text-cyan border-cyan/50" : ""}`} aria-label="Layers" aria-expanded={showLayers} onClick={() => setShowLayers((s) => !s)}>
-              <Layers size={14} aria-hidden /> <span className="max-sm:hidden">Layers</span>
-            </button>
-            <button
-              className={`btn btn-sm ${space ? "btn-primary" : "btn-secondary"}`}
-              aria-pressed={space}
-              onClick={() => setSpace((s) => !s)}
-              title="See Earth from orbit: a starry sky and the real night side of the planet"
-              aria-label="Space view"
-            >
-              <Sparkles size={14} aria-hidden /> <span className="max-sm:hidden">Space</span>
-            </button>
-            <button className="btn btn-secondary btn-icon btn-sm hidden sm:inline-flex" aria-label={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
-              {fullscreen ? <Minimize size={14} aria-hidden /> : <Maximize size={14} aria-hidden />}
-            </button>
+            ))}
           </div>
-        )}
-        {mode !== "list" && !showLayers && <Legend />}
+          {mode !== "list" && (
+            <>
+              <span className="dock-sep" aria-hidden />
+              {/* Phones pinch to zoom and use two fingers to tilt or turn, so those buttons are for larger screens. */}
+              <button type="button" className="dock-btn max-sm:hidden" aria-label="Zoom in" title="Zoom in" onClick={() => mapApi.current?.zoomBy(1)}>
+                <Plus size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn max-sm:hidden" aria-label="Zoom out" title="Zoom out" onClick={() => mapApi.current?.zoomBy(-1)}>
+                <Minus size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn max-sm:hidden" aria-pressed={tilted} aria-label={tilted ? "Look straight down" : "Tilt for a 3D perspective"} title={tilted ? "Look straight down" : "Tilt for a 3D perspective"} onClick={() => mapApi.current?.setPitch(tilted ? 0 : 60)}>
+                <Mountain size={16} aria-hidden />
+              </button>
+              <button type="button" className={`dock-btn ${Math.abs(view.bearing) < 1 ? "max-sm:hidden" : ""}`} aria-label="Point north" title={`Point north (heading ${Math.round(view.bearing)}°)`} onClick={() => mapApi.current?.resetNorth()}>
+                <Compass size={16} aria-hidden style={{ transform: `rotate(${-view.bearing}deg)` }} />
+              </button>
+              {mode === "globe" && (
+                <button type="button" className="dock-btn" aria-pressed={autoRotate && !reduced} aria-label={autoRotate ? "Stop auto-rotation" : "Start auto-rotation"} title={autoRotate ? "Stop turning" : "Let the planet turn"} onClick={() => (setAutoRotate((a) => !a), autoRotate ? null : (setPlace(null), setSelection(null)))} disabled={reduced}>
+                  {autoRotate && !reduced ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}
+                </button>
+              )}
+              <button type="button" className="dock-btn" aria-label="Reset to whole-planet view" title="Whole planet" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME, zoom: fitGlobeZoom(window.innerWidth - padRight, window.innerHeight) }))}>
+                <RotateCcw size={15} aria-hidden />
+              </button>
+              <span className="dock-sep" aria-hidden />
+              <button type="button" className="dock-btn dock-btn--spin" aria-label="Spin the globe" title="Spin the globe: land on a random event somewhere in the world" onClick={startSpin}>
+                <Dices size={16} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="dock-btn"
+                aria-pressed={pickMode || !!near}
+                aria-label={near ? `Search area: ${formatKm(near.radiusKm)}` : "Explore an area"}
+                title="Pick a point on the map and search a radius around it"
+                onClick={() => (near && !pickMode ? setPickMode(true) : setPickMode((p) => !p))}
+              >
+                <Crosshair size={16} aria-hidden />
+                {near && <span className="text-[12px] font-semibold tnum pr-1">{formatKm(near.radiusKm)}</span>}
+              </button>
+              <button type="button" className="dock-btn" aria-label="Show events near me" title="Events near me (your location is not stored)" onClick={locate}>
+                <LocateFixed size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn" aria-pressed={showLayers} aria-label="Layers" title="Map layers: style, terrain, borders, labels" onClick={() => (setShowLegend(false), setShowLayers((v) => !v))}>
+                <Layers size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn" aria-pressed={space} aria-label="Space view" title="See Earth from orbit: a starry sky and the real night side" onClick={() => setSpace((v) => !v)}>
+                <Sparkles size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn max-sm:hidden" aria-pressed={showLegend} aria-label="Legend" title="What the markers mean" onClick={() => (setShowLayers(false), setShowLegend((v) => !v))}>
+                <Info size={16} aria-hidden />
+              </button>
+              <button type="button" className="dock-btn max-sm:hidden" aria-label={fullscreen ? "Exit full screen" : "Full screen"} title={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
+                {fullscreen ? <Minimize size={15} aria-hidden /> : <Maximize size={15} aria-hidden />}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ---------- Status line ---------- */}
@@ -867,6 +895,34 @@ export function DiscoverClient() {
 
 // ------------------------------------------------------------------ pieces
 
+/**
+ * Light behind the planet and a soft shadow beneath it, sized to the globe on screen. Only
+ * while the whole planet is in view; drawn under the map, which is clear around the globe.
+ */
+function GlobeAura({ zoom, lat, space, shift }: { zoom: number; lat: number; space: boolean; shift: number }) {
+  const r = globeRadiusPx(zoom, lat);
+  if (zoom > 3.2 || !Number.isFinite(r)) return null;
+  return (
+    <div className="pointer-events-none absolute inset-y-0 left-0 overflow-hidden" style={{ right: shift }} aria-hidden>
+      <div className={`globe-halo ${space ? "globe-halo--space" : ""}`} style={{ width: r * 2.9, height: r * 2.9 }} />
+      <div className="globe-shadow" style={{ width: r * 1.5, height: r * 0.2, transform: `translate(-50%, ${r * 1.04}px)` }} />
+    </div>
+  );
+}
+
+/** How to handle the globe, shown on its lower part for a first-time visitor. */
+function GlobeHint({ zoom, lat, shift }: { zoom: number; lat: number; shift: number }) {
+  const [touch, setTouch] = useState(false);
+  useEffect(() => setTouch(window.matchMedia("(pointer: coarse)").matches), []);
+  const r = globeRadiusPx(zoom, lat);
+  if (zoom > 3.2 || !Number.isFinite(r)) return null;
+  return (
+    <p className="globe-hint pointer-events-none absolute z-10 left-1/2 glass-dock rounded-full px-3.5 py-1.5 t-micro font-semibold text-text whitespace-nowrap" style={{ top: `calc(50% + ${Math.round(r * 0.66)}px)`, left: `calc(50% - ${shift / 2}px)` }} role="note">
+      <span aria-hidden>👆</span> Drag to spin · {touch ? "Pinch" : "Scroll"} to zoom · Tap a glowing marker
+    </p>
+  );
+}
+
 /** Counts up to a number quickly when it first appears or changes. */
 function CountUp({ value }: { value: number }) {
   const [shown, setShown] = useState(value);
@@ -889,25 +945,24 @@ function CountUp({ value }: { value: number }) {
   return <>{shown.toLocaleString()}</>;
 }
 
-function Legend() {
-  const [open, setOpen] = useState(false);
+/** What the markers mean: a shape and colour per kind of event, and what a number says. */
+function LegendPanel({ onClose }: { onClose: () => void }) {
   const groups = ["music", "sports", "theatre", "festivals", "conferences", "exhibitions", "attractions", "family"];
   return (
-    <div className="surface-float rounded-[var(--radius-m)] px-3 py-2 hidden sm:block">
-      <button className="flex items-center gap-1.5 t-micro text-text-2 hover:text-text" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        Legend {open ? <ChevronDown size={12} aria-hidden /> : <ChevronUp size={12} aria-hidden />}
-      </button>
-      {open && (
-        <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
-          {groups.map((g) => (
-            <li key={g} className="flex items-center gap-2 t-micro text-text-2">
-              <ShapeGlyph group={g} size={18} />
-              {GROUPS.find((x) => x.slug === g)?.name.split(" &")[0]}
-            </li>
-          ))}
-          <li className="col-span-2 t-micro text-text-3 mt-1 max-w-[260px]">Numbered markers group several events; the coloured ring shows how much of the group is its main category. Zoom in to separate them.</li>
-        </ul>
-      )}
+    <div className="glass-dock rounded-[var(--radius-m)] p-3 panel-in w-[min(300px,calc(100vw-2rem))]" role="dialog" aria-label="Legend">
+      <div className="flex items-center justify-between">
+        <p className="t-small font-semibold">Legend</p>
+        <button type="button" className="dock-btn !h-7 !min-w-7" aria-label="Close legend" onClick={onClose}><X size={14} aria-hidden /></button>
+      </div>
+      <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
+        {groups.map((g) => (
+          <li key={g} className="flex items-center gap-2 t-micro text-text-2">
+            <ShapeGlyph group={g} size={18} />
+            {GROUPS.find((x) => x.slug === g)?.name.split(" &")[0]}
+          </li>
+        ))}
+        <li className="col-span-2 t-micro text-text-3 mt-1">Numbered markers group several events; the coloured ring shows how much of the group is its main category. Zoom in to separate them.</li>
+      </ul>
     </div>
   );
 }

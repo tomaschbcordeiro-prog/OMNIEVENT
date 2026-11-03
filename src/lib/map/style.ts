@@ -56,7 +56,8 @@ export const DAY_SKY: SkySpecification = {
   "sky-horizon-blend": 0.5,
   "horizon-fog-blend": 0.35,
   "fog-ground-blend": 0.1,
-  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.45, 5, 0.35, 8, 0],
+  // A strong glow while the whole planet is in view, fading as you zoom in to a city.
+  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 3, 0.7, 5, 0.35, 8, 0],
 };
 
 /** Space view: Earth seen from orbit, a thin blue rim against a starry page. */

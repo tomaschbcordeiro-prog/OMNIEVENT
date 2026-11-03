@@ -173,7 +173,7 @@ export function TimeBar({
 
   if (!open)
     return (
-      <div className="surface-float rounded-full p-1 flex items-center gap-0.5 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="group" aria-label="When">
+      <div className="glass-dock rounded-full p-1 flex items-center gap-0.5 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="group" aria-label="When">
         <button
           type="button"
           onClick={() => openTimeline(true)}
