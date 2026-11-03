@@ -235,7 +235,9 @@ async function tmFetch(path: string, params: Record<string, string>, ctx: SyncCo
   // 5,000-calls-a-day quota. Only 200s are cached, and an entry past its age keeps being
   // served while it is refreshed, so a used-up quota never empties the map.
   // The URL (with the key) never leaves the server.
-  const res = await fetch(url, { signal: ctx.signal, next: { revalidate: CACHE_SECONDS } } as RequestInit);
+  // A request that hangs must not stall the whole crawl (it is retried next run).
+  const signal = ctx.signal ? AbortSignal.any([ctx.signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000);
+  const res = await fetch(url, { signal, next: { revalidate: CACHE_SECONDS } } as RequestInit);
   if (res.status === 429) {
     // Quota responses say when the allowance resets (epoch ms). Retrying before then
     // only spends requests, so stop and report the time instead.
@@ -390,7 +392,10 @@ export const ticketmasterProvider: ProviderAdapter = {
     const resume = saved && saved.from === from && saved.to === to && saved.countries === countries.join(",") ? saved.queue : undefined;
     // A finished crawl is repeated twice a day; until then runs come every half hour.
     const done = await getState<number>("ticketmaster:complete");
-    if (!resume && done && Date.now() - done < 12 * 3600000)
+    // Shown on the status page: when a run last started, and what it set out to do.
+    const idle = !resume && !!done && Date.now() - done < 12 * 3600000;
+    await setState("ticketmaster:started", { at: new Date().toISOString(), resumed: resume?.length ?? 0, idle }, 7 * 86400).catch(() => {});
+    if (idle)
       return { batch: { events: [], venues: [], participants: [], offers: [] }, run: { imported: 0, updated: 0, failures: 0, rateLimited: false, ok: true, partial: true, finishedAt: new Date().toISOString() } };
     const totals: Record<string, number> = {};
     const crawl = await crawlCatalogue(fetchPage, countries, {

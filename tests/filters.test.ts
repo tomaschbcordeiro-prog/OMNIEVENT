@@ -152,3 +152,12 @@ describe("any of these places, any of these keywords", () => {
     expect(teatro.length).toBe(all({ anyOf: ["theatre"] }).length);
   });
 });
+
+describe("search survives incomplete records", () => {
+  it("scores a card whose title or performer names are missing instead of failing", async () => {
+    const { __testing } = await import("@/lib/store");
+    const card = { title: undefined, people: [{ name: undefined }, null], venueName: "Hall", city: undefined, country: "PT", categorySlug: "jazz", groupSlug: "music" } as unknown as EventCard;
+    expect(__testing.textScore(card, ["jazz"])).toBeGreaterThan(0);
+    expect(__testing.textScore(card, ["rock"])).toBe(0);
+  });
+});

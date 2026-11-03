@@ -335,8 +335,9 @@ export function providerStatuses(): ProviderStatus[] {
 
 // ------------------------------------------------------------------ indexing & dedupe
 
-const norm = (s: string) =>
-  s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// Any value: a source that leaves out a name or title must not break every search.
+const norm = (s: unknown) =>
+  String(s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 // Ticket sellers sometimes give one show an "end" weeks or a year away (a pass's validity, a
 // season's last date). A single show doesn't last days, so that end is dropped; runs the
@@ -630,7 +631,7 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
 }
 
 /** Internals exposed to unit tests only. */
-export const __testing = { matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f), matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f) };
+export const __testing = { matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f), matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f), textScore: (c: EventCard, terms: string[]) => textScore(c, terms) };
 
 /** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */
 function matchesWhenSlow(e: OmniEvent, f: SearchFilters): boolean {
@@ -794,7 +795,7 @@ function cardText(c: EventCard) {
   let t = textCache.get(c);
   if (!t) {
     const title = ` ${norm(c.title)}`;
-    const people = ` ${c.people.map((p) => norm(p.name)).join(" ")}`;
+    const people = ` ${(c.people ?? []).map((p) => norm(p?.name)).join(" ")}`;
     t = {
       title,
       people,

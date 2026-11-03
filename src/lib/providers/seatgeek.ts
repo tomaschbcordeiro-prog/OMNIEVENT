@@ -96,7 +96,8 @@ export function normalizeSeatGeek(raw: SgEvent[], syncedAt: string): ProviderBat
     }
     const cat = mapSgType(e.type, e.taxonomies);
     const group = groupOf(cat);
-    const people = (e.performers ?? []).map((p, i) => {
+    // A performer without a name can't be shown or searched.
+    const people = (e.performers ?? []).filter((p) => typeof p?.name === "string" && p.name.trim()).map((p, i) => {
       const kind: ParticipantKind = group === "sports" ? "team" : group === "theatre" ? "production" : "artist";
       const id = `sg-p-${p.id}`;
       if (!participants.has(id))
