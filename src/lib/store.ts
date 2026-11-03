@@ -90,6 +90,9 @@ const savedAt = new Map<string, number>();
 /** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
 const dataAt = new Map<string, number>();
 
+/** How old a source's data on an instance may get before a newer shared copy is downloaded. */
+const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 3600000;
+
 /** How long the first requests a server answers may wait for its data. */
 const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 10000);
 
@@ -226,6 +229,11 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     providers.map(async (p) => {
       const meta = index[p.id];
       if (!meta || p.isDemo || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
+      // An instance that already holds a source re-downloads it at most every few hours:
+      // big catalogues are tens of megabytes, and long crawls save new copies often, so
+      // fetching each one on every instance used up the storage plan's transfer allowance.
+      const have = dataAt.get(p.id);
+      if (have !== undefined && state.providerData.has(p.id) && meta.at - have < SNAPSHOT_REFRESH_MS) return;
       try {
         const batch = await loadSnapshot(p.id, meta);
         if (!batch || state.syncing.has(p.id)) return;
