@@ -302,7 +302,9 @@
 "Vila Nova de Gaia":{"lat":41.1292264,
 "lng":-8.6057396},
 "São Brás de Alportel":{"lat":37.1529622,
-"lng":-7.8879138}},
+"lng":-7.8879138},
+"Vila do Conde":{"lat":41.3540398,
+"lng":-8.7435403}},
 "Norte de Portugal (vários locais)|Arouca":null,
 "Casa do Povo do Pombalinho|Golegã":null,
 "Évora|Évora":{"lat":38.570774,
@@ -346,4 +348,8 @@
 "Auditório Municipal de Gaia|Vila Nova de Gaia":{"lat":41.123179,
 "lng":-8.603559},
 "Cineteatro (São Brás de Alportel)|São Brás de Alportel":{"lat":37.152962,
-"lng":-7.887914}}
+"lng":-7.887914},
+"Galeria Julio|Vila do Conde":{"lat":41.348214,
+"lng":-8.747173},
+"Basílica dos Congregados|Braga":{"lat":41.55102,
+"lng":-8.421309}}
