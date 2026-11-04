@@ -203,6 +203,8 @@ export interface OmniEvent {
   tags?: string[];
   announcedAt?: ISODate;
   editorialPick?: boolean;
+  /** Listed by a member (not from a data source): who, and the organiser they named. */
+  listedBy?: { id: string; name: string; username?: string; organiser: string; organiserUrl?: string };
   provenance: Provenance;
 }
 

@@ -101,7 +101,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   if (existing) return existing;
   const runId = `${p.id}-${Date.now().toString(36)}`;
   const startedAt = new Date().toISOString();
-  const shared = sharedEnabled && !p.isDemo;
+  // A source that already lives in the shared storage is read directly by every server.
+  const shared = sharedEnabled && !p.isDemo && !p.selfShared;
   const job = (async () => {
     // One instance reads a source at a time; the others pick up its snapshot. An instance
     // with nothing at all from a source reads it anyway, except sources with a daily quota.
@@ -228,7 +229,7 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   await Promise.all(
     providers.map(async (p) => {
       const meta = index[p.id];
-      if (!meta || p.isDemo || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
+      if (!meta || p.isDemo || p.selfShared || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
       // An instance that already holds a source re-downloads it at most every few hours:
       // big catalogues are tens of megabytes, and long crawls save new copies often, so
       // fetching each one on every instance used up the storage plan's transfer allowance.
@@ -310,6 +311,17 @@ export async function ensureFresh(): Promise<void> {
     const left = state.firstLoadDeadline - now;
     if (left > 0) await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, left))]);
   }
+}
+
+/**
+ * Reads one source again now (after a member lists, changes or removes an event), waiting for
+ * a read already under way to finish first so the new one sees the change.
+ */
+export async function refreshSource(id: string): Promise<void> {
+  const p = activeProviders().find((x) => x.id === id);
+  if (!p) return;
+  await state.syncing.get(id)?.catch(() => {});
+  await syncProvider(p);
 }
 
 /**

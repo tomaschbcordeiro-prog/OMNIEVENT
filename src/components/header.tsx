@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, Search, X } from "lucide-react";
+import { Menu, Plus, Search, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
@@ -80,6 +80,10 @@ export function Header() {
             {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}
           </button>
         )}
+        {/* Organisers: put your own event on the map. */}
+        <Link href="/events/new" aria-current={path === "/events/new" ? "page" : undefined} className={`btn btn-sm hidden lg:inline-flex rounded-full press ${isHome ? "bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] text-text" : "btn-secondary"}`}>
+          <Plus size={15} aria-hidden /> List event
+        </Link>
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <AccountMenu floating={isHome} />
         <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
@@ -107,6 +111,9 @@ export function Header() {
                 )}
               </Link>
             ))}
+            <Link href="/events/new" onClick={() => setMenu(false)} className="mt-1 flex items-center gap-2 rounded-[var(--radius-s)] px-3 py-2.5 font-semibold text-[#9a6400] bg-[var(--gold)]/10">
+              <Plus size={16} aria-hidden /> List your event
+            </Link>
           </nav>
         </div>
       )}

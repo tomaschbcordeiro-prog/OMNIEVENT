@@ -28,6 +28,7 @@ export function Footer() {
                 ["/match", "Event Match"],
                 ["/community", "Community"],
                 ["/clubs", "Clubs ✦"],
+                ["/events/new", "List your event"],
                 ["/my-world", "My World"],
               ].map(([href, label]) => (
                 <li key={href}><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href={href}>{label}</Link></li>

@@ -28,13 +28,14 @@ import { parisProvider } from "./paris";
 import { seatgeekProvider } from "./seatgeek";
 import { skiddleProvider } from "./skiddle";
 import { ticketmasterProvider } from "./ticketmaster";
+import { membersProvider } from "./members";
 import type { ProviderAdapter } from "./types";
 
 /**
  * Register new sources here. Each adapter is independent; the store merges and
  * de-duplicates their output. See src/lib/providers/README.md.
  */
-export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, bolProvider, culturaPortugalProvider, ptMunicipiosProvider, cataloniaProvider, barcelonaProvider, valenciaIvcProvider, euskadiProvider, castillaLeonProvider, zaragozaProvider, footballProvider, parisProvider, openAgendaProvider, nycParksProvider, chicagoProvider, localistProvider, liveWhaleProvider, mapasCulturaisProvider, helsinkiProvider, espooProvider, taiwanProvider, montrealProvider, brisbaneProvider, berlinProvider, madridProvider, wikidataProvider, demoProvider];
+export const ALL_PROVIDERS: ProviderAdapter[] = [ticketmasterProvider, seatgeekProvider, skiddleProvider, lisbonProvider, venueCalendarsProvider, bolProvider, culturaPortugalProvider, ptMunicipiosProvider, cataloniaProvider, barcelonaProvider, valenciaIvcProvider, euskadiProvider, castillaLeonProvider, zaragozaProvider, footballProvider, parisProvider, openAgendaProvider, nycParksProvider, chicagoProvider, localistProvider, liveWhaleProvider, mapasCulturaisProvider, helsinkiProvider, espooProvider, taiwanProvider, montrealProvider, brisbaneProvider, berlinProvider, madridProvider, wikidataProvider, membersProvider, demoProvider];
 
 /** DISABLED_PROVIDERS=paris,madrid switches sources off without a code change. */
 const disabled = () => new Set((process.env.DISABLED_PROVIDERS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
@@ -49,6 +50,7 @@ export function activeProviders(): ProviderAdapter[] {
   const off = disabled();
   const real = ALL_PROVIDERS.filter((p) => !p.isDemo && p.isConfigured() && !off.has(p.id));
   const mode = (process.env.DEMO_MODE ?? "auto").toLowerCase();
-  const includeDemo = mode === "on" || (mode !== "off" && real.length === 0);
+  // Members' own listings alone don't make a catalogue: the demo still shows without a real source.
+  const includeDemo = mode === "on" || (mode !== "off" && real.filter((p) => !p.selfShared).length === 0);
   return [...real, ...(includeDemo ? ALL_PROVIDERS.filter((p) => p.isDemo) : [])];
 }

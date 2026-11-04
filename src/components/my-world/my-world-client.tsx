@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download, Share2,
-  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users,
+  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users, CalendarPlus,
 } from "lucide-react";
 import type { EventCard, Cluster } from "@/lib/types";
 import { useUser, userActions, type Trip } from "@/lib/user/store";
@@ -20,14 +20,16 @@ import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { ClusterMap } from "../cluster-map";
 import { MyCommunity } from "../community/my-community";
 import { AccountPanel } from "../community/account-panel";
+import { MyEvents } from "../create/my-events";
 
-type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "following" | "community" | "alerts" | "account";
+type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "events" | "following" | "community" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "saved", label: "Saved", icon: Bookmark },
   { id: "searches", label: "Saved searches", icon: SearchIcon },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "trips", label: "Trips", icon: Route },
+  { id: "events", label: "My events", icon: CalendarPlus },
   { id: "following", label: "Following", icon: Heart },
   { id: "community", label: "Community", icon: Users },
   { id: "alerts", label: "Alerts", icon: Bell },
@@ -105,6 +107,7 @@ export function MyWorldClient() {
         {tab === "searches" && <SavedSearches />}
         {tab === "calendar" && <Calendar cards={cards} />}
         {tab === "trips" && <Trips cards={cards} />}
+        {tab === "events" && <MyEvents />}
         {tab === "following" && <Following />}
         {tab === "community" && (
           <>

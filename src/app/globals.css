@@ -1740,3 +1740,118 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   background: linear-gradient(120deg, var(--gold-light), var(--gold));
   color: var(--club-ink);
 }
+
+/* ---- List your event: a deep-night header with gold, clean white steps below ----------- */
+.ce-hero {
+  background:
+    radial-gradient(800px 360px at 10% -20%, rgb(124 58 237 / 0.6), transparent 60%),
+    radial-gradient(700px 320px at 100% 0%, rgb(20 99 255 / 0.45), transparent 55%),
+    linear-gradient(180deg, #0b1026, var(--club-deep));
+  color: #fff;
+}
+.ce-step {
+  display: block;
+  color: rgb(255 255 255 / 0.55);
+  border-radius: 8px;
+  padding: 2px 0;
+}
+.ce-step:disabled {
+  cursor: default;
+}
+.ce-step-bar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  transition: background 300ms ease;
+}
+.ce-step-dot {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.ce-step--done {
+  color: rgb(255 255 255 / 0.85);
+}
+.ce-step--done .ce-step-bar {
+  background: rgb(255 226 154 / 0.7);
+}
+.ce-step--done .ce-step-dot {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--club-ink);
+}
+.ce-step--on {
+  color: #fff;
+}
+.ce-step--on .ce-step-bar {
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  box-shadow: 0 0 12px rgb(255 201 77 / 0.6);
+}
+.ce-step--on .ce-step-dot {
+  background: #fff;
+  border-color: #fff;
+  color: var(--club-ink);
+}
+.ce-step:not(:disabled):hover {
+  color: #fff;
+}
+/* Kind-of-event tiles and entry choices: big, tappable, with the category's colour when chosen. */
+.ce-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 56px;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-m);
+  border: 1.5px solid var(--line);
+  background: var(--panel);
+  text-align: left;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.ce-tile:hover {
+  border-color: var(--line-strong);
+}
+.ce-tile--on {
+  border-color: var(--tile);
+  background: color-mix(in srgb, var(--tile) 9%, var(--panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tile) 22%, transparent);
+}
+.ce-choice {
+  display: grid;
+  justify-items: start;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-m);
+  border: 1.5px solid var(--line);
+  background: var(--panel);
+  text-align: left;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ce-choice:hover {
+  border-color: var(--line-strong);
+}
+.ce-choice--on {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgb(20 99 255 / 0.18);
+}
+/* The pin on the location map: gold, draggable, with a soft pulse at its point. */
+.create-pin {
+  position: relative;
+  width: 30px;
+  height: 40px;
+  cursor: grab;
+  background: radial-gradient(circle at 50% 38%, #fff 0 5px, transparent 5.5px), linear-gradient(160deg, var(--gold-light), var(--gold) 55%, #d98f12);
+  clip-path: path("M15 0C6.7 0 0 6.7 0 15c0 11 15 25 15 25s15-14 15-25C30 6.7 23.3 0 15 0z");
+  filter: drop-shadow(0 4px 6px rgb(13 27 51 / 0.35));
+  animation: pin-drop 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.create-pin:active {
+  cursor: grabbing;
+}

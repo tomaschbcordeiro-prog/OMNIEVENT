@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ensureFresh, searchEvents } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { parseQuery } from "@/lib/search/parse";
@@ -54,9 +55,10 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <div className="mb-6">
           <h1 className="t-h1">{asked ? `Results for “${asked}”` : filters.near ? `Events near ${filters.nearLabel?.split(",")[0] ?? "the selected point"}` : "All events"}</h1>
           {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-1">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
-          <p className="t-lede text-text-2 mt-2">
-            Every category, every city, in one search.
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <p className="t-lede text-text-2">Every category, every city, in one search.</p>
+            <Link href="/events/new" className="btn btn-secondary btn-sm press">＋ List your event</Link>
+          </div>
         </div>
         <div className="grid gap-2 mb-4">
           {!parsed.ok && <Notice>Some filters in this link were invalid and have been ignored.</Notice>}

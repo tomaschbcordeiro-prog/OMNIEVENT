@@ -199,3 +199,12 @@ export function ago(iso: string): string {
   if (s < 7 * 86400) return `${Math.round(s / 86400)}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: s > 300 * 86400 ? "numeric" : undefined });
 }
+
+/** Events a member lists themselves: the same key and error handling, on /api/my-events. */
+export async function myEventsGet<T>(query = ""): Promise<T> {
+  return parse<T>(await fetch(`/api/my-events${query ? `?${query}` : ""}`, { headers: headers(false), cache: "no-store" }));
+}
+
+export async function myEventsPost<T>(body: Record<string, unknown>): Promise<T> {
+  return parse<T>(await fetch("/api/my-events", { method: "POST", headers: headers(false), body: JSON.stringify(body) }));
+}

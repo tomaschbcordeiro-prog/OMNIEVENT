@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
-import { ensureFresh, getEventView, searchEvents } from "@/lib/store";
+import { ensureFresh, getEventView, refreshSource, searchEvents } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
@@ -15,14 +15,23 @@ import { sellerSearches } from "@/lib/sellers";
 import { CommunityPanel } from "@/components/community/community-panel";
 import { CommunityPulse } from "@/components/community/pulse";
 import { EventActionBar } from "@/components/event-action-bar";
+import { ListedBy } from "@/components/create/my-events";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
 
+/** An event a member just listed may not have reached this server yet: read the listings again once. */
+async function findEvent(slug: string) {
+  const e = getEventView(slug);
+  if (e || !/-ue[a-z0-9]{8}$/.test(slug)) return e;
+  await refreshSource("members").catch(() => {});
+  return getEventView(slug);
+}
+
 export async function generateMetadata({ params }: { params: P }): Promise<Metadata> {
   const { slug } = await params;
   await ensureFresh();
-  const e = getEventView(slug);
+  const e = await findEvent(slug);
   if (!e) return { title: "Event not found" };
   const when = formatEventDate(e.start, e.timeZone);
   const desc = `${e.title} at ${e.venue.name}, ${e.venue.city}, on ${when}. ${e.isFree ? "Free entry." : "Compare ticket options and go to the official seller."}`;
@@ -83,7 +92,7 @@ function aboutDuration(min: number): string {
 export default async function EventPage({ params }: { params: P }) {
   const { slug } = await params;
   await ensureFresh();
-  const e = getEventView(slug);
+  const e = await findEvent(slug);
   if (!e) notFound();
   const cat = getCategory(e.categorySlug);
   const group = groupOf(e.categorySlug);
@@ -142,6 +151,7 @@ export default async function EventPage({ params }: { params: P }) {
                 {e.provenance.isDemo && <DemoBadge />}
               </div>
               <h1 className="t-display mt-2 text-balance">{e.title}</h1>
+              {e.listedBy && <ListedBy id={e.provenance.externalId} ownerId={e.listedBy.id} name={e.listedBy.name} username={e.listedBy.username} organiser={e.listedBy.organiser} organiserUrl={e.listedBy.organiserUrl} />}
               {teams.length === 2 && (
                 <p className="t-h2 text-text-2 mt-2 font-normal">
                   <Link href={`/participants/${teams[0].slug}`} className="text-text hover:text-cyan">{teams[0].name}</Link>
@@ -249,7 +259,7 @@ export default async function EventPage({ params }: { params: P }) {
               ) : (
                 <TicketComparison offers={e.offers} eventStatus={e.status} />
               )}
-              {e.ticketAccess !== "free" && sellers.length > 0 && (
+              {e.ticketAccess !== "free" && sellers.length > 0 && !e.listedBy && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 t-small">
                   <span className="text-text-3" title="Each opens that site's own search for this event; we haven't checked whether they sell it, or at what price.">Also search on</span>
                   {sellers.map((s) => (
@@ -357,7 +367,7 @@ export default async function EventPage({ params }: { params: P }) {
             {/* Where it comes from, in one quiet line. */}
             <p className="px-1 t-micro text-text-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               <Database size={12} aria-hidden />
-              <span>From {e.provenance.provider === "demo" ? "the demo generator (fictional)" : e.provenance.provider}</span>
+              <span>{e.provenance.provider === "demo" ? "From the demo generator (fictional)" : e.listedBy ? "Listed by a member" : `From ${e.provenance.provider}`}</span>
               <span aria-hidden>·</span>
               <span className="tnum">updated {relativeTime(e.provenance.lastSyncedAt)}</span>
               {e.provenance.sourceUrl && (

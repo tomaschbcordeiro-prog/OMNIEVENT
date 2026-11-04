@@ -35,6 +35,12 @@ export interface ProviderAdapter {
   fetchEvent?(externalId: string): Promise<ProviderBatch | null>;
   /** How often the store should re-sync this provider. */
   refreshIntervalMs: number;
+  /**
+   * The source already lives in the shared storage (events listed by members): every server
+   * reads it directly and cheaply, so it is never locked, snapshotted or downloaded as a copy,
+   * and it doesn't count as "real data" when deciding whether to show the demo.
+   */
+  selfShared?: boolean;
 }
 
 export class ProviderError extends Error {
