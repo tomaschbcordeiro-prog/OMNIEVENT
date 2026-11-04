@@ -37,6 +37,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The Studio's poster images are drawn with the site's typeface, read from disk.
+  outputFileTracingIncludes: { "/api/poster/[id]": ["./public/fonts/**"] },
+  // Listing an event moved into the Studio; old links keep working (query strings carry over).
+  async redirects() {
+    return [{ source: "/events/new", destination: "/studio/new", permanent: false }];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

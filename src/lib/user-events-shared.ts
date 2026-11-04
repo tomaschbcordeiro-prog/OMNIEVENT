@@ -42,7 +42,13 @@ export const LIMITS = {
   address: 200,
   organiser: [2, 80],
   price: 100000,
+  tiers: 6,
+  tierName: 40,
+  programme: 12,
+  programmeTitle: 80,
 } as const;
+
+export const POSTER_STYLE_IDS = ["bold", "minimal", "neon", "retro"] as const;
 
 /** What the questionnaire sends, and what an owner gets back to edit. */
 export interface UserEventInput {
@@ -62,6 +68,8 @@ export interface UserEventInput {
   access: AccessKind;
   priceMin?: number;
   priceMax?: number;
+  /** Ticket types (Early bird, Regular, VIP…); the prices above follow from them. */
+  tiers?: { name: string; price: number }[];
   currency?: string;
   ticketUrl?: string;
   soldOut?: boolean;
@@ -71,7 +79,11 @@ export interface UserEventInput {
   accessibility: string[];
   languages: string[];
   imageUrl?: string;
+  /** A poster drawn by the Studio, used when there's no picture. */
+  posterStyle?: (typeof POSTER_STYLE_IDS)[number];
   hue: number;
+  /** The running order: doors, sets, talks… */
+  programme?: { time: string; title: string }[];
   organiser: { name: string; url?: string };
   website?: string;
   agree: boolean;

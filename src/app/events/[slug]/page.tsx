@@ -151,6 +151,7 @@ export default async function EventPage({ params }: { params: P }) {
                 {e.provenance.isDemo && <DemoBadge />}
               </div>
               <h1 className="t-display mt-2 text-balance">{e.title}</h1>
+              {e.tagline && <p className="t-lede text-text-2 mt-2 measure">{e.tagline}</p>}
               {e.listedBy && <ListedBy id={e.provenance.externalId} ownerId={e.listedBy.id} name={e.listedBy.name} username={e.listedBy.username} organiser={e.listedBy.organiser} organiserUrl={e.listedBy.organiserUrl} />}
               {teams.length === 2 && (
                 <p className="t-h2 text-text-2 mt-2 font-normal">
@@ -214,6 +215,21 @@ export default async function EventPage({ params }: { params: P }) {
               <section className="mt-8" aria-labelledby="about">
                 <h2 id="about" className="t-h2">About</h2>
                 <div className="t-body text-text-2 mt-2 measure whitespace-pre-line">{e.description}</div>
+              </section>
+            )}
+
+            {e.programme && e.programme.length > 0 && (
+              <section className="mt-8" aria-labelledby="prog">
+                <h2 id="prog" className="t-h2">Programme</h2>
+                <ol className="mt-3 relative grid gap-3 border-l-2 border-line pl-5 ml-1.5">
+                  {e.programme.map((p) => (
+                    <li key={`${p.time}-${p.title}`} className="relative">
+                      <span className="absolute -left-[27px] top-1.5 h-3 w-3 rounded-full border-2 border-panel bg-cyan" aria-hidden />
+                      <span className="tnum font-semibold">{p.time}</span>
+                      <span className="text-text-2"> · {p.title}</span>
+                    </li>
+                  ))}
+                </ol>
               </section>
             )}
 

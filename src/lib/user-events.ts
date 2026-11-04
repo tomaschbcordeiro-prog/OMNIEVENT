@@ -11,7 +11,7 @@ import { nearestCityId } from "./providers/common";
 import { isValidTimeZone, zonedToUtc } from "./time";
 import type { OmniEvent, Participant, ParticipantKind, ParticipantRole, TicketOffer, Venue } from "./types";
 import type { ProviderBatch } from "./providers/types";
-import { ACCESSIBILITY_OPTIONS, AGE_OPTIONS, LIMITS, cleanUrl, listingTextProblem, type UserEventInput } from "./user-events-shared";
+import { ACCESSIBILITY_OPTIONS, AGE_OPTIONS, LIMITS, POSTER_STYLE_IDS, cleanUrl, listingTextProblem, type UserEventInput } from "./user-events-shared";
 
 /**
  * Events listed by members. Each is stored whole in the community storage; the catalogue reads
@@ -107,6 +107,11 @@ const schema = z.object({
   }),
   access: z.enum(["free", "ticketed", "registration"]),
   priceMin: money,
+  tiers: z
+    .array(z.object({ name: text(1, LIMITS.tierName), price: z.coerce.number().min(0).max(LIMITS.price) }))
+    .max(LIMITS.tiers)
+    .optional()
+    .transform((a) => (a?.length ? a : undefined)),
   priceMax: money,
   currency: z
     .string()
@@ -133,6 +138,12 @@ const schema = z.object({
       return u;
     }),
   hue: z.coerce.number().int().min(0).max(359).default(210),
+  posterStyle: z.enum(POSTER_STYLE_IDS).optional(),
+  programme: z
+    .array(z.object({ time: z.string().regex(hm, "Each programme item needs a time."), title: text(2, LIMITS.programmeTitle) }))
+    .max(LIMITS.programme)
+    .optional()
+    .transform((a) => (a?.length ? [...a].sort((x, y) => x.time.localeCompare(y.time)) : undefined)),
   organiser: z.object({ name: text(LIMITS.organiser[0], LIMITS.organiser[1]), url }),
   website: url,
   agree: z.boolean().refine((v) => v === true, "Confirm that you may list this event."),
@@ -178,7 +189,7 @@ export function validate(raw: unknown, now = Date.now()): Omit<UserEvent, "id" |
   }
   const v = p.data;
 
-  for (const t of [v.title, v.tagline ?? "", v.description, ...v.performers]) {
+  for (const t of [v.title, v.tagline ?? "", v.description, ...v.performers, ...(v.tiers ?? []).map((x) => x.name), ...(v.programme ?? []).map((x) => x.title)]) {
     const why = listingTextProblem(t);
     if (why) throw new CommunityError(why, 400);
   }
@@ -222,7 +233,12 @@ export function validate(raw: unknown, now = Date.now()): Omit<UserEvent, "id" |
   if (schedule && length && length > DAY) throw new CommunityError("Repeats are for one-day events. For a festival over several days, set an end date instead.", 400);
   if (schedule?.length === 0) schedule = undefined;
 
-  // Prices make sense, and paid tickets say what they cost.
+  // Prices make sense, and paid tickets say what they cost (ticket types give the range).
+  if (v.access === "ticketed" && v.tiers?.length) {
+    const prices = v.tiers.map((t) => t.price);
+    v.priceMin = Math.min(...prices);
+    v.priceMax = Math.max(...prices);
+  }
   if (v.access === "ticketed") {
     if (v.priceMin == null) throw new CommunityError("Add a ticket price (from).", 400);
     if (!v.currency) throw new CommunityError("Choose the price's currency.", 400);
@@ -237,6 +253,7 @@ export function validate(raw: unknown, now = Date.now()): Omit<UserEvent, "id" |
     venue: { ...v.venue, countryCode },
     priceMin: priced ? v.priceMin : undefined,
     priceMax: priced && v.priceMax != null && v.priceMax > v.priceMin! ? v.priceMax : undefined,
+    tiers: priced ? v.tiers : undefined,
     currency: priced ? v.currency : undefined,
     soldOut: priced || v.access === "registration" ? v.soldOut : false,
     familyFriendly: v.familyFriendly || v.ageMin === 0 ? v.familyFriendly : false,
@@ -327,7 +344,7 @@ export async function editableUserEvent(secret: string, id: unknown): Promise<Us
     date: e.date, time: e.time, endDate: e.endDate, endTime: e.endTime, repeat: e.repeat, venue: e.venue, access: e.access,
     priceMin: e.priceMin, priceMax: e.priceMax, currency: e.currency, ticketUrl: e.ticketUrl, soldOut: e.soldOut, capacity: e.capacity,
     ageMin: e.ageMin, familyFriendly: e.familyFriendly, accessibility: e.accessibility, languages: e.languages, imageUrl: e.imageUrl,
-    hue: e.hue, organiser: e.organiser, website: e.website, agree: e.agree,
+    hue: e.hue, organiser: e.organiser, website: e.website, agree: e.agree, tiers: e.tiers, programme: e.programme, posterStyle: e.posterStyle,
   };
   return { ...input, id: e.id, slug: slugOf(e), cancelled: e.cancelled, hidden: e.hidden };
 }
@@ -351,7 +368,7 @@ export async function myUserEvents(secret: string): Promise<MyEventRow[]> {
   const ids = ((await cmd<string[]>(["SMEMBERS", K.own(me.id)])) ?? []) as string[];
   const events = await loadMany(ids);
   return events
-    .map((e) => ({ id: e.id, slug: slugOf(e), title: e.title, start: e.start, timeZone: e.timeZone, city: e.venue.city, category: e.category, cancelled: e.cancelled, hidden: e.hidden, imageUrl: e.imageUrl, hue: e.hue }))
+    .map((e) => ({ id: e.id, slug: slugOf(e), title: e.title, start: e.start, timeZone: e.timeZone, city: e.venue.city, category: e.category, cancelled: e.cancelled, hidden: e.hidden, imageUrl: e.imageUrl ?? (e.posterStyle ? posterUrl(e) : undefined), hue: e.hue }))
     .sort((a, b) => b.start.localeCompare(a.start));
 }
 
@@ -444,7 +461,8 @@ export function toBatch(list: UserEvent[], now = Date.now()): ProviderBatch {
       canonicalId: id,
       slug: slugOf(u),
       title: u.title,
-      description: [u.tagline, u.description].filter(Boolean).join("\n\n"),
+      tagline: u.tagline,
+      description: u.description,
       categorySlug: u.category,
       groupSlug: group,
       eventType: length && length > DAY ? "multi_day" : u.schedule?.length ? "recurring" : "single",
@@ -462,7 +480,9 @@ export function toBatch(list: UserEvent[], now = Date.now()): ProviderBatch {
       ageRestriction: { minAge: u.ageMin || undefined, note: u.ageMin ? `For ages ${u.ageMin} and over.` : "All ages welcome." },
       accessibility: u.accessibility.length ? u.accessibility : undefined,
       officialUrl: u.website ?? u.ticketUrl ?? u.organiser.url,
-      imageUrl: u.imageUrl,
+      // No picture: the Studio's poster, drawn on demand (the version changes with every edit).
+      imageUrl: u.imageUrl ?? (u.posterStyle ? posterUrl(u) : undefined),
+      programme: u.programme,
       posterHue: u.hue,
       participants: people.map(({ p, role }, order) => ({ participantId: p.id, role, order })),
       schedule: u.schedule,
@@ -474,7 +494,26 @@ export function toBatch(list: UserEvent[], now = Date.now()): ProviderBatch {
     batch.events.push(e);
     batch.venues.push(venue);
     for (const { p } of people) if (!batch.participants.some((x) => x.id === p.id)) batch.participants.push(p);
-    if (u.access !== "free" && (u.access === "ticketed" || u.ticketUrl)) {
+    const currency = u.currency ?? country?.currency ?? "EUR";
+    if (u.access === "ticketed" && u.tiers?.length) {
+      // One offer per ticket type, so the event page lists them all.
+      u.tiers.forEach((t, i) =>
+        batch.offers.push({
+          id: `${PROVIDER_ID}-o-${u.id}-${i}`,
+          eventId: id,
+          provider: u.organiser.name,
+          providerType: "organizer",
+          ticketCategory: "standard",
+          label: t.name,
+          basePrice: t.price,
+          currency,
+          availability: u.soldOut ? "sold_out" : "unknown",
+          purchaseUrl: u.ticketUrl,
+          priceObservedAt: synced,
+          isDemo: false,
+        }),
+      );
+    } else if (u.access !== "free" && (u.access === "ticketed" || u.ticketUrl)) {
       const offer: TicketOffer = {
         id: `${PROVIDER_ID}-o-${u.id}`,
         eventId: id,
@@ -484,7 +523,7 @@ export function toBatch(list: UserEvent[], now = Date.now()): ProviderBatch {
         label: u.access === "registration" ? "Free registration" : undefined,
         basePrice: u.priceMin,
         maxPrice: u.priceMax,
-        currency: u.currency ?? country?.currency ?? "EUR",
+        currency,
         availability: u.soldOut ? "sold_out" : "unknown",
         purchaseUrl: u.ticketUrl,
         priceObservedAt: synced,
@@ -495,6 +534,9 @@ export function toBatch(list: UserEvent[], now = Date.now()): ProviderBatch {
   }
   return batch;
 }
+
+/** Where a listing's Studio poster is drawn; the version makes an edit show at once. */
+export const posterUrl = (u: Pick<UserEvent, "id" | "posterStyle" | "updatedAt">) => `/api/poster/${u.id}?s=${u.posterStyle ?? "bold"}&v=${Date.parse(u.updatedAt).toString(36)}`;
 
 /** Test helper. */
 export const __testing = { resetCache: () => (cache = undefined), keys: K };

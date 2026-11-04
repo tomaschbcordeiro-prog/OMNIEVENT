@@ -13,7 +13,12 @@ import { CategoryIcon, Poster } from "../ui";
 import { toast } from "../toast";
 import { Field, Segmented, TagInput, Toggle } from "./fields";
 import { LocationPicker } from "./location-picker";
-import { STEPS, currencyFor, emptyDraft, firstProblem, fromInput, problems, toInput, todayLocal, type Draft, type StepId } from "./draft";
+import { STEPS, applyExtracted, applyTemplate, currencyFor, emptyDraft, firstProblem, fromInput, posterDataOf, problems, toInput, todayLocal, type Draft, type StepId } from "./draft";
+import { POSTER_STYLES } from "@/lib/studio/poster";
+import { getTemplate } from "@/lib/studio/templates";
+import type { Extracted } from "@/lib/studio/magic";
+import { ScaledPoster } from "../studio/scaled-poster";
+import { PASTE_KEY } from "@/lib/studio/keys";
 
 const DRAFT_KEY = "omni:create-event:v1";
 
@@ -55,24 +60,28 @@ function whenLine(d: Draft): string {
   return `${first}${time}`;
 }
 
+function money(n: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-GB", { style: "currency", currency: currency || "EUR", maximumFractionDigits: n % 1 ? 2 : 0, minimumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+  } catch {
+    return String(n);
+  }
+}
+
 function priceLine(d: Draft): string {
   if (d.access === "free") return "Free";
   if (d.access === "registration") return d.soldOut ? "Fully booked" : "Free, sign up first";
-  if (d.access === "ticketed" && d.priceMin) {
-    const f = (s: string) => {
-      const n = Number(s.replace(",", "."));
-      try {
-        return new Intl.NumberFormat("en-GB", { style: "currency", currency: d.currency || "EUR", maximumFractionDigits: n % 1 ? 2 : 0, minimumFractionDigits: n % 1 ? 2 : 0 }).format(n);
-      } catch {
-        return s;
-      }
-    };
-    return d.soldOut ? "Sold out" : `${d.priceMax ? "" : "From "}${f(d.priceMin)}${d.priceMax ? ` to ${f(d.priceMax)}` : ""}`;
+  const prices = d.tiers.map((t) => Number(t.price.replace(",", "."))).filter((n) => d.tiers.length && Number.isFinite(n) && n >= 0);
+  if (d.access === "ticketed" && prices.length) {
+    if (d.soldOut) return "Sold out";
+    const lo = Math.min(...prices);
+    const hi = Math.max(...prices);
+    return lo === hi ? money(lo, d.currency) : `${money(lo, d.currency)} to ${money(hi, d.currency)}`;
   }
   return "Tickets to be set";
 }
 
-export function CreateEvent({ editId }: { editId?: string }) {
+export function CreateEvent({ editId, template, fromPaste, duplicateId }: { editId?: string; template?: string; fromPaste?: boolean; duplicateId?: string }) {
   const router = useRouter();
   const { profile } = useMe();
   const [d, setD] = useState<Draft>(emptyDraft);
@@ -83,6 +92,8 @@ export function CreateEvent({ editId }: { editId?: string }) {
   const [serverError, setServerError] = useState("");
   const [done, setDone] = useState<{ slug: string; id: string; updated: boolean } | null>(null);
   const [restored, setRestored] = useState(false);
+  /** How this draft started: a template, a pasted announcement or a copy, shown as a banner. */
+  const [origin, setOrigin] = useState<{ kind: "template" | "paste" | "copy"; text: string } | null>(null);
   const [loading, setLoading] = useState(!!editId);
   const [editState, setEditState] = useState<{ cancelled?: boolean; slug?: string }>({});
   const [tz, setTz] = useState<{ timeZone: string; label: string } | null>(null);
@@ -92,9 +103,46 @@ export function CreateEvent({ editId }: { editId?: string }) {
   const set = useCallback(<K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v })), []);
   const setVenue = (patch: Partial<Draft["venue"]>) => setD((x) => ({ ...x, venue: { ...x.venue, ...patch } }));
 
-  // A draft from last time comes back (new listings only).
+  // A head start: a template, a pasted announcement, or a copy of one of your events.
+  const prefilled = !!(template || fromPaste || duplicateId);
   useEffect(() => {
     if (editId) return;
+    const tpl = getTemplate(template);
+    if (tpl) {
+      setD((x) => applyTemplate(x, tpl));
+      setOrigin({ kind: "template", text: `${tpl.emoji} Started from “${tpl.name}”: times, tickets, a programme and a description to adapt are filled in.` });
+      return;
+    }
+    if (fromPaste) {
+      try {
+        const x = JSON.parse(localStorage.getItem(PASTE_KEY) ?? "null") as Extracted | null;
+        if (x) {
+          setD((dd) => applyExtracted(dd, x));
+          setOrigin({ kind: "paste", text: `✨ Filled from your text: ${x.found.join(", ") || "a few details"}. Check each step before publishing.` });
+        }
+        localStorage.removeItem(PASTE_KEY);
+      } catch {
+        // storage unavailable
+      }
+      return;
+    }
+    if (duplicateId) {
+      setLoading(true);
+      myEventsGet<{ event: Parameters<typeof fromInput>[0] }>(`id=${encodeURIComponent(duplicateId)}`)
+        .then(({ event }) => {
+          setD({ ...fromInput(event), date: "", endDate: "", dates: [] });
+          setOrigin({ kind: "copy", text: `📋 A copy of “${event.title}”. Choose the new date, change anything else, and publish.` });
+          setReached(STEPS.length - 1);
+          setAt(STEPS.findIndex((s) => s.id === "when"));
+        })
+        .catch((err) => setServerError(err instanceof Error ? err.message : "Couldn't copy that event."))
+        .finally(() => setLoading(false));
+    }
+  }, [editId, template, fromPaste, duplicateId]);
+
+  // A draft from last time comes back (new listings without a head start only).
+  useEffect(() => {
+    if (editId || prefilled) return;
     try {
       const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null") as { draft: Draft; at: number; reached: number } | null;
       if (saved?.draft && (saved.draft.title || saved.draft.venue.name || saved.draft.description)) {
@@ -106,7 +154,7 @@ export function CreateEvent({ editId }: { editId?: string }) {
     } catch {
       // storage unavailable: start fresh
     }
-  }, [editId]);
+  }, [editId, prefilled]);
   useEffect(() => {
     if (editId || done) return;
     const t = setTimeout(() => {
@@ -205,7 +253,7 @@ export function CreateEvent({ editId }: { editId?: string }) {
       await myEventsPost({ action, id: editId });
       if (action === "delete") {
         toast({ title: "Event removed", emoji: "🗑️" });
-        router.push("/my-world?tab=events");
+        router.push("/studio");
         return;
       }
       setEditState((s) => ({ ...s, cancelled: action === "cancel" }));
@@ -236,12 +284,14 @@ export function CreateEvent({ editId }: { editId?: string }) {
 
   return (
     <main id="main" className="pb-16">
-      <section className="ce-hero">
-        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8 pb-7 sm:pt-10">
-          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/50 bg-white/10 px-3 py-1 t-small font-semibold text-[var(--gold-light)]">
-            <Sparkles size={14} aria-hidden /> {editId ? "Edit your event" : "List your event"}
-          </p>
-          <h1 className="t-h1 mt-3 text-white text-balance">{editId ? "Make it right" : <>Put your event <span className="gold-text">on the map</span></>}</h1>
+      <section className="studio-stage">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-6 pb-7 sm:pt-8">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 t-small text-white/70">
+            <Link href="/studio" className="studio-mark hover:text-white">Studio</Link>
+            <span aria-hidden>/</span>
+            <span className="text-white">{editId ? "Edit event" : "New event"}</span>
+          </nav>
+          <h1 className="t-h1 mt-3 text-white text-balance">{editId ? "Make it right" : <>Put your event <span className="studio-text">on the map</span></>}</h1>
           <p className="t-body text-white/80 mt-2 measure">
             {editId ? "Change anything below; it updates for everyone within a minute." : "Seven short steps. It appears on the globe, in search and on its city's page for everyone."}
           </p>
@@ -273,13 +323,30 @@ export function CreateEvent({ editId }: { editId?: string }) {
 
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
         <div ref={card} className="scroll-mt-24">
+          {origin && (
+            <div className="mb-4 flex items-start gap-3 rounded-[var(--radius-m)] border border-[var(--studio)]/30 bg-[var(--studio)]/[0.06] px-4 py-3 t-small panel-in" role="status">
+              <span className="flex-1">{origin.text}</span>
+              <button type="button" className="text-text-3 hover:text-text" aria-label="Dismiss" onClick={() => setOrigin(null)}><X size={15} aria-hidden /></button>
+            </div>
+          )}
           {restored && at === 0 && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-m)] border border-cyan/30 bg-cyan/5 px-4 py-2.5 t-small panel-in">
               <span>We kept your draft from last time.</span>
               <button type="button" className="btn btn-ghost btn-sm" onClick={startOver}>Start fresh</button>
             </div>
           )}
-          <section className="surface rounded-[var(--radius-l)] p-5 sm:p-7" aria-labelledby="ce-step-h">
+          <section
+            className="surface rounded-[var(--radius-l)] p-5 sm:p-7"
+            aria-labelledby="ce-step-h"
+            onKeyDown={(e) => {
+              const t = e.target as HTMLElement;
+              if (e.key !== "Enter" || e.defaultPrevented || e.shiftKey || t.tagName !== "INPUT" || t.closest("[data-own-enter]")) return;
+              if (["checkbox", "radio", "button"].includes((t as HTMLInputElement).type)) return;
+              e.preventDefault();
+              if (step.id === "publish") void publish();
+              else next();
+            }}
+          >
             {loading ? (
               <div className="grid gap-3" aria-hidden>
                 <div className="skeleton h-8 w-2/3" />
@@ -430,6 +497,7 @@ function Place({ d, setVenue, errs, tz, setCurrency }: { d: Draft; setVenue: (p:
       </Field>
       <Field label="Location on the map" error={errs.pin}>
         <LocationPicker
+          initialQuery={d.placeQuery}
           value={v.lat != null && v.lng != null ? { lat: v.lat, lng: v.lng } : null}
           onPick={(p) => {
             setVenue({
@@ -552,6 +620,7 @@ function When({ d, set, errs, tz }: StepProps & { tz: { timeZone: string; label:
 // ---- 4. Tickets --------------------------------------------------------------------------
 
 function Tickets({ d, set, errs }: StepProps) {
+  const setTier = (i: number, patch: Partial<Draft["tiers"][number]>) => set("tiers", d.tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)));
   return (
     <>
       <Field label="Entry" error={errs.access}>
@@ -567,21 +636,36 @@ function Tickets({ d, set, errs }: StepProps) {
       </Field>
       {d.access === "ticketed" && (
         <div className="grid gap-5 panel-in">
-          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_8rem]">
-            <Field label="Price from" htmlFor="ce-pmin" error={errs.priceMin}>
-              <input id="ce-pmin" inputMode="decimal" className="field tnum" placeholder="12" value={d.priceMin} onChange={(e) => set("priceMin", e.target.value.replace(/[^\d.,]/g, ""))} />
-            </Field>
-            <Field label="Up to" optional htmlFor="ce-pmax" error={errs.priceMax}>
-              <input id="ce-pmax" inputMode="decimal" className="field tnum" placeholder="25" value={d.priceMax} onChange={(e) => set("priceMax", e.target.value.replace(/[^\d.,]/g, ""))} />
-            </Field>
-            <Field label="Currency" htmlFor="ce-cur" error={errs.currency}>
-              <select id="ce-cur" className="field" value={d.currency} onChange={(e) => set("currency", e.target.value)}>
-                <option value="">Choose</option>
-                {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-          </div>
-          <Field label="Where to buy tickets" optional htmlFor="ce-tix" error={errs.ticketUrl} hint="A link to the ticket page. No link? People will see the price and the organiser.">
+          <Field label="Ticket types" error={errs.tiers} hint="One line per kind of ticket: early bird, regular, VIP, student…">
+            <div className="grid gap-2">
+              {d.tiers.map((t, i) => (
+                <div key={i} className="grid gap-1">
+                  <div className="flex items-center gap-2">
+                    <label className="sr-only" htmlFor={`ce-tier-${i}`}>Ticket type {i + 1}</label>
+                    <input id={`ce-tier-${i}`} className="field flex-1 min-w-0" placeholder="e.g. Regular" value={t.name} maxLength={LIMITS.tierName} onChange={(e) => setTier(i, { name: e.target.value })} />
+                    <label className="sr-only" htmlFor={`ce-tier-price-${i}`}>Price of ticket type {i + 1}</label>
+                    <input id={`ce-tier-price-${i}`} inputMode="decimal" className="field tnum w-28" placeholder="Price" value={t.price} onChange={(e) => setTier(i, { price: e.target.value.replace(/[^\d.,]/g, "") })} />
+                    <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${t.name || "this ticket type"}`} disabled={d.tiers.length === 1} onClick={() => set("tiers", d.tiers.filter((_, j) => j !== i))}>
+                      <X size={15} aria-hidden />
+                    </button>
+                  </div>
+                  {errs[`tier${i}`] && <p role="alert" className="t-small text-bad">{errs[`tier${i}`]}</p>}
+                </div>
+              ))}
+              {d.tiers.length < LIMITS.tiers && (
+                <button type="button" className="btn btn-ghost btn-sm justify-self-start" onClick={() => set("tiers", [...d.tiers, { name: "", price: "" }])}>
+                  <Plus size={15} aria-hidden /> Add a ticket type
+                </button>
+              )}
+            </div>
+          </Field>
+          <Field label="Currency" htmlFor="ce-cur" error={errs.currency}>
+            <select id="ce-cur" className="field sm:max-w-[10rem]" value={d.currency} onChange={(e) => set("currency", e.target.value)}>
+              <option value="">Choose</option>
+              {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </Field>
+          <Field label="Where to buy tickets" optional htmlFor="ce-tix" error={errs.ticketUrl} hint="A link to the ticket page. No link? People will see the prices and the organiser.">
             <input id="ce-tix" type="url" inputMode="url" className="field" placeholder="https://…" value={d.ticketUrl} onChange={(e) => set("ticketUrl", e.target.value)} />
           </Field>
           <Toggle checked={d.soldOut} onChange={(v) => set("soldOut", v)} label="Sold out" hint="Keeps it listed, clearly marked." />
@@ -621,6 +705,29 @@ function Details({ d, set, errs }: StepProps) {
       <Field label="Line-up" optional hint="Artists, speakers, teams or hosts. Press Enter after each." htmlFor="ce-people" error={errs.performers}>
         <TagInput id="ce-people" values={d.performers} onChange={(v) => set("performers", v)} placeholder="e.g. Ana Moura Trio" max={LIMITS.performers} maxLength={80} />
       </Field>
+      <Field label="Programme" optional hint="The running order: doors, sets, talks, the last song…">
+        <div className="grid gap-2" data-own-enter>
+          {d.programme.map((it, i) => (
+            <div key={i} className="grid gap-1">
+              <div className="flex items-center gap-2">
+                <label className="sr-only" htmlFor={`ce-prog-t-${i}`}>Time</label>
+                <input id={`ce-prog-t-${i}`} type="time" step={300} className="field tnum w-32" value={it.time} onChange={(e) => set("programme", d.programme.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))} />
+                <label className="sr-only" htmlFor={`ce-prog-${i}`}>What happens</label>
+                <input id={`ce-prog-${i}`} className="field flex-1 min-w-0" placeholder="e.g. Doors open" maxLength={LIMITS.programmeTitle} value={it.title} onChange={(e) => set("programme", d.programme.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+                <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Remove this item" onClick={() => set("programme", d.programme.filter((_, j) => j !== i))}>
+                  <X size={15} aria-hidden />
+                </button>
+              </div>
+              {errs[`prog${i}`] && <p role="alert" className="t-small text-bad">{errs[`prog${i}`]}</p>}
+            </div>
+          ))}
+          {d.programme.length < LIMITS.programme && (
+            <button type="button" className="btn btn-ghost btn-sm justify-self-start" onClick={() => set("programme", [...d.programme, { time: d.programme.at(-1)?.time || d.time || "", title: "" }])}>
+              <Plus size={15} aria-hidden /> Add to the programme
+            </button>
+          )}
+        </div>
+      </Field>
       <Field label="Age">
         <Segmented<number> label="Age" value={d.ageMin} onChange={(v) => (set("ageMin", v), v >= 16 && set("familyFriendly", false))} options={AGE_OPTIONS.map((a) => ({ value: a.min, label: a.label }))} />
       </Field>
@@ -650,26 +757,48 @@ function Look({ d, set, errs }: StepProps) {
   const [broken, setBroken] = useState(false);
   const url = cleanUrl(d.imageUrl, { https: true });
   useEffect(() => setBroken(false), [d.imageUrl]);
+  const data = posterDataOf(d);
   return (
     <>
-      <Field label="Cover picture" optional htmlFor="ce-img" error={errs.imageUrl || (broken && url ? "We couldn't load a picture from that address. Check it opens on its own." : undefined)} hint="Paste the address of a picture online (it must start with https://). Use one you're allowed to share.">
-        <input id="ce-img" type="url" inputMode="url" className="field" placeholder="https://…/poster.jpg" value={d.imageUrl} onChange={(e) => set("imageUrl", e.target.value)} />
-      </Field>
-      <div className="overflow-hidden rounded-[var(--radius-l)] border border-line">
-        {url && !broken ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" className="aspect-[16/9] w-full object-cover bg-panel-2" onError={() => setBroken(true)} />
+      <div className="overflow-hidden rounded-[var(--radius-l)] border border-line shadow-[0_24px_50px_-30px_rgb(13_27_51_/_0.6)]">
+        {d.look === "photo" ? (
+          url && !broken ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" className="aspect-[16/9] w-full object-cover bg-panel-2" onError={() => setBroken(true)} />
+          ) : (
+            <div className="grid aspect-[16/9] w-full place-items-center bg-panel-2 text-text-3 t-small">
+              <span className="flex items-center gap-2"><ImageIcon size={16} aria-hidden /> Your picture shows here</span>
+            </div>
+          )
         ) : (
-          <div className="relative">
-            <Poster title={d.title || "Your event"} hue={d.hue} categorySlug={d.category || d.group || "other"} size="lg" className="aspect-[16/9] w-full" />
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-panel/90 px-2.5 py-1 t-micro font-semibold"><ImageIcon size={13} aria-hidden /> No picture: a poster in your colour</span>
-          </div>
+          <ScaledPoster data={data} styleId={d.look} className="w-full" />
         )}
       </div>
-      <Field label="Colour" hint="Used for the poster when there's no picture, and as the event's accent.">
+      <Field label="Style">
+        <div role="radiogroup" aria-label="Poster style" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {POSTER_STYLES.map((st) => (
+            <button key={st.id} type="button" role="radio" aria-checked={d.look === st.id} onClick={() => set("look", st.id)} className={`studio-style press ${d.look === st.id ? "studio-style--on" : ""}`}>
+              <ScaledPoster data={data} styleId={st.id} className="w-full rounded-[8px]" label={`${st.label} style`} />
+              <span className="mt-1.5 block font-semibold text-[13px]">{st.label}</span>
+              <span className="block t-micro text-text-3">{st.hint}</span>
+            </button>
+          ))}
+          <button type="button" role="radio" aria-checked={d.look === "photo"} onClick={() => set("look", "photo")} className={`studio-style press ${d.look === "photo" ? "studio-style--on" : ""}`}>
+            <span className="grid aspect-[16/9] w-full place-items-center rounded-[8px] bg-panel-2"><ImageIcon size={20} className="text-text-3" aria-hidden /></span>
+            <span className="mt-1.5 block font-semibold text-[13px]">My picture</span>
+            <span className="block t-micro text-text-3">A photo or your own flyer</span>
+          </button>
+        </div>
+      </Field>
+      {d.look === "photo" && (
+        <Field label="Picture address" htmlFor="ce-img" error={errs.imageUrl || (broken && url ? "We couldn't load a picture from that address. Check it opens on its own." : undefined)} hint="Paste the address of a picture online (it must start with https://). Use one you're allowed to share.">
+          <input id="ce-img" type="url" inputMode="url" className="field" placeholder="https://…/poster.jpg" value={d.imageUrl} onChange={(e) => set("imageUrl", e.target.value)} />
+        </Field>
+      )}
+      <Field label="Colour" hint={d.look === "photo" ? "Your event's accent colour." : "Sets the poster's colours."}>
         <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-2">
           {HUES.map((h) => (
-            <button key={h} type="button" role="radio" aria-checked={d.hue === h} aria-label={`Colour ${h}`} onClick={() => set("hue", h)} className={`h-9 w-9 rounded-full border-2 press ${d.hue === h ? "border-text scale-110" : "border-transparent"}`} style={{ background: `linear-gradient(135deg, hsl(${h} 85% 80%), hsl(${(h + 40) % 360} 75% 62%))` }} />
+            <button key={h} type="button" role="radio" aria-checked={d.hue === h} aria-label={`Colour ${h}`} onClick={() => set("hue", h)} className={`h-9 w-9 rounded-full border-2 press ${d.hue === h ? "border-text scale-110" : "border-transparent"}`} style={{ background: `linear-gradient(135deg, hsl(${h} 85% 70%), hsl(${(h + 40) % 360} 75% 50%))` }} />
           ))}
         </div>
       </Field>
@@ -686,9 +815,9 @@ function Publish({ d, set, errs, go, signedIn, editing }: StepProps & { go: (i: 
     ["basics", "Event", <><strong>{d.title || "—"}</strong>{cat ? ` · ${cat.name}` : ""}{d.genres.length ? ` · ${d.genres.join(", ")}` : ""}</>],
     ["place", "Place", <>{d.venue.name || "—"}{d.venue.city ? `, ${d.venue.city}` : ""}{d.venue.country ? `, ${d.venue.country}` : ""}</>],
     ["when", "When", whenLine(d)],
-    ["tickets", "Entry", <>{priceLine(d)}{d.ticketUrl ? " · with link" : ""}{d.capacity ? ` · ${d.capacity} people` : ""}</>],
-    ["details", "Details", <>{d.description ? `${d.description.slice(0, 90)}${d.description.length > 90 ? "…" : ""}` : "—"}{d.performers.length ? ` · ${d.performers.length} in the line-up` : ""}{` · ${AGE_OPTIONS.find((a) => a.min === d.ageMin)?.label}`}</>],
-    ["look", "Look", d.imageUrl ? "Your picture" : "A poster in your colour"],
+    ["tickets", "Entry", <>{priceLine(d)}{d.access === "ticketed" && d.tiers.length > 1 ? ` · ${d.tiers.length} ticket types` : ""}{d.ticketUrl ? " · with link" : ""}{d.capacity ? ` · ${d.capacity} people` : ""}</>],
+    ["details", "Details", <>{d.description ? `${d.description.slice(0, 90)}${d.description.length > 90 ? "…" : ""}` : "—"}{d.performers.length ? ` · ${d.performers.length} in the line-up` : ""}{d.programme.length ? ` · ${d.programme.length} in the programme` : ""}{` · ${AGE_OPTIONS.find((a) => a.min === d.ageMin)?.label}`}</>],
+    ["look", "Poster", d.look === "photo" ? "Your picture" : `Studio poster, ${POSTER_STYLES.find((x) => x.id === d.look)?.label ?? "Bold"} style`],
   ];
   return (
     <>
@@ -739,7 +868,11 @@ function PreviewCard({ d }: { d: Draft }) {
   return (
     <article className="overflow-hidden rounded-[var(--radius-l)] border border-line bg-panel shadow-[0_18px_40px_-28px_rgb(13_27_51_/_0.5)]">
       <div className="relative">
-        <Poster title={d.title || "Your event"} imageUrl={url} hue={d.hue} categorySlug={d.category || d.group || "other"} className="aspect-[16/9] w-full" />
+        {d.look === "photo" ? (
+          <Poster title={d.title || "Your event"} imageUrl={url} hue={d.hue} categorySlug={d.category || d.group || "other"} className="aspect-[16/9] w-full" />
+        ) : (
+          <ScaledPoster data={posterDataOf(d)} styleId={d.look} className="w-full" />
+        )}
         {d.date && (
           <span className="absolute left-2.5 top-2.5 rounded-[10px] bg-panel/95 px-2 py-1 text-center leading-none shadow-sm tnum">
             <span className="block text-[10px] font-semibold uppercase text-text-3">{localDay(d.date, { month: "short" })}</span>
@@ -778,11 +911,11 @@ function Done({ d, slug, updated, onAnother }: { d: Draft; slug: string; updated
   };
   return (
     <main id="main" className="pb-16">
-      <section className="ce-hero">
+      <section className="studio-stage">
         <div className="mx-auto max-w-[720px] px-4 sm:px-6 py-12 text-center relative">
           <span className="absolute left-1/2 top-16" aria-hidden><Burst colors={["#ffe29a", "#f5c451", "#ffffff", "#ff7aa8", "#8b5cf6"]} /></span>
           <p className="text-5xl" aria-hidden>{updated ? "✅" : "🎉"}</p>
-          <h1 className="t-h1 mt-3 text-white">{updated ? "Changes saved" : <>Your event is <span className="gold-text">live</span></>}</h1>
+          <h1 className="t-h1 mt-3 text-white">{updated ? "Changes saved" : <>Your event is <span className="studio-text">live</span></>}</h1>
           <p className="t-body text-white/80 mt-2">{updated ? "Everyone sees the new version within a minute." : "It's on the globe, in search and on its city's page. Share it so people know."}</p>
         </div>
       </section>
@@ -793,7 +926,7 @@ function Done({ d, slug, updated, onAnother }: { d: Draft; slug: string; updated
           <button type="button" className="btn btn-secondary press w-full justify-center" onClick={() => void share()}><Share2 size={15} aria-hidden /> Share</button>
         </div>
         <div className="flex justify-center gap-2">
-          <Link href="/my-world?tab=events" className="btn btn-ghost btn-sm">My events</Link>
+          <Link href="/studio" className="btn btn-ghost btn-sm">Back to Studio</Link>
           {!updated && <button type="button" className="btn btn-ghost btn-sm" onClick={onAnother}><Plus size={14} aria-hidden /> List another</button>}
         </div>
       </div>

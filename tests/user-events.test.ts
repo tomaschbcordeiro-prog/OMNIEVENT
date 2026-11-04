@@ -121,7 +121,8 @@ describe("listing, changing and removing", () => {
     const e = batch.events[0];
     expect(e).toMatchObject({ slug, title: "Fado ao Luar", categorySlug: "music", groupSlug: "music", status: "on_sale", ticketAccess: "ticketed", isFree: false, timeZone: "Europe/Lisbon", posterHue: 30 });
     expect(e.listedBy).toMatchObject({ id: ids[A], name: "Ana Teste", username: "ana", organiser: "Noites de Fado" });
-    expect(e.description).toContain("An evening of fado by the river");
+    expect(e.tagline).toBe("An evening of fado by the river");
+    expect(e.description).toContain("Three voices");
     expect(batch.venues[0]).toMatchObject({ name: "Clube Ferroviário", city: "Lisboa", countryCode: "PT", cityId: "lisbon", timeZone: "Europe/Lisbon" });
     expect(batch.participants.map((p) => p.name)).toEqual(["Ana Moura Tribute Trio", "Rui Guitarra"]);
     expect(e.participants[0].role).toBe("headliner");
@@ -153,6 +154,30 @@ describe("listing, changing and removing", () => {
     await expect(createUserEvent("x".repeat(32), input(), "ip-x")).rejects.toThrow(/account/);
     for (let i = 0; i < 5; i++) await createUserEvent(A, input({ title: `Night ${i + 1}` }), "ip-a");
     await expect(createUserEvent(A, input({ title: "Night 6" }), "ip-a")).rejects.toThrow(/a lot of events today/);
+  });
+
+  it("lists ticket types as separate offers, a programme in order, and a Studio poster when there's no picture", async () => {
+    const { id } = await createUserEvent(
+      A,
+      input({
+        priceMin: undefined,
+        priceMax: undefined,
+        tiers: [{ name: "Early bird", price: 10 }, { name: "Regular", price: 15 }, { name: "VIP", price: 40 }],
+        programme: [{ time: "22:00", title: "Main set" }, { time: "21:00", title: "Doors open" }],
+        imageUrl: undefined,
+        posterStyle: "neon",
+      }),
+      "ip-a",
+    );
+    const batch = toBatch(await loadAllUserEvents());
+    expect(batch.offers.map((o) => [o.label, o.basePrice])).toEqual([["Early bird", 10], ["Regular", 15], ["VIP", 40]]);
+    expect(batch.events[0].programme).toEqual([{ time: "21:00", title: "Doors open" }, { time: "22:00", title: "Main set" }]);
+    expect(batch.events[0].imageUrl).toMatch(new RegExp(`^/api/poster/${id}\\?s=neon&v=[a-z0-9]+$`));
+    const form = await editableUserEvent(A, id);
+    expect(form).toMatchObject({ posterStyle: "neon", priceMin: 10, priceMax: 40 });
+    expect(form.tiers).toHaveLength(3);
+    expect(() => validate(input({ programme: [{ time: "25:00", title: "Late" }] }))).toThrow(/time/);
+    expect(() => validate(input({ tiers: [{ name: "Pay by MB Way", price: 5 }] }))).toThrow(/Payment/);
   });
 
   it("takes an event off the site after three members report it", async () => {

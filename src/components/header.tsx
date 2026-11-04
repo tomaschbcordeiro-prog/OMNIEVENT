@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, Plus, Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
@@ -18,6 +18,7 @@ const NAV = [
   { href: "/match", key: "nav.match" },
   { href: "/community", key: "nav.community" },
   { href: "/clubs", key: "nav.clubs", premium: true },
+  { href: "/studio", key: "nav.studio", studio: true },
   { href: "/my-world", key: "nav.myworld" },
 ];
 
@@ -55,7 +56,11 @@ export function Header() {
         <Logo />
         <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-2">
           {NAV.map((n) => (
-            n.premium ? (
+            n.studio ? (
+              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-studio mx-0.5 px-2.5 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
+                <span className="nav-studio-dot" aria-hidden /> {t(n.key)}
+              </Link>
+            ) : n.premium ? (
               <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-premium mx-0.5 px-2.5 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
                 <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
               </Link>
@@ -80,10 +85,6 @@ export function Header() {
             {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}
           </button>
         )}
-        {/* Organisers: put your own event on the map. */}
-        <Link href="/events/new" aria-current={path === "/events/new" ? "page" : undefined} className={`btn btn-sm hidden lg:inline-flex rounded-full press ${isHome ? "bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] text-text" : "btn-secondary"}`}>
-          <Plus size={15} aria-hidden /> List event
-        </Link>
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <AccountMenu floating={isHome} />
         <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
@@ -100,8 +101,13 @@ export function Header() {
           {!isHome && <SearchBox className="mb-3" placeholder={t("search.placeholder")} />}
           <nav aria-label="Main mobile" className="grid gap-1">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
-                {n.premium ? (
+              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : n.studio ? "nav-studio flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
+                {n.studio ? (
+                  <>
+                    <span className="nav-studio-dot" aria-hidden /> {t(n.key)}
+                    <span className="ml-auto t-micro text-text-3">List your event</span>
+                  </>
+                ) : n.premium ? (
                   <>
                     <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
                     <span className="ml-auto rounded-full bg-[#2a1450] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#ffe29a]">New</span>
@@ -111,9 +117,6 @@ export function Header() {
                 )}
               </Link>
             ))}
-            <Link href="/events/new" onClick={() => setMenu(false)} className="mt-1 flex items-center gap-2 rounded-[var(--radius-s)] px-3 py-2.5 font-semibold text-[#9a6400] bg-[var(--gold)]/10">
-              <Plus size={16} aria-hidden /> List your event
-            </Link>
           </nav>
         </div>
       )}

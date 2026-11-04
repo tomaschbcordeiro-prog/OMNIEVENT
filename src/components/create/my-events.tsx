@@ -44,7 +44,7 @@ export function MyEvents() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
         <h1 className="t-h1">My events</h1>
-        <Link href="/events/new" className="btn btn-gold press">
+        <Link href="/studio/new" className="btn btn-gold press">
           <Sparkles size={16} aria-hidden /> List an event
         </Link>
       </div>
@@ -53,7 +53,7 @@ export function MyEvents() {
           <p className="t-h3">Organising something?</p>
           <p className="t-small text-text-2 mt-1">List it in a few steps and it shows up on the globe, in search and on its city&apos;s page. You&apos;ll need a free account.</p>
           <div className="mt-4 flex gap-2">
-            <Link href="/events/new" className="btn btn-primary btn-sm">List an event</Link>
+            <Link href="/studio/new" className="btn btn-primary btn-sm">List an event</Link>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => void requireMember(false)}>Sign in</button>
           </div>
         </div>
@@ -66,7 +66,7 @@ export function MyEvents() {
           <CalendarPlus size={24} className="text-cyan" aria-hidden />
           <p className="t-h3 mt-2">You haven&apos;t listed anything yet</p>
           <p className="t-small text-text-2 mt-1">A concert, a market, a run club, a supper: if it&apos;s happening, put it on the map.</p>
-          <Link href="/events/new" className="btn btn-primary btn-sm mt-4">List your first event</Link>
+          <Link href="/studio/new" className="btn btn-primary btn-sm mt-4">List your first event</Link>
         </div>
       ) : (
         <>
@@ -96,7 +96,7 @@ function List({ rows, title, muted }: { rows: Row[]; title: string; muted?: bool
                 {r.hidden && <span className="ml-2 font-semibold text-warn">Hidden after reports</span>}
               </p>
             </div>
-            <Link href={`/events/new?edit=${r.id}`} className="btn btn-secondary btn-sm shrink-0">
+            <Link href={`/studio/new?edit=${r.id}`} className="btn btn-secondary btn-sm shrink-0">
               <Pencil size={14} aria-hidden /> Edit
             </Link>
           </li>
@@ -143,7 +143,7 @@ export function ListedBy({ id, ownerId, name, username, organiser, organiserUrl 
         </span>
       </span>
       {mine ? (
-        <Link href={`/events/new?edit=${id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> Edit your event</Link>
+        <Link href={`/studio/new?edit=${id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> Edit your event</Link>
       ) : (
         <button type="button" className="btn btn-ghost btn-sm text-text-2" onClick={() => void report()} disabled={reported}>
           <Flag size={14} aria-hidden /> {reported ? "Reported" : "Report"}

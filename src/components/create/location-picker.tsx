@@ -50,13 +50,13 @@ async function describe(lat: number, lng: number): Promise<Omit<PickedPlace, "la
  * Where the event is: search an address or place, or tap the map, then drag the pin to the exact
  * spot. Every move fills in the street, city and country.
  */
-export function LocationPicker({ value, onPick }: { value: { lat: number; lng: number } | null; onPick: (p: PickedPlace) => void }) {
+export function LocationPicker({ value, onPick, initialQuery }: { value: { lat: number; lng: number } | null; onPick: (p: PickedPlace) => void; /** Searched at once (from a pasted announcement). */ initialQuery?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const pin = useRef<Marker | null>(null);
   const latest = useRef(onPick);
   latest.current = onPick;
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(value ? "" : (initialQuery ?? ""));
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);

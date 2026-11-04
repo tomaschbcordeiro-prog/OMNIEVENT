@@ -203,6 +203,10 @@ export interface OmniEvent {
   tags?: string[];
   announcedAt?: ISODate;
   editorialPick?: boolean;
+  /** A one-line pitch, when the source gives one. */
+  tagline?: string;
+  /** The running order (doors, sets, talks), in local times. */
+  programme?: { time: string; title: string }[];
   /** Listed by a member (not from a data source): who, and the organiser they named. */
   listedBy?: { id: string; name: string; username?: string; organiser: string; organiserUrl?: string };
   provenance: Provenance;

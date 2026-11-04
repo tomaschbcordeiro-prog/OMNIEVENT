@@ -57,7 +57,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
           {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-1">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <p className="t-lede text-text-2">Every category, every city, in one search.</p>
-            <Link href="/events/new" className="btn btn-secondary btn-sm press">＋ List your event</Link>
+            <Link href="/studio/new" className="btn btn-secondary btn-sm press">＋ List your event</Link>
           </div>
         </div>
         <div className="grid gap-2 mb-4">
