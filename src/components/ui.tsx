@@ -92,7 +92,12 @@ const TONE: Record<string, string> = {
   muted: "text-text-2 bg-text/5 border-line-strong",
 };
 
-export function StatusBadge({ status, className = "" }: { status: EventStatus; className?: string }) {
+/** Statuses worth flagging on a card or list: the ones that change whether you can go. */
+const NOTABLE_STATUS = new Set<EventStatus>(["sold_out", "postponed", "rescheduled", "cancelled", "completed"]);
+
+/** `quiet`: only show the statuses that matter (in lists and cards), not "On sale" or "Scheduled". */
+export function StatusBadge({ status, className = "", quiet = false }: { status: EventStatus; className?: string; quiet?: boolean }) {
+  if (quiet && !NOTABLE_STATUS.has(status)) return null;
   const m = STATUS_META[status];
   return <span className={`inline-flex h-5 items-center rounded px-1.5 text-[11px] font-semibold border ${TONE[m.tone]} ${className}`}>{m.label}</span>;
 }
@@ -111,10 +116,10 @@ export function DemoBadge({ title = "Fictional demonstration data — not a real
 
 /** Advertised price with honest qualifiers and an optional labelled conversion. */
 export function Price({
-  amount, currency, feesIncluded, from = true, isFree, displayCurrency, className = "",
-}: { amount?: number; currency?: string; feesIncluded?: boolean; from?: boolean; isFree?: boolean; displayCurrency?: string; className?: string }) {
+  amount, currency, feesIncluded, from = true, isFree, displayCurrency, className = "", quiet = false,
+}: { amount?: number; currency?: string; feesIncluded?: boolean; from?: boolean; isFree?: boolean; displayCurrency?: string; className?: string; /** Lists: say nothing when the price isn't known. */ quiet?: boolean }) {
   if (isFree) return <span className={`text-ok font-semibold ${className}`}>Free</span>;
-  if (amount == null || !currency) return <span className={`text-text-3 ${className}`}>Price not available</span>;
+  if (amount == null || !currency) return quiet ? null : <span className={`text-text-3 ${className}`}>Price not available</span>;
   const converted = displayCurrency && displayCurrency !== currency ? convert(amount, currency, displayCurrency) : undefined;
   return (
     <span className={`tnum ${className}`}>

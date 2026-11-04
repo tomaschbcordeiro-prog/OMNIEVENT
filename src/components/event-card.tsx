@@ -72,18 +72,17 @@ export function EventRow({
           {c.eventType !== "daily_attraction" && !c.hoursUnknown && !c.ongoing && <span className="tnum shrink-0">, {formatEventTime(c.start, c.timeZone)}</span>}
           {c.distanceKm != null && <span className="shrink-0">, {formatDistance(c.distanceKm)} away</span>}
         </p>
-        <div className={`${compact ? "flex" : "flex md:hidden"} flex-wrap items-center gap-1.5 mt-1`}>
-            <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-micro" />
-            {c.isDemo && <DemoBadge />}
-            {c.status !== "on_sale" && <StatusBadge status={c.status} />}
+        {/* One line for price and anything that changes whether you can go; nothing when there's nothing to say. */}
+        <div className={`${compact ? "flex" : "flex md:hidden"} flex-wrap items-center gap-1.5 mt-1 empty:hidden`}>
+          <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-micro" quiet />
+          {c.isDemo && <DemoBadge />}
+          <StatusBadge status={c.status} quiet />
         </div>
       </div>
-      <div className={`${compact ? "hidden" : "hidden md:flex"} flex-col items-end gap-1.5 shrink-0 text-right`}>
-        <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" />
-        <div className="flex items-center gap-1.5">
-          {c.isDemo && <DemoBadge />}
-          <StatusBadge status={c.status} />
-        </div>
+      <div className={`${compact ? "hidden" : "hidden md:flex"} flex-col items-end gap-1.5 shrink-0 text-right empty:hidden`}>
+        <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" quiet />
+        {c.isDemo && <DemoBadge />}
+        <StatusBadge status={c.status} quiet />
       </div>
     </>
   );
@@ -119,7 +118,7 @@ export function EventTile({ c }: { c: Card }) {
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">
             {c.isDemo && <DemoBadge />}
-            {c.status !== "on_sale" && <StatusBadge status={c.status} className="bg-panel/90" />}
+            <StatusBadge status={c.status} className="bg-panel/90" quiet />
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-1 p-3">
@@ -136,7 +135,7 @@ export function EventTile({ c }: { c: Card }) {
             {c.venueName}, {c.city}
           </p>
           <div className="mt-auto pt-2 flex items-end justify-between gap-2">
-            <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" />
+            <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" quiet />
           </div>
         </div>
       </Link>

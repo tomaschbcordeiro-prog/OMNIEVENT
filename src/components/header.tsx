@@ -13,7 +13,7 @@ import { AccountMenu } from "./community/account-menu";
 const NAV = [
   { href: "/", key: "nav.discover" },
   { href: "/events", key: "nav.events" },
-  { href: "/categories", key: "nav.categories" },
+  // Categories stay one tap away from Events, the home chips and the footer.
   { href: "/destinations", key: "nav.destinations" },
   { href: "/match", key: "nav.match" },
   { href: "/community", key: "nav.community" },

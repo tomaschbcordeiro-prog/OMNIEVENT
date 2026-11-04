@@ -47,8 +47,9 @@ export function formatMoney(amount: number, currency: CurrencyCode, locale = "en
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
+    // Whole amounts stay short (€20); others show cents in full (€6.80, not €6.8).
     maximumFractionDigits: zeroDecimal ? 0 : amount % 1 === 0 ? 0 : 2,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: zeroDecimal || amount % 1 === 0 ? 0 : 2,
   }).format(amount);
 }
 

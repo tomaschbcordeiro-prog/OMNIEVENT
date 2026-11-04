@@ -1740,9 +1740,3 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   background: linear-gradient(120deg, var(--gold-light), var(--gold));
   color: var(--club-ink);
 }
-.dock-btn--flight {
-  color: #b77900;
-}
-.space .dock-btn--flight {
-  color: var(--gold-light);
-}

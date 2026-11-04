@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import type { BaseStyle, LayerKey, LayerState } from "@/lib/map/style";
 import { PROVIDER_INFO, MAPTILER_KEY } from "@/lib/map/style";
 
@@ -17,13 +17,18 @@ const TOGGLES: { key: LayerKey; label: string; hint?: string }[] = [
 ];
 
 export function LayersPanel({
-  base, layers, onBase, onLayer, onClose,
+  base, layers, onBase, onLayer, onClose, space, onSpace, onLegend,
 }: {
   base: BaseStyle;
   layers: LayerState;
   onBase: (b: BaseStyle) => void;
   onLayer: (k: LayerKey, on: boolean) => void;
   onClose: () => void;
+  /** Space view: the starry sky and the real night side. */
+  space?: boolean;
+  onSpace?: (on: boolean) => void;
+  /** Opens the marker legend. */
+  onLegend?: () => void;
 }) {
   return (
     <div role="dialog" aria-label="Map layers" className="surface-float rounded-[var(--radius-l)] w-[290px] max-h-[70dvh] overflow-auto scroll-thin p-3 panel-in">
@@ -45,6 +50,17 @@ export function LayersPanel({
         ))}
       </div>
       <ul className="mt-3 grid">
+        {onSpace && (
+          <li className="border-b border-line pb-1.5 mb-1.5">
+            <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
+              <span>
+                <span className="block t-small font-medium">✨ Space view</span>
+                <span className="block t-micro text-text-3">A starry sky and the real night side</span>
+              </span>
+              <input type="checkbox" role="switch" className="h-4 w-4 accent-[var(--cyan)]" checked={!!space} onChange={(e) => onSpace(e.target.checked)} />
+            </label>
+          </li>
+        )}
         {TOGGLES.map((t) => (
           <li key={t.key}>
             <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
@@ -57,7 +73,12 @@ export function LayersPanel({
           </li>
         ))}
       </ul>
-      <p className="t-micro text-text-3 mt-3 border-t border-line pt-2">
+      {onLegend && (
+        <button type="button" className="btn btn-ghost btn-sm mt-2 -ml-2" onClick={onLegend}>
+          <Info size={14} aria-hidden /> What the markers mean
+        </button>
+      )}
+      <p className="t-micro text-text-3 mt-2 border-t border-line pt-2">
         Imagery: {PROVIDER_INFO.satellite.name}. Streets: {PROVIDER_INFO.vector}. Terrain: {PROVIDER_INFO.terrain}.
         {!MAPTILER_KEY && " Satellite detail is limited to city scale; street-level imagery needs a MapTiler key."}
       </p>

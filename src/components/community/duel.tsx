@@ -88,7 +88,6 @@ function useCountdown(to: string | undefined) {
 export function DailyDuel() {
   const { profile } = useMe();
   const [duel, setDuel] = useState<Duel | null | undefined>(undefined);
-  const [failed, setFailed] = useState(false);
   const [round, setRound] = useState(0);
   const [busy, setBusy] = useState(false);
   const [burst, setBurst] = useState(0);
@@ -101,14 +100,12 @@ export function DailyDuel() {
     try {
       const r = await communityGet<{ duel: Duel | null }>("view=duel");
       setDuel(r.duel);
-      setFailed(false);
       if (r.duel) {
         const open = r.duel.rounds.findIndex((x) => !x.mine);
         setRound(Math.max(0, open));
         setFinished(open === -1);
       }
     } catch {
-      setFailed(true);
       setDuel(null);
     }
   }, []);
@@ -166,13 +163,8 @@ export function DailyDuel() {
   };
 
   if (duel === undefined) return <div className="skeleton h-80 rounded-[var(--radius-l)]" aria-hidden />;
-  if (!duel)
-    return failed ? (
-      <section id="duel" className="rounded-[var(--radius-l)] border border-dashed border-line-strong p-5">
-        <p className="t-h3 flex items-center gap-2"><Swords size={18} className="text-violet" aria-hidden /> Daily duel</p>
-        <p className="t-small text-text-2 mt-1">Today&apos;s duel is taking a short break. Try again in a little while.</p>
-      </section>
-    ) : null;
+  // No duel today (or storage resting): the page simply goes on without it.
+  if (!duel) return null;
 
   const r = current ?? duel.rounds[duel.rounds.length - 1];
   const revealed = !!r.mine;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Shuffle, Sparkles, Dices, Info, Plane,
+  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane,
 } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
@@ -635,9 +635,6 @@ export function DiscoverClient() {
                 <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
                   <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight <span className="nf-cta-new" aria-label="new">NEW</span>
                 </button>
-                <Link href="/match" className="press inline-flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 px-3.5 py-1.5 t-small font-semibold text-white">
-                  <span aria-hidden>💘</span> <span className="sm:hidden">Swipe a plan</span><span className="max-sm:hidden">Swipe your next plan</span> <span aria-hidden>→</span>
-                </Link>
               </div>
             )}
             <SearchBox
@@ -742,7 +739,7 @@ export function DiscoverClient() {
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
       <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"} ${flightOn ? "hidden" : ""}`}>
         {showLayers && mode !== "list" && (
-          <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} />
+          <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} space={space} onSpace={setSpace} onLegend={() => (setShowLayers(false), setShowLegend(true))} />
         )}
         {mode !== "list" && filters.live && liveList.length > 0 && !selection && (
           <button type="button" onClick={hopLive} className="press panel-in inline-flex items-center gap-2 rounded-full bg-live text-white px-4 h-9 text-[13.5px] font-semibold shadow-[0_10px_24px_-10px_rgb(225_29_72_/_0.8)] hover:brightness-110">
@@ -818,9 +815,6 @@ export function DiscoverClient() {
               <button type="button" className="dock-btn dock-btn--spin" aria-label="Spin the globe" title="Spin the globe: land on a random event somewhere in the world" onClick={startSpin}>
                 <Dices size={16} aria-hidden />
               </button>
-              <button type="button" className="dock-btn dock-btn--flight" aria-label="Night Flight" title="Night Flight: a cinematic tour of tonight round the planet" onClick={startFlight}>
-                <Plane size={16} aria-hidden />
-              </button>
               <button
                 type="button"
                 className="dock-btn"
@@ -838,12 +832,6 @@ export function DiscoverClient() {
               <button type="button" className="dock-btn" aria-pressed={showLayers} aria-label="Layers" title="Map layers: style, terrain, borders, labels" onClick={() => (setShowLegend(false), setShowLayers((v) => !v))}>
                 <Layers size={16} aria-hidden />
               </button>
-              <button type="button" className="dock-btn" aria-pressed={space} aria-label="Space view" title="See Earth from orbit: a starry sky and the real night side" onClick={() => setSpace((v) => !v)}>
-                <Sparkles size={16} aria-hidden />
-              </button>
-              <button type="button" className="dock-btn max-sm:hidden" aria-pressed={showLegend} aria-label="Legend" title="What the markers mean" onClick={() => (setShowLayers(false), setShowLegend((v) => !v))}>
-                <Info size={16} aria-hidden />
-              </button>
               <button type="button" className="dock-btn max-sm:hidden" aria-label={fullscreen ? "Exit full screen" : "Full screen"} title={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
                 {fullscreen ? <Minimize size={15} aria-hidden /> : <Maximize size={15} aria-hidden />}
               </button>
@@ -860,7 +848,6 @@ export function DiscoverClient() {
             <span className="live-dot" aria-hidden /> {liveInView.toLocaleString()} on right now
           </div>
         )}
-        <div className="mt-0.5">Zoom {view.zoom.toFixed(1)}</div>
         {demoOnly && <div className="mt-0.5 text-[#ffd98a]">Demo mode: all events shown are fictional</div>}
       </div>
 
@@ -1122,12 +1109,6 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
       .then((j) => setCities(j.destinations.filter((d: { kind: string; stats?: { total: number } }) => d.kind === "city" && d.stats).sort((a: { stats: { total: number } }, b: { stats: { total: number } }) => b.stats.total - a.stats.total)))
       .catch(() => setCities([]));
   }, []);
-  // "Surprise me" picks any city with a decent number of listings, not only the biggest ones.
-  const surprise = () => {
-    const pool = cities.filter((c) => (c.stats?.total ?? 0) >= 10);
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    if (pick) onCity(pick.id);
-  };
 
   return (
     <section aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)] panel-slide">
@@ -1135,9 +1116,6 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
         <button className="flex-1 flex items-center gap-1.5 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           <span className="t-h3">Happening soon</span>
           {open ? <ChevronUp size={16} aria-hidden className="text-text-3" /> : <ChevronDown size={16} aria-hidden className="text-text-3" />}
-        </button>
-        <button type="button" className="btn btn-sm rounded-full bg-sun text-text font-semibold hover:brightness-105 shadow-[0_6px_16px_-8px_rgb(200_140_0_/_0.9)]" onClick={surprise} disabled={!cities.length} title="Fly to a random city with events">
-          <Shuffle size={14} aria-hidden /> Surprise me
         </button>
       </div>
       {open && (
@@ -1164,8 +1142,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
             <Link href={active.id === "buzz" ? "/community" : `/events?${active.params.replace(/&?size=\d+/, "")}`} className="btn btn-secondary btn-sm w-full mt-3">{active.id === "buzz" ? "Open the community" : "See all"}</Link>
           </div>
           <section className="pt-4">
-            <h2 className="t-h3">Busiest cities</h2>
-            <p className="t-micro text-text-3 mb-2">By number of listed upcoming events.</p>
+            <h2 className="t-h3 mb-2">Busiest cities</h2>
             <ul className="flex flex-wrap gap-1.5">
               {cities.slice(0, 8).map((c) => (
                 <li key={c.id}>
@@ -1318,7 +1295,7 @@ function EventPreview({ card, onClose, onBack, backLabel, onNextLive }: { card: 
         ) : null}
         <div className="absolute left-3 bottom-2 flex gap-1.5">
           {card.isDemo && <DemoBadge />}
-          <StatusBadge status={card.status} className="bg-panel/90" />
+          <StatusBadge status={card.status} className="bg-panel/90" quiet />
         </div>
       </div>
       <div className="overflow-auto scroll-thin p-4 grid gap-3">

@@ -8,7 +8,6 @@ import { formatMoney, relativeTime, AVAILABILITY_META, TICKET_CATEGORY_LABEL } f
 import { convert, FX_SOURCE } from "@/lib/currency";
 import { userActions, useUser } from "@/lib/user/store";
 import { ClusterMap } from "./cluster-map";
-import { Tone } from "./ui";
 
 export function ViewTracker({ id }: { id: string }) {
   useEffect(() => userActions.viewed(id), [id]);
@@ -124,88 +123,77 @@ export function TicketComparison({ offers, eventStatus }: { offers: TicketOffer[
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 mb-3">
+      <div className={`items-center justify-between gap-3 mb-3 ${offers.length > 1 ? "flex" : "hidden"}`}>
         <p className="t-small text-text-2">
           {offers.length} {offers.length === 1 ? "offer" : "offers"} from {new Set(offers.map((o) => o.provider)).size} {new Set(offers.map((o) => o.provider)).size === 1 ? "seller" : "sellers"}
         </p>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSort((s) => (s === "price" ? "provider" : "price"))}>
-          <ArrowUpDown size={14} aria-hidden /> Sort by {sort === "price" ? "seller" : "price"}
-        </button>
+        {offers.length > 2 && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSort((s) => (s === "price" ? "provider" : "price"))}>
+            <ArrowUpDown size={14} aria-hidden /> Sort by {sort === "price" ? "seller" : "price"}
+          </button>
+        )}
       </div>
       {inactive && <p className="t-small text-warn mb-3">This event is {eventStatus}. Offers are shown for reference only.</p>}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
         {groups.map((g) => (
           <div key={g.id}>
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5">
-              <h3 className="t-small font-semibold">{g.title}</h3>
-              <span className="t-micro text-text-3">{g.note}</span>
-            </div>
-            <div className="overflow-x-auto rounded-[var(--radius-m)] border border-line">
-              <table className="w-full text-sm">
-                <thead className="bg-panel-2 text-text-2 text-left">
-                  <tr>
-                    <th scope="col" className="px-3 py-2 font-medium">Seller</th>
-                    <th scope="col" className="px-3 py-2 font-medium">Ticket</th>
-                    <th scope="col" className="px-3 py-2 font-medium text-right">Price</th>
-                    <th scope="col" className="px-3 py-2 font-medium">Availability</th>
-                    <th scope="col" className="px-3 py-2 font-medium"><span className="sr-only">Buy</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {g.items.map((o) => {
-                    const av = AVAILABILITY_META[o.availability];
-                    const shown = o.totalPrice ?? o.basePrice;
-                    const conv = shown != null && user.prefs.currency !== o.currency ? convert(shown, o.currency, user.prefs.currency) : undefined;
-                    return (
-                      <tr key={o.id} className="align-top">
-                        <td className="px-3 py-2.5">
-                          <span className="font-medium">{o.provider}</span>
-                          <span className="block t-micro text-text-3 capitalize">{o.providerType.replace("_", " ")}{o.sponsored ? ", sponsored" : ""}</span>
-                        </td>
-                        <td className="px-3 py-2.5 text-text-2">{o.label && o.label !== "standard" ? o.label : TICKET_CATEGORY_LABEL[o.ticketCategory]}</td>
-                        <td className="px-3 py-2.5 text-right tnum whitespace-nowrap">
-                          {shown != null ? (
-                            <>
-                              <span className="font-semibold">{formatMoney(shown, o.currency)}</span>
-                              {o.maxPrice != null && o.maxPrice > (o.basePrice ?? 0) && <span className="text-text-3"> to {formatMoney(o.maxPrice, o.currency)}</span>}
-                              {o.totalPrice != null && o.feeAmount != null && (
-                                <span className="block t-micro text-text-3">{formatMoney(o.basePrice!, o.currency)} + {formatMoney(o.feeAmount, o.currency)} fees</span>
-                              )}
-                              {o.totalPrice == null && <span className="block t-micro text-text-3">{o.feesIncluded === false ? "plus fees" : "fees not stated"}</span>}
-                              {conv != null && (
-                                <span className="block t-micro text-text-3" title={`${FX_SOURCE.name}, ${FX_SOURCE.asOf}`}>≈ {formatMoney(Math.round(conv), user.prefs.currency)} estimate</span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-text-3">Not published</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Tone tone={av.tone}>{av.label}</Tone>
-                          {o.priceObservedAt && <span className="block t-micro text-text-3 mt-1">Checked {relativeTime(o.priceObservedAt)}</span>}
-                        </td>
-                        <td className="px-3 py-2.5 text-right">
-                          {o.purchaseUrl ? (
-                            <a href={`/out/${encodeURIComponent(o.id)}`} target={o.isDemo ? undefined : "_blank"} rel="noopener noreferrer nofollow sponsored" className={`btn btn-sm ${o.availability === "sold_out" || inactive ? "btn-secondary" : "btn-primary"}`}>
-                              {o.isDemo ? "View demo offer" : `Go to ${o.provider}`}
-                              {!o.isDemo && <ExternalLink size={13} aria-hidden />}
-                            </a>
-                          ) : (
-                            <span className="t-micro text-text-3">No link</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {groups.length > 1 ? (
+              <p className="t-small mb-1.5">
+                <span className="font-semibold">{g.title}</span> <span className="text-text-3">· {g.note}</span>
+              </p>
+            ) : null}
+            <ul className="divide-y divide-line rounded-[var(--radius-m)] border border-line bg-panel">
+              {g.items.map((o) => {
+                const av = AVAILABILITY_META[o.availability];
+                const shown = o.totalPrice ?? o.basePrice;
+                const conv = shown != null && user.prefs.currency !== o.currency ? convert(shown, o.currency, user.prefs.currency) : undefined;
+                return (
+                  <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">
+                        {o.provider}
+                        {o.sponsored && <span className="ml-1.5 t-micro text-text-3">sponsored</span>}
+                      </p>
+                      <p className="t-micro text-text-3 truncate">
+                        {o.label && o.label !== "standard" ? o.label : TICKET_CATEGORY_LABEL[o.ticketCategory]}
+                        {o.availability !== "available" && o.availability !== "unknown" && <> · <span className={av.tone === "bad" ? "text-bad" : av.tone === "warn" ? "text-warn" : ""}>{av.label}</span></>}
+                        {o.priceObservedAt && <> · checked {relativeTime(o.priceObservedAt)}</>}
+                      </p>
+                    </div>
+                    <div className="text-right tnum">
+                      {shown != null ? (
+                        <>
+                          <span className="font-semibold">{formatMoney(shown, o.currency)}</span>
+                          {o.maxPrice != null && o.maxPrice > (o.basePrice ?? 0) && <span className="text-text-3"> to {formatMoney(o.maxPrice, o.currency)}</span>}
+                          <span className="block t-micro text-text-3">
+                            {o.totalPrice != null ? (o.feeAmount != null ? `incl. ${formatMoney(o.feeAmount, o.currency)} fees` : "fees included") : o.feesIncluded === false ? "plus fees" : "fees not stated"}
+                            {conv != null && <span title={`${FX_SOURCE.name}, ${FX_SOURCE.asOf}`}> · ≈ {formatMoney(Math.round(conv), user.prefs.currency)}</span>}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="t-small text-text-3">Price not published</span>
+                      )}
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      {o.purchaseUrl ? (
+                        <a href={`/out/${encodeURIComponent(o.id)}`} target={o.isDemo ? undefined : "_blank"} rel="noopener noreferrer nofollow sponsored" className={`btn btn-sm w-full sm:w-auto ${o.availability === "sold_out" || inactive ? "btn-secondary" : "btn-primary"}`}>
+                          {o.isDemo ? "View demo offer" : `Go to ${o.provider}`}
+                          {!o.isDemo && <ExternalLink size={13} aria-hidden />}
+                        </a>
+                      ) : (
+                        <span className="t-micro text-text-3">No link</span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ))}
       </div>
       <p className="t-micro text-text-3 mt-3 flex gap-1.5">
         <Info size={13} className="shrink-0 mt-px" aria-hidden />
-        You buy directly from the seller. OMNIEVENT doesn&apos;t process payments, hold tickets or guarantee prices, which can change after the time shown.
+        You buy directly from the seller. Prices can change after the time shown.
       </p>
     </div>
   );

@@ -13,7 +13,7 @@ export function Footer() {
         <div>
           <Logo />
           <p className="t-small text-text-2 mt-3 measure">
-            OMNIEVENT lists events from connected sources and links you to the seller. We don&apos;t sell tickets or take payments, and an event missing here doesn&apos;t mean it isn&apos;t happening.
+            Events from many sources on one planet. We link you to the seller; we don&apos;t sell tickets.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3 t-small">

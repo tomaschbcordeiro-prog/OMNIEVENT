@@ -16,13 +16,15 @@ export default async function CategoriesPage() {
   await ensureFresh();
   const counts = groupCounts();
   const groups = GROUPS.filter((g) => g.active && g.slug !== "other").sort((a, b) => a.order - b.order);
-  const [lead, ...rest] = [groups.slice(0, 3), groups.slice(3)];
+  const [lead, ...rest] = [groups.slice(0, 3), groups.slice(3).filter((g) => (counts[g.slug] ?? 0) > 0)];
+  // Categories with nothing listed yet: one quiet line, not a row each.
+  const waiting = groups.slice(3).filter((g) => !(counts[g.slug] ?? 0));
 
   return (
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <h1 className="t-h1">What are you into?</h1>
-        <p className="t-lede text-text-2 mt-2">Pick a category to see what&apos;s on, where, and how much it costs. Counts show listed upcoming events from connected sources.</p>
+        <p className="t-lede text-text-2 mt-2">Pick a category to see what&apos;s on, where, and for how much.</p>
 
         {/* The three largest worlds get room; everything else is a scannable index. */}
         <div className="mt-8 grid gap-3 md:grid-cols-3">
@@ -60,6 +62,18 @@ export default async function CategoriesPage() {
             </li>
           ))}
         </ul>
+        {waiting.length > 0 && (
+          <p className="mt-6 t-small text-text-3">
+            Nothing listed right now in{" "}
+            {waiting.map((g, i) => (
+              <span key={g.slug}>
+                {i > 0 && (i === waiting.length - 1 ? " or " : ", ")}
+                <Link href={`/categories/${g.slug}`} className="underline decoration-line-strong hover:text-text">{g.name}</Link>
+              </span>
+            ))}
+            .
+          </p>
+        )}
       </main>
       <Footer />
     </>

@@ -56,7 +56,7 @@ function Fixtures({ items }: { items: EventCard[] }) {
                   </Link>
                   <span className="flex items-center gap-1.5 mt-1">
                     {c.isDemo && <DemoBadge />}
-                    {c.status !== "on_sale" && <StatusBadge status={c.status} />}
+                    <StatusBadge status={c.status} quiet />
                     <span className="t-micro text-text-3 md:hidden">{c.sports?.competition}</span>
                   </span>
                 </td>
@@ -69,7 +69,7 @@ function Fixtures({ items }: { items: EventCard[] }) {
                   <span className="block t-micro text-text-3">{c.city}, {c.country}</span>
                 </td>
                 <td className="px-3 py-2.5 text-right align-top whitespace-nowrap">
-                  <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} from={false} className="t-small" />
+                  <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} from={false} className="t-small" quiet />
                 </td>
               </tr>
             );

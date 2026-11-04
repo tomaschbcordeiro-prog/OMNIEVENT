@@ -78,6 +78,8 @@ export function CommunityPanel({
   const { profile } = useMe();
   const [thread, setThread] = useState<Thread | null>(null);
   const [error, setError] = useState("");
+  /** Storage isn't answering: on event and city pages the section steps aside until it's back. */
+  const [down, setDown] = useState(false);
   const [sort, setSort] = useState<Sort>("top");
   const seen = useRef<Set<string> | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -93,7 +95,9 @@ export function CommunityPanel({
       seen.current = ids;
       setThread(t);
       setError("");
+      setDown(false);
     } catch (err) {
+      if (err instanceof CommunityRequestError && err.status === 503) setDown(true);
       setError(err instanceof Error ? err.message : "Couldn't load the conversation.");
     }
   }, [target]);
@@ -124,6 +128,8 @@ export function CommunityPanel({
   const isEvent = mode === "event-upcoming" || mode === "event-past";
   const canRate = mode !== "event-upcoming" && mode !== "city" && mode !== "club";
 
+  if (down && mode !== "club") return null;
+
   return (
     <section id="community" aria-labelledby="community-h" className={`${mode === "club" ? "" : "mt-12"} scroll-mt-24`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -131,9 +137,6 @@ export function CommunityPanel({
           <h2 id="community-h" className="t-h2 flex items-center gap-2">
             <Users size={20} className="text-cyan" aria-hidden />
             {heading}
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/10 px-2 py-0.5 text-[11px] font-semibold text-ok">
-              <span className="live-dot" aria-hidden /> Live
-            </span>
           </h2>
           <p className="t-small text-text-2 mt-1">{INTRO[mode]}</p>
         </div>

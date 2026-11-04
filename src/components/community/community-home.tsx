@@ -66,11 +66,10 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
       <section className="sky relative overflow-hidden">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-10 pb-12 grid gap-8 lg:grid-cols-[1.3fr_1fr] items-center">
           <div className="on-sky">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 t-small font-semibold text-text shadow-sm">
-              <span className="live-dot" aria-hidden /> Live community
-            </p>
-            <h1 className="t-display mt-4 text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind every pin on the map</h1>
+            <h1 className="t-display text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind every pin on the map</h1>
             <p className="t-body text-white/95 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
+            {/* Numbers only once there's something to count. */}
+            {(!home || Object.values(home.stats).some((n) => n > 0)) && (
             <dl className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl">
               {([
                 ["Members", home?.stats.members],
@@ -84,6 +83,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
                 </div>
               ))}
             </dl>
+            )}
           </div>
           <MemberCard profile={profile} />
         </div>
@@ -97,7 +97,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
         <section aria-labelledby="feed-h" className="min-w-0">
-          <div className="mb-8">
+          <div className="mb-8 empty:hidden">
             <DailyDuel />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -190,9 +190,9 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
           <SideList icon={<Star size={18} className="text-sun" fill="currentColor" strokeWidth={0} aria-hidden />} title="Best rated" empty="Rate a venue or a show to start the ranking." items={home?.topRated} render={(t) => (
             <span className="flex items-center gap-1.5 t-micro text-text-3 tnum"><Stars value={t.ratingAvg} size={12} /> {t.ratingAvg.toFixed(1)} · {t.ratingCount} {t.ratingCount === 1 ? "rating" : "ratings"}</span>
           )} />
+          {home && home.leaders.length > 0 && (
           <section aria-labelledby="lead-h" className="surface rounded-[var(--radius-l)] p-4">
             <h2 id="lead-h" className="t-h3 flex items-center gap-2"><Trophy size={18} className="text-amber" aria-hidden />Top members</h2>
-            {home && home.leaders.length === 0 && <p className="t-small text-text-2 mt-2">Join and post to appear here.</p>}
             <ol className="mt-2 grid gap-1">
               {(home?.leaders ?? []).map((p, i) => (
                 <li key={p.id} className={`flex items-center gap-2.5 rounded-[var(--radius-s)] px-1.5 py-1.5 ${p.id === profile?.id ? "bg-sun/15" : ""}`}>
@@ -204,6 +204,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               ))}
             </ol>
           </section>
+          )}
           <section aria-labelledby="rules-h" className="rounded-[var(--radius-l)] border border-ok/30 bg-ok/5 p-4">
             <h2 id="rules-h" className="t-h3 flex items-center gap-2"><ShieldCheck size={18} className="text-ok" aria-hidden />Keeping it friendly and safe</h2>
             <ul className="mt-2 grid gap-1.5 t-small text-text-2">
@@ -213,9 +214,15 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               <li>🚫 Block anyone you&apos;d rather not hear from: they can&apos;t reply to, mention or follow you.</li>
             </ul>
           </section>
-          <section aria-labelledby="badge-h" className="rounded-[var(--radius-l)] border border-line p-4">
-            <h2 id="badge-h" className="t-h3">Badges to earn</h2>
-            <ul className="mt-2 grid grid-cols-2 gap-2">
+          <details className="group rounded-[var(--radius-l)] border border-line p-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 t-h3 [&::-webkit-details-marker]:hidden">
+              <span>🏅 Badges to earn</span>
+              <span className="t-micro font-normal text-text-3 tnum">
+                {profile?.badges.length ? `${profile.badges.length} of ${Object.keys(BADGES).length}` : `${Object.keys(BADGES).length} to collect`}
+                <span className="ml-1.5 inline-block transition-transform group-open:rotate-180" aria-hidden>⌄</span>
+              </span>
+            </summary>
+            <ul className="mt-3 grid grid-cols-2 gap-2">
               {Object.entries(BADGES).map(([id, b]) => {
                 const have = profile?.badges.includes(id);
                 return (
@@ -228,7 +235,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               })}
             </ul>
             <p className="t-micro text-text-3 mt-3">Points: posts 5, reviews 10, plans 1, each reaction you get 2, the daily duel 1.</p>
-          </section>
+          </details>
         </section>
       </div>
     </main>
@@ -281,11 +288,12 @@ function MemberCard({ profile }: { profile: PublicProfile | null }) {
   );
 }
 
-function SideList({ icon, title, items, empty, render }: { icon: React.ReactNode; title: string; items?: (TargetMeta & { going: number; interested: number; posts: number; ratingAvg: number; ratingCount: number })[]; empty: string; render: (t: NonNullable<typeof items>[number]) => React.ReactNode }) {
+function SideList({ icon, title, items, render }: { icon: React.ReactNode; title: string; items?: (TargetMeta & { going: number; interested: number; posts: number; ratingAvg: number; ratingCount: number })[]; empty?: string; render: (t: NonNullable<typeof items>[number]) => React.ReactNode }) {
+  // An empty list says nothing: the section appears once there's something in it.
+  if (items && items.length === 0) return null;
   return (
     <section className="surface rounded-[var(--radius-l)] p-4" aria-label={title}>
       <h2 className="t-h3 flex items-center gap-2">{icon}{title}</h2>
-      {items && items.length === 0 && <p className="t-small text-text-2 mt-2">{empty}</p>}
       {!items && <div className="skeleton h-24 mt-3" aria-hidden />}
       <ul className="mt-2 grid gap-1">
         {(items ?? []).slice(0, 8).map((t) => (

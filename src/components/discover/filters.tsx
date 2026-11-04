@@ -138,7 +138,7 @@ export function FilterForm({ f, onChange, showCategories = true, counts }: { f: 
             <input id="f-tto" type="time" step={900} className="field tnum" value={f.tTo ?? ""} onChange={(e) => set({ tTo: e.target.value || undefined })} />
           </div>
         </div>
-        <p className="t-micro text-text-3 mt-1.5">Times are the local time at each venue. An end before the start runs past midnight.</p>
+        <p className="t-micro text-text-3 mt-1.5">In each venue&apos;s local time.</p>
       </fieldset>
 
       <fieldset>
@@ -153,9 +153,11 @@ export function FilterForm({ f, onChange, showCategories = true, counts }: { f: 
             ))}
           </select>
         </div>
-        <p className="t-micro text-text-3 mt-1.5">
-          “Local” compares each event in its own currency. Choosing a currency converts using approximate static rates. Events with no published price are left out when a price filter is set.
-        </p>
+        {(f.minPrice != null || f.maxPrice != null) && (
+          <p className="t-micro text-text-3 mt-1.5">
+            {f.currency ? "Converted at approximate rates. " : "Each event in its own currency. "}Events without a price are left out.
+          </p>
+        )}
       </fieldset>
 
       <fieldset>

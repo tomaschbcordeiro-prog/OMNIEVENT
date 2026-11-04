@@ -30,7 +30,7 @@ export function AccountMenu({ floating = false }: { floating?: boolean }) {
 
   if (!profile?.username)
     return (
-      <div className={`flex items-center gap-1 ${floating ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] p-1" : ""}`}>
+      <div className={`flex items-center gap-1 ${floating ? "sm:rounded-full sm:bg-panel/90 sm:backdrop-blur-md sm:shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] sm:p-1" : ""}`}>
         <button type="button" className="btn btn-ghost btn-sm hidden sm:inline-flex rounded-full" onClick={() => void openAccount("signin")}>
           Sign in
         </button>

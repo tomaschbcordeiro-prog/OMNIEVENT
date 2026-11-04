@@ -22,7 +22,7 @@ export default async function DestinationsPage() {
           <div>
             <h1 className="t-display">Go where it&apos;s happening</h1>
             <p className="t-lede text-text-2 mt-3">
-              Pick a city to see everything on during your dates, from matches and concerts to museums and family days out. Then build a trip from several events across cities.
+              Pick a city to see everything on during your dates, then build a trip across cities.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href="/my-world?tab=trips" className="btn btn-primary">Plan a trip</Link>
@@ -36,16 +36,21 @@ export default async function DestinationsPage() {
           {CONTINENTS.map((ct) => {
             const cities = CITIES.filter((c) => c.continent === ct.id).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0));
             const total = cities.reduce((s, c) => s + (stats[c.id]?.total ?? 0), 0);
+            const busy = cities.filter((c) => (stats[c.id]?.total ?? 0) > 0);
+            // Cities with nothing listed right now: one quiet line of links, not a grid of zeros.
+            const quiet = cities.filter((c) => !(stats[c.id]?.total ?? 0));
             return (
               <section key={ct.id} aria-labelledby={`ct-${ct.id}`} className="grid gap-4 md:grid-cols-[220px_1fr] border-t border-line pt-6">
                 <div>
                   <h2 id={`ct-${ct.id}`} className="t-h2">
                     <Link href={`/destinations/${ct.slug}`} className="hover:text-cyan">{ct.name}</Link>
                   </h2>
-                  <p className="t-small text-text-3 tnum mt-1">{total.toLocaleString()} upcoming in {cities.length} cities</p>
+                  <p className="t-small text-text-3 tnum mt-1">{total ? `${total.toLocaleString()} upcoming` : "Coming soon"}</p>
                 </div>
+                <div>
+                {busy.length > 0 && (
                 <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2">
-                  {cities.map((c) => (
+                  {busy.map((c) => (
                     <li key={c.id}>
                       <Link href={`/destinations/${c.slug}`} className="group flex items-baseline justify-between gap-2 py-1 border-b border-transparent hover:border-line">
                         <span className="truncate group-hover:text-cyan">{c.name}<span className="text-text-3 t-small">, {c.country}</span></span>
@@ -54,6 +59,19 @@ export default async function DestinationsPage() {
                     </li>
                   ))}
                 </ul>
+                )}
+                {quiet.length > 0 && (
+                  <p className={`t-small text-text-3 ${busy.length ? "mt-3" : ""}`}>
+                    {busy.length ? "Also covered: " : "Nothing listed yet in "}
+                    {quiet.map((c, i) => (
+                      <span key={c.id}>
+                        {i > 0 && ", "}
+                        <Link href={`/destinations/${c.slug}`} className="hover:text-text hover:underline">{c.name}</Link>
+                      </span>
+                    ))}
+                  </p>
+                )}
+                </div>
               </section>
             );
           })}

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
 import { ensureFresh, getEventView, searchEvents } from "@/lib/store";
-import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, ACCESS_META } from "@/lib/format";
+import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
@@ -70,6 +70,16 @@ const ROLE_LABEL: Record<string, string> = {
   speaker: "Speaker", performer: "Performer", cast: "Cast", organizer: "Organiser", competitor: "Competitor", dj: "DJ",
 };
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** "About 2 hours", "About 1.5 hours", "About 45 minutes". */
+function aboutDuration(min: number): string {
+  const q = Math.round(min / 15) * 15;
+  if (q < 60) return `About ${Math.max(5, Math.round(min / 5) * 5)} minutes`;
+  const h = q / 60;
+  return `About ${h} ${h === 1 ? "hour" : "hours"}`;
+}
+
 export default async function EventPage({ params }: { params: P }) {
   const { slug } = await params;
   await ensureFresh();
@@ -82,6 +92,9 @@ export default async function EventPage({ params }: { params: P }) {
   const sameVenue = searchEvents({ venue: v.slug, pageSize: 6 }).items.filter((c) => c.id !== e.id).slice(0, 5);
   const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 8, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 5);
   const isDaily = e.eventType === "daily_attraction";
+  // An end time is worth showing only when it's after the start.
+  const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
+  const access = e.accessibility?.length ? e.accessibility : v.accessibility ?? [];
   const ymd = (iso: string) => iso.slice(0, 10);
   const teams = e.people.filter((p) => p.role === "team_home" || p.role === "team_away" || p.role === "team");
   const inactive = e.status === "cancelled" || e.status === "completed";
@@ -125,7 +138,7 @@ export default async function EventPage({ params }: { params: P }) {
                   <Link href={`/categories/${group}?sub=${e.categorySlug}`} className="hover:text-text">{cat?.name}</Link>
                   {e.sports?.competition && `, ${e.sports.competition}${e.sports.stage ? `, ${e.sports.stage}` : ""}`}
                 </span>
-                <StatusBadge status={e.status} />
+                <StatusBadge status={e.status} quiet />
                 {e.provenance.isDemo && <DemoBadge />}
               </div>
               <h1 className="t-display mt-2 text-balance">{e.title}</h1>
@@ -165,13 +178,14 @@ export default async function EventPage({ params }: { params: P }) {
                         <span className="block text-text-2">Times not listed by the source, see the official page</span>
                       ) : <span className="block">
                         {formatEventTime(e.start, e.timeZone)}
-                        {e.end && e.eventType !== "multi_day" && <> to {formatEventTime(e.end, e.timeZone)}</>}{" "}
-                        <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)} ({e.timeZone.replace("_", " ")})</span>
+                        {showEnd && <> to {formatEventTime(e.end!, e.timeZone)}</>}{" "}
+                        <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)}</span>
                       </span>}
                       {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
                     </>
                   )}
-                  {e.durationMinutes && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">About {Math.round(e.durationMinutes / 15) * 15 >= 60 ? `${(Math.round(e.durationMinutes / 15) * 15) / 60} hours` : `${e.durationMinutes} minutes`}</span>}
+                  {/* The length, when the end time isn't shown already. */}
+                  {e.durationMinutes && !showEnd && !e.hoursUnknown && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">{aboutDuration(e.durationMinutes)}</span>}
                 </dd>
               </div>
               <div className="relative pl-[30px]">
@@ -228,49 +242,46 @@ export default async function EventPage({ params }: { params: P }) {
             )}
 
             <section id="tickets" className="mt-10 scroll-mt-24" aria-labelledby="tix">
-              <h2 id="tix" className="t-h2">Tickets</h2>
-              <p className="t-small text-text-2 mt-1 mb-4">{ACCESS_META[e.ticketAccess]}{e.registrationRequired ? ". Register with the organiser before attending." : ""}</p>
+              <h2 id="tix" className="t-h2 mb-4">Tickets</h2>
+              {(e.registrationRequired || e.ticketAccess === "registration") && <p className="t-small text-text-2 -mt-2 mb-4">Register with the organiser before you go.</p>}
               {e.ticketAccess === "free" ? (
                 <p className="t-body">Entry is free. No ticket is needed unless the organiser says otherwise.</p>
               ) : (
                 <TicketComparison offers={e.offers} eventStatus={e.status} />
               )}
               {e.ticketAccess !== "free" && sellers.length > 0 && (
-                <div className="mt-5 rounded-[var(--radius-m)] border border-line bg-panel p-4">
-                  <h3 className="t-small font-semibold">Compare on other ticket sites in {v.country}</h3>
-                  <p className="t-micro text-text-3 mt-0.5">These open each seller&apos;s own search for this event. We haven&apos;t checked whether they sell it, or at what price.</p>
-                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {sellers.map((s) => (
-                      <li key={s.id}>
-                        <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center justify-between gap-2 rounded-[var(--radius-s)] border border-line-strong px-3 py-2 hover:border-cyan/50 hover:bg-panel-2">
-                          <span className="font-medium text-sm">Search {s.name}</span>
-                          <ExternalLink size={14} className="text-text-3" aria-hidden />
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="mt-4 flex flex-wrap items-center gap-2 t-small">
+                  <span className="text-text-3" title="Each opens that site's own search for this event; we haven't checked whether they sell it, or at what price.">Also search on</span>
+                  {sellers.map((s) => (
+                    <a key={s.id} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="chip press hover:border-cyan/50">
+                      {s.name} <ExternalLink size={12} className="text-text-3" aria-hidden />
+                    </a>
+                  ))}
                 </div>
               )}
             </section>
 
             <CommunityPanel target={`e:${e.id}`} mode={Date.parse(e.end ?? e.start) + (e.end ? 0 : (e.durationMinutes ?? 180) * 60000) < Date.now() ? "event-past" : "event-upcoming"} title={e.title} />
 
-            <section className="mt-10 grid gap-6 sm:grid-cols-2" aria-label="Good to know">
-              <div>
-                <h2 className="t-h3 flex items-center gap-2"><ShieldCheck size={16} className="text-text-3" aria-hidden />Age policy</h2>
-                <p className="t-small text-text-2 mt-1.5">{e.ageRestriction?.note ?? "No age restriction has been published. Check with the venue."}</p>
-              </div>
-              <div>
-                <h2 className="t-h3 flex items-center gap-2"><Accessibility size={16} className="text-text-3" aria-hidden />Accessibility</h2>
-                {e.accessibility?.length || v.accessibility?.length ? (
-                  <ul className="t-small text-text-2 mt-1.5 list-disc pl-4">
-                    {(e.accessibility ?? v.accessibility)!.map((a) => <li key={a}>{a}</li>)}
-                  </ul>
-                ) : (
-                  <p className="t-small text-text-2 mt-1.5">No accessibility information has been published. Contact the venue for details.</p>
+            {/* Only what the source actually says: no blocks of "nothing published". */}
+            {(e.ageRestriction?.note || access.length > 0) && (
+              <section className="mt-10 grid gap-6 sm:grid-cols-2" aria-label="Good to know">
+                {e.ageRestriction?.note && (
+                  <div>
+                    <h2 className="t-h3 flex items-center gap-2"><ShieldCheck size={16} className="text-text-3" aria-hidden />Age policy</h2>
+                    <p className="t-small text-text-2 mt-1.5">{e.ageRestriction.note}</p>
+                  </div>
                 )}
-              </div>
-            </section>
+                {access.length > 0 && (
+                  <div>
+                    <h2 className="t-h3 flex items-center gap-2"><Accessibility size={16} className="text-text-3" aria-hidden />Accessibility</h2>
+                    <ul className="t-small text-text-2 mt-1.5 list-disc pl-4">
+                      {access.map((a) => <li key={a}>{a}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
 
             <section className="mt-10" aria-labelledby="loc">
               <h2 id="loc" className="t-h2">Location</h2>
@@ -286,19 +297,12 @@ export default async function EventPage({ params }: { params: P }) {
                     <Globe2 size={14} aria-hidden /> Venue website
                   </a>
                 )}
-                <span className="t-micro text-text-3 self-center tnum">{v.lat.toFixed(4)}, {v.lng.toFixed(4)}</span>
-              </div>
-            </section>
-
-            <section className="mt-10" aria-labelledby="travel">
-              <h2 id="travel" className="t-h2">Getting there</h2>
-              <p className="t-small text-text-2 mt-1">These open searches on other sites. We don&apos;t check availability or prices.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <a className="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${v.city}, ${v.country}`)}&checkin=${ymd(e.start)}`}>
+                {/* Coming from elsewhere: searches on other sites (we don't check availability or prices). */}
+                <a className="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer" title="Opens a search on Booking.com" href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${v.city}, ${v.country}`)}&checkin=${ymd(e.start)}`}>
                   <Hotel size={14} aria-hidden /> Stays in {v.city}
                 </a>
-                <a className="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/travel/flights?q=${encodeURIComponent(`flights to ${v.city} on ${ymd(e.start)}`)}`}>
-                  <Plane size={14} aria-hidden /> Flights to {v.city}
+                <a className="btn btn-ghost btn-sm" target="_blank" rel="noopener noreferrer" title="Opens a search on Google Flights" href={`https://www.google.com/travel/flights?q=${encodeURIComponent(`flights to ${v.city} on ${ymd(e.start)}`)}`}>
+                  <Plane size={14} aria-hidden /> Flights
                 </a>
               </div>
             </section>
@@ -328,7 +332,7 @@ export default async function EventPage({ params }: { params: P }) {
                 <Price amount={e.fromPrice?.amount} currency={e.fromPrice?.currency} feesIncluded={e.fromPrice?.feesIncluded} isFree={e.isFree} />
               </p>
               {!e.isFree && e.offers.length > 0 && (
-                <p className="t-small text-text-2 mt-1">{e.offers.length} offers from {new Set(e.offers.map((o) => o.provider)).size} sellers</p>
+                <p className="t-small text-text-2 mt-1">{plural(e.offers.length, "offer")} from {plural(new Set(e.offers.map((o) => o.provider)).size, "seller")}</p>
               )}
               <div className="mt-4 grid gap-2">
                 {!e.isFree && e.offers.length > 0 && (
@@ -350,30 +354,20 @@ export default async function EventPage({ params }: { params: P }) {
                 </div>
               </div>
             </div>
-            <div className="rounded-[var(--radius-l)] border border-line p-4 t-small">
-              <p className="flex items-center gap-2 font-semibold"><Database size={15} className="text-text-3" aria-hidden />Where this comes from</p>
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-text-2">
-                <dt className="text-text-3">Source</dt>
-                <dd>{e.provenance.provider === "demo" ? "Demo generator (fictional)" : e.provenance.provider}</dd>
-                <dt className="text-text-3">Synced</dt>
-                <dd className="tnum">{relativeTime(e.provenance.lastSyncedAt)}</dd>
-                {e.provenance.lastVerifiedAt && (
-                  <>
-                    <dt className="text-text-3">Verified</dt>
-                    <dd className="tnum">{relativeTime(e.provenance.lastVerifiedAt)}</dd>
-                  </>
-                )}
-                {e.provenance.sourceUrl && (
-                  <>
-                    <dt className="text-text-3">Listing</dt>
-                    <dd><a href={e.provenance.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-text">Original page</a></dd>
-                  </>
-                )}
-              </dl>
-              {Date.now() - new Date(e.provenance.lastSyncedAt).getTime() > 2 * 86400000 && (
-                <p className="text-warn mt-2">This information is more than two days old and may be out of date.</p>
+            {/* Where it comes from, in one quiet line. */}
+            <p className="px-1 t-micro text-text-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <Database size={12} aria-hidden />
+              <span>From {e.provenance.provider === "demo" ? "the demo generator (fictional)" : e.provenance.provider}</span>
+              <span aria-hidden>·</span>
+              <span className="tnum">updated {relativeTime(e.provenance.lastSyncedAt)}</span>
+              {e.provenance.sourceUrl && (
+                <>
+                  <span aria-hidden>·</span>
+                  <a href={e.provenance.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-text">original listing</a>
+                </>
               )}
-            </div>
+              {Date.now() - new Date(e.provenance.lastSyncedAt).getTime() > 2 * 86400000 && <span className="basis-full text-warn">More than two days old: it may be out of date.</span>}
+            </p>
           </section>
         </div>
         <EventActionBar id={e.id} title={e.title} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
