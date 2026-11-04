@@ -157,7 +157,8 @@ export function TicketComparison({ offers, eventStatus }: { offers: TicketOffer[
                       <p className="t-micro text-text-3 truncate">
                         {o.label && o.label !== "standard" ? o.label : TICKET_CATEGORY_LABEL[o.ticketCategory]}
                         {o.availability !== "available" && o.availability !== "unknown" && <> · <span className={av.tone === "bad" ? "text-bad" : av.tone === "warn" ? "text-warn" : ""}>{av.label}</span></>}
-                        {o.priceObservedAt && <> · checked {relativeTime(o.priceObservedAt)}</>}
+                        {/* Relative to now: the page's HTML may be a few minutes older than this render. */}
+                        {o.priceObservedAt && <span suppressHydrationWarning> · checked {relativeTime(o.priceObservedAt)}</span>}
                       </p>
                     </div>
                     <div className="text-right tnum">
@@ -167,7 +168,7 @@ export function TicketComparison({ offers, eventStatus }: { offers: TicketOffer[
                           {o.maxPrice != null && o.maxPrice > (o.basePrice ?? 0) && <span className="text-text-3"> to {formatMoney(o.maxPrice, o.currency)}</span>}
                           <span className="block t-micro text-text-3">
                             {o.totalPrice != null ? (o.feeAmount != null ? `incl. ${formatMoney(o.feeAmount, o.currency)} fees` : "fees included") : o.feesIncluded === false ? "plus fees" : "fees not stated"}
-                            {conv != null && <span title={`${FX_SOURCE.name}, ${FX_SOURCE.asOf}`}> · ≈ {formatMoney(Math.round(conv), user.prefs.currency)}</span>}
+                            {conv != null && <span suppressHydrationWarning title={`${FX_SOURCE.name}, ${FX_SOURCE.asOf}`}> · ≈ {formatMoney(Math.round(conv), user.prefs.currency)}</span>}
                           </span>
                         </>
                       ) : (
