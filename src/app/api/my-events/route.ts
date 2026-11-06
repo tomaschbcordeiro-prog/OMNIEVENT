@@ -1,5 +1,5 @@
 import { refreshSource } from "@/lib/store";
-import { apiError, clientKey, handler, ok, rateLimit } from "@/lib/api";
+import { apiError, clientKey, handler, ok, rateLimit, readJson } from "@/lib/api";
 import { CommunityError } from "@/lib/community/service";
 import { PROVIDER_ID, createUserEvent, deleteUserEvent, editableUserEvent, myUserEvents, reportUserEvent, setCancelled, updateUserEvent } from "@/lib/user-events";
 
@@ -37,12 +37,8 @@ export const GET = handler(async (req: Request) => {
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
   if (!rateLimit(`my-events-w:${ip}`, 40)) return apiError(429, "rate_limited", "Too many requests.");
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return apiError(400, "invalid_body", "Send JSON.");
-  }
+  const body = await readJson(req);
+  if (body instanceof Response) return body;
   const secret = secretOf(req);
   try {
     let result: unknown;

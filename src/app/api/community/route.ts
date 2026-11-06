@@ -1,6 +1,6 @@
 import { ensureFresh, getCard, searchEvents } from "@/lib/store";
 import { getDestination } from "@/lib/destinations";
-import { apiError, clientKey, handler, ok, rateLimit } from "@/lib/api";
+import { apiError, clientKey, handler, ok, rateLimit, readJson } from "@/lib/api";
 import {
   CommunityError,
   createPost,
@@ -151,12 +151,8 @@ export const GET = handler(async (req: Request) => {
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
   if (!rateLimit(`community-w:${ip}`, 60)) return apiError(429, "rate_limited", "Too many requests.");
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return apiError(400, "invalid_body", "Send JSON.");
-  }
+  const body = await readJson(req);
+  if (body instanceof Response) return body;
   const secret = secretOf(req);
   const target = String(body.target ?? "");
   const needMeta = async () => {

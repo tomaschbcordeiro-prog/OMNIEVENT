@@ -215,6 +215,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
           <input
             ref={input}
             id={`${listId}-input`}
+            data-search-input
             role="combobox"
             aria-expanded={open}
             aria-controls={listId}

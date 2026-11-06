@@ -1,5 +1,5 @@
 import { ensureFresh, getCard } from "@/lib/store";
-import { apiError, clientKey, handler, ok, rateLimit } from "@/lib/api";
+import { apiError, clientKey, handler, ok, rateLimit, readJson } from "@/lib/api";
 import { CommunityError, memberOf } from "@/lib/community/service";
 import {
   addPick,
@@ -65,12 +65,8 @@ export const GET = handler(async (req: Request) => {
 export const POST = handler(async (req: Request) => {
   const ip = clientKey(req);
   if (!rateLimit(`clubs-w:${ip}`, 60)) return apiError(429, "rate_limited", "Too many requests.");
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return apiError(400, "invalid_body", "Send JSON.");
-  }
+  const body = await readJson(req);
+  if (body instanceof Response) return body;
   const secret = secretOf(req);
   try {
     switch (body.action) {

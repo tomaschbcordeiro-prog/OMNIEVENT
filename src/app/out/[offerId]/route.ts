@@ -18,5 +18,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ offerId: st
   const url = offer.purchaseUrl;
   if (!url || !/^https:\/\//.test(url)) return NextResponse.redirect(new URL("/events?notice=offer-unavailable", req.url));
   log("info", "outbound ticket click", { offer: offer.id, provider: offer.provider });
+  // A link a member typed in isn't vouched for by a ticket seller: show where it leads first,
+  // so our address can't be used to disguise somewhere else.
+  if (offer.id.startsWith("members-")) return NextResponse.redirect(new URL(`/leaving?offer=${encodeURIComponent(offer.id)}`, req.url));
   return NextResponse.redirect(url, 302);
 }

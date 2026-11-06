@@ -44,7 +44,13 @@ const nextConfig: NextConfig = {
     return [{ source: "/events/new", destination: "/studio/new", permanent: false }];
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // Files whose name or address changes with their content can be kept by browsers for good.
+    const forever = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      { source: "/maplibre/:path*", headers: forever },
+      { source: "/fonts/:path*", headers: forever },
+    ];
   },
 };
 

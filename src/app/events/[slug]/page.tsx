@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
 import { ensureFresh, getEventView, refreshSource, searchEvents } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
@@ -16,6 +17,7 @@ import { CommunityPanel } from "@/components/community/community-panel";
 import { CommunityPulse } from "@/components/community/pulse";
 import { EventActionBar } from "@/components/event-action-bar";
 import { ListedBy } from "@/components/create/my-events";
+import { Countdown } from "@/components/countdown";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -94,6 +96,8 @@ export default async function EventPage({ params }: { params: P }) {
   await ensureFresh();
   const e = await findEvent(slug);
   if (!e) notFound();
+  // The page's main picture usually lives on another site: open that connection right away.
+  if (e.imageUrl && /^https:\/\//.test(e.imageUrl)) preconnect(new URL(e.imageUrl).origin);
   const cat = getCategory(e.categorySlug);
   const group = groupOf(e.categorySlug);
   const v = e.venue;
@@ -194,6 +198,11 @@ export default async function EventPage({ params }: { params: P }) {
                       </span>}
                       {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
                     </>
+                  )}
+                  {!isDaily && !e.hoursUnknown && (
+                    <span className="mt-1.5 block">
+                      <Countdown starts={[e.start, ...(e.schedule ?? [])]} durationMinutes={e.durationMinutes} end={e.eventType === "multi_day" ? e.end : undefined} />
+                    </span>
                   )}
                   {/* The length, when the end time isn't shown already. */}
                   {e.durationMinutes && !showEnd && !e.hoursUnknown && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">{aboutDuration(e.durationMinutes)}</span>}

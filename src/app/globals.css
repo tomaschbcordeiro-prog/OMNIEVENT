@@ -2053,3 +2053,130 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   background: var(--studio);
   box-shadow: 0 0 8px var(--studio);
 }
+
+/* ---- Small interactions ------------------------------------------------------------------ */
+/* Live countdown on event pages; the seconds tick in. */
+.countdown {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgb(20 99 255 / 0.08);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.countdown--empty {
+  min-height: 26px;
+  padding: 0;
+  background: none;
+}
+.countdown--live {
+  background: rgb(225 29 72 / 0.1);
+  color: #be123c;
+}
+.countdown--past {
+  background: rgb(13 27 51 / 0.06);
+  color: var(--color-text-2);
+}
+.countdown-sub {
+  font-weight: 500;
+  opacity: 0.8;
+}
+.countdown-digits {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+.countdown-digits b {
+  display: inline-block;
+  min-width: 1.35em;
+  padding: 0 0.15em;
+  border-radius: 5px;
+  background: rgb(255 255 255 / 0.8);
+  box-shadow: inset 0 0 0 1px rgb(13 27 51 / 0.08);
+  text-align: center;
+  font-weight: 700;
+}
+.countdown-digits b:first-child:not(:only-child) {
+  margin-right: 4px;
+}
+.countdown-tick {
+  animation: tick-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes tick-in {
+  from {
+    transform: translateY(-40%);
+    opacity: 0.2;
+  }
+}
+/* Keyboard keys in the shortcuts list. */
+.kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  border: 1px solid var(--color-line-strong);
+  border-bottom-width: 2px;
+  background: var(--panel);
+  font-family: var(--font-geist-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 700;
+}
+/* City day chart: bars grow in, the count shows above the bar you point at. */
+.day-bar-fill {
+  transform-origin: bottom;
+  animation: bar-grow 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+.day-bar-count {
+  position: absolute;
+  top: -1.35rem;
+  left: 50%;
+  transform: translate(-50%, 4px);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.day-bar:hover .day-bar-count,
+.day-bar:focus-visible .day-bar-count,
+.day-bar[aria-current] .day-bar-count {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+/* Event cards lean towards the pointer (see TiltCards), with a soft light where it is. */
+@media (hover: hover) and (pointer: fine) {
+  .tile[data-tilt] {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-3px);
+    transition: transform 120ms ease-out, box-shadow 220ms ease, border-color 220ms ease;
+  }
+  .tile[data-tilt]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgb(255 255 255 / 0.22), transparent 55%);
+    mix-blend-mode: soft-light;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-bar-fill,
+  .countdown-tick {
+    animation: none;
+  }
+}

@@ -29,17 +29,22 @@ export default async function CategoriesPage() {
         {/* The three largest worlds get room; everything else is a scannable index. */}
         <div className="mt-8 grid gap-3 md:grid-cols-3">
           {lead.map((g) => (
-            <Link key={g.slug} href={`/categories/${g.slug}`} className="group relative overflow-hidden rounded-[var(--radius-l)] border border-line bg-panel p-5 hover:border-line-strong">
+            // The whole card opens the category; each genre chip opens straight to that genre.
+            <div key={g.slug} className="group relative overflow-hidden rounded-[var(--radius-l)] border border-line bg-panel p-5 hover:border-line-strong">
               <CategoryIcon slug={g.slug} size={28} />
-              <h2 className="t-h2 mt-4 group-hover:text-cyan">{g.name}</h2>
+              <h2 className="t-h2 mt-4 group-hover:text-cyan">
+                <Link href={`/categories/${g.slug}`} className="after:absolute after:inset-0 after:content-['']">{g.name}</Link>
+              </h2>
               <p className="t-small text-text-2 mt-1">{g.description}</p>
               <p className="t-small text-text-3 mt-3 tnum">{(counts[g.slug] ?? 0).toLocaleString()} upcoming</p>
-              <ul className="mt-3 flex flex-wrap gap-1.5">
+              <ul className="relative z-10 mt-3 flex flex-wrap gap-1.5" aria-label={`${g.name} genres`}>
                 {childrenOf(g.slug).slice(0, 8).map((c) => (
-                  <li key={c.slug} className="t-micro text-text-2 rounded-full border border-line px-2 py-0.5">{c.name}</li>
+                  <li key={c.slug}>
+                    <Link href={`/categories/${g.slug}?sub=${c.slug}`} className="inline-block t-micro text-text-2 rounded-full border border-line px-2 py-0.5 hover:border-cyan/50 hover:text-cyan hover:bg-cyan/5 transition-colors">{c.name}</Link>
+                  </li>
                 ))}
               </ul>
-            </Link>
+            </div>
           ))}
         </div>
 

@@ -58,7 +58,7 @@ export function Poster({
   const accent = GROUP_HEX[group] ?? "#9AA8BA";
   if (imageUrl && !broken)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrl} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
+    return <img src={imageUrl} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
     <div

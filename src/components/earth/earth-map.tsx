@@ -1,7 +1,8 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import maplibregl, { type Map as MLMap, type GeoJSONSource, type MapGeoJSONFeature, type ExpressionSpecification } from "maplibre-gl";
+import { maplibregl } from "@/lib/map/maplibre";
+import type { Map as MLMap, GeoJSONSource, MapGeoJSONFeature, ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, type BaseStyle, type LayerState } from "@/lib/map/style";
 import { nightGeoJSON } from "@/lib/map/night";

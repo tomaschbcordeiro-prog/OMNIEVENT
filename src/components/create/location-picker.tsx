@@ -106,7 +106,7 @@ export function LocationPicker({ value, onPick, initialQuery }: { value: { lat: 
     const m = map.current;
     if (!m) return;
     if (!pin.current) {
-      void import("maplibre-gl").then(({ default: ml }) => {
+      void import("@/lib/map/maplibre").then(({ maplibregl: ml }) => {
         const el = document.createElement("div");
         el.className = "create-pin";
         el.setAttribute("aria-label", "Event location. Drag to adjust.");
@@ -123,7 +123,7 @@ export function LocationPicker({ value, onPick, initialQuery }: { value: { lat: 
   // The map itself: a flat street map; a tap moves the pin there.
   useEffect(() => {
     let gone = false;
-    void import("maplibre-gl").then(({ default: ml }) => {
+    void import("@/lib/map/maplibre").then(({ maplibregl: ml }) => {
       if (gone || !box.current) return;
       const m = new ml.Map({
         container: box.current,

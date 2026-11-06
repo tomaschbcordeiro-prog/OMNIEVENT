@@ -120,11 +120,13 @@ export default async function DestinationPage({ params, searchParams }: { params
           <ol className="grid gap-1" style={{ gridTemplateColumns: `repeat(${perDay.length}, minmax(32px, 1fr))` }}>
             {perDay.map((p) => {
               const dt = new Date(`${p.key}T12:00:00Z`);
+              const picked = user.from === p.key && user.to === p.key;
               return (
                 <li key={p.key}>
-                  <Link href={`/destinations/${d.slug}?${filtersToParams({ ...user, from: p.key, to: p.key }).toString()}#all`} className="group flex flex-col items-center gap-1" aria-label={`${p.n} events on ${dt.toDateString()}`}>
-                    <span className="flex h-16 w-full items-end justify-center rounded-[4px] bg-panel">
-                      <span className="w-full rounded-[4px] bg-cyan/60 group-hover:bg-cyan transition-colors" style={{ height: `${Math.max(4, (p.n / maxDay) * 100)}%` }} />
+                  <Link href={picked ? `/destinations/${d.slug}#all` : `/destinations/${d.slug}?${filtersToParams({ ...user, from: p.key, to: p.key }).toString()}#all`} aria-current={picked ? "date" : undefined} className="group day-bar flex flex-col items-center gap-1" aria-label={`${p.n} events on ${dt.toDateString()}${picked ? " (showing; tap again for all days)" : ""}`}>
+                    <span className="relative flex h-16 w-full items-end justify-center rounded-[4px] bg-panel">
+                      <span className="day-bar-count tnum" aria-hidden>{p.n}</span>
+                      <span className={`day-bar-fill w-full rounded-[4px] transition-colors ${picked ? "bg-cyan" : "bg-cyan/60 group-hover:bg-cyan"}`} style={{ height: `${Math.max(4, (p.n / maxDay) * 100)}%` }} />
                     </span>
                     <span className="t-micro text-text-3 tnum leading-tight text-center">
                       {dt.toLocaleDateString("en-GB", { weekday: "narrow", timeZone: "UTC" })}

@@ -27,6 +27,37 @@ export function ok<T>(data: T, init?: { maxAge?: number; swr?: number; partial?:
   return res;
 }
 
+/**
+ * A request's JSON object, read with a size limit (the forms send a few kilobytes; anything far
+ * bigger is refused before it is parsed or validated). Returns an error response instead when
+ * the body is too large or isn't a JSON object.
+ */
+export async function readJson(req: Request, maxBytes = 64 * 1024): Promise<Record<string, unknown> | Response> {
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > maxBytes) return apiError(413, "too_large", "That's too much to send at once.");
+  let text: string;
+  try {
+    text = await req.text();
+  } catch {
+    return apiError(400, "invalid_body", "Send JSON.");
+  }
+  if (text.length > maxBytes) return apiError(413, "too_large", "That's too much to send at once.");
+  try {
+    const body = JSON.parse(text) as unknown;
+    if (!body || typeof body !== "object" || Array.isArray(body)) return apiError(400, "invalid_body", "Send a JSON object.");
+    return body as Record<string, unknown>;
+  } catch {
+    return apiError(400, "invalid_body", "Send JSON.");
+  }
+}
+
+/** Removes anything that looks like a key or token from a text shown to the public. */
+export function redactSecrets(text: string): string {
+  return text
+    .replace(/([?&](?:apikey|api_key|key|client_id|client_secret|token|access_token|secret)=)[^&\s"')]+/gi, "$1[hidden]")
+    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/g, "$1 [hidden]");
+}
+
 /** Wrap a handler so unexpected errors become a logged 500 with a stable shape. */
 export function handler<A extends unknown[]>(fn: (...args: A) => Promise<Response>) {
   return async (...args: A): Promise<Response> => {
