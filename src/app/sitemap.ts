@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 import { ensureFresh, allSlugs } from "@/lib/store";
 import { ALL_DESTINATIONS } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /** Only real (non-demo) events, venues and participants are listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

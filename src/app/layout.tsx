@@ -6,11 +6,11 @@ import { JoinHost } from "@/components/community/bits";
 import { Shortcuts } from "@/components/shortcuts";
 import { TiltCards } from "@/components/tilt-cards";
 import { Toaster } from "@/components/toast";
+import { SITE } from "@/lib/site";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
