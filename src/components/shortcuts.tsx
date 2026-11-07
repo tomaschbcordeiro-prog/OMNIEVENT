@@ -9,6 +9,7 @@ const GO: [string, string, string][] = [
   ["e", "/events", "All events"],
   ["d", "/destinations", "Destinations"],
   ["m", "/match", "Event Match"],
+  ["t", "/mixtape", "Mixtape"],
   ["c", "/community", "Community"],
   ["l", "/clubs", "Clubs"],
   ["s", "/studio", "Studio"],
@@ -39,6 +40,13 @@ export function Shortcuts() {
           e.preventDefault();
           box.focus();
           box.select();
+          return;
+        }
+        // Where the search field is folded into a button, open it (it focuses itself).
+        const fold = document.querySelector<HTMLButtonElement>('header button[aria-label="Search"]');
+        if (fold && fold.offsetParent !== null) {
+          e.preventDefault();
+          fold.click();
         }
         return;
       }

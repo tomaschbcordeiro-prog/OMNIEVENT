@@ -1,28 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { ensureFresh, getEventView, refreshSource } from "@/lib/store";
 import { getCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/format";
 import { PosterArt, POSTER_H, POSTER_W, isPosterStyle, type PosterData } from "@/lib/studio/poster";
+import { loadOgFonts } from "@/lib/og-fonts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-
-/** Geist, the site's own typeface, in the weights the posters use (read once per server). */
-let fonts: Promise<{ name: string; data: Buffer; weight: 400 | 700 | 900; style: "normal" }[]> | undefined;
-const loadFonts = () =>
-  (fonts ??= Promise.all(
-    ([["Regular", 400], ["Bold", 700], ["Black", 900]] as const).map(async ([file, weight]) => ({
-      name: "Geist",
-      data: await readFile(join(process.cwd(), "public", "fonts", `Geist-${file}.ttf`)),
-      weight,
-      style: "normal" as const,
-    })),
-  ).catch(() => {
-    fonts = undefined;
-    return [];
-  }));
 
 /**
  * GET /api/poster/<id>?s=<style>&v=<version> — a member-listed event's Studio poster, as a
@@ -64,7 +48,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     category: getCategory(e.categorySlug)?.name,
     hue: e.posterHue ?? 265,
   };
-  const loaded = await loadFonts();
+  const loaded = await loadOgFonts();
   return new ImageResponse(<PosterArt data={data} styleId={isPosterStyle(style) ? style : "bold"} font={loaded.length ? "Geist" : "sans-serif"} />, {
     width: POSTER_W,
     height: POSTER_H,

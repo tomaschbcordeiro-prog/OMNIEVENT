@@ -100,6 +100,11 @@ export default async function DestinationPage({ params, searchParams }: { params
               >
                 <Crosshair size={14} aria-hidden /> Explore on the map
               </Link>
+              {d.kind === "city" && result.total >= 8 && (
+                <Link className="btn btn-sm mx-cta-light" href={`/mixtape?c=${d.id}`}>
+                  <span aria-hidden>📼</span> Plan a weekend here
+                </Link>
+              )}
             </div>
 
             <form className="mt-6 grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end rounded-[var(--radius-l)] border border-line p-4" action={`/destinations/${d.slug}`}>

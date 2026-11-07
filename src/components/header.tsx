@@ -16,6 +16,7 @@ const NAV = [
   // Categories stay one tap away from Events, the home chips and the footer.
   { href: "/destinations", key: "nav.destinations" },
   { href: "/match", key: "nav.match" },
+  { href: "/mixtape", key: "nav.mixtape", fresh: true },
   { href: "/community", key: "nav.community" },
   { href: "/clubs", key: "nav.clubs", premium: true },
   { href: "/studio", key: "nav.studio", studio: true },
@@ -54,14 +55,14 @@ export function Header() {
       <div className="mx-auto flex h-[var(--header-h)] max-w-[1600px] items-center gap-4 px-4 sm:px-6">
         <div className={`flex items-center gap-2 ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] pl-3 pr-3 lg:pr-1 py-1.5 lg:py-1" : ""}`}>
         <Logo />
-        <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-2">
+        <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-1 xl:ml-2">
           {NAV.map((n) => (
             n.studio ? (
-              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-studio mx-0.5 px-2.5 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-studio mx-0.5 px-2 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
                 <span className="nav-studio-dot" aria-hidden /> {t(n.key)}
               </Link>
             ) : n.premium ? (
-              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-premium mx-0.5 px-2.5 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
+              <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className="nav-premium mx-0.5 px-2 xl:px-3 py-1 rounded-full text-sm whitespace-nowrap">
                 <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
               </Link>
             ) : (
@@ -69,7 +70,7 @@ export function Header() {
                 key={n.href}
                 href={n.href}
                 aria-current={isActive(n.href) ? "page" : undefined}
-                className={`px-2 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
+                className={`px-1.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
               >
                 {t(n.key)}
               </Link>
@@ -78,10 +79,10 @@ export function Header() {
         </nav>
         </div>
         <div className="flex-1" />
-        {/* On small laptops the full navigation and a search field don't both fit: search folds into a button. */}
-        {!isHome && <SearchBox className="hidden md:block lg:hidden xl:block w-full max-w-md" placeholder={t("search.placeholder")} />}
+        {/* Below 1440 px the full navigation and a search field don't both fit: search folds into a button. */}
+        {!isHome && <SearchBox className="hidden md:block lg:hidden wide:block w-full max-w-md min-w-0" placeholder={t("search.placeholder")} />}
         {!isHome && (
-          <button className="btn btn-ghost btn-icon hidden lg:inline-flex xl:hidden" aria-label={search ? "Close search" : "Search"} aria-expanded={search} onClick={() => setSearch((v) => !v)}>
+          <button className="btn btn-ghost btn-icon hidden lg:inline-flex wide:hidden" aria-label={search ? "Close search" : "Search"} aria-expanded={search} onClick={() => setSearch((v) => !v)}>
             {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}
           </button>
         )}
@@ -92,7 +93,7 @@ export function Header() {
         </button>
       </div>
       {search && !isHome && (
-        <div className="hidden lg:block xl:hidden border-t border-line bg-panel shadow-lg px-6 py-3 panel-in">
+        <div className="hidden lg:block wide:hidden border-t border-line bg-panel shadow-lg px-6 py-3 panel-in">
           <SearchBox className="mx-auto max-w-2xl" autoFocus placeholder={t("search.placeholder")} />
         </div>
       )}
@@ -111,6 +112,11 @@ export function Header() {
                   <>
                     <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
                     <span className="ml-auto rounded-full bg-[#2a1450] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#ffe29a]">New</span>
+                  </>
+                ) : n.fresh ? (
+                  <>
+                    {t(n.key)}
+                    <span className="ml-auto t-micro text-text-3">Plan a weekend</span>
                   </>
                 ) : (
                   t(n.key)

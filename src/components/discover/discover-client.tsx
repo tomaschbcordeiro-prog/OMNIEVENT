@@ -633,8 +633,11 @@ export function DiscoverClient() {
                   <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
                 </button>
                 <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
-                  <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight <span className="nf-cta-new" aria-label="new">NEW</span>
+                  <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight
                 </button>
+                <Link href="/mixtape" className="mx-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
+                  <span className="mx-cta-tape" aria-hidden>📼</span> Mixtape <span className="nf-cta-new" aria-label="new">NEW</span>
+                </Link>
               </div>
             )}
             <SearchBox

@@ -11,6 +11,7 @@ import { haversineKm, gridKey, latLngToVec3 } from "./geo";
 import { localDateKey } from "./format";
 import { windowIntervals, overlaps, todayIn, isValidTimeZone, parseHM, tzOffsetMs } from "./time";
 import { log } from "./log";
+import type { MixCandidate } from "./mixtape/plan";
 import type {
   Cluster,
   EventCard,
@@ -1035,6 +1036,144 @@ export function nightFlight(opts: { n?: number; groups?: string[]; now?: number;
   const dusk = (s: Stop) => s.at - (s.local - 20 * 60) * 60000;
   out.sort((a, b) => dusk(a) - dusk(b) || a.at - b.at);
   return out.map((s) => (Date.parse(s.c.start) === s.at ? s.c : { ...s.c, start: new Date(s.at).toISOString(), until: undefined, ongoing: undefined }));
+}
+
+/** Mixtape tracks lean towards nights out: talks and trade fairs are rarely what a weekend is made of. */
+const MIX_WORKY = new Set(["conferences", "technology", "education"]);
+const mixJitter = (id: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return 0.7 + ((h >>> 0) % 1000) / 1666;
+};
+
+/**
+ * What a Mixtape in a city can be made of, from one local date to another: each event with its
+ * performances in that time (a start and an end), or, for things you drop in on (an
+ * exhibition, an attraction, a market that runs all day), its opening window each day. Prices
+ * are in the city's currency. At most `limit` events, the likeliest picks first, with no one
+ * kind taking more than a third of the places; events in `include` (a shared tape's) always
+ * make it when they're on.
+ */
+export function mixtapePool(cityId: string, fromDate: string, toDate: string, limit = 450, include?: Set<string>): { items: MixCandidate[]; total: number } {
+  const d = getDestination(cityId);
+  if (!d || d.kind !== "city") return { items: [], total: 0 };
+  const tz = d.timeZone && isValidTimeZone(d.timeZone) ? d.timeZone : "UTC";
+  const cur = d.currency ?? "EUR";
+  const W0 = windowIntervals(fromDate, fromDate, tz)[0][0];
+  // Through the last night (until six the next morning).
+  const W1 = windowIntervals(toDate, toDate, tz)[0][1] + 6 * 3600000;
+  const f: SearchFilters = { city: cityId, from: fromDate, to: toDate };
+  const MIN45 = 45 * 60000;
+
+  type Scored = { c: MixCandidate; s: number };
+  const all: Scored[] = [];
+  for (const c of state.cards.values()) {
+    if (c.status === "cancelled" || c.status === "postponed" || c.online || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
+    if (!matches(c, f)) continue;
+    const e = state.events.get(c.id);
+    if (!e) continue;
+    const times: [number, number][] = [];
+    const open: [number, number][] = [];
+    let loose = false;
+    let until: number | undefined;
+    // Each local day of [a, b) inside the window, open from `o` to `cl` ("HH:MM").
+    const daily = (a: number, b: number, o: string, cl: string) => {
+      const lo = Math.max(a, W0);
+      const hi = Math.min(b, W1);
+      if (hi <= lo) return;
+      const first = localDateKey(new Date(lo), tz);
+      const last = localDateKey(new Date(hi - 1), tz);
+      for (let day = first, i = 0; day <= last && i < 8; day = addDaysYMD(day, 1), i++) {
+        const [w] = windowIntervals(day, day, tz, o, cl);
+        const s = Math.max(w[0], a, W0);
+        const en = Math.min(w[1], b, W1);
+        if (en - s >= MIN45) open.push([s, en]);
+      }
+    };
+    const hm = (mins: number) => `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    const dayStart = (t: number) => windowIntervals(localDateKey(new Date(t), tz), localDateKey(new Date(t), tz), tz)[0][0];
+    if (e.eventType === "daily_attraction") {
+      const a = Date.parse(e.start);
+      const b = e.end ? Date.parse(e.end) : a;
+      if (!Number.isFinite(a)) continue;
+      const first = dayStart(a);
+      const last = windowIntervals(localDateKey(new Date(Number.isFinite(b) ? b : a), tz), localDateKey(new Date(Number.isFinite(b) ? b : a), tz), tz)[0][1];
+      if (e.hoursUnknown) {
+        loose = true;
+        daily(first, last, "10:00", "18:00");
+      } else {
+        const opens = Math.floor((((a + tzOffsetMs(a, tz)) % DAY) + DAY) % DAY / 60000);
+        const closes = Math.min(opens + (e.durationMinutes ?? 480), 24 * 60 + 300);
+        daily(first, last, hm(opens), hm(closes));
+      }
+    } else if (e.hoursUnknown) {
+      // Only the dates: the event is on those days, at times not given.
+      loose = true;
+      for (const [a, b] of eventIntervals(e)) daily(dayStart(a), Math.max(b, dayStart(a) + DAY), "10:00", "20:00");
+    } else {
+      for (const [a, b] of eventIntervals(e)) {
+        if (b <= W0 || a >= W1) continue;
+        const len = b - a;
+        if (len <= 4 * 3600000) times.push([a, b]);
+        // A long day (a market, a festival day): drop in while it's on.
+        else if (len <= 16 * 3600000) {
+          const s = Math.max(a, W0);
+          const en = Math.min(b, W1);
+          if (en - s >= MIN45) open.push([s, en]);
+        }
+        // A run over days or months (an exhibition, a season): its days, at the hours its
+        // first and last dates give (else museum hours). Which days it's on may vary.
+        else {
+          const ta = Math.floor((((a + tzOffsetMs(a, tz)) % DAY) + DAY) % DAY / 60000);
+          const tb = Math.floor((((b + tzOffsetMs(b, tz)) % DAY) + DAY) % DAY / 60000);
+          const hours = tb - ta >= 60 && tb - ta <= 14 * 60;
+          daily(a, b, hours ? hm(ta) : "10:00", hours ? hm(tb) : "19:00");
+          until = Math.max(until ?? 0, b);
+        }
+      }
+    }
+    if (!times.length && !open.length) continue;
+    times.sort((x, y) => x[0] - y[0]);
+    open.sort((x, y) => x[0] - y[0]);
+    const price = c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, cur) : undefined;
+    const item: MixCandidate = {
+      id: c.id,
+      slug: c.slug,
+      title: c.title,
+      group: c.groupSlug,
+      cat: c.categorySlug,
+      venue: c.venueName,
+      lat: Math.round(c.lat * 1e5) / 1e5,
+      lng: Math.round(c.lng * 1e5) / 1e5,
+      img: c.imageUrl,
+      hue: c.posterHue,
+      free: c.isFree,
+      price: price == null ? undefined : Math.round(price * 100) / 100,
+      family: c.familyFriendly || undefined,
+      pick: c.editorialPick || undefined,
+      demo: c.isDemo || undefined,
+      times: times.length ? times.slice(0, 16) : undefined,
+      open: open.length ? open.slice(0, 10) : undefined,
+      loose: loose || undefined,
+      until: until && !loose ? until : undefined,
+    };
+    const s = (c.imageUrl ? 3 : 1) * (times.length ? 1.5 : 1) * (LIVELY.has(c.groupSlug) ? 1.5 : 1) * (loose ? 0.6 : 1) * (c.isDemo ? 0.02 : 1) * (MIX_WORKY.has(c.groupSlug) ? 0.4 : 1) * mixJitter(c.id);
+    all.push({ c: item, s });
+  }
+  all.sort((a, b) => b.s - a.s);
+  const cap = Math.ceil(limit / 3);
+  const perGroup = new Map<string, number>();
+  const items: MixCandidate[] = include?.size ? all.filter((x) => include.has(x.c.id)).map((x) => x.c) : [];
+  const taken = new Set(items.map((c) => c.id));
+  for (const { c } of all) {
+    if (items.length >= limit) break;
+    if (taken.has(c.id)) continue;
+    const n = perGroup.get(c.group) ?? 0;
+    if (n >= cap) continue;
+    perGroup.set(c.group, n + 1);
+    items.push(c);
+  }
+  return { items, total: all.length };
 }
 
 /**
