@@ -31,6 +31,8 @@ import { NightFlight, flightPadBottom } from "../earth/night-flight";
 import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
 import { sellerSearches } from "@/lib/sellers";
+import { HerePill } from "../here-pill";
+import type { Here } from "@/lib/here-shared";
 
 // MapLibre touches `window` on import, so the map only loads in the browser. Its download
 // starts as soon as this page's script runs, not when the map first renders.
@@ -92,6 +94,20 @@ export function DiscoverClient() {
   const [space, setSpace] = useState(false);
   const [intro, setIntro] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
+  // Where the visitor is (their choice, else their connection's city): the globe turns to face
+  // it as it arrives, and "Happening soon" lists what's on there.
+  // undefined while it's being found (briefly: the lists wait for it, at most a couple of seconds).
+  const [here, setHere] = useState<Here | null | undefined>(undefined);
+  const linkedView = useRef(false);
+  useEffect(() => {
+    const late = setTimeout(() => setHere((h) => (h === undefined ? null : h)), 2500);
+    fetch("/api/here")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { here: Here } | null) => setHere(j?.here ?? null))
+      .catch(() => setHere(null))
+      .finally(() => clearTimeout(late));
+    return () => clearTimeout(late);
+  }, []);
   const [mapReady, setMapReady] = useState(false);
   // Where the camera really is (the view state pauses while the planet turns), for the glow.
   const [cam, setCam] = useState<{ zoom: number; lat: number } | null>(null);
@@ -164,6 +180,7 @@ export function DiscoverClient() {
     if (sp.get("style") === "map" || sp.get("style") === "satellite") setBase(sp.get("style") as BaseStyle);
     const m = sp.get("view") as ViewMode | null;
     setMode(!ok ? "list" : m === "map" || m === "list" ? m : "globe");
+    linkedView.current = !!(sp.get("at") || sp.get("v") || sp.get("pin"));
     if (sp.get("at") || sp.get("v") || sp.get("pin")) setAutoRotate(false);
     // A fresh visit arrives from deep space; shared links open right where they point.
     else setIntro(true);
@@ -578,7 +595,7 @@ export function DiscoverClient() {
             ref={mapApi}
             className="absolute inset-0"
             ariaLabel="Interactive map of Earth with events. Drag to move, scroll or pinch to zoom, right-drag or two fingers to tilt and rotate. Arrow keys pan and plus or minus zoom when the map is focused. Use the list view for full keyboard access to every event."
-            initial={initialView!}
+            initial={here?.city && !linkedView.current ? { ...initialView!, lat: Math.max(-30, Math.min(48, here.city.lat * 0.8)), lng: here.city.lng } : initialView!}
             projection={projection}
             base={base}
             layers={layers}
@@ -622,13 +639,21 @@ export function DiscoverClient() {
         <div className="max-w-[min(34rem,100%)]">
           <div className="pointer-events-auto">
             <h1 className={`text-balance on-sky ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
-              <span className="block t-hero">One planet. <span className="text-white/80">Every experience.</span></span>
+              <span className="block t-hero">One planet. <em className="text-white/85">Every experience.</em></span>
               <span className="max-sm:sr-only block font-medium text-[0.9375rem] leading-snug mt-1.5 text-white/90">
                 Spin it, tap a glowing marker, or ask for anything.
               </span>
             </h1>
             {!(view.zoom > 4 || place || mode === "list") && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="hero-ctas mt-3 flex items-center gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:no-scrollbar max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+                {here && (
+                  <div className="lg:hidden shrink-0">
+                    <HerePill here={here} tone="glass" onChange={(h) => {
+                      setHere(h);
+                      if (h.city) fly({ lat: h.city.lat, lng: h.city.lng, zoom: 10.5 });
+                    }} />
+                  </div>
+                )}
                 <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-text hover:brightness-105">
                   <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
                 </button>
@@ -941,7 +966,10 @@ export function DiscoverClient() {
           onClearFocus={() => setFocusedVenue(null)}
         />
       ) : (
-        mode !== "list" && <DiscoveryPanel filters={filters} interests={user.prefs.interests} onHover={peek} onPick={(c) => (setHovered(null), clearTimeout(peekTimer.current), setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
+        mode !== "list" && <DiscoveryPanel filters={filters} here={here} onHere={(h) => {
+          setHere(h);
+          if (h.city) fly({ lat: h.city.lat, lng: h.city.lng, zoom: 10.5 });
+        }} interests={user.prefs.interests} onHover={peek} onPick={(c) => (setHovered(null), clearTimeout(peekTimer.current), setSelection({ kind: "event", card: c }), fly({ lat: c.lat, lng: c.lng, zoom: 13 }))} onCity={(id) => {
           const d = getDestination(id);
           if (d) fly({ lat: d.lat, lng: d.lng, zoom: 10.5 });
           setFilters((f) => ({ ...f, city: id, country: undefined, continent: undefined }));
@@ -1085,17 +1113,20 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; o
   );
 }
 
-function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filters: SearchFilters; interests: string[]; onPick: (c: EventCard) => void; onCity: (id: string) => void; onHover: (c: EventCard | null) => void }) {
+function DiscoveryPanel({ filters, here, onHere, interests, onPick, onCity, onHover }: { filters: SearchFilters; here: Here | null | undefined; onHere: (h: Here) => void; interests: string[]; onPick: (c: EventCard) => void; onCity: (id: string) => void; onHover: (c: EventCard | null) => void }) {
   const [open, setOpen] = useState(true);
-  const base = filtersToParams({ ...filters, from: undefined, to: undefined, page: undefined, sort: undefined });
+  // Lists open on the visitor's city unless the search already says where.
+  const placed = !!(filters.city || filters.country || filters.continent || filters.near || filters.places?.length || filters.group);
+  const near = !placed && here?.city ? here.city : null;
+  const base = filtersToParams({ ...filters, city: near?.id ?? filters.city, from: undefined, to: undefined, page: undefined, sort: undefined });
   const wk = datePresets()[1];
   const weekend = new URLSearchParams(base);
   weekend.set("from", wk.from);
   weekend.set("to", wk.to);
   weekend.set("size", "8");
-  const fresh = new URLSearchParams(filtersToParams({ ...filters, sort: "announced", page: undefined }));
+  const fresh = new URLSearchParams(filtersToParams({ ...filters, city: near?.id ?? filters.city, sort: "announced", page: undefined }));
   fresh.set("size", "8");
-  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "8", status: "on_sale" }) : null;
+  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "8", status: "on_sale", ...(near ? { city: near.id } : {}) }) : null;
   const tabs = [
     ...(forYou ? [{ id: "you", label: "For you", params: forYou.toString(), empty: "Nothing on sale matches your interests right now." }] : []),
     { id: "weekend", label: "This weekend", params: weekend.toString(), empty: "Nothing this weekend matches your filters." },
@@ -1104,7 +1135,7 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   ];
   const [tab, setTab] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === tab) ?? tabs[0];
-  const { items, loading, error } = useEvents(active.params);
+  const { items, loading, error } = useEvents(here === undefined && active.id !== "buzz" ? null : active.params);
   const [cities, setCities] = useState<{ id: string; name: string; country?: string; stats?: { total: number } }[]>([]);
   useEffect(() => {
     fetch("/api/destinations")
@@ -1116,10 +1147,11 @@ function DiscoveryPanel({ filters, interests, onPick, onCity, onHover }: { filte
   return (
     <section aria-label="Discover" className="absolute z-20 right-4 sm:right-6 top-[calc(var(--header-h)+0.5rem)] w-[360px] max-h-[calc(100dvh-var(--header-h)-5rem)] hidden lg:flex flex-col surface-float rounded-[var(--radius-l)] panel-slide">
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
-        <button className="flex-1 flex items-center gap-1.5 text-left" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          <span className="t-h3">Happening soon</span>
-          {open ? <ChevronUp size={16} aria-hidden className="text-text-3" /> : <ChevronDown size={16} aria-hidden className="text-text-3" />}
+        <button className="flex-1 flex items-center gap-1.5 text-left min-w-0" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="t-h3 truncate">Happening soon</span>
+          {open ? <ChevronUp size={16} aria-hidden className="text-text-3 shrink-0" /> : <ChevronDown size={16} aria-hidden className="text-text-3 shrink-0" />}
         </button>
+        {here && !placed && <HerePill here={here} align="right" onChange={onHere} />}
       </div>
       {open && (
         <div className="overflow-auto scroll-thin px-4 pb-4">

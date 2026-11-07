@@ -195,7 +195,7 @@ export function MatchDeck() {
       <div className="mx-auto max-w-[620px] px-4 pt-6 pb-10">
         <div className="text-center">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
-          <h1 className="t-h1 mt-3">Swipe your next plan</h1>
+          <h1 className="t-h1 mt-3">Swipe your <em>next plan</em></h1>
           <p className="t-body text-text-2 mt-2">Tell us what you fancy, then swipe: right to save, left to pass, up to open.</p>
         </div>
         <div className="mt-5">
@@ -208,7 +208,7 @@ export function MatchDeck() {
     <div className="mx-auto max-w-[520px] px-4 pt-6 pb-10">
       <div className="text-center">
         <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
-        <h1 className="t-h1 mt-3">Swipe your next plan</h1>
+        <h1 className="t-h1 mt-3">Swipe your <em>next plan</em></h1>
         <p className="t-small text-text-2 mt-1">Right to save it, left to pass, up to open. Arrow keys work too.</p>
       </div>
 

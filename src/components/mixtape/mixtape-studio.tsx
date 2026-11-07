@@ -88,7 +88,7 @@ function gapNote(from: number, to: number, tz: string): string | null {
  * Shuffle, lock, swap or drop tracks, play it on the map, then share it, put it in your
  * calendar or keep it on your shelf.
  */
-export function MixtapeStudio({ cities, link }: { cities: MixCity[]; link: TapeLink | null }) {
+export function MixtapeStudio({ cities, link, here }: { cities: MixCity[]; link: TapeLink | null; /** The visitor's city, and whether they chose it (or their device found it). */ here?: { id: string; chosen: boolean } | null }) {
   const [now, setNow] = useState<number | null>(null);
   const [cityId, setCityId] = useState(link?.city ?? "");
   const [kind, setKind] = useState<WhenKind>(link?.kind ?? "weekend");
@@ -182,7 +182,10 @@ export function MixtapeStudio({ cities, link }: { cities: MixCity[]; link: TapeL
     }
     if (last.vibe && typeof last.vibe.energy === "number") setVibe({ ...DEFAULT_VIBE, ...last.vibe, moods: Array.isArray(last.vibe.moods) ? last.vibe.moods : [] });
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const pick = cities.find((c) => c.id === last.city) ?? cities.filter((c) => c.tz === tz).sort((a, b) => b.n - a.n)[0] ?? cities[0];
+    // A city they chose (or their device found) first, then the one used last time, then the one
+    // their connection is in, then the busiest in their time zone.
+    const byId = (id?: string) => (id ? cities.find((c) => c.id === id) : undefined);
+    const pick = (here?.chosen ? byId(here.id) : undefined) ?? byId(last.city) ?? byId(here?.id) ?? cities.filter((c) => c.tz === tz).sort((a, b) => b.n - a.n)[0] ?? cities[0];
     if (pick) setCityId(pick.id);
     // Once, on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps

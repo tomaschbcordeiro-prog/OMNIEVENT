@@ -66,7 +66,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
       <section className="sky relative overflow-hidden">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-10 pb-12 grid gap-8 lg:grid-cols-[1.3fr_1fr] items-center">
           <div className="on-sky">
-            <h1 className="t-display text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind every pin on the map</h1>
+            <h1 className="t-display text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind <em>every pin</em> on the map</h1>
             <p className="t-body text-white/95 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
             {/* Numbers only once there's something to count. */}
             {(!home || Object.values(home.stats).some((n) => n > 0)) && (

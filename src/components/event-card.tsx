@@ -92,7 +92,7 @@ export function EventRow({
       onMouseEnter={onHover ? () => onHover(c) : undefined}
       onMouseLeave={onHover ? () => onHover(null) : undefined}
       onFocusCapture={onHover ? () => onHover(c) : undefined}
-      className={`group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-text/[0.03] ${highlighted ? "bg-cyan/[0.07] ring-1 ring-cyan/40" : ""}`}
+      className={`event-row reveal group relative flex items-center gap-3 sm:gap-4 py-3 px-2 -mx-2 rounded-[var(--radius-m)] hover:bg-text/[0.03] ${highlighted ? "bg-cyan/[0.07] ring-1 ring-cyan/40" : ""}`}
     >
       {onSelect ? (
         <button type="button" className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4 text-left" onClick={() => onSelect(c)}>
@@ -112,7 +112,7 @@ export function EventTile({ c }: { c: Card }) {
   const user = useUser();
   const people = peopleLine(c);
   return (
-    <li className="tile group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
+    <li className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
       <Link href={`/events/${c.slug}`} className="flex flex-col flex-1">
         <div className="relative overflow-hidden">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />

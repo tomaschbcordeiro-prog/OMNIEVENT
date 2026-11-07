@@ -10,6 +10,12 @@ import { getDestination } from "@/lib/destinations";
 import { Suspense } from "react";
 import { ContinueSearch } from "@/components/continue-search";
 import { summarizeSearch } from "@/lib/search/summary";
+import { getHere } from "@/lib/here";
+import { HerePill } from "@/components/here-pill";
+import type { SearchFilters } from "@/lib/types";
+
+/** Whether a search already says where (then the visitor's city isn't added). */
+const saysWhere = (f: SearchFilters) => !!(f.city || f.country || f.continent || f.near || f.places?.length || f.group || f.venue);
 
 export const dynamic = "force-dynamic";
 
@@ -41,23 +47,52 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
   const params = toParams(sp);
   const asked = params.get("asked");
   const notice = params.get("notice");
+  const anywhere = params.get("where") === "any";
   params.delete("asked");
   params.delete("notice");
+  params.delete("where");
   await ensureFresh();
   const parsed = parseFilterParams(params);
-  const filters = parsed.ok ? parsed.filters : {};
+  const asGiven = parsed.ok ? parsed.filters : {};
+  // Without a place in the search, it opens on the visitor's city (one tap shows everywhere).
+  const here = await getHere();
+  const local = !anywhere && !asked && !saysWhere(asGiven) && here.city ? here.city : null;
+  const filters: SearchFilters = local ? { ...asGiven, city: local.id } : asGiven;
   const result = searchEvents(filters);
   const interp = asked ? parseQuery(asked, {}) : null;
+  const cityName = filters.city ? getDestination(filters.city)?.name : undefined;
+  const everywhere = new URLSearchParams(params);
+  everywhere.delete("page");
+  everywhere.set("where", "any");
 
   return (
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
         <div className="mb-6">
-          <h1 className="t-h1">{asked ? `Results for “${asked}”` : filters.near ? `Events near ${filters.nearLabel?.split(",")[0] ?? "the selected point"}` : "All events"}</h1>
-          {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-1">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-            <p className="t-lede text-text-2">Every category, every city, in one search.</p>
-            <Link href="/studio/new" className="btn btn-secondary btn-sm press">＋ List your event</Link>
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+            <div className="min-w-0">
+              <h1 className="t-display">
+                {asked ? (
+                  <>Results for <em>“{asked}”</em></>
+                ) : filters.near ? (
+                  <>Events near <em>{filters.nearLabel?.split(",")[0] ?? "the selected point"}</em></>
+                ) : cityName ? (
+                  <>What&apos;s on in <em>{cityName}</em></>
+                ) : (
+                  <>Everything, <em>everywhere</em></>
+                )}
+              </h1>
+              {(filters.near || filters.tFrom || filters.from) && <p className="t-small text-text-3 mt-2">{summarizeSearch(filters).text}. Times are local to each venue.</p>}
+            </div>
+            <Link href="/studio/new" className="btn btn-secondary btn-sm press max-sm:hidden">＋ List your event</Link>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <HerePill here={here} label={local ? "Near" : undefined} />
+            {local ? (
+              <Link href={`/events?${everywhere}`} className="t-small text-text-2 hover:text-text underline-offset-4 hover:underline">See everywhere</Link>
+            ) : (
+              <p className="t-small text-text-2">Every category, every city, in one search.</p>
+            )}
           </div>
         </div>
         <div className="grid gap-2 mb-4">
@@ -74,7 +109,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <Suspense fallback={null}>
           <ContinueSearch />
         </Suspense>
-        <EventsBrowser result={result} filters={filters} facets={result.facets} />
+        <EventsBrowser result={result} filters={filters} facets={result.facets} implicitCity={here.city && filters.city === here.city.id ? here.city.id : undefined} anywhere={anywhere} />
       </main>
       <Footer />
     </>

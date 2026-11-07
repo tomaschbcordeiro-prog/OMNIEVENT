@@ -18,13 +18,17 @@ import { FilterForm, ActiveFilters } from "./discover/filters";
  * results, and the URL is always shareable and crawlable.
  */
 export function EventsBrowser({
-  result, filters, facets, hideCategoryStrip = false, basePath,
+  result, filters, facets, hideCategoryStrip = false, basePath, implicitCity, anywhere = false,
 }: {
   result: Paged<EventCard>;
   filters: SearchFilters;
   facets?: { groups: Record<string, number> };
   hideCategoryStrip?: boolean;
   basePath?: string;
+  /** The visitor's city, added because the search named no place: dropping it means "everywhere". */
+  implicitCity?: string;
+  /** The visitor asked for everywhere: keep it so as they refine the search. */
+  anywhere?: boolean;
 }) {
   const router = useRouter();
   const path = usePathname();
@@ -34,6 +38,8 @@ export function EventsBrowser({
 
   const go = (f: SearchFilters) => {
     const p = filtersToParams(f);
+    const placed = !!(f.city || f.country || f.continent || f.near || f.places?.length || f.group || f.venue);
+    if (!placed && (anywhere || (implicitCity && filters.city === implicitCity))) p.set("where", "any");
     start(() => router.push(`${basePath ?? path}${p.toString() ? `?${p}` : ""}`, { scroll: false }));
   };
   const n = activeFilterCount(filters);

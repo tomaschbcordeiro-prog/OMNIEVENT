@@ -7,7 +7,7 @@ import { ensureFresh, getEventView, refreshSource, searchEvents } from "@/lib/st
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
-import { CategoryIcon, DemoBadge, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
+import { CategoryIcon, DemoBadge, HeroImage, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
 import { ShareToClub } from "@/components/clubs/share-to-club";
@@ -140,8 +140,12 @@ export default async function EventPage({ params }: { params: P }) {
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <article className="min-w-0">
             <div className="relative overflow-hidden rounded-[var(--radius-l)] border border-line">
-              {/* A real picture gets room; without one, a short band keeps the title near the top. */}
-              <Poster priority title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className={e.imageUrl ? "aspect-[21/9] max-h-[420px] w-full" : "h-32 sm:h-40 w-full"} />
+              {/* A real picture gets room, shown whole; without one, a short band keeps the title near the top. */}
+              {e.imageUrl ? (
+                <HeroImage src={e.imageUrl} title={e.title} hue={e.posterHue} categorySlug={e.categorySlug} />
+              ) : (
+                <Poster priority title={e.title} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className="h-32 sm:h-40 w-full" />
+              )}
             </div>
 
             <header className="mt-6">
@@ -221,14 +225,14 @@ export default async function EventPage({ params }: { params: P }) {
             </dl>
 
             {e.description && (
-              <section className="mt-8" aria-labelledby="about">
+              <section className="reveal mt-8" aria-labelledby="about">
                 <h2 id="about" className="t-h2">About</h2>
                 <div className="t-body text-text-2 mt-2 measure whitespace-pre-line">{e.description}</div>
               </section>
             )}
 
             {e.programme && e.programme.length > 0 && (
-              <section className="mt-8" aria-labelledby="prog">
+              <section className="reveal mt-8" aria-labelledby="prog">
                 <h2 id="prog" className="t-h2">Programme</h2>
                 <ol className="mt-3 relative grid gap-3 border-l-2 border-line pl-5 ml-1.5">
                   {e.programme.map((p) => (
@@ -243,7 +247,7 @@ export default async function EventPage({ params }: { params: P }) {
             )}
 
             {(e.schedule?.length || e.timeSlots?.length) && (
-              <section className="mt-8" aria-labelledby="sched">
+              <section className="reveal mt-8" aria-labelledby="sched">
                 <h2 id="sched" className="t-h2">{e.timeSlots ? "Entry times" : "More performances"}</h2>
                 {e.timeSlots && <p className="t-small text-text-3 mt-1">Today&apos;s timed-entry slots as reported by the seller.</p>}
                 <ul className="mt-3 flex flex-wrap gap-2">
@@ -258,7 +262,7 @@ export default async function EventPage({ params }: { params: P }) {
             )}
 
             {e.people.length > 0 && (
-              <section className="mt-8" aria-labelledby="people">
+              <section className="reveal mt-8" aria-labelledby="people">
                 <h2 id="people" className="t-h2 flex items-center gap-2"><Users size={18} className="text-text-3" aria-hidden />{group === "sports" ? "Competitors" : group === "conferences" || group === "technology" ? "Speakers" : group === "theatre" ? "Cast" : "Line-up"}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {e.people.map((p) => (
@@ -276,7 +280,7 @@ export default async function EventPage({ params }: { params: P }) {
               </section>
             )}
 
-            <section id="tickets" className="mt-10 scroll-mt-24" aria-labelledby="tix">
+            <section id="tickets" className="reveal mt-10 scroll-mt-24" aria-labelledby="tix">
               <h2 id="tix" className="t-h2 mb-4">Tickets</h2>
               {(e.registrationRequired || e.ticketAccess === "registration") && <p className="t-small text-text-2 -mt-2 mb-4">Register with the organiser before you go.</p>}
               {e.ticketAccess === "free" ? (
@@ -300,7 +304,7 @@ export default async function EventPage({ params }: { params: P }) {
 
             {/* Only what the source actually says: no blocks of "nothing published". */}
             {(e.ageRestriction?.note || access.length > 0) && (
-              <section className="mt-10 grid gap-6 sm:grid-cols-2" aria-label="Good to know">
+              <section className="reveal mt-10 grid gap-6 sm:grid-cols-2" aria-label="Good to know">
                 {e.ageRestriction?.note && (
                   <div>
                     <h2 className="t-h3 flex items-center gap-2"><ShieldCheck size={16} className="text-text-3" aria-hidden />Age policy</h2>
@@ -318,7 +322,7 @@ export default async function EventPage({ params }: { params: P }) {
               </section>
             )}
 
-            <section className="mt-10" aria-labelledby="loc">
+            <section className="reveal mt-10" aria-labelledby="loc">
               <h2 id="loc" className="t-h2">Location</h2>
               <div className="mt-3">
                 <LocationMap lat={v.lat} lng={v.lng} label={v.name} group={group} />

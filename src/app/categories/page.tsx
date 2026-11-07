@@ -23,7 +23,7 @@ export default async function CategoriesPage() {
   return (
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
-        <h1 className="t-h1">What are you into?</h1>
+        <h1 className="t-h1">What are you <em>into?</em></h1>
         <p className="t-lede text-text-2 mt-2">Pick a category to see what&apos;s on, where, and for how much.</p>
 
         {/* The three largest worlds get room; everything else is a scannable index. */}

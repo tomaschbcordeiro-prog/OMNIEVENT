@@ -21,7 +21,7 @@ export default function AboutPage() {
     <>
       <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-10 pb-6">
         <p className="t-small font-semibold text-text-3">About</p>
-        <h1 className="t-h1 mt-1 max-w-[22ch]">Every event on Earth, in one place</h1>
+        <h1 className="t-h1 mt-1 max-w-[22ch]">Every event on Earth, <em>in one place</em></h1>
         <p className="t-lede text-text-2 mt-3">
           OMNIEVENT gathers concerts, sport, theatre, festivals, exhibitions, talks and family days from official sources around the world, so you can find what&apos;s on anywhere, on any date, without opening twenty sites.
         </p>

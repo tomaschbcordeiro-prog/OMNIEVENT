@@ -10,7 +10,7 @@ import { formatMoney, STATUS_META } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
 import { userActions, useUser } from "@/lib/user/store";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "./toast";
 import type { ReactNode } from "react";
 
@@ -49,6 +49,52 @@ export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number 
  * Event artwork. Real provider images are shown when present; otherwise a
  * generated poster (no stock photos pretending to be the event).
  */
+/**
+ * An event's main picture, shown whole: never cropped (posters keep their words) and never
+ * blown up past a little over its own size (no blur), on a soft backdrop made from the picture
+ * itself. Falls back to the drawn poster when it can't load.
+ */
+export function HeroImage({ src, title, hue, categorySlug }: { src: string; title: string; hue?: number; categorySlug: string }) {
+  const [broken, setBroken] = useState(false);
+  const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const img = useRef<HTMLImageElement>(null);
+  // A picture that finished loading before the page's script ran has no load event to wait for.
+  useEffect(() => {
+    const el = img.current;
+    if (el?.complete && el.naturalWidth) measure(el);
+    else if (el?.complete) setBroken(true);
+  }, []);
+  if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="h-32 sm:h-40 w-full" />;
+  function measure(img: HTMLImageElement) {
+    const b = box.current?.getBoundingClientRect();
+    if (!b?.width || !img.naturalWidth) return;
+    // Fit inside the frame, enlarging small pictures by a third at most.
+    const s = Math.min(b.width / img.naturalWidth, b.height / img.naturalHeight, 1.35);
+    setFit({ w: Math.min(100, ((img.naturalWidth * s) / b.width) * 100), h: Math.min(100, ((img.naturalHeight * s) / b.height) * 100) });
+  }
+  return (
+    <div ref={box} className="hero-img aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" aria-hidden className="hero-img-bg" referrerPolicy="no-referrer" decoding="async" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="hero-img-fg"
+        data-ready={fit ? "" : undefined}
+        style={fit ? { width: `${fit.w}%`, height: `${fit.h}%` } : undefined}
+        fetchPriority="high"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        ref={img}
+        onLoad={(e) => measure(e.currentTarget)}
+        onError={() => setBroken(true)}
+      />
+    </div>
+  );
+}
+
 export function Poster({
   imageUrl, hue = 210, categorySlug, className = "", size = "md", priority = false,
 }: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg"; /** The page's main picture: loaded first, not lazily. */ priority?: boolean }) {

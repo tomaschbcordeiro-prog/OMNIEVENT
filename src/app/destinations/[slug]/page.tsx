@@ -117,7 +117,7 @@ export default async function DestinationPage({ params, searchParams }: { params
           <ClusterMap params={filtersToParams(base).toString()} initial={{ lat: d.lat, lng: d.lng, zoom }} className="h-80" />
         </div>
 
-        <section className="mt-10" aria-labelledby="cal">
+        <section className="reveal mt-10" aria-labelledby="cal">
           <h2 id="cal" className="t-h3">{user.from ? "Events per day of your trip" : "Next two weeks"}</h2>
           <p className="t-micro text-text-3">Dated events per local day. Daily attractions are not counted.</p>
           {/* Each day stays at least 32 px wide (a comfortable tap); on phones the strip scrolls sideways. */}
@@ -146,7 +146,7 @@ export default async function DestinationPage({ params, searchParams }: { params
         </section>
 
         {groups.length > 0 && (
-          <section className="mt-10" aria-labelledby="mix">
+          <section className="reveal mt-10" aria-labelledby="mix">
             <h2 id="mix" className="t-h3">What&apos;s on here</h2>
             <ul className="mt-3 flex flex-wrap gap-2">
               {groups.map(([g, n]) => (
@@ -179,7 +179,7 @@ export default async function DestinationPage({ params, searchParams }: { params
         </div>
 
         {venues.length > 0 && (
-          <section className="mt-12" aria-labelledby="venues">
+          <section className="reveal mt-12" aria-labelledby="venues">
             <h2 id="venues" className="t-h2">Venues</h2>
             <p className="t-small text-text-3">Ordered by number of listed upcoming events.</p>
             <ul className="mt-3 grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -196,7 +196,7 @@ export default async function DestinationPage({ params, searchParams }: { params
         )}
 
         {childCities.length > 0 && (
-          <section className="mt-12" aria-labelledby="cities">
+          <section className="reveal mt-12" aria-labelledby="cities">
             <h2 id="cities" className="t-h2">Cities</h2>
             <ul className="mt-3 grid gap-x-8 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
               {childCities.map((c) => (

@@ -4,6 +4,7 @@ import { CITIES, getDestination } from "@/lib/destinations";
 import { parseTapeQuery, tapeQuery } from "@/lib/mixtape/share";
 import { tapeName } from "@/lib/mixtape/plan";
 import { MixtapeStudio, type MixCity } from "@/components/mixtape/mixtape-studio";
+import { getHere } from "@/lib/here";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
@@ -42,5 +43,6 @@ export default async function MixtapePage({ searchParams }: { searchParams: SP }
     .map(toCity)
     .sort((a, b) => b.n - a.n)
     .slice(0, 400);
-  return <MixtapeStudio cities={cities} link={link} />;
+  const here = await getHere();
+  return <MixtapeStudio cities={cities} link={link} here={here.city ? { id: here.city.id, chosen: here.source === "chosen" || here.source === "gps" } : null} />;
 }

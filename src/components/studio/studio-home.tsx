@@ -147,7 +147,7 @@ export function StudioHome() {
         </section>
 
         {/* ---- Templates ---- */}
-        <section aria-labelledby="tpl-h" className="mt-14">
+        <section aria-labelledby="tpl-h" className="reveal mt-14">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2 id="tpl-h" className="t-h2">Start from a template</h2>
@@ -174,7 +174,7 @@ export function StudioHome() {
         </section>
 
         {/* ---- Your events ---- */}
-        <section aria-labelledby="mine-h" className="mt-16">
+        <section aria-labelledby="mine-h" className="reveal mt-16">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 id="mine-h" className="t-h2">Your events</h2>
             <Link href="/studio/new" className="btn btn-secondary btn-sm">＋ New event</Link>
@@ -191,7 +191,7 @@ export function StudioHome() {
         </section>
 
         {/* ---- Why ---- */}
-        <section aria-label="Why the Studio" className="mt-16 grid gap-4 sm:grid-cols-3">
+        <section aria-label="Why the Studio" className="reveal mt-16 grid gap-4 sm:grid-cols-3">
           {[
             ["🌍", "On the globe, in a minute", "Your event appears on the 3D globe, in search, on its city's page and in Spin the globe."],
             ["🎨", "A poster that designs itself", "Four styles from your details, used on cards, your page and when people share the link."],
