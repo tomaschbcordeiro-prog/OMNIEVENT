@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { ensureFresh, getCards } from "@/lib/store";
+import { dataReady, ensureFresh, getCards } from "@/lib/store";
 import { getDestination } from "@/lib/destinations";
 import { parseTapeQuery } from "@/lib/mixtape/share";
 import { tapeHue, tapeName } from "@/lib/mixtape/plan";
@@ -37,7 +37,14 @@ export async function GET(req: Request) {
   const city = link ? getDestination(link.city) : undefined;
   if (!link || !city || city.kind !== "city") return new Response("Not found", { status: 404 });
   await ensureFresh();
-  const cards = new Map(getCards(link.tracks.map((t) => t.id)).map((c) => [c.id, c]));
+  const ids = link.tracks.map((t) => t.id);
+  let cards = new Map(getCards(ids).map((c) => [c.id, c]));
+  // A server that has just started may still be loading some sources: give it a few seconds.
+  for (let i = 0; i < 4 && cards.size < ids.length && !dataReady(); i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    await ensureFresh();
+    cards = new Map(getCards(ids).map((c) => [c.id, c]));
+  }
   const tz = city.timeZone ?? "UTC";
   const when = (t: number, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, ...o }).format(new Date(t)).replace(",", "").toUpperCase();
   const tracks = link.tracks.filter((t) => cards.has(t.id));
@@ -99,7 +106,8 @@ export async function GET(req: Request) {
       width: W,
       height: H,
       fonts: loaded.length ? loaded : undefined,
-      headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" },
+      // Kept for good once every track is found; while this server is still loading events, only briefly.
+      headers: { "Cache-Control": tracks.length === link.tracks.length && dataReady() ? "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" : "public, max-age=60, s-maxage=60" },
     },
   );
 }
