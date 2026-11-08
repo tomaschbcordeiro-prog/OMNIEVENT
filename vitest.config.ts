@@ -8,5 +8,7 @@ export default defineConfig({
       "server-only": path.resolve(__dirname, "tests/server-only-stub.ts"),
     },
   },
+  // Components are compiled the way Next compiles them (no React import needed).
+  esbuild: { jsx: "automatic" },
   test: { include: ["tests/**/*.test.ts"], environment: "node" },
 });

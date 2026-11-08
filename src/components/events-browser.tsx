@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
 import { rememberSearch } from "@/lib/search/session";
@@ -17,6 +17,9 @@ import { FilterForm, ActiveFilters } from "./discover/filters";
  * Filter state lives in the URL. Every change navigates, the server re-renders
  * results, and the URL is always shareable and crawlable.
  */
+/** Small words not worth marking in titles. */
+const STOP = new Set(["the", "and", "for", "with", "this", "that", "next", "near", "from", "until", "der", "die", "das", "und", "les", "des", "pour", "avec", "del", "los", "las", "con", "para", "dos", "das", "com", "por", "uma", "um"]);
+
 export function EventsBrowser({
   result, filters, facets, hideCategoryStrip = false, basePath, implicitCity, anywhere = false,
 }: {
@@ -34,6 +37,8 @@ export function EventsBrowser({
   const path = usePathname();
   const [pending, start] = useTransition();
   const [layout, setLayout] = useState<"list" | "grid">("list");
+  // The words searched for, marked in the titles that match.
+  const terms = useMemo(() => (filters.q ?? "").split(/[\s,.;:!?"“”()]+/).filter((w) => w.length >= 3 && !STOP.has(w.toLowerCase())), [filters.q]);
   const [drawer, setDrawer] = useState(false);
 
   const go = (f: SearchFilters) => {
@@ -130,13 +135,13 @@ export function EventsBrowser({
           ) : layout === "list" ? (
             <ul className="divide-y divide-line">
               {result.items.map((c) => (
-                <EventRow key={c.id} c={c} />
+                <EventRow key={c.id} c={c} terms={terms} />
               ))}
             </ul>
           ) : (
             <ul className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
               {result.items.map((c) => (
-                <EventTile key={c.id} c={c} />
+                <EventTile key={c.id} c={c} terms={terms} />
               ))}
             </ul>
           )}

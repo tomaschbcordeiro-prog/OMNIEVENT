@@ -72,8 +72,8 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
               <h1 className="t-display">
-                {asked ? (
-                  <>Results for <em>“{asked}”</em></>
+                {asked || filters.q ? (
+                  <>Results for <em>“{asked ?? filters.q}”</em></>
                 ) : filters.near ? (
                   <>Events near <em>{filters.nearLabel?.split(",")[0] ?? "the selected point"}</em></>
                 ) : cityName ? (

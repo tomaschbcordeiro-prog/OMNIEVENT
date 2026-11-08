@@ -3894,3 +3894,12 @@ html.theme-vt::view-transition-new(root) {
     transition: none;
   }
 }
+/* Searched words in result titles. */
+mark.hit {
+  background: color-mix(in srgb, var(--sun) 38%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}

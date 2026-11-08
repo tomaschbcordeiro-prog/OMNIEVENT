@@ -7,6 +7,38 @@ import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/li
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
 import { useUser } from "@/lib/user/store";
 
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** The title with the searched words marked (accents and case ignored). */
+export function Marked({ text, terms }: { text: string; terms?: string[] }) {
+  const words = (terms ?? []).map(fold).filter((t) => t.length >= 2);
+  if (!words.length) return <>{text}</>;
+  // Folding keeps one character per character for Latin text, so positions line up; when it
+  // doesn't (some scripts), the title is shown as it is.
+  const folded = fold(text);
+  if (folded.length !== text.length) return <>{text}</>;
+  const hits: [number, number][] = [];
+  for (const w of words) {
+    let i = folded.indexOf(w);
+    while (i >= 0) {
+      hits.push([i, i + w.length]);
+      i = folded.indexOf(w, i + w.length);
+    }
+  }
+  if (!hits.length) return <>{text}</>;
+  hits.sort((a, b) => a[0] - b[0]);
+  const out: React.ReactNode[] = [];
+  let at = 0;
+  for (const [s, e] of hits) {
+    if (s < at) continue;
+    if (s > at) out.push(text.slice(at, s));
+    out.push(<mark key={s} className="hit">{text.slice(s, e)}</mark>);
+    at = e;
+  }
+  out.push(text.slice(at));
+  return <>{out}</>;
+}
+
 function peopleLine(c: Card): string | undefined {
   if (!c.people.length) return undefined;
   if (c.sports && c.people.length === 2 && c.people.every((p) => p.role.startsWith("team"))) return `${c.people[0].name} vs ${c.people[1].name}`;
@@ -45,8 +77,8 @@ function DateBlock({ c }: { c: Card }) {
 }
 
 export function EventRow({
-  c, onSelect, compact = false, highlighted = false, onHover,
-}: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void }) {
+  c, onSelect, compact = false, highlighted = false, onHover, terms,
+}: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void; /** Searched words to mark in the title. */ terms?: string[] }) {
   const user = useUser();
   const people = peopleLine(c);
   const body = (
@@ -62,7 +94,7 @@ export function EventRow({
           </span>
         </div>
         {/* Phones wrap long titles onto two lines rather than cutting them off. */}
-        <p className={`font-semibold leading-snug mt-0.5 group-hover:text-cyan transition-colors ${compact ? "truncate" : "line-clamp-2 md:line-clamp-none md:truncate"}`}>{c.title}</p>
+        <p className={`font-semibold leading-snug mt-0.5 group-hover:text-cyan transition-colors ${compact ? "truncate" : "line-clamp-2 md:line-clamp-none md:truncate"}`}><Marked text={c.title} terms={terms} /></p>
         {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
         <p className="t-small text-text-3 truncate flex items-center mt-0.5">
           <MapPin size={12} aria-hidden className="shrink-0 mr-1" />
@@ -108,7 +140,7 @@ export function EventRow({
   );
 }
 
-export function EventTile({ c }: { c: Card }) {
+export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
   const user = useUser();
   const people = peopleLine(c);
   return (
@@ -126,7 +158,7 @@ export function EventTile({ c }: { c: Card }) {
             <CategoryIcon slug={c.categorySlug} size={13} />
             <span className="truncate">{c.sports?.competition ?? categoryLabel(c.categorySlug)}</span>
           </div>
-          <p className="font-semibold leading-snug line-clamp-2 group-hover:text-cyan transition-colors">{c.title}</p>
+          <p className="font-semibold leading-snug line-clamp-2 group-hover:text-cyan transition-colors"><Marked text={c.title} terms={terms} /></p>
           {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
           <p className="t-small text-text-3 truncate tnum">
             {cardWhen(c)}
