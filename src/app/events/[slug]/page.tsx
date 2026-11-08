@@ -87,10 +87,19 @@ function jsonLd(e: EventView) {
       address: { "@type": "PostalAddress", streetAddress: e.venue.address, addressLocality: e.venue.city, addressCountry: e.venue.countryCode },
       geo: { "@type": "GeoCoordinates", latitude: e.venue.lat, longitude: e.venue.lng },
     },
-    performer: e.people.map((p) => ({ "@type": p.kind === "team" ? "SportsTeam" : "PerformingGroup", name: p.name })),
+    performer: e.people.length ? e.people.map((p) => ({ "@type": p.kind === "team" ? "SportsTeam" : "PerformingGroup", name: p.name })) : undefined,
+    organizer: e.listedBy ? { "@type": "Organization", name: e.listedBy.organiser, url: e.listedBy.organiserUrl } : undefined,
+    isAccessibleForFree: e.isFree || undefined,
     offers: e.offers
       .filter((o) => o.basePrice != null && o.purchaseUrl?.startsWith("http"))
-      .map((o) => ({ "@type": "Offer", price: o.totalPrice ?? o.basePrice, priceCurrency: o.currency, url: o.purchaseUrl, seller: { "@type": "Organization", name: o.provider } })),
+      .map((o) => ({
+        "@type": "Offer",
+        price: o.totalPrice ?? o.basePrice,
+        priceCurrency: o.currency,
+        url: o.purchaseUrl,
+        availability: o.availability === "sold_out" || e.status === "sold_out" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+        seller: { "@type": "Organization", name: o.provider },
+      })),
   };
 }
 
