@@ -18,7 +18,7 @@ import { CommunityPulse } from "@/components/community/pulse";
 import { EventActionBar } from "@/components/event-action-bar";
 import { ListedBy } from "@/components/create/my-events";
 import { Countdown } from "@/components/countdown";
-import { forecast, weatherLook } from "@/lib/weather";
+import { DayForecast } from "@/components/weather";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -122,10 +122,9 @@ export default async function EventPage({ params }: { params: P }) {
   const isDaily = e.eventType === "daily_attraction";
   // An end time is worth showing only when it's after the start.
   const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
-  // The forecast for the day of the event, when it's in the week ahead.
+  // The forecast for the day of the event, when it's in the week ahead (asked for by the browser).
   const daysAhead = (Date.parse(e.start) - Date.now()) / 864e5;
-  const wx = !e.online && !isDaily && e.eventType !== "multi_day" && daysAhead > -0.5 && daysAhead < 6.5 ? await forecast(e.venue.lat, e.venue.lng) : null;
-  const wxDay = wx?.days.find((w) => w.date === localDateKey(e.start, e.timeZone));
+  const wxDate = !e.online && !isDaily && e.eventType !== "multi_day" && daysAhead > -0.5 && daysAhead < 6.5 ? localDateKey(e.start, e.timeZone) : null;
   const access = e.accessibility?.length ? e.accessibility : v.accessibility ?? [];
   const ymd = (iso: string) => iso.slice(0, 10);
   const teams = e.people.filter((p) => p.role === "team_home" || p.role === "team_away" || p.role === "team");
@@ -227,12 +226,7 @@ export default async function EventPage({ params }: { params: P }) {
                       <Countdown starts={[e.start, ...(e.schedule ?? [])]} durationMinutes={e.durationMinutes} end={e.eventType === "multi_day" ? e.end : undefined} />
                     </span>
                   )}
-                  {wxDay && (
-                    <span className="block t-small text-text-2 mt-1.5">
-                      <span aria-hidden>{weatherLook(wxDay.code).emoji}</span> Forecast: {weatherLook(wxDay.code).label.toLowerCase()}, {wxDay.max}° / {wxDay.min}°
-                      {wxDay.rain != null && wxDay.rain >= 20 ? `, ${wxDay.rain}% chance of rain` : ""}
-                    </span>
-                  )}
+                  {wxDate && <DayForecast lat={e.venue.lat} lng={e.venue.lng} date={wxDate} />}
                   {/* The length, when the end time isn't shown already. */}
                   {e.durationMinutes && !showEnd && !e.hoursUnknown && !isDaily && e.eventType !== "multi_day" && <span className="block t-small text-text-3">{aboutDuration(e.durationMinutes)}</span>}
                 </dd>

@@ -12,6 +12,7 @@ import { getCategory, GROUP_HEX } from "@/lib/categories";
 import { todayIn } from "@/lib/time";
 import { userActions } from "@/lib/user/store";
 import { weatherLook } from "@/lib/weather-look";
+import { useForecast } from "../weather";
 import { CategoryIcon, Poster } from "../ui";
 import { toast } from "../toast";
 import { Cassette } from "./cassette";
@@ -33,8 +34,6 @@ interface Pool {
   key: string;
   items: MixCandidate[];
   total: number;
-  /** The forecast for each day of the tape. */
-  weather?: { date: string; code: number; max: number; min: number; rain?: number }[];
 }
 
 interface ShelfTape {
@@ -216,9 +215,9 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
     const inc = pending.current?.city === city.id ? `&include=${encodeURIComponent(pending.current.tracks.map((t) => t.id).join(","))}` : "";
     fetch(`/api/mixtape?city=${city.id}&from=${win.fromDate}&to=${win.toDate}${inc}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((j: { items: MixCandidate[]; total: number; weather?: Pool["weather"] }) => {
+      .then((j: { items: MixCandidate[]; total: number }) => {
         seen.current = new Set();
-        setPool({ key: poolKey, items: j.items, total: j.total, weather: j.weather });
+        setPool({ key: poolKey, items: j.items, total: j.total });
       })
       .catch(() => {
         if (!ctrl.signal.aborted) setError("We couldn't load events for this city just now. Try again in a moment.");
@@ -429,6 +428,8 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
   // ---- what the tape shows
   const tz = city?.tz ?? "UTC";
   const stats = useMemo(() => tapeStats(tape, byId, tz), [tape, byId, tz]);
+  // The forecast for the tape's days (asked for by the browser).
+  const wx = useForecast(city?.lat, city?.lng, 10);
   const fmt = (t: number, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, ...o }).format(new Date(t));
   const time = (t: number) => fmt(t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const stops: RouteStop[] = tape.flatMap((t, i) => {
@@ -641,7 +642,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                     <span>Side {s.letter}</span>
                     <span className="text-text-3 font-medium">· {s.label}</span>
                     {(() => {
-                      const w = pool.weather?.find((x) => x.date === s.date);
+                      const w = wx?.days.find((x) => x.date === s.date);
                       if (!w) return null;
                       const look = weatherLook(w.code);
                       return (

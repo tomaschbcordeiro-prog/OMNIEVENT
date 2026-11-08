@@ -18,7 +18,7 @@ import { Crosshair } from "lucide-react";
 import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
 import { CommunityPanel } from "@/components/community/community-panel";
-import { forecast, weatherLook } from "@/lib/weather";
+import { WeatherNow, WeatherWeek } from "@/components/weather";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -69,8 +69,6 @@ export default async function DestinationPage({ params, searchParams }: { params
   const venues = d.kind === "city" ? venuesInCity(d.id).slice(0, 8) : [];
   const stats = cityStats();
   const childCities = d.kind !== "city" ? citiesIn(d).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0)) : [];
-  // The weather in a city (now and the coming week), when the forecast answers in time.
-  const wx = d.kind === "city" ? await forecast(d.lat, d.lng) : null;
   const nowLocal = d.timeZone ? new Intl.DateTimeFormat("en-GB", { timeZone: d.timeZone, hour: "2-digit", minute: "2-digit", weekday: "short" }).format(new Date()) : null;
   const zoom = d.kind === "city" ? 10.5 : d.kind === "country" ? 4.6 : 2;
   const parent = d.kind === "city" ? getDestination(d.parentId!) : d.kind === "country" ? CONTINENTS.find((c) => c.id === d.continent) : undefined;
@@ -90,37 +88,12 @@ export default async function DestinationPage({ params, searchParams }: { params
             <p className="t-body text-text-2 mt-2">
               {d.kind === "city" ? d.country : d.kind === "country" ? getDestination(d.continent!)?.name : "Continent"}
               {nowLocal && <span className="text-text-3">, local time {nowLocal}</span>}
-              {wx?.now && (
-                <span className="text-text-3">
-                  , {weatherLook(wx.now.code, wx.now.day).emoji} {wx.now.temp}° {weatherLook(wx.now.code, wx.now.day).label.toLowerCase()}
-                </span>
-              )}
+              {d.kind === "city" && <WeatherNow lat={d.lat} lng={d.lng} />}
             </p>
             <p className="t-small text-text-3 mt-1 tnum">
               {result.total.toLocaleString()} upcoming events listed{d.currency ? `, prices usually in ${d.currency}` : ""}. {d.lat.toFixed(2)}°, {d.lng.toFixed(2)}°
             </p>
-            {wx && wx.days.length > 1 && (
-              <div className="mt-3">
-                <ul className="wx-strip no-scrollbar" aria-label={`Weather in ${d.name}, the coming days`}>
-                  {wx.days.map((w) => {
-                    const look = weatherLook(w.code);
-                    const day = new Date(`${w.date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
-                    return (
-                      <li key={w.date} className="wx-day" title={`${look.label}${w.rain != null ? `, ${w.rain}% chance of rain` : ""}`}>
-                        <span className="t-micro text-text-3">{day}</span>
-                        <span className="wx-emoji" aria-hidden>{look.emoji}</span>
-                        <span className="sr-only">{look.label},</span>
-                        <span className="t-micro tnum"><strong>{w.max}°</strong> <span className="text-text-3">{w.min}°</span></span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="t-micro text-text-3 mt-1">
-                  Weather:{" "}
-                  <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" className="underline decoration-line-strong hover:text-text">Open-Meteo</a>
-                </p>
-              </div>
-            )}
+            {d.kind === "city" && <WeatherWeek lat={d.lat} lng={d.lng} place={d.name} />}
             <div className="mt-4 flex flex-wrap gap-2">
               <FollowButton kind="destination" id={d.id} name={d.name} />
               {/* Cities open as a radius search; larger areas just open the map there. */}
