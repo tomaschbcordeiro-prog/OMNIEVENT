@@ -77,6 +77,7 @@ describe("zoomed-in globe views", () => {
         __testing.around(true);
         const fast = clusterEvents(f, view);
         __testing.around(false);
+        __testing.forget();
         const slow = clusterEvents(f, view);
         seen += fast.inView;
         expect({ total: fast.total, inView: fast.inView, clusters: fast.clusters.map((c) => [c.id, c.count, c.live]) }).toEqual({ total: slow.total, inView: slow.inView, clusters: slow.clusters.map((c) => [c.id, c.count, c.live]) });
@@ -84,6 +85,47 @@ describe("zoomed-in globe views", () => {
     expect(seen).toBeGreaterThan(50);
     __testing.around(true);
     __testing.drop("globe");
+    __testing.rebuild();
+  });
+});
+
+describe("venue, performer and nearby searches", () => {
+  it("find what looking through every card finds", () => {
+    const base = generateDemoData(new Date("2026-11-08T10:00:00Z"));
+    __testing.load("lists", { ...base, events: base.events.map((e) => ({ ...e, provenance: { ...e.provenance, provider: "lists", isDemo: false } })) });
+    __testing.rebuild();
+    // Every upcoming card, page by page.
+    const every = [];
+    for (let page = 1; ; page++) {
+      const r = searchEvents({ pageSize: 100, page });
+      every.push(...r.items);
+      if (page >= r.pages) break;
+    }
+    const ids = (list: { id: string }[]) => list.map((c) => c.id).sort();
+    const venues = [...new Set(every.map((c) => c.venueSlug))].slice(0, 15);
+    for (const venue of venues) {
+      const got = searchEvents({ venue, pageSize: 100 });
+      expect(ids(got.items)).toEqual(ids(every.filter((c) => c.venueSlug === venue)).slice(0, 100));
+    }
+    const people = [...new Set(every.flatMap((c) => c.people.map((p) => p.slug)))].slice(0, 15);
+    for (const participant of people) {
+      const got = searchEvents({ participant, pageSize: 100 });
+      expect(got.total).toBe(every.filter((c) => c.people.some((p) => p.slug === participant)).length);
+    }
+    for (const c of every.slice(0, 10)) {
+      for (const radiusKm of [2, 15, 120]) {
+        const near = { lat: c.lat + 0.01, lng: c.lng - 0.01, radiusKm };
+        __testing.around(true);
+        const fast = searchEvents({ near, pageSize: 100, sort: "distance" });
+        __testing.around(false);
+        __testing.forget();
+        const slow = searchEvents({ near, pageSize: 100, sort: "distance" });
+        __testing.around(true);
+        expect(fast.total).toBe(slow.total);
+        expect(ids(fast.items)).toEqual(ids(slow.items));
+      }
+    }
+    __testing.drop("lists");
     __testing.rebuild();
   });
 });

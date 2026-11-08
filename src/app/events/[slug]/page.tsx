@@ -134,6 +134,9 @@ export default async function EventPage({ params }: { params: P }) {
   const sellers = e.provenance.isDemo ? [] : sellerSearches(v.countryCode, e.title, v.city, e.offers.map((o) => o.provider));
   const sameVenue = searchEvents({ venue: v.slug, pageSize: 9 }).items.filter((c) => c.id !== e.id).slice(0, 8);
   const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 14, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 8);
+  // The main performer's other dates elsewhere: a tour's other cities, a team's other matches.
+  const lead = e.people.find((p) => p.role === "headliner") ?? e.people[0];
+  const moreDates = lead ? searchEvents({ participant: lead.slug, pageSize: 12, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 8) : [];
   const isDaily = e.eventType === "daily_attraction";
   // An end time is worth showing only when it's after the start.
   const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
@@ -384,8 +387,17 @@ export default async function EventPage({ params }: { params: P }) {
               </div>
             </section>
 
-            {(sameVenue.length > 0 || nearby.length > 0) && (
+            {(sameVenue.length > 0 || nearby.length > 0 || moreDates.length > 0) && (
               <div className="mt-12 grid gap-10">
+                {lead && moreDates.length > 0 && (
+                  <section aria-labelledby="more-dates">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 id="more-dates" className="t-h3">More dates: {lead.name}</h2>
+                      <Link href={`/participants/${lead.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
+                    </div>
+                    <ul className="tile-strip no-scrollbar mt-3">{moreDates.map((c) => <EventTile key={c.id} c={c} />)}</ul>
+                  </section>
+                )}
                 {sameVenue.length > 0 && (
                   <section aria-labelledby="same">
                     <div className="flex items-baseline justify-between gap-3">

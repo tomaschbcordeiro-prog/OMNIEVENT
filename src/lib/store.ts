@@ -45,6 +45,9 @@ interface StoreState {
   byCity?: Map<string, EventCard[]>;
   /** Cards by their venue's country code (upper case): a country's or continent's searches look only there. */
   byCountry?: Map<string, EventCard[]>;
+  /** Cards by venue slug and by performer slug: a venue's or a performer's dates without looking through every card. */
+  byVenue?: Map<string, EventCard[]>;
+  byPerson?: Map<string, EventCard[]>;
   /** Event counts per city, worked out once per rebuild. */
   cityStatsCache?: Record<string, { total: number; groups: Record<string, number> }>;
   participants: Map<string, Participant>;
@@ -695,6 +698,14 @@ const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 
 function candidates(f: SearchFilters): Iterable<EventCard> {
   // A country's or continent's: only its countries' cards (a continent page ran its searches
   // over every card on Earth, seconds per page).
+  // A performer's or a venue's dates: only theirs.
+  if (f.participant && state.byPerson) return state.byPerson.get(f.participant) ?? [];
+  if (f.venue && state.byVenue) return state.byVenue.get(f.venue) ?? [];
+  // Around a point: only the map cells within reach.
+  if (f.near) {
+    const near = cardsAround(f.near.lat, f.near.lng, f.near.radiusKm);
+    if (near) return near;
+  }
   const byCountry = state.byCountry;
   if (byCountry) {
     if (f.country) return byCountry.get(f.country.toUpperCase()) ?? [];
@@ -795,8 +806,17 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   const grid = new Map<string, EventCard[]>();
   const byCity = new Map<string, EventCard[]>();
   const byCountry = new Map<string, EventCard[]>();
+  const byVenue = new Map<string, EventCard[]>();
+  const byPerson = new Map<string, EventCard[]>();
+  const file = (index: Map<string, EventCard[]>, key: string, c: EventCard) => {
+    const list = index.get(key);
+    if (list) list.push(c);
+    else index.set(key, [c]);
+  };
   for (const c of cards.values()) {
     if (++n % 4000 === 0) yield;
+    file(byVenue, c.venueSlug, c);
+    for (const p of c.people) file(byPerson, p.slug, c);
     const cc = venues.get(events.get(c.id)?.venueId ?? "")?.countryCode;
     if (cc) {
       const list = byCountry.get(cc);
@@ -844,6 +864,8 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   state.grid = grid;
   state.byCity = byCity;
   state.byCountry = byCountry;
+  state.byVenue = byVenue;
+  state.byPerson = byPerson;
   state.cityStatsCache = undefined;
   const ms = Date.now() - t0;
   if (ms > 300) log("info", "indexes rebuilt", { ms, events: cards.size });
@@ -1203,6 +1225,8 @@ export const __testing = {
   drop: (id: string) => state.providerData.delete(id),
   /** Whether zoomed-in globe views look only at nearby map cells (off: at every card). */
   around: (on: boolean) => void (aroundOn = on),
+  /** Forgets remembered search answers and counts. */
+  forget: () => (searchMemo.clear(), countMemo.clear()),
 };
 
 /** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */
