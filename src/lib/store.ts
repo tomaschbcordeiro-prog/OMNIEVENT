@@ -527,6 +527,20 @@ export function loadingNow(): boolean {
   return false;
 }
 
+/**
+ * Something a page needs (an event, a venue) that this server may still be loading: looked for
+ * again every moment while it loads, up to `ms`, and returned as soon as it's in.
+ */
+export async function waitFor<T>(find: () => T | undefined, ms = 20000): Promise<T | undefined> {
+  const until = Date.now() + ms;
+  let found = find();
+  while (found === undefined && loadingNow() && Date.now() < until) {
+    await new Promise((r) => setTimeout(r, 400));
+    found = find();
+  }
+  return found;
+}
+
 export function dataReady(): boolean {
   if (state.hydrating) return false;
   return activeProviders().every((p) => state.lastSync.has(p.id));

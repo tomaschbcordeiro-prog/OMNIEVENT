@@ -41,7 +41,7 @@ const loadEarthMap = () => import("../earth/earth-map");
 const EarthMap = dynamic(() => loadEarthMap().then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
-type GeoAnswer = { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean };
+type GeoAnswer = { clusters: Cluster[]; total: number; inView: number; demoOnly?: boolean; /** The server was still loading its catalogue. */ partial?: boolean };
 type Selection = { kind: "cluster"; cluster: Cluster } | { kind: "event"; card: EventCard; from?: Cluster } | null;
 
 // v2: the daytime map without night shading became the default.
@@ -309,6 +309,8 @@ export function DiscoverClient() {
         return (await res.json()) as GeoAnswer;
       })
       .then((data) => {
+        // An answer from a server still loading isn't kept: the next look asks again.
+        if (data.partial) return data;
         const c = geoCache.current;
         c.delete(qs);
         c.set(qs, { at: Date.now(), data });
@@ -322,6 +324,8 @@ export function DiscoverClient() {
   }, []);
 
   const fetchedOnce = useRef(false);
+  const partialTries = useRef(0);
+  const [geoAgain, setGeoAgain] = useState(0);
   useEffect(() => {
     if (!initialView || mode === "list") return;
     const qs = geoQuery(filterKey);
@@ -347,7 +351,14 @@ export function DiscoverClient() {
       setLoading(true);
       try {
         const json = await loadGeo(qs, pending ? undefined : ctrl.signal);
-        if (!ctrl.signal.aborted) show(json);
+        if (!ctrl.signal.aborted) {
+          show(json);
+          // Answered by a server that was still loading: look again shortly, until it's whole.
+          if (json.partial && partialTries.current < 15) {
+            partialTries.current++;
+            setTimeout(() => setGeoAgain((n) => n + 1), 4000);
+          }
+        }
       } catch (e) {
         if ((e as Error).name !== "AbortError" && !ctrl.signal.aborted) setError((e as Error).message);
       } finally {
@@ -359,7 +370,7 @@ export function DiscoverClient() {
       ctrl.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewKey, filterKey, mode, initialView, retry]);
+  }, [viewKey, filterKey, mode, initialView, retry, geoAgain]);
 
   /** Fetch the globe's events for these days in the current view ahead of time, three at a time. */
   const prefetchDays = useCallback(

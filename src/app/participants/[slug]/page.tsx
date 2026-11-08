@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDestination } from "@/lib/destinations";
 import { shareImage, ldJson, performerLd } from "@/lib/structured-data";
-import { ensureFresh, getParticipantBySlug, searchEvents, waitForData } from "@/lib/store";
+import { ensureFresh, getParticipantBySlug, searchEvents, waitFor } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
 import { MonthList, NextUp } from "@/components/event-list-parts";
 import { ClusterMap } from "@/components/cluster-map";
@@ -34,12 +34,8 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
 export default async function ParticipantPage({ params }: { params: P }) {
   const { slug } = await params;
   await ensureFresh();
-  let p = getParticipantBySlug(slug);
   // A server that has just started may still be loading its source.
-  if (!p) {
-    await waitForData(20000);
-    p = getParticipantBySlug(slug);
-  }
+  const p = await waitFor(() => getParticipantBySlug(slug));
   if (!p) notFound();
   const res = searchEvents({ participant: p.slug, pageSize: 80, sort: "date" });
   const past = searchEvents({ participant: p.slug, status: ["completed"], from: "2000-01-01", pageSize: 10 });

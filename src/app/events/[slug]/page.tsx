@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
-import { ensureFresh, getEventView, loadingNow, refreshSource, searchEvents, waitForData } from "@/lib/store";
+import { ensureFresh, getEventView, loadingNow, refreshSource, searchEvents, waitFor } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventTile } from "@/components/event-card";
@@ -40,8 +40,7 @@ async function findEvent(slug: string) {
     return getEventView(slug);
   }
   // A server that has just started may still be loading the event's source.
-  await waitForData(20000);
-  const late = getEventView(slug);
+  const late = await waitFor(() => getEventView(slug));
   // Still loading: fail this once (not kept) rather than keep a "not found" page for minutes.
   if (!late && loadingNow()) throw new Error("Events are still loading on this server. Try again in a moment.");
   return late;
