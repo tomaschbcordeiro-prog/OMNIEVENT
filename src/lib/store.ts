@@ -712,7 +712,14 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   const cards = new Map<string, EventCard>();
   for (const e of events.values()) {
     if (++n % 2000 === 0) yield;
-    cards.set(e.id, cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS));
+    const card = cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS);
+    // What every search needs (its words, dates and intervals) is worked out now, not on the
+    // first search a new server answers.
+    cardText(card);
+    startMsOf(card);
+    simpleEvent(e);
+    lastEnd(e);
+    cards.set(e.id, card);
   }
   const grid = new Map<string, EventCard[]>();
   const byCity = new Map<string, EventCard[]>();
@@ -864,8 +871,32 @@ const DAY = 864e5;
 const addDaysYMD = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 const DEFAULT_DURATION_MIN = 120;
 
-/** Scheduled [start, end) intervals of an event: the main run plus any repeat performances. */
+const INTERVALS = Symbol("intervals");
+const SIMPLE = Symbol("simple");
+
+/** Scheduled [start, end) intervals of an event: the main run plus any repeat performances (worked out once per record; not to be changed by callers). */
 function eventIntervals(e: OmniEvent): [number, number][] {
+  const kept = (e as OmniEvent & { [INTERVALS]?: [number, number][] })[INTERVALS];
+  if (kept) return kept;
+  return keep(e, INTERVALS, intervalsOf(e));
+}
+
+/** One performance of a day or less: how a search shows it doesn't depend on the dates asked. */
+function simpleEvent(e: OmniEvent): boolean {
+  const kept = (e as OmniEvent & { [SIMPLE]?: boolean })[SIMPLE];
+  if (kept !== undefined) return kept;
+  return keep(e, SIMPLE, !e.schedule?.length && (!e.end || Date.parse(e.end) - Date.parse(e.start) <= DAY));
+}
+
+/** A card's start as a number, worked out once per card (kept beside it: cards go to the browser as they are). */
+const startMs = new WeakMap<EventCard, number>();
+function startMsOf(c: EventCard): number {
+  let t = startMs.get(c);
+  if (t === undefined) startMs.set(c, (t = Date.parse(c.start)));
+  return t;
+}
+
+function intervalsOf(e: OmniEvent): [number, number][] {
   const s = Date.parse(e.start);
   const dur = (Number.isFinite(e.durationMinutes) && e.durationMinutes! > 0 ? e.durationMinutes! : DEFAULT_DURATION_MIN) * 60000;
   // Events without an end time are assumed to last their stated duration, else two hours.
@@ -997,7 +1028,7 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
   const e = state.events.get(c.id);
   if (!e || e.eventType === "daily_attraction") return c;
   // One performance (the usual case): it matched, so it reads as it is.
-  if (!e.schedule?.length && (!e.end || Date.parse(e.end) - Date.parse(e.start) <= DAY)) return c;
+  if (simpleEvent(e)) return c;
   const tz = isValidTimeZone(e.timeZone) ? e.timeZone : "UTC";
   const ivs = eventIntervals(e);
   const sp = daySpans(e, tz);
@@ -1013,7 +1044,7 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
   const [a, b] = ivs[best];
   const long = b - a > DAY;
   const ongoing = long && (dated ? sp[2 * best] < from : a < now);
-  if (a === Date.parse(c.start) && !long) return c;
+  if (a === startMsOf(c) && !long) return c;
   return { ...c, start: new Date(a).toISOString(), until: long ? new Date(b).toISOString() : undefined, ongoing: ongoing || undefined };
 }
 
@@ -1219,11 +1250,58 @@ function textScore(c: EventCard, terms: string[]): number {
     else if (x.people.includes(w)) s = 4;
     else if (x.cat.includes(w)) s = 2;
     else if (x.place.includes(w)) s = 1.5;
-    else if (t.length >= 6 && x.words.some((v) => Math.abs(v.length - t.length) <= 1 && levenshtein(v, t) <= 1)) s = 2;
+    else if (t.length >= 6 && hasNearWord(x.words, t)) s = 2;
     if (!s) return 0; // AND semantics
     score += s;
   }
   return score;
+}
+
+/** Whether two words differ by at most one letter added, removed or changed (linear time). */
+export function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  if (la > lb) return withinOneEdit(b, a);
+  let i = 0;
+  while (i < la && a[i] === b[i]) i++;
+  if (la === lb) return a.slice(i + 1) === b.slice(i + 1);
+  return a.slice(i) === b.slice(i + 1);
+}
+
+// Every word long enough to forgive a typo in, by length, from the whole catalogue: a search
+// finds the words one letter away from what was typed once, then each event is a quick lookup
+// (comparing the typed word with every event's words, letter by letter, took most of a second).
+let vocabOf: Map<string, EventCard> | undefined;
+let vocab = new Map<number, Set<string>>();
+const nearCache = new Map<string, Set<string>>();
+function nearWords(t: string): Set<string> {
+  if (vocabOf !== state.cards) {
+    vocabOf = state.cards;
+    vocab = new Map();
+    nearCache.clear();
+    for (const c of state.cards.values())
+      for (const w of cardText(c).words) {
+        let set = vocab.get(w.length);
+        if (!set) vocab.set(w.length, (set = new Set()));
+        set.add(w);
+      }
+  }
+  let near = nearCache.get(t);
+  if (!near) {
+    near = new Set();
+    for (let len = t.length - 1; len <= t.length + 1; len++) for (const w of vocab.get(len) ?? []) if (withinOneEdit(w, t)) near.add(w);
+    if (nearCache.size > 500) nearCache.clear();
+    nearCache.set(t, near);
+  }
+  return near;
+}
+function hasNearWord(words: string[], t: string): boolean {
+  const near = nearWords(t);
+  if (!near.size) return false;
+  for (const w of words) if (near.has(w)) return true;
+  return false;
 }
 
 export function levenshtein(a: string, b: string): number {
@@ -1247,16 +1325,19 @@ function catSetsFor(f: SearchFilters) {
 export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { groups: Record<string, number>; cities: Record<string, number> } } {
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
   const catSets = catSetsFor(f);
-  const scored: { c: EventCard; s: number }[] = [];
+  // Matches in two parallel lists (cards and their scores): no object per match.
+  const found: EventCard[] = [];
+  const score: number[] = [];
   const groups: Record<string, number> = {};
   const cities: Record<string, number> = {};
+  const now = Date.now();
   for (const c of candidates(f)) {
     if (!matches(c, f, catSets)) continue;
     const s = textScore(c, terms);
     if (!s) continue;
-    const shown = present(c, f);
-    const item = f.near ? { ...shown, distanceKm: haversineKm(c.lat, c.lng, f.near.lat, f.near.lng) } : shown;
-    scored.push({ c: item, s });
+    const shown = present(c, f, now);
+    found.push(f.near ? { ...shown, distanceKm: haversineKm(c.lat, c.lng, f.near.lat, f.near.lng) } : shown);
+    score.push(s);
     groups[c.groupSlug] = (groups[c.groupSlug] ?? 0) + 1;
     if (c.cityId) cities[c.cityId] = (cities[c.cityId] ?? 0) + 1;
   }
@@ -1267,14 +1348,14 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   const windowStart = f.from ? Date.parse(`${f.from}T00:00:00Z`) : Date.now() - 6 * 3600000;
   const price = (c: EventCard) => (c.isFree ? 0 : c.fromPrice ? convert(c.fromPrice.amount, c.fromPrice.currency, f.currency ?? "USD") ?? Infinity : Infinity);
   // Sort keys worked out once per result (in flat arrays), not on every comparison.
-  const n = scored.length;
+  const n = found.length;
   const T = new Float64Array(n);
   const U = new Uint8Array(n);
   const P = new Float64Array(n);
   const A: string[] = sort === "announced" ? new Array(n) : [];
   for (let i = 0; i < n; i++) {
-    const c = scored[i].c;
-    T[i] = c.ongoing ? windowStart : Date.parse(c.start);
+    const c = found[i];
+    T[i] = c.ongoing ? windowStart : startMsOf(c);
     // Always-open attractions and listings with dates only don't have a meaningful "next"
     // start time, so they follow events with a real start time.
     U[i] = Number(c.eventType === "daily_attraction" || !!c.ongoing || !!c.hoursUnknown);
@@ -1285,9 +1366,9 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   order.sort((a, b) => {
     switch (sort) {
       case "price": return P[a] - P[b] || T[a] - T[b];
-      case "distance": return (scored[a].c.distanceKm ?? Infinity) - (scored[b].c.distanceKm ?? Infinity);
+      case "distance": return (found[a].distanceKm ?? Infinity) - (found[b].distanceKm ?? Infinity);
       case "announced": return A[a] < A[b] ? 1 : A[a] > A[b] ? -1 : 0;
-      case "relevance": return scored[b].s - scored[a].s || T[a] - T[b];
+      case "relevance": return score[b] - score[a] || T[a] - T[b];
       default: return U[a] - U[b] || T[a] - T[b];
     }
   });
@@ -1295,7 +1376,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   const page = Math.max(1, f.page ?? 1);
   const total = n;
   return {
-    items: order.slice((page - 1) * pageSize, page * pageSize).map((i) => scored[i].c),
+    items: order.slice((page - 1) * pageSize, page * pageSize).map((i) => found[i]),
     total,
     page,
     pageSize,
