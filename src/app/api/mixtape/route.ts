@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { ensureFresh, mixtapePool, dataReady } from "@/lib/store";
 import { getDestination } from "@/lib/destinations";
+import { forecast } from "@/lib/weather";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
 // Background data syncs keep running after the response, up to this many seconds.
@@ -39,8 +40,11 @@ export const GET = handler(async (req: NextRequest) => {
   if (!d || d.kind !== "city") return apiError(404, "not_found", "That city isn't one we know.");
   await ensureFresh();
   const { items, total } = mixtapePool(d.id, v.data.from, v.data.to, 450, new Set(v.data.include));
+  // The forecast for each day of the tape (when it answers in time).
+  const wx = await forecast(d.lat, d.lng, 10);
+  const weather = (wx?.days ?? []).filter((w) => w.date >= v.data.from && w.date <= v.data.to);
   return ok(
-    { city: { id: d.id, name: d.name, country: d.country, tz: d.timeZone, currency: d.currency ?? "EUR", lat: d.lat, lng: d.lng }, from: v.data.from, to: v.data.to, items, total },
+    { city: { id: d.id, name: d.name, country: d.country, tz: d.timeZone, currency: d.currency ?? "EUR", lat: d.lat, lng: d.lng }, from: v.data.from, to: v.data.to, items, total, weather },
     { maxAge: 300, swr: 1800, partial: !dataReady() },
   );
 });

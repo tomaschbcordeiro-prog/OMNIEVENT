@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/format";
 import { getCategory, GROUP_HEX } from "@/lib/categories";
 import { todayIn } from "@/lib/time";
 import { userActions } from "@/lib/user/store";
+import { weatherLook } from "@/lib/weather-look";
 import { CategoryIcon, Poster } from "../ui";
 import { toast } from "../toast";
 import { Cassette } from "./cassette";
@@ -32,6 +33,8 @@ interface Pool {
   key: string;
   items: MixCandidate[];
   total: number;
+  /** The forecast for each day of the tape. */
+  weather?: { date: string; code: number; max: number; min: number; rain?: number }[];
 }
 
 interface ShelfTape {
@@ -213,9 +216,9 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
     const inc = pending.current?.city === city.id ? `&include=${encodeURIComponent(pending.current.tracks.map((t) => t.id).join(","))}` : "";
     fetch(`/api/mixtape?city=${city.id}&from=${win.fromDate}&to=${win.toDate}${inc}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((j: { items: MixCandidate[]; total: number }) => {
+      .then((j: { items: MixCandidate[]; total: number; weather?: Pool["weather"] }) => {
         seen.current = new Set();
-        setPool({ key: poolKey, items: j.items, total: j.total });
+        setPool({ key: poolKey, items: j.items, total: j.total, weather: j.weather });
       })
       .catch(() => {
         if (!ctrl.signal.aborted) setError("We couldn't load events for this city just now. Try again in a moment.");
@@ -432,12 +435,14 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
     const c = byId.get(t.id);
     return c ? [{ key: `${t.id}@${t.start}`, lat: c.lat, lng: c.lng, color: GROUP_HEX[c.group] ?? GROUP_HEX.other, title: c.title, newDay: i > 0 && tapeDay(t.start, tz) !== tapeDay(tape[i - 1].start, tz) }] : [];
   });
-  const sides: { letter: string; label: string; items: { t: Track; i: number }[] }[] = [];
+  const sides: { letter: string; label: string; date: string; items: { t: Track; i: number }[] }[] = [];
   tape.forEach((t, i) => {
     const d = tapeDay(t.start, tz);
     const last = sides[sides.length - 1];
+    // After midnight it's still the evening before.
+    const dayOf = t.start - (localMinutes(t.start, tz) < 300 ? 6 * 3600000 : 0);
     if (last && tapeDay(last.items[0].t.start, tz) === d) last.items.push({ t, i });
-    else sides.push({ letter: String.fromCharCode(65 + sides.length), label: fmt(t.start - (localMinutes(t.start, tz) < 300 ? 6 * 3600000 : 0), { weekday: "long", day: "numeric", month: "short" }), items: [{ t, i }] });
+    else sides.push({ letter: String.fromCharCode(65 + sides.length), label: fmt(dayOf, { weekday: "long", day: "numeric", month: "short" }), date: todayIn(tz, new Date(dayOf)), items: [{ t, i }] });
   });
   const active = playing ?? pointed;
   const progress = playing != null && tape.length ? (playing + 1) / tape.length : Math.min(0.85, 0.15 + tape.length * 0.08);
@@ -635,6 +640,17 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                     <span className="mx-side-letter">{s.letter}</span>
                     <span>Side {s.letter}</span>
                     <span className="text-text-3 font-medium">· {s.label}</span>
+                    {(() => {
+                      const w = pool.weather?.find((x) => x.date === s.date);
+                      if (!w) return null;
+                      const look = weatherLook(w.code);
+                      return (
+                        <span className="mx-wx" title={`${look.label}${w.rain != null ? `, ${w.rain}% chance of rain` : ""}`}>
+                          <span aria-hidden>{look.emoji}</span> {w.max}°<span className="sr-only">, {look.label}</span>
+                          {w.rain != null && w.rain >= 50 && <span className="mx-wx-rain">☂ {w.rain}%</span>}
+                        </span>
+                      );
+                    })()}
                   </h2>
                   <ol className="mt-2.5">
                     {s.items.map(({ t, i }, k) => {

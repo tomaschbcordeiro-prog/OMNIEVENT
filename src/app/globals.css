@@ -3377,3 +3377,20 @@ body.nf-on .maplibregl-ctrl-bottom-right {
     display: none;
   }
 }
+/* The forecast beside each side (day) of a Mixtape. */
+.mx-wx {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+.mx-wx-rain {
+  color: var(--info);
+  font-weight: 600;
+}
