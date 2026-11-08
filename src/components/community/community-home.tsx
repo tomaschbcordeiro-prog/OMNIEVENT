@@ -175,7 +175,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               ))}
             </ul>
           )}
-          {home && !quiet && feed.length === 0 && filter !== "following" && <p className="mt-4 t-small text-text-2">Nothing of this kind yet.</p>}
+          {home && !quiet && !down && feed.length === 0 && filter !== "following" && <p className="mt-4 t-small text-text-2">Nothing of this kind yet.</p>}
 
           {filter !== "following" && <div className="mt-3"><NewPostsPill count={newPosts} onShow={() => void load()} /></div>}
           <ul className="mt-4 grid gap-3">
