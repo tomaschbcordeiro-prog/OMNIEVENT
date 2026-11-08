@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
-import { dataReady, ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
+import { ensureFresh, getEventView, loadingNow, refreshSource, searchEvents, waitForData } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventTile } from "@/components/event-card";
@@ -43,7 +43,7 @@ async function findEvent(slug: string) {
   await waitForData(20000);
   const late = getEventView(slug);
   // Still loading: fail this once (not kept) rather than keep a "not found" page for minutes.
-  if (!late && !dataReady()) throw new Error("Events are still loading on this server. Try again in a moment.");
+  if (!late && loadingNow()) throw new Error("Events are still loading on this server. Try again in a moment.");
   return late;
 }
 
@@ -51,7 +51,8 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
   const { slug } = await params;
   await ensureFresh();
   const e = await findEvent(slug);
-  if (!e) return { title: "Event not found" };
+  // Not found here already, so the answer carries a real 404 (search engines drop the address).
+  if (!e) notFound();
   const when = formatEventDate(e.start, e.timeZone);
   const desc = `${e.title} at ${e.venue.name}, ${e.venue.city}, on ${when}. ${e.isFree ? "Free entry." : "Compare ticket options and go to the official seller."}`;
   return {

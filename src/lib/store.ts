@@ -515,6 +515,17 @@ export async function waitForData(ms: number): Promise<void> {
  * True once this server holds every active source's data (or has given up on one). Before
  * that, answers may be missing sources and mustn't be cached for other visitors.
  */
+/**
+ * Whether this server is loading anything right now (shared copies, or a source it has never
+ * held): until it isn't, a missing event may just not be here yet.
+ */
+export function loadingNow(): boolean {
+  if (state.hydrating) return true;
+  // A source being read for the first time; one that failed before and is being retried isn't.
+  for (const id of state.syncing.keys()) if (!state.providerData.has(id) && !state.runs.has(id)) return true;
+  return false;
+}
+
 export function dataReady(): boolean {
   if (state.hydrating) return false;
   return activeProviders().every((p) => state.lastSync.has(p.id));
