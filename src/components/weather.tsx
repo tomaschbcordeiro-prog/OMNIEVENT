@@ -23,6 +23,52 @@ export interface Wx {
 
 const memo = new Map<string, Promise<Wx | null>>();
 
+type Raw = {
+  current?: { temperature_2m?: number; weather_code?: number; is_day?: number };
+  daily?: { time?: string[]; weather_code?: number[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_probability_max?: (number | null)[] };
+};
+
+function toWx(j: Raw): Wx {
+  const d = j.daily;
+  return {
+    now: typeof j.current?.temperature_2m === "number" && typeof j.current.weather_code === "number" ? { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, day: j.current.is_day !== 0 } : undefined,
+    days: (d?.time ?? [])
+      .map((date, i) => ({ date, code: d?.weather_code?.[i] ?? -1, max: Math.round(d?.temperature_2m_max?.[i] ?? NaN), min: Math.round(d?.temperature_2m_min?.[i] ?? NaN), rain: d?.precipitation_probability_max?.[i] ?? undefined }))
+      .filter((x) => x.code >= 0 && Number.isFinite(x.max) && Number.isFinite(x.min)),
+  };
+}
+
+/**
+ * Places asked for in the same moment go out as one request (Open-Meteo answers several
+ * places at once): the destinations page shows eight cities' weather with one request.
+ */
+const waiting = new Map<number, { lat: number; lng: number; done: (wx: Wx | null) => void }[]>();
+
+function ask(lat: number, lng: number, days: number): Promise<Wx | null> {
+  return new Promise((done) => {
+    const list = waiting.get(days) ?? [];
+    list.push({ lat, lng, done });
+    if (list.length > 1) return;
+    waiting.set(days, list);
+    setTimeout(async () => {
+      waiting.delete(days);
+      for (let i = 0; i < list.length; i += 20) {
+        const group = list.slice(i, i + 20);
+        try {
+          const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${group.map((x) => x.lat.toFixed(3)).join(",")}&longitude=${group.map((x) => x.lng.toFixed(3)).join(",")}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=${days}`, { signal: AbortSignal.timeout(6000) });
+          if (!r.ok) throw new Error(String(r.status));
+          const j = (await r.json()) as Raw | Raw[];
+          // One place comes back as an object, several as a list in the order asked.
+          const all = Array.isArray(j) ? j : [j];
+          group.forEach((x, k) => x.done(all[k] ? toWx(all[k]) : null));
+        } catch {
+          group.forEach((x) => x.done(null));
+        }
+      }
+    }, 30);
+  });
+}
+
 export function loadForecast(lat: number, lng: number, days = 8): Promise<Wx | null> {
   const key = `${lat.toFixed(2)},${lng.toFixed(2)},${days}`;
   const store = `omnievent:wx:${key}`;
@@ -35,29 +81,18 @@ export function loadForecast(lat: number, lng: number, days = 8): Promise<Wx | n
     } catch {
       // storage unavailable
     }
-    try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lng.toFixed(3)}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=${days}`, { signal: AbortSignal.timeout(6000) });
-      if (!r.ok) return null;
-      const j = (await r.json()) as {
-        current?: { temperature_2m?: number; weather_code?: number; is_day?: number };
-        daily?: { time?: string[]; weather_code?: number[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_probability_max?: (number | null)[] };
-      };
-      const d = j.daily;
-      const wx: Wx = {
-        now: typeof j.current?.temperature_2m === "number" && typeof j.current.weather_code === "number" ? { temp: Math.round(j.current.temperature_2m), code: j.current.weather_code, day: j.current.is_day !== 0 } : undefined,
-        days: (d?.time ?? [])
-          .map((date, i) => ({ date, code: d?.weather_code?.[i] ?? -1, max: Math.round(d?.temperature_2m_max?.[i] ?? NaN), min: Math.round(d?.temperature_2m_min?.[i] ?? NaN), rain: d?.precipitation_probability_max?.[i] ?? undefined }))
-          .filter((x) => x.code >= 0 && Number.isFinite(x.max) && Number.isFinite(x.min)),
-      };
-      try {
-        localStorage.setItem(store, JSON.stringify({ at: Date.now(), wx }));
-      } catch {
-        // private mode
-      }
-      return wx;
-    } catch {
+    const wx = await ask(lat, lng, days);
+    if (!wx) {
+      // Asked again on the next page instead of remembering the failure.
+      memo.delete(key);
       return null;
     }
+    try {
+      localStorage.setItem(store, JSON.stringify({ at: Date.now(), wx }));
+    } catch {
+      // private mode
+    }
+    return wx;
   })();
   memo.set(key, p);
   return p;
