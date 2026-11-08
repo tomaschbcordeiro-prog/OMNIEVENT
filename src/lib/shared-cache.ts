@@ -1,11 +1,14 @@
 import "server-only";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { brotliCompressSync, brotliDecompressSync, constants as zc, gunzipSync } from "node:zlib";
 
-// Unpacked on the main thread (about half a second for the biggest copy): done on Node's small
-// pool of worker threads instead, it could wait behind other work there (slow name lookups)
-// and a new server never finished loading.
-const gunzip = async (b: Buffer) => gunzipSync(b);
-const gzip = async (b: Buffer) => gzipSync(b);
+// Packed with Brotli and a 16 MB window: the same descriptions and links recur across a tour's
+// dates far apart in a copy, which gzip's 32 KB window can't see. Ticketmaster's 122 MB of
+// JSON packs to 8.7 MB instead of 18.9 MB (gzip), and packs and unpacks a little faster.
+// Unpacked on the main thread: done on Node's small pool of worker threads instead, it could
+// wait behind other work there (slow name lookups) and a new server never finished loading.
+const pack = (b: Buffer) => brotliCompressSync(b, { params: { [zc.BROTLI_PARAM_QUALITY]: 4, [zc.BROTLI_PARAM_LGWIN]: 24, [zc.BROTLI_PARAM_SIZE_HINT]: b.length } });
+/** Copies saved before the switch to Brotli are gzip. */
+const unpack = (b: Buffer, enc?: string) => (enc === "br" ? brotliDecompressSync(b) : gunzipSync(b));
 import { getCache, type RuntimeCache } from "@vercel/functions";
 import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
 import type { ProviderBatch } from "./providers/types";
@@ -46,6 +49,8 @@ export interface SnapshotMeta {
   n: number;
   at: number;
   events: number;
+  /** "br" for Brotli; absent for the older gzip copies. */
+  enc?: "br";
 }
 
 /** Runs `fn` over `items`, `limit` at a time. */
@@ -58,14 +63,14 @@ async function inBatches<T, R>(items: T[], limit: number, fn: (x: T, i: number) 
 /** Saves a source's batch, compressed and split into chunks under the store's size limits. */
 export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.now()): Promise<void> {
   if (!sharedEnabled) return;
-  const data = (await gzip(Buffer.from(JSON.stringify(batch)))).toString("base64");
+  const data = pack(Buffer.from(JSON.stringify(batch))).toString("base64");
   if (rc) {
     // Each copy has its own version; readers only follow the meta entry, written last, and
     // older copies expire by themselves.
     const ver = at.toString(36) + Math.random().toString(36).slice(2, 6);
     const n = Math.max(1, Math.ceil(data.length / RC_CHUNK));
     await inBatches(Array.from({ length: n }, (_, i) => i), 4, (i) => rc.set(`snap:${id}:${ver}:${i}`, data.slice(i * RC_CHUNK, (i + 1) * RC_CHUNK), { ttl: TTL, name: `snapshot ${id} ${i + 1}/${n}` }));
-    const meta: SnapshotMeta = { ver, n, at, events: batch.events.length };
+    const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "br" };
     await rc.set(`snap:meta:${id}`, meta, { ttl: TTL, name: `snapshot ${id}` });
     return;
   }
@@ -75,7 +80,7 @@ export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.n
   const ver = current?.ver === "a" ? "b" : "a";
   const n = Math.max(1, Math.ceil(data.length / CHUNK));
   for (let i = 0; i < n; i++) await cmd(["SET", `snap:${id}:${ver}:${i}`, data.slice(i * CHUNK, (i + 1) * CHUNK), "EX", TTL]);
-  const meta: SnapshotMeta = { ver, n, at, events: batch.events.length };
+  const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "br" };
   await cmd(["HSET", INDEX, id, JSON.stringify(meta)]);
   // Chunks left over from a bigger earlier copy in this slot.
   const stale = Array.from({ length: 40 }, (_, i) => `snap:${id}:${ver}:${n + i}`);
@@ -142,7 +147,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
     const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 12, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
     const t1 = Date.now();
     if (parts.some((p) => typeof p !== "string")) return undefined;
-    const raw = (await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8");
+    const raw = unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8");
     const t2 = Date.now();
     const batch = JSON.parse(raw) as ProviderBatch;
     if (meta.n > 2) loadTimings[id] = `${meta.n} chunks: fetch ${t1 - t0} ms, unzip ${t2 - t1} ms, parse ${Date.now() - t2} ms`;
@@ -158,7 +163,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
       }),
     );
   if (parts.some((p) => typeof p !== "string")) return undefined;
-  return JSON.parse((await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8")) as ProviderBatch;
+  return JSON.parse(unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8")) as ProviderBatch;
 }
 
 /** True when this instance now holds the lock; it expires by itself after `ttlSec`. */
