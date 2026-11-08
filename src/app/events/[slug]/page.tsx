@@ -7,7 +7,7 @@ import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, H
 import { dataReady, ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
-import { EventRow } from "@/components/event-card";
+import { EventTile } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, HeroImage, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
@@ -121,8 +121,8 @@ export default async function EventPage({ params }: { params: P }) {
   const v = e.venue;
   const sellerNames = [...new Set(e.offers.map((o) => o.provider))];
   const sellers = e.provenance.isDemo ? [] : sellerSearches(v.countryCode, e.title, v.city, e.offers.map((o) => o.provider));
-  const sameVenue = searchEvents({ venue: v.slug, pageSize: 6 }).items.filter((c) => c.id !== e.id).slice(0, 5);
-  const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 8, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 5);
+  const sameVenue = searchEvents({ venue: v.slug, pageSize: 9 }).items.filter((c) => c.id !== e.id).slice(0, 8);
+  const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 14, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 8);
   const isDaily = e.eventType === "daily_attraction";
   // An end time is worth showing only when it's after the start.
   const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
@@ -374,17 +374,23 @@ export default async function EventPage({ params }: { params: P }) {
             </section>
 
             {(sameVenue.length > 0 || nearby.length > 0) && (
-              <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2">
+              <div className="mt-12 grid gap-10">
                 {sameVenue.length > 0 && (
                   <section aria-labelledby="same">
-                    <h2 id="same" className="t-h3">Also at {v.name}</h2>
-                    <ul className="divide-y divide-line mt-2">{sameVenue.map((c) => <EventRow key={c.id} c={c} compact />)}</ul>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 id="same" className="t-h3">Also at {v.name}</h2>
+                      <Link href={`/venues/${v.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
+                    </div>
+                    <ul className="tile-strip no-scrollbar mt-3">{sameVenue.map((c) => <EventTile key={c.id} c={c} />)}</ul>
                   </section>
                 )}
                 {nearby.length > 0 && (
                   <section aria-labelledby="near">
-                    <h2 id="near" className="t-h3">Nearby</h2>
-                    <ul className="divide-y divide-line mt-2">{nearby.map((c) => <EventRow key={c.id} c={c} compact />)}</ul>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 id="near" className="t-h3">Nearby, soon</h2>
+                      {v.cityId && <Link href={`/events?city=${v.cityId}`} className="t-small text-text-2 hover:text-text shrink-0">More in {v.city} →</Link>}
+                    </div>
+                    <ul className="tile-strip no-scrollbar mt-3">{nearby.map((c) => <EventTile key={c.id} c={c} />)}</ul>
                   </section>
                 )}
               </div>

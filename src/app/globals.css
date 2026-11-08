@@ -3903,3 +3903,17 @@ mark.hit {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+/* A row of event tiles you scroll sideways (on an event page: same venue, nearby). */
+.tile-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(210px, 236px);
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+}
+.tile-strip > li {
+  scroll-snap-align: start;
+}
