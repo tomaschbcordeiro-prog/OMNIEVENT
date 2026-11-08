@@ -70,7 +70,7 @@ export function PosterArt({ data, styleId, font = "Geist" }: { data: PosterData;
               <div style={{ display: "flex", fontWeight: 700, letterSpacing: 2 }}>{when || "Date to be set"}</div>
               <div style={{ display: "flex", color: "#4A4540", marginTop: 6 }}>{where || "Somewhere wonderful"}</div>
             </div>
-            {d.price ? <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: hsl(d.hue, 75, 40) }}>{d.price}</div> : null}
+            {d.price ? <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: hsl(d.hue, 75, 28) }}>{d.price}</div> : null}
           </div>
         </div>
       </div>
