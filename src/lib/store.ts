@@ -483,7 +483,7 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   hydrateInfo.doneMs = Date.now() - t0;
   // Then, in slices, what every search needs (words, dates, intervals), so the first searches
   // are quick; done after the loading, which it would otherwise slow down.
-  void warmSearch();
+  warming = warmSearch().finally(() => (warming = undefined));
 }
 
 /**
@@ -552,7 +552,13 @@ export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void>
   // whatever has loaded while the rest keeps syncing in the background.
   // On serverless hosts an instance freezes once its response is sent; ask the platform to
   // keep it running until background syncs finish (bounded by the route's maxDuration).
-  const running = [...state.syncing.values()];
+  // The same for a new server loading its shared copies, and for index rebuilds under way:
+  // without it, that work went on only while some request happened to be running (a quiet
+  // server took up to two minutes to load what takes about thirty seconds).
+  const running: Promise<unknown>[] = [...state.syncing.values()];
+  if (state.hydrating) running.push(state.hydrating);
+  if (sliced) running.push(sliced);
+  if (warming) running.push(warming);
   if (running.length) {
     try {
       after(() => Promise.allSettled(running));
@@ -914,6 +920,8 @@ function rebuildIndexes() {
 }
 
 let sliced: Promise<void> | undefined;
+/** Search data being prepared after a new server has loaded (see warmSearch). */
+let warming: Promise<void> | undefined;
 let slicedAgain = false;
 /**
  * The same rebuild, done in slices of a few dozen milliseconds: a big catalogue takes seconds to
