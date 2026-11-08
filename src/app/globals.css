@@ -3303,3 +3303,27 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   color: var(--text-3);
   background: var(--panel-2);
 }
+/* The week's weather on a city page. */
+.wx-strip {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+.wx-day {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  min-width: 3.5rem;
+  padding: 0.45rem 0.4rem;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.wx-day:first-child {
+  border-color: color-mix(in srgb, var(--cyan) 35%, var(--line));
+  background: color-mix(in srgb, var(--cyan) 6%, var(--panel));
+}
+.wx-emoji {
+  font-size: 1.35rem;
+  line-height: 1.2;
+}

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
 import { dataReady, ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
-import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
+import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, HeroImage, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
@@ -18,6 +18,7 @@ import { CommunityPulse } from "@/components/community/pulse";
 import { EventActionBar } from "@/components/event-action-bar";
 import { ListedBy } from "@/components/create/my-events";
 import { Countdown } from "@/components/countdown";
+import { forecast, weatherLook } from "@/lib/weather";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -121,6 +122,10 @@ export default async function EventPage({ params }: { params: P }) {
   const isDaily = e.eventType === "daily_attraction";
   // An end time is worth showing only when it's after the start.
   const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
+  // The forecast for the day of the event, when it's in the week ahead.
+  const daysAhead = (Date.parse(e.start) - Date.now()) / 864e5;
+  const wx = !e.online && !isDaily && e.eventType !== "multi_day" && daysAhead > -0.5 && daysAhead < 6.5 ? await forecast(e.venue.lat, e.venue.lng) : null;
+  const wxDay = wx?.days.find((w) => w.date === localDateKey(e.start, e.timeZone));
   const access = e.accessibility?.length ? e.accessibility : v.accessibility ?? [];
   const ymd = (iso: string) => iso.slice(0, 10);
   const teams = e.people.filter((p) => p.role === "team_home" || p.role === "team_away" || p.role === "team");
@@ -220,6 +225,12 @@ export default async function EventPage({ params }: { params: P }) {
                   {!isDaily && !e.hoursUnknown && (
                     <span className="mt-1.5 block">
                       <Countdown starts={[e.start, ...(e.schedule ?? [])]} durationMinutes={e.durationMinutes} end={e.eventType === "multi_day" ? e.end : undefined} />
+                    </span>
+                  )}
+                  {wxDay && (
+                    <span className="block t-small text-text-2 mt-1.5">
+                      <span aria-hidden>{weatherLook(wxDay.code).emoji}</span> Forecast: {weatherLook(wxDay.code).label.toLowerCase()}, {wxDay.max}° / {wxDay.min}°
+                      {wxDay.rain != null && wxDay.rain >= 20 ? `, ${wxDay.rain}% chance of rain` : ""}
                     </span>
                   )}
                   {/* The length, when the end time isn't shown already. */}
