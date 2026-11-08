@@ -2197,7 +2197,6 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 }
 .countdown-sub {
   font-weight: 500;
-  opacity: 0.8;
 }
 .countdown-digits {
   display: inline-flex;

@@ -29,12 +29,19 @@ async function publicHost(url: URL): Promise<boolean> {
   return addrs.length > 0 && !addrs.some((a) => privateAddress(a.address));
 }
 
+/**
+ * Sites that didn't answer us lately (some refuse cloud servers): their pictures go straight to
+ * the original for an hour instead of waiting on them every time.
+ */
+const unreachable = new Map<string, number>();
+const HOST_PAUSE_MS = 3600000;
+
 /** Fetches a picture, following up to three redirects, each to a public https address. */
 async function fetchImage(start: URL): Promise<Response | string> {
   let url = start;
   for (let hop = 0; hop < 4; hop++) {
     if (!(await publicHost(url))) return "private";
-    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(8000), headers: { "User-Agent": "Mozilla/5.0 (compatible; OMNIEVENT image preview; +https://omnievent.vercel.app)", Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
+    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000), headers: { "User-Agent": "Mozilla/5.0 (compatible; OMNIEVENT image preview; +https://omnievent.vercel.app)", Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
     if (res.status >= 300 && res.status < 400) {
       const next = res.headers.get("location");
       if (!next) return "redirect-without-location";
@@ -65,6 +72,7 @@ export async function GET(req: Request) {
   if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443") || !THUMB_WIDTHS.includes(w as (typeof THUMB_WIDTHS)[number])) return new Response("Bad image request", { status: 400 });
   if (!rateLimit(`img:${clientKey(req)}`, 400)) return original(url.href, "rate");
 
+  if ((unreachable.get(url.hostname) ?? 0) > Date.now()) return original(url.href, "host-paused");
   try {
     if (!(await publicHost(url))) return new Response("Not allowed", { status: 403 });
     const res = await fetchImage(url);
@@ -98,6 +106,11 @@ export async function GET(req: Request) {
     });
   } catch (err) {
     const e = err as Error & { cause?: { code?: string } };
+    // A site that times out or drops the connection is left alone for a while.
+    if (e?.name === "TimeoutError" || e?.cause?.code) {
+      unreachable.set(url.hostname, Date.now() + HOST_PAUSE_MS);
+      if (unreachable.size > 500) unreachable.delete(unreachable.keys().next().value!);
+    }
     return original(url.href, `error-${String(e?.cause?.code ?? e?.name ?? "unknown").slice(0, 40)}`);
   }
 }
