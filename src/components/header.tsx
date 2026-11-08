@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, Search, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
@@ -45,10 +45,18 @@ export function Header() {
   const [search, setSearch] = useState(false);
   const t = (k: string) => translate(user.prefs.language, k);
   const isHome = path === "/";
+  // A soft shadow once the page scrolls under the bar.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 6);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   return (
-    <header className={`${isHome ? "absolute inset-x-0 top-0" : "sticky top-0 bg-bg/85 backdrop-blur-md border-b border-line"} z-40`}>
+    <header data-scrolled={scrolled && !isHome ? "" : undefined} className={`site-header ${isHome ? "absolute inset-x-0 top-0" : "sticky top-0 bg-bg/85 backdrop-blur-md border-b border-line"} z-40`}>
       <a href="#main" className="sr-only-focusable absolute left-2 top-2 z-50 btn btn-primary">
         Skip to content
       </a>

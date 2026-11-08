@@ -185,18 +185,23 @@ export function SaveButton({ id, title, compact = false, className = "" }: { id:
   const user = useUser();
   const saved = user.saved.some((s) => s.id === id);
   const Icon = saved ? BookmarkCheck : Bookmark;
+  // A ring that ripples out from the button the moment something is saved.
+  const [burst, setBurst] = useState(0);
   return (
     <button
       type="button"
       aria-pressed={saved}
+      // Alternating names restart the ripple without remounting (focus stays put).
+      data-burst={burst ? (burst % 2 ? "a" : "b") : undefined}
       aria-label={saved ? `Remove ${title} from saved` : `Save ${title}`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         userActions.toggleSave(id);
+        if (!saved) setBurst((n) => n + 1);
         toast(saved ? { title: "Removed from saved", emoji: "🗑️" } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
-      className={`btn press ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
+      className={`save-btn btn press ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
     >
       <Icon key={String(saved)} size={15} aria-hidden fill={saved ? "currentColor" : "none"} className={saved ? "pop" : undefined} />
       {!compact && (saved ? "Saved" : "Save")}
