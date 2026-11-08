@@ -373,6 +373,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   // Four sources at a time (each snapshot is unpacked in memory before it's kept), the
   // smallest first so most of the catalogue shows within the first seconds.
   const queue = [...providers].sort((a, b) => (index[a.id]?.events ?? 0) - (index[b.id]?.events ?? 0));
+  const queueSize = queue.length;
+  const rebuildsBefore = hydrateInfo.rebuilds;
+  const loadedBefore = hydrateInfo.loaded.length;
   const loadOne = async (p: ProviderAdapter) => {
       const meta = index[p.id];
       // A source being read live here still takes its shared copy (merged with what the live
@@ -403,7 +406,12 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         // A new server shows the sources as they arrive.
         hydrateInfo.loaded.push(`${p.id}@${Math.round((Date.now() - t0) / 100) / 10}s`);
         lastLoadAt = Date.now();
-        if (!sliced && Date.now() - lastPassAt >= 2000) void pass();
+        // While loading, few passes (each goes over everything loaded so far and competes with
+        // the loading for the processor): one early so the first visitors see most of the
+        // catalogue, one when most sources are in; the last one when everything is.
+        const passes = hydrateInfo.rebuilds - rebuildsBefore;
+        const loadedShare = (hydrateInfo.loaded.length - loadedBefore) / Math.max(1, queueSize);
+        if (!sliced && ((passes === 0 && Date.now() - t0 >= 1500) || (passes === 1 && loadedShare >= 0.85))) void pass();
         if (!state.runs.has(p.id))
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;

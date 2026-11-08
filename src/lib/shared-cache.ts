@@ -135,7 +135,7 @@ export async function snapshotIndex(ids: string[] = []): Promise<Record<string, 
 
 export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<ProviderBatch | undefined> {
   if (rc) {
-    const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 8, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
+    const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 12, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
     if (parts.some((p) => typeof p !== "string")) return undefined;
     return JSON.parse((await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8")) as ProviderBatch;
   }
