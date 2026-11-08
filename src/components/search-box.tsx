@@ -232,7 +232,8 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
             autoComplete="off"
             autoFocus={autoFocus}
             value={q}
-            placeholder={placeholder ?? "Search events, artists, teams, venues or places"}
+            // Short enough to show whole on a phone (the longer wording was cut off mid-sentence).
+            placeholder={placeholder ?? "Events, artists, venues, cities…"}
             onChange={(e) => {
               setQ(e.target.value);
               setOpen(true);
