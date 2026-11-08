@@ -337,14 +337,14 @@ function SwipeCard({ card: c, fly, onDecide }: { card: EventCard; fly: "left" | 
       <span className="match-stamp left-5 border-ok text-ok -rotate-12" style={{ opacity: like }} aria-hidden>SAVE</span>
       <span className="match-stamp right-5 border-bad text-bad rotate-12" style={{ opacity: nope }} aria-hidden>PASS</span>
       <div className="absolute left-4 top-4 flex gap-1.5">
-        <span className="rounded-full bg-white/90 px-2.5 py-1 t-micro font-semibold text-text tnum">{cardWhen(c)}</span>
+        <span className="rounded-full bg-panel/90 px-2.5 py-1 t-micro font-semibold text-text tnum">{cardWhen(c)}</span>
       </div>
       <div className="absolute inset-x-0 bottom-0 p-5 text-white">
         <p className="flex items-center gap-1.5 t-small text-white/85"><CategoryIcon slug={c.categorySlug} size={14} /> {categoryLabel(c.categorySlug)}</p>
         <h2 className="text-[26px] leading-tight font-bold tracking-[-0.02em] mt-1 line-clamp-3 text-balance">{c.title}</h2>
         <p className="t-small text-white/85 mt-1.5 flex items-center gap-1"><MapPin size={14} aria-hidden /> <span className="truncate">{c.venueName}, {c.city}{c.distanceKm != null ? ` · ${Math.round(c.distanceKm)} km` : ""}</span></p>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="rounded-full bg-white/90 text-text px-3 py-1 t-small font-semibold">
+          <span className="rounded-full bg-panel/90 text-text px-3 py-1 t-small font-semibold">
             <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} />
           </span>
           <Link href={`/events/${c.slug}`} className="t-small font-semibold underline-offset-2 hover:underline">Details →</Link>

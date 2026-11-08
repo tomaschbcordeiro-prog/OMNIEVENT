@@ -77,7 +77,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
                 ["Ratings", home?.stats.ratings],
                 ["Plans made", home?.stats.plans],
               ] as const).map(([k, v]) => (
-                <div key={k} className="rounded-[var(--radius-m)] bg-white/85 backdrop-blur px-3 py-2.5 shadow-sm">
+                <div key={k} className="rounded-[var(--radius-m)] bg-panel/85 backdrop-blur px-3 py-2.5 shadow-sm">
                   <dd className="text-2xl font-bold tnum text-text">{v ?? <span className="skeleton inline-block h-6 w-10" />}</dd>
                   <dt className="t-micro text-text-2">{k}</dt>
                 </div>

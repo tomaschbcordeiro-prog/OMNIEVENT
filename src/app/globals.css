@@ -3421,7 +3421,7 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 }
 .site-header[data-scrolled] {
   box-shadow: 0 10px 28px -20px rgb(13 27 51 / 0.45);
-  background-color: rgb(243 247 252 / 0.92);
+  background-color: color-mix(in srgb, var(--bg) 92%, transparent);
 }
 /* Saving: a ring ripples out from the button. */
 .save-btn {
