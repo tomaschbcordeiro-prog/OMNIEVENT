@@ -34,7 +34,8 @@ export const metadata: Metadata = {
     "Explore concerts, sport, theatre, festivals, conferences, exhibitions and attractions on an interactive 3D globe, compare ticket options and go straight to official sellers.",
   openGraph: { type: "website", siteName: "OMNIEVENT" },
   twitter: { card: "summary_large_image" },
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "OMNIEVENT", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = { themeColor: "#3F97F2", width: "device-width", initialScale: 1, viewportFit: "cover" };
