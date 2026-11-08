@@ -1,4 +1,4 @@
-import { ensureFresh, providerStatuses, dataSummary } from "@/lib/store";
+import { ensureFresh, providerStatuses, dataSummary, hydrateInfo } from "@/lib/store";
 import { FX_SOURCE } from "@/lib/currency";
 import { handler, ok, redactSecrets } from "@/lib/api";
 import { getStates, snapshotIndex } from "@/lib/shared-cache";
@@ -34,7 +34,7 @@ export const GET = handler(async () => {
   // Errors from sources are shown as they came: anything shaped like a key is hidden first.
   // How this server is doing (how long it has run, how much memory it holds).
   const mem = process.memoryUsage();
-  const server = { uptimeSec: Math.round(process.uptime()), rssMb: Math.round(mem.rss / 1048576), heapMb: Math.round(mem.heapUsed / 1048576) };
+  const server = { uptimeSec: Math.round(process.uptime()), rssMb: Math.round(mem.rss / 1048576), heapMb: Math.round(mem.heapUsed / 1048576), hydrate: { ...hydrateInfo, loaded: hydrateInfo.loaded.slice(-40), failed: hydrateInfo.failed.slice(-10) } };
   const body = { providers, data: dataSummary(), server, storage: await storageStatus(), shared, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } };
   return ok(JSON.parse(redactSecrets(JSON.stringify(body))));
 });

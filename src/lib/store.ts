@@ -277,13 +277,21 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
  * Checked when an instance starts and then every five minutes (one small request).
  */
 let lastHydrateRebuild = 0;
+/** How the last load of shared copies went on this server (for the status page). */
+export const hydrateInfo: { runs: number; startedAt?: number; indexMs?: number; indexed?: number; loaded: string[]; failed: string[]; doneMs?: number; rebuilds: number } = { runs: 0, loaded: [], failed: [], rebuilds: 0 };
 async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   let index: Awaited<ReturnType<typeof snapshotIndex>>;
+  const t0 = Date.now();
+  hydrateInfo.runs++;
+  hydrateInfo.startedAt = t0;
   try {
     index = await snapshotIndex(providers.map((p) => p.id));
     state.snapIndex = index;
+    hydrateInfo.indexMs = Date.now() - t0;
+    hydrateInfo.indexed = Object.keys(index).length;
   } catch (err) {
     log("error", "snapshot index failed", { err: String(err) });
+    hydrateInfo.failed.push(`index: ${String(err).slice(0, 80)}`);
     return;
   }
   let changed = false;
@@ -306,14 +314,17 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
         // A new server shows the sources as they arrive, rebuilding at most every eight seconds
         // (each rebuild goes over everything loaded so far).
+        hydrateInfo.loaded.push(`${p.id}@${Math.round((Date.now() - t0) / 100) / 10}s`);
         if (Date.now() - lastHydrateRebuild > 8000) {
           lastHydrateRebuild = Date.now();
           rebuildIndexes();
+          hydrateInfo.rebuilds++;
         }
         if (!state.runs.has(p.id))
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;
       } catch (err) {
+        hydrateInfo.failed.push(`${p.id}: ${String(err).slice(0, 80)}`);
         (state.snapFailed ??= new Set()).add(p.id);
         log("error", "snapshot load failed", { provider: p.id, err: String(err) });
       }
@@ -324,6 +335,7 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     }),
   );
   if (changed) rebuildIndexes();
+  hydrateInfo.doneMs = Date.now() - t0;
 }
 
 /**
