@@ -556,33 +556,46 @@ function sane(e: OmniEvent): OmniEvent {
 // What a rebuild works out per record is kept with the source's own objects, which stay the
 // same until that source is read again: rebuilding then mostly reuses (and every cache keyed
 // on an event or card, such as its days or its search text, stays warm).
-const titles = new WeakMap<OmniEvent, string>();
+const TITLE = Symbol("title");
+const COPY = Symbol("copy");
+const CARD = Symbol("card");
+type Memo = OmniEvent & { [TITLE]?: string; [COPY]?: OmniEvent; [CARD]?: { card: EventCard; venue: Venue | undefined; offers: TicketOffer[]; people: (Participant | undefined)[] } };
+// Kept on the record itself under a symbol (unseen by JSON and by the rest of the code):
+// cheaper to read and to collect than one more WeakMap entry per record.
+const DEDUPE = Symbol("dedupe");
+type DedupeKey = { v: Venue; t: string; startMs: number; key: string; day: string };
 function titleOf(e: OmniEvent): string {
-  let t = titles.get(e);
-  if (t === undefined) titles.set(e, (t = norm(e.title)));
+  let t = (e as Memo)[TITLE];
+  if (t === undefined) (e as Memo)[TITLE] = t = norm(e.title);
   return t;
 }
-const copies = new WeakMap<OmniEvent, OmniEvent>();
 function canonicalCopy(e: OmniEvent): OmniEvent {
-  let c = copies.get(e);
-  if (!c) copies.set(e, (c = { ...sane(e), canonicalId: e.id }));
+  let c = (e as Memo)[COPY];
+  if (!c) {
+    const s = sane(e);
+    // Most records are already their own canonical copy: kept as they are, not copied (copying
+    // a big catalogue's every record cost seconds on a new server, mostly in garbage collection).
+    c = s === e && e.canonicalId === e.id ? e : { ...s, canonicalId: e.id };
+    (e as Memo)[COPY] = c;
+  }
   return c;
 }
 const offerCopies = new WeakMap<TicketOffer, TicketOffer>();
 function offerCopy(o: TicketOffer, eventId: string): TicketOffer {
+  // An offer for the event it was listed with needs no copy; one moved to the merged event does.
+  if (o.eventId === eventId) return o;
   let c = offerCopies.get(o);
   if (!c || c.eventId !== eventId) offerCopies.set(o, (c = { ...o, eventId }));
   return c;
 }
 const NO_OFFERS: TicketOffer[] = [];
-const cardMemo = new WeakMap<OmniEvent, { card: EventCard; venue: Venue | undefined; offers: TicketOffer[]; people: (Participant | undefined)[] }>();
 function cardFor(e: OmniEvent, venues: Map<string, Venue>, participants: Map<string, Participant>, offers: TicketOffer[]): EventCard {
   const venue = venues.get(e.venueId);
   const people = e.participants.map((ep) => participants.get(ep.participantId));
-  const m = cardMemo.get(e);
+  const m = (e as Memo)[CARD];
   if (m && m.venue === venue && m.offers.length === offers.length && m.offers.every((o, i) => o === offers[i]) && m.people.every((p, i) => p === people[i]) && m.people.length === people.length) return m.card;
   const card = toCard(e, venues, participants, offers);
-  cardMemo.set(e, { card, venue, offers: [...offers], people });
+  (e as Memo)[CARD] = { card, venue, offers: [...offers], people };
   return card;
 }
 
@@ -618,9 +631,8 @@ function rebuildIndexes() {
   // exact coordinates or start times: same title, same day and venues within 400 m merge,
   // so its page compares both sellers.
   const byTitleDay = new Map<string, { id: string; lat: number; lng: number; provider: string }[]>();
-  const sameShowElsewhere = (e: OmniEvent, v: Venue, t: string, startMs: number) => {
+  const sameShowElsewhere = (e: OmniEvent, v: Venue, t: string, day: string) => {
     if (t.length < 6) return undefined;
-    const day = `${t}|${Math.floor(startMs / 86400000)}`;
     return byTitleDay.get(day)?.find((c) => c.provider !== e.provenance.provider && haversineKm(c.lat, c.lng, v.lat, v.lng) < 0.4)?.id;
   };
 
@@ -637,13 +649,20 @@ function rebuildIndexes() {
   for (const [, batch] of ordered) {
     for (const e of batch.events) {
       const v = venues.get(e.venueId);
-      const startMs = Date.parse(e.start);
-      if (!v || !Number.isFinite(startMs) || !Number.isFinite(v.lat) || !Number.isFinite(v.lng)) continue;
-      // Conservative duplicate key: identical normalised title, same ~100 m venue cell,
-      // start within the same 15-minute window. Similar names alone never merge.
-      const t = titleOf(e);
-      const key = `${t}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(startMs / 900000)}`;
-      const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v, t, startMs);
+      if (!v) continue;
+      // Worked out once per record and venue, then kept with the record.
+      let k = (e as OmniEvent & { [DEDUPE]?: DedupeKey })[DEDUPE];
+      if (!k || k.v !== v) {
+        const startMs = Date.parse(e.start);
+        if (!Number.isFinite(startMs) || !Number.isFinite(v.lat) || !Number.isFinite(v.lng)) continue;
+        // Conservative duplicate key: identical normalised title, same ~100 m venue cell,
+        // start within the same 15-minute window. Similar names alone never merge.
+        const t = titleOf(e);
+        k = { v, t, startMs, key: `${t}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(startMs / 900000)}`, day: `${t}|${Math.floor(startMs / 86400000)}` };
+        (e as OmniEvent & { [DEDUPE]?: DedupeKey })[DEDUPE] = k;
+      }
+      const { t, key } = k;
+      const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v, t, k.day);
       if (canonical && events.get(canonical)?.provenance.isDemo === e.provenance.isDemo) {
         aliases.set(e.id, canonical);
         slugAliases.set(e.slug, canonical);
@@ -651,7 +670,7 @@ function rebuildIndexes() {
       }
       dedupe.set(key, e.id);
       events.set(e.id, canonicalCopy(e));
-      const day = `${t}|${Math.floor(startMs / 86400000)}`;
+      const day = k.day;
       const same = byTitleDay.get(day);
       const entry = { id: e.id, lat: v.lat, lng: v.lng, provider: e.provenance.provider };
       if (same) same.push(entry);
@@ -678,7 +697,9 @@ function rebuildIndexes() {
   state.offersById = offersById;
   state.aliases = aliases;
   state.cards = cards;
-  state.bySlug = new Map([...events.values()].map((e) => [e.slug, e.id]));
+  const bySlug = new Map<string, string>();
+  for (const e of events.values()) bySlug.set(e.slug, e.id);
+  state.bySlug = bySlug;
   // A merged duplicate's own link leads to the event it was merged into.
   for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
   state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
@@ -914,7 +935,14 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
 }
 
 /** Internals exposed to unit tests only. */
-export const __testing = { matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f), matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f), textScore: (c: EventCard, terms: string[]) => textScore(c, terms) };
+export const __testing = {
+  matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f),
+  matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f),
+  textScore: (c: EventCard, terms: string[]) => textScore(c, terms),
+  /** For timing the index on a big catalogue: put a batch in place and rebuild. */
+  load: (id: string, batch: ProviderBatch) => state.providerData.set(id, batch),
+  rebuild: () => rebuildIndexes(),
+};
 
 /** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */
 function matchesWhenSlow(e: OmniEvent, f: SearchFilters): boolean {
