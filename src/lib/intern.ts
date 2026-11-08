@@ -1,5 +1,8 @@
 import type { ProviderBatch } from "./providers/types";
 
+/** Fields that are different on every record: looking them up would only cost time. */
+const UNIQUE = new Set(["id", "canonicalId", "slug", "externalId"]);
+
 /**
  * One copy of each repeated text in a source's data. Parsed from JSON, every record holds its
  * own copy of texts that are the same across many records: a tour's description and title on
@@ -7,11 +10,11 @@ import type { ProviderBatch } from "./providers/types";
  * official page, the source page and the ticket link. A server holds a couple of hundred
  * thousand records, close to its memory limit; sharing those copies frees tens of megabytes.
  * Only text values change hands (each is replaced by an equal one), so nothing reads differently.
+ *
+ * Returns a function that does this to a list of records; lists given to the same function
+ * share their copies too (a source's copy is read a few thousand records at a time).
  */
-/** Fields that are different on every record: looking them up would only cost time. */
-const UNIQUE = new Set(["id", "canonicalId", "slug", "externalId"]);
-
-export function internBatch<T extends ProviderBatch>(batch: T): T {
+export function textSharer(): (rows: readonly unknown[] | undefined) => void {
   const pool = new Map<string, string>();
   const one = (s: string): string => {
     const kept = pool.get(s);
@@ -35,6 +38,14 @@ export function internBatch<T extends ProviderBatch>(batch: T): T {
       } else if (v && typeof v === "object") strings(v as Record<string, unknown>);
     }
   };
-  for (const list of [batch.events, batch.venues, batch.participants, batch.offers] as unknown as Record<string, unknown>[][]) for (const r of list ?? []) strings(r);
+  return (rows) => {
+    for (const r of rows ?? []) if (r && typeof r === "object") strings(r as Record<string, unknown>);
+  };
+}
+
+/** textSharer over a whole batch at once. */
+export function internBatch<T extends ProviderBatch>(batch: T): T {
+  const share = textSharer();
+  for (const list of [batch.events, batch.venues, batch.participants, batch.offers]) share(list);
   return batch;
 }

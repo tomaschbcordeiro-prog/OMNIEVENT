@@ -1,19 +1,25 @@
 import "server-only";
-import { brotliDecompressSync, constants as zc, createBrotliCompress, gunzipSync } from "node:zlib";
+import { Readable } from "node:stream";
+import { StringDecoder } from "node:string_decoder";
+import { brotliDecompressSync, constants as zc, createBrotliCompress, createBrotliDecompress, gunzipSync } from "node:zlib";
 import { getCache, type RuntimeCache } from "@vercel/functions";
 import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
 import type { ProviderBatch } from "./providers/types";
-import { internBatch } from "./intern";
+import { internBatch, textSharer } from "./intern";
 
 // Packed with Brotli and a 16 MB window: the same descriptions and links recur across a tour's
 // dates far apart in a copy, which gzip's 32 KB window can't see. Ticketmaster's 122 MB of
 // JSON packs to 8.7 MB instead of 18.9 MB (gzip), and packs and unpacks a little faster.
-// Unpacked on the main thread: done on Node's small pool of worker threads instead, it could
-// wait behind other work there (slow name lookups) and a new server never finished loading.
 //
-// Packed as it's written, a few thousand records at a time: writing a big source's whole copy
-// as one string first (122 MB, twice that in memory for text outside Latin-1) could take a
-// server near its memory limit on top of everything it already holds, and saves stopped.
+// Written as lines of a couple of thousand records each (["events", [...]]), packed as they're
+// written, and read back the same way:
+// - writing a big source's whole copy as one string first (122 MB, twice that in memory for
+//   text outside Latin-1) could take a server near its memory limit, and saves stopped;
+// - reading one back in one go (unpack, then parse 122 MB) held a server for about seven
+//   seconds, every page it was asked for waiting meanwhile. Now it is unpacked off the main
+//   thread and each line is read in turn, the server answering in between.
+const LINES = 2000;
+
 export async function packBatch(batch: ProviderBatch): Promise<Buffer> {
   const z = createBrotliCompress({ params: { [zc.BROTLI_PARAM_QUALITY]: 4, [zc.BROTLI_PARAM_LGWIN]: 24 } });
   const out: Buffer[] = [];
@@ -23,28 +29,76 @@ export async function packBatch(batch: ProviderBatch): Promise<Buffer> {
     z.on("error", reject);
   });
   const write = (text: string) => new Promise<void>((resolve, reject) => z.write(text, (err) => (err ? reject(err) : resolve())));
-  const keys = ["events", "venues", "participants", "offers"] as const;
-  await write("{");
-  for (const [k, key] of keys.entries()) {
-    await write(`${k ? "," : ""}"${key}":[`);
+  await write(`${JSON.stringify({ v: 2 })}\n`);
+  for (const key of ["events", "venues", "participants", "offers"] as const) {
     const rows: readonly unknown[] = batch[key] ?? [];
-    for (let i = 0; i < rows.length; i += 2000)
+    for (let i = 0; i < rows.length; i += LINES)
       await write(
-        (i ? "," : "") +
-          rows
-            .slice(i, i + 2000)
-            .map((r) => JSON.stringify(r) ?? "null")
-            .join(","),
+        `["${key}",[${rows
+          .slice(i, i + LINES)
+          .map((r) => JSON.stringify(r) ?? "null")
+          .join(",")}]]\n`,
       );
-    await write("]");
   }
-  z.end("}");
+  z.end();
   await done;
   return Buffer.concat(out);
 }
 
-/** Copies saved before the switch to Brotli are gzip. */
+const KEYS = new Set(["events", "venues", "participants", "offers"]);
+
+/**
+ * Reads a copy written by packBatch: unpacked as a stream (off the main thread), each line
+ * parsed as it completes, the server free to answer between lines.
+ */
+export async function unpackLines(packed: Buffer): Promise<ProviderBatch> {
+  const batch: ProviderBatch = { events: [], venues: [], participants: [], offers: [] };
+  const share = textSharer();
+  const decoder = new StringDecoder("utf8");
+  let header = true;
+  let pending: string[] = [];
+  const take = (line: string) => {
+    if (header) {
+      header = false;
+      if ((JSON.parse(line) as { v?: number }).v !== 2) throw new Error("unknown copy format");
+      return;
+    }
+    if (!line) return;
+    const [key, rows] = JSON.parse(line) as [string, unknown[]];
+    if (!KEYS.has(key) || !Array.isArray(rows)) throw new Error("damaged copy");
+    share(rows);
+    const list = batch[key as keyof ProviderBatch] as unknown[];
+    for (const r of rows) list.push(r);
+  };
+  const stream = Readable.from([packed]).pipe(createBrotliDecompress());
+  for await (const chunk of stream as AsyncIterable<Buffer>) {
+    const text = decoder.write(chunk);
+    let from = 0;
+    let at: number;
+    while ((at = text.indexOf("\n", from)) >= 0) {
+      pending.push(text.slice(from, at));
+      take(pending.join(""));
+      pending = [];
+      from = at + 1;
+      // Lets the server answer requests between lines.
+      await new Promise((r) => setImmediate(r));
+    }
+    if (from < text.length) pending.push(text.slice(from));
+  }
+  pending.push(decoder.end());
+  const last = pending.join("");
+  if (last) take(last);
+  return batch;
+}
+
+/** Copies saved before lines were written: one JSON document, Brotli ("br") or gzip (none). */
 export const unpack = (b: Buffer, enc?: string) => (enc === "br" ? brotliDecompressSync(b) : gunzipSync(b));
+
+/** Any copy, whatever the format it was saved in. */
+async function readCopy(packed: Buffer, enc?: string): Promise<ProviderBatch> {
+  if (enc === "brl") return unpackLines(packed);
+  return internBatch(JSON.parse(unpack(packed, enc).toString("utf8")) as ProviderBatch);
+}
 
 /**
  * Data shared by every server instance:
@@ -82,8 +136,8 @@ export interface SnapshotMeta {
   n: number;
   at: number;
   events: number;
-  /** "br" for Brotli; absent for the older gzip copies. */
-  enc?: "br";
+  /** "brl" for Brotli lines (packBatch), "br" for one Brotli document; absent for the older gzip copies. */
+  enc?: "br" | "brl";
 }
 
 /** Runs `fn` over `items`, `limit` at a time. */
@@ -103,7 +157,7 @@ export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.n
     const ver = at.toString(36) + Math.random().toString(36).slice(2, 6);
     const n = Math.max(1, Math.ceil(data.length / RC_CHUNK));
     await inBatches(Array.from({ length: n }, (_, i) => i), 4, (i) => rc.set(`snap:${id}:${ver}:${i}`, data.slice(i * RC_CHUNK, (i + 1) * RC_CHUNK), { ttl: TTL, name: `snapshot ${id} ${i + 1}/${n}` }));
-    const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "br" };
+    const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "brl" };
     await rc.set(`snap:meta:${id}`, meta, { ttl: TTL, name: `snapshot ${id}` });
     return;
   }
@@ -113,7 +167,7 @@ export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.n
   const ver = current?.ver === "a" ? "b" : "a";
   const n = Math.max(1, Math.ceil(data.length / CHUNK));
   for (let i = 0; i < n; i++) await cmd(["SET", `snap:${id}:${ver}:${i}`, data.slice(i * CHUNK, (i + 1) * CHUNK), "EX", TTL]);
-  const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "br" };
+  const meta: SnapshotMeta = { ver, n, at, events: batch.events.length, enc: "brl" };
   await cmd(["HSET", INDEX, id, JSON.stringify(meta)]);
   // Chunks left over from a bigger earlier copy in this slot.
   const stale = Array.from({ length: 40 }, (_, i) => `snap:${id}:${ver}:${n + i}`);
@@ -181,12 +235,8 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
     const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 24, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
     const t1 = Date.now();
     if (parts.some((p) => typeof p !== "string")) return undefined;
-    const raw = unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8");
-    const t2 = Date.now();
-    const batch = JSON.parse(raw) as ProviderBatch;
-    const t3 = Date.now();
-    internBatch(batch);
-    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks: fetch ${t1 - t0} ms, unzip ${t2 - t1} ms, parse ${t3 - t2} ms, share texts ${Date.now() - t3} ms`;
+    const batch = await readCopy(Buffer.from(parts.join(""), "base64"), meta.enc);
+    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks (${meta.enc ?? "gzip"}): fetch ${t1 - t0} ms, read ${Date.now() - t1} ms`;
     return batch;
   }
   if (!persistent) return undefined;
@@ -199,7 +249,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
       }),
     );
   if (parts.some((p) => typeof p !== "string")) return undefined;
-  return internBatch(JSON.parse(unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8")) as ProviderBatch);
+  return readCopy(Buffer.from(parts.join(""), "base64"), meta.enc);
 }
 
 /** True when this instance now holds the lock; it expires by itself after `ttlSec`. */
