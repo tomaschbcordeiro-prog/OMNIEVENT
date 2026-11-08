@@ -141,10 +141,11 @@ const dataAt = new Map<string, number>();
 const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 3600000;
 
 /** How long the first requests a server answers may wait for its data. */
-// A new server answers within a few seconds with what it has; the rest keeps loading. On
-// Vercel, where the shared copies arrive whole in about ten seconds, the first visitors wait
-// for them rather than see a nearly empty catalogue.
-const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? (process.env.VERCEL === "1" ? 10000 : 4000));
+// A new server answers within a few seconds with what it has; the rest keeps loading (the
+// index is rebuilt in slices, so the server stays responsive). On Vercel the shared copies
+// take ten to fifteen seconds in all: the first visitors wait six, see most of the catalogue,
+// and the page completes itself when the rest is in (see StillLoading).
+const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? (process.env.VERCEL === "1" ? 6000 : 4000));
 
 const SYNC_SLOTS = Number(process.env.SYNC_CONCURRENCY ?? 8);
 const HEAVY_SLOTS = 2;
@@ -337,7 +338,6 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
  * Loads snapshots other instances saved that are newer than what this instance has.
  * Checked when an instance starts and then every five minutes (one small request).
  */
-let lastHydrateRebuild = 0;
 /** How the last load of shared copies went on this server (for the status page). */
 export const hydrateInfo: { runs: number; startedAt?: number; indexMs?: number; indexed?: number; loaded: string[]; failed: string[]; doneMs?: number; rebuilds: number } = { runs: 0, loaded: [], failed: [], rebuilds: 0 };
 async function hydrate(providers: ProviderAdapter[]): Promise<void> {
@@ -356,9 +356,16 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     return;
   }
   let changed = false;
-  // Whether something arrived since the last rebuild (the last source to arrive usually
-  // triggers one already; a second full rebuild of a big catalogue would cost seconds).
-  let dirty = false;
+  // The index is rebuilt in slices while copies arrive (the server keeps answering meanwhile),
+  // at most one pass every two seconds, and once more at the end if anything arrived after the
+  // last pass began.
+  let lastLoadAt = 0;
+  let lastPassAt = 0;
+  const pass = () => {
+    lastPassAt = Date.now();
+    hydrateInfo.rebuilds++;
+    return rebuildIndexesSliced();
+  };
   // Four sources at a time (each snapshot is unpacked in memory before it's kept), the
   // smallest first so most of the catalogue shows within the first seconds.
   const queue = [...providers].sort((a, b) => (index[a.id]?.events ?? 0) - (index[b.id]?.events ?? 0));
@@ -378,16 +385,10 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         state.providerData.set(p.id, batch);
         dataAt.set(p.id, meta.at);
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
-        // A new server shows the sources as they arrive, rebuilding at most every eight seconds
-        // (each rebuild goes over everything loaded so far).
+        // A new server shows the sources as they arrive.
         hydrateInfo.loaded.push(`${p.id}@${Math.round((Date.now() - t0) / 100) / 10}s`);
-        dirty = true;
-        if (Date.now() - lastHydrateRebuild > 8000) {
-          lastHydrateRebuild = Date.now();
-          rebuildIndexes();
-          dirty = false;
-          hydrateInfo.rebuilds++;
-        }
+        lastLoadAt = Date.now();
+        if (!sliced && Date.now() - lastPassAt >= 2000) void pass();
         if (!state.runs.has(p.id))
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;
@@ -402,9 +403,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
       while (queue.length) await loadOne(queue.shift()!);
     }),
   );
-  if (changed && dirty) {
-    rebuildIndexes();
-    hydrateInfo.rebuilds++;
+  if (changed) {
+    while (sliced) await sliced;
+    if (lastLoadAt >= lastPassAt) await pass();
   }
   hydrateInfo.doneMs = Date.now() - t0;
 }
@@ -636,7 +637,9 @@ function candidates(f: SearchFilters): Iterable<EventCard> {
   return out;
 }
 
-function rebuildIndexes() {
+function* rebuildSteps(gen: number): Generator<void, void, void> {
+  // Gives way every few thousand records (the async rebuild pauses there; the sync one doesn't).
+  let n = 0;
   const t0 = Date.now();
   const events = new Map<string, OmniEvent>();
   const venues = new Map<string, Venue>();
@@ -666,6 +669,7 @@ function rebuildIndexes() {
   }
   for (const [, batch] of ordered) {
     for (const e of batch.events) {
+      if (++n % 2000 === 0) yield;
       const v = venues.get(e.venueId);
       if (!v) continue;
       // Worked out once per record and venue, then kept with the record.
@@ -706,24 +710,14 @@ function rebuildIndexes() {
   }
 
   const cards = new Map<string, EventCard>();
-  for (const e of events.values()) cards.set(e.id, cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS));
-
-  state.events = events;
-  state.venues = venues;
-  state.participants = participants;
-  state.offers = offers;
-  state.offersById = offersById;
-  state.aliases = aliases;
-  state.cards = cards;
-  const bySlug = new Map<string, string>();
-  for (const e of events.values()) bySlug.set(e.slug, e.id);
-  state.bySlug = bySlug;
-  // A merged duplicate's own link leads to the event it was merged into.
-  for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
-  state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
+  for (const e of events.values()) {
+    if (++n % 2000 === 0) yield;
+    cards.set(e.id, cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS));
+  }
   const grid = new Map<string, EventCard[]>();
   const byCity = new Map<string, EventCard[]>();
   for (const c of cards.values()) {
+    if (++n % 4000 === 0) yield;
     if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
       const k = cellKey(Math.floor(c.lat), Math.floor(c.lng));
       const list = grid.get(k);
@@ -736,12 +730,83 @@ function rebuildIndexes() {
       else byCity.set(c.cityId, [c]);
     }
   }
+  const bySlug = new Map<string, string>();
+  for (const e of events.values()) {
+    if (++n % 8000 === 0) yield;
+    bySlug.set(e.slug, e.id);
+  }
+  // A merged duplicate's own link leads to the event it was merged into.
+  for (const [slug, id] of slugAliases) if (!bySlug.has(slug)) bySlug.set(slug, id);
+  const venuesBySlug = new Map<string, string>();
+  for (const v of venues.values()) venuesBySlug.set(v.slug, v.id);
+  yield;
+  const participantsBySlug = new Map<string, string>();
+  for (const p of participants.values()) participantsBySlug.set(p.slug, p.id);
+
+  // A newer rebuild started meanwhile (it sees newer data): this one's work is dropped.
+  if (gen !== rebuildGen) return;
+  // Installed all at once, so a page never sees half of one index and half of another.
+  state.events = events;
+  state.venues = venues;
+  state.participants = participants;
+  state.offers = offers;
+  state.offersById = offersById;
+  state.aliases = aliases;
+  state.cards = cards;
+  state.bySlug = bySlug;
+  state.venuesBySlug = venuesBySlug;
+  state.participantsBySlug = participantsBySlug;
   state.grid = grid;
   state.byCity = byCity;
   state.cityStatsCache = undefined;
   const ms = Date.now() - t0;
   if (ms > 300) log("info", "indexes rebuilt", { ms, events: cards.size });
-  state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
+}
+
+/** Each rebuild's number: only the newest one in flight may install its result. */
+let rebuildGen = 0;
+
+/** Rebuilds the indexes at once (blocks until done). */
+function rebuildIndexes() {
+  const it = rebuildSteps(++rebuildGen);
+  while (!it.next().done);
+}
+
+let sliced: Promise<void> | undefined;
+let slicedAgain = false;
+/**
+ * The same rebuild, done in slices of a few dozen milliseconds: a big catalogue takes seconds to
+ * index, and meanwhile the server keeps answering (from the index it already has). Calls during
+ * one coalesce into one more pass afterwards.
+ */
+function rebuildIndexesSliced(): Promise<void> {
+  if (sliced) {
+    slicedAgain = true;
+    return sliced;
+  }
+  sliced = (async () => {
+    do {
+      slicedAgain = false;
+      const it = rebuildSteps(++rebuildGen);
+      let until = Date.now() + 30;
+      while (!it.next().done) {
+        if (Date.now() < until) continue;
+        await new Promise((r) => setImmediate(r));
+        until = Date.now() + 30;
+      }
+    } while (slicedAgain);
+  })().finally(() => (sliced = undefined));
+  return sliced;
+}
+
+/** True while the indexes are being rebuilt in slices (the catalogue shown may be incomplete). */
+export function indexing(): boolean {
+  return !!sliced;
+}
+
+/** Whether this server shows its whole catalogue: nothing loading and the index up to date. */
+export function catalogueComplete(): boolean {
+  return !loadingNow() && !sliced;
 }
 
 function fromPrice(offers: TicketOffer[]): EventCard["fromPrice"] {
@@ -960,6 +1025,8 @@ export const __testing = {
   /** For timing the index on a big catalogue: put a batch in place and rebuild. */
   load: (id: string, batch: ProviderBatch) => state.providerData.set(id, batch),
   rebuild: () => rebuildIndexes(),
+  rebuildSliced: () => rebuildIndexesSliced(),
+  drop: (id: string) => state.providerData.delete(id),
 };
 
 /** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */

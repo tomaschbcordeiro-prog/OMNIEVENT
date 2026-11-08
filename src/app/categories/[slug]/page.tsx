@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ensureFresh, searchEvents, sportsMeta } from "@/lib/store";
+import { catalogueComplete, dataSummary, ensureFresh, searchEvents, sportsMeta } from "@/lib/store";
+import { StillLoading } from "@/components/still-loading";
 import { getCategory, childrenOf, GLOBE_MODES, GROUPS, GROUP_HEX, groupOf } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { parseFilterParams, filtersToParams } from "@/lib/search/params";
@@ -201,6 +202,8 @@ export default async function CategoryPage({ params, searchParams }: { params: P
           </section>
         )}
       </main>
+      {/* A server that had only just started: the rest of the catalogue is on its way. */}
+      <StillLoading partial={!catalogueComplete()} count={dataSummary().total} />
       <Footer />
     </>
   );

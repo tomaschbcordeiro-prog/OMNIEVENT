@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { DateRangeFields } from "@/components/date-range";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ensureFresh, searchEvents, venuesInCity, cityStats, dayCounts } from "@/lib/store";
+import { catalogueComplete, dataSummary, ensureFresh, searchEvents, venuesInCity, cityStats, dayCounts } from "@/lib/store";
+import { StillLoading } from "@/components/still-loading";
 import { getDestination, citiesIn, CONTINENTS } from "@/lib/destinations";
 import { parseFilterParams, filtersToParams } from "@/lib/search/params";
 import { GROUPS } from "@/lib/categories";
@@ -227,6 +228,8 @@ export default async function DestinationPage({ params, searchParams }: { params
           <EventsBrowser result={result} filters={user} facets={result.facets} basePath={`/destinations/${d.slug}`} />
         </section>
       </main>
+      {/* A server that had only just started: the rest of the catalogue is on its way. */}
+      <StillLoading partial={!catalogueComplete()} count={dataSummary().total} />
       <Footer />
     </>
   );
