@@ -43,6 +43,8 @@ interface StoreState {
   /** Cards by 1° map cell, and by city: a city's searches only look at what's near it. */
   grid?: Map<string, EventCard[]>;
   byCity?: Map<string, EventCard[]>;
+  /** Cards by their venue's country code (upper case): a country's or continent's searches look only there. */
+  byCountry?: Map<string, EventCard[]>;
   /** Event counts per city, worked out once per rebuild. */
   cityStatsCache?: Record<string, { total: number; groups: Record<string, number> }>;
   participants: Map<string, Participant>;
@@ -678,6 +680,11 @@ function cardFor(e: OmniEvent, venues: Map<string, Venue>, participants: Map<str
   return card;
 }
 
+/** The cards of every country on a continent (as `matches` places a venue's country). */
+function* inContinent(byCountry: Map<string, EventCard[]>, continent: string): Generator<EventCard> {
+  for (const [cc, list] of byCountry) if (getDestination(cc.toLowerCase())?.continent === continent) yield* list;
+}
+
 /** A 1° map cell's key (longitudes wrapped to -180…179). */
 const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 360) % 360) - 180}`;
 
@@ -686,6 +693,17 @@ const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 
  * (40 km) and those filed under it; otherwise every card. `matches` still decides.
  */
 function candidates(f: SearchFilters): Iterable<EventCard> {
+  // A country's or continent's: only its countries' cards (a continent page ran its searches
+  // over every card on Earth, seconds per page).
+  const byCountry = state.byCountry;
+  if (byCountry) {
+    if (f.country) return byCountry.get(f.country.toUpperCase()) ?? [];
+    if (f.continent) return inContinent(byCountry, f.continent);
+    if (f.city) {
+      const d = getDestination(f.city);
+      if (d?.kind === "country" && d.countryCode) return byCountry.get(d.countryCode) ?? [];
+    }
+  }
   if (!f.city || !state.grid) return state.cards.values();
   const d = getDestination(f.city);
   if (!d || d.kind !== "city") return state.cards.values();
@@ -776,8 +794,15 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   }
   const grid = new Map<string, EventCard[]>();
   const byCity = new Map<string, EventCard[]>();
+  const byCountry = new Map<string, EventCard[]>();
   for (const c of cards.values()) {
     if (++n % 4000 === 0) yield;
+    const cc = venues.get(events.get(c.id)?.venueId ?? "")?.countryCode;
+    if (cc) {
+      const list = byCountry.get(cc);
+      if (list) list.push(c);
+      else byCountry.set(cc, [c]);
+    }
     if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
       const k = cellKey(Math.floor(c.lat), Math.floor(c.lng));
       const list = grid.get(k);
@@ -818,6 +843,7 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   state.participantsBySlug = participantsBySlug;
   state.grid = grid;
   state.byCity = byCity;
+  state.byCountry = byCountry;
   state.cityStatsCache = undefined;
   const ms = Date.now() - t0;
   if (ms > 300) log("info", "indexes rebuilt", { ms, events: cards.size });
