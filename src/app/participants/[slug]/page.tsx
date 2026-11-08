@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getDestination } from "@/lib/destinations";
 import { ensureFresh, getParticipantBySlug, searchEvents, waitForData } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
+import { MonthList, NextUp } from "@/components/event-list-parts";
 import { ClusterMap } from "@/components/cluster-map";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
@@ -37,9 +39,19 @@ export default async function ParticipantPage({ params }: { params: P }) {
     p = getParticipantBySlug(slug);
   }
   if (!p) notFound();
-  const res = searchEvents({ participant: p.slug, pageSize: 50, sort: "date" });
+  const res = searchEvents({ participant: p.slug, pageSize: 80, sort: "date" });
   const past = searchEvents({ participant: p.slug, status: ["completed"], from: "2000-01-01", pageSize: 10 });
-  const cities = new Set(res.items.map((c) => c.city));
+  const [next, ...later] = res.items;
+  // Where they're on: each city once, with how many dates, in the order they come up.
+  const where = new Map<string, { name: string; id?: string; n: number }>();
+  for (const c of res.items) {
+    const k = c.cityId ?? c.city;
+    const w = where.get(k);
+    if (w) w.n++;
+    // A metro area goes by its city's name (Amadora and Cascais games count as Lisbon).
+    else where.set(k, { name: (c.cityId && getDestination(c.cityId)?.name) || c.city, id: c.cityId, n: 1 });
+  }
+  const cities = [...where.values()];
 
   return (
     <>
@@ -49,28 +61,59 @@ export default async function ParticipantPage({ params }: { params: P }) {
           <span aria-hidden>/</span><span className="py-1 text-text-2">{KIND[p.kind] ?? "Performer"}</span>
         </nav>
         {p.provenance.isDemo && <div className="mb-5"><Notice tone="demo">This is a fictional profile created for demonstration.</Notice></div>}
-        <div className="grid gap-8 lg:grid-cols-[1fr_1fr] items-start">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] items-center">
           <div>
             <p className="t-small text-text-2 flex items-center gap-2">{KIND[p.kind] ?? p.kind}{p.country && <span className="text-text-3">, {p.country}</span>}{p.provenance.isDemo && <DemoBadge />}</p>
             <h1 className="t-display mt-2">{p.name}</h1>
             {p.description && <p className="t-body text-text-2 mt-3 measure">{p.description}</p>}
-            <p className="t-small text-text-3 mt-2 tnum">{res.total} upcoming {res.total === 1 ? "event" : "events"}{cities.size > 1 ? ` in ${cities.size} cities` : ""}</p>
-            <div className="mt-4 flex gap-2">
+            <p className="t-small text-text-3 mt-3 tnum">
+              {res.total ? `${res.total.toLocaleString("en-GB")} upcoming ${res.total === 1 ? "date" : "dates"}` : "No upcoming dates listed"}
+              {cities.length > 1 && ` in ${cities.length}${res.total > res.items.length ? "+" : ""} cities`}
+              {cities.length === 1 && ` in ${cities[0].name}`}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
               <FollowButton kind="participant" id={p.slug} name={p.name} />
               {p.url && <a className="btn btn-secondary btn-sm" href={p.url} target="_blank" rel="noopener noreferrer">Official page</a>}
             </div>
-            <p className="t-small text-text-2 mt-2">Following saves this to My World. Alerts need a notification service, which isn&apos;t connected yet.</p>
+            <p className="t-micro text-text-3 mt-2">Following keeps {p.name} in My World.</p>
           </div>
-          {res.total > 0 && <ClusterMap params={`participant=${encodeURIComponent(p.slug)}`} initial={{ lat: res.items[0].lat, lng: res.items[0].lng, zoom: 1.2 }} className="h-64" />}
-        </div>
-        <section className="mt-10" aria-labelledby="up">
-          <h2 id="up" className="t-h2">Upcoming</h2>
-          {res.items.length ? (
-            <ul className="divide-y divide-line mt-2">{res.items.map((c) => <EventRow key={c.id} c={c} />)}</ul>
+          {next ? (
+            <NextUp c={next} showPlace />
           ) : (
             <div className="mt-3"><EmptyState title="No upcoming events listed" body="Our sources don't list anything right now. Follow to keep this in My World." action={<Link href="/events" className="btn btn-secondary btn-sm">Browse all events</Link>} /></div>
           )}
-        </section>
+        </div>
+        {next && (
+          <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+            <section aria-labelledby="up">
+              <h2 id="up" className="t-h2">After that</h2>
+              {later.length ? (
+                <MonthList items={later} label="Upcoming" />
+              ) : (
+                <p className="t-body text-text-2 mt-2">That&apos;s the only date listed for now.</p>
+              )}
+            </section>
+            <aside className="grid gap-4 lg:sticky lg:top-20" aria-label="Where they're on">
+              <ClusterMap params={`participant=${encodeURIComponent(p.slug)}`} initial={{ lat: next.lat, lng: next.lng, zoom: cities.length > 1 ? 1.2 : 9 }} className="h-64" />
+              {cities.length > 1 && (
+                <div className="side-card">
+                  <h2 className="t-small font-semibold">On in</h2>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {cities.slice(0, 24).map((w) => (
+                      <li key={w.id ?? w.name}>
+                        {w.id ? (
+                          <Link href={`/destinations/${w.id}`} className="city-chip">{w.name}{w.n > 1 && <span className="tnum">{w.n}</span>}</Link>
+                        ) : (
+                          <span className="city-chip">{w.name}{w.n > 1 && <span className="tnum">{w.n}</span>}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </aside>
+          </div>
+        )}
         {past.items.length > 0 && (
           <section className="mt-10" aria-labelledby="past">
             <h2 id="past" className="t-h3 text-text-2">Recently past</h2>

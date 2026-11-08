@@ -3431,3 +3431,154 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 .install-app:active {
   transform: scale(0.97);
 }
+/* "Next up": the soonest event on a venue or artist page, as a picture. */
+.next-up {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--radius-l, 20px);
+  border: 1px solid var(--color-line);
+  background: var(--panel);
+  box-shadow: 0 18px 40px -24px rgb(10 30 70 / 0.35);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms;
+}
+.next-up:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 50px -24px rgb(10 30 70 / 0.42);
+}
+.next-up-media {
+  position: relative;
+  aspect-ratio: 16 / 8;
+  overflow: hidden;
+  background: var(--color-panel-2, #eef2f7);
+}
+.next-up-media > img,
+.next-up-media > div {
+  transition: transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.next-up:hover .next-up-media > img,
+.next-up:hover .next-up-media > div {
+  transform: scale(1.035);
+}
+.next-up-chip {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgb(8 14 28 / 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.next-up-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgb(52 211 153 / 0.6);
+  animation: next-pulse 2.2s ease-out infinite;
+}
+@keyframes next-pulse {
+  70% {
+    box-shadow: 0 0 0 7px rgb(52 211 153 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(52 211 153 / 0);
+  }
+}
+.next-up-body {
+  padding: 14px 16px 16px;
+  display: grid;
+  gap: 4px;
+}
+.next-up-title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  transition: color 150ms;
+}
+.next-up:hover .next-up-title {
+  color: var(--color-cyan);
+}
+.next-up-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-cyan);
+}
+.next-up-go svg {
+  transition: transform 180ms;
+}
+.next-up:hover .next-up-go svg {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .next-up,
+  .next-up-media > img,
+  .next-up-media > div {
+    transition: none;
+  }
+  .next-up-dot {
+    animation: none;
+  }
+}
+/* Month headings in long lists stay in view under the header while you scroll. */
+.month-group + .month-group {
+  margin-top: 18px;
+}
+.month-head {
+  position: sticky;
+  top: var(--header-h, 56px);
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0 6px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+  background: linear-gradient(var(--bg) 75%, transparent);
+}
+.month-count {
+  font-family: var(--font-geist-sans, system-ui), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-3);
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.05);
+}
+.side-card {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-m);
+  background: var(--panel);
+  padding: 14px 16px;
+}
+.city-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  font-size: 13px;
+  background: var(--panel);
+  transition: border-color 150ms, color 150ms;
+}
+a.city-chip:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+.city-chip .tnum {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-3);
+}
