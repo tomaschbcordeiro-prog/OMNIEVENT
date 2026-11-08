@@ -99,8 +99,10 @@ const dataAt = new Map<string, number>();
 const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 3600000;
 
 /** How long the first requests a server answers may wait for its data. */
-// A new server answers within a few seconds with what it has; the rest keeps loading.
-const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 4000);
+// A new server answers within a few seconds with what it has; the rest keeps loading. On
+// Vercel, where the shared copies arrive whole in about ten seconds, the first visitors wait
+// for them rather than see a nearly empty catalogue.
+const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? (process.env.VERCEL === "1" ? 10000 : 4000));
 
 const SYNC_SLOTS = Number(process.env.SYNC_CONCURRENCY ?? 8);
 const HEAVY_SLOTS = 2;
