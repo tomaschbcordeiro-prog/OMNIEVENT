@@ -1,5 +1,6 @@
 "use client";
 
+import { icsText } from "@/lib/ics";
 import { setRangeEdge } from "@/lib/date-range";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -410,7 +411,7 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
 
 function icsFor(trip: Trip, cards: EventCard[]): string {
   const stamp = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const esc = (s: string) => s.replace(/([,;\\])/g, "\\$1");
+  const esc = icsText;
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//Trip//EN", `X-WR-CALNAME:${esc(trip.name)}`];
   for (const c of cards) {
     lines.push("BEGIN:VEVENT", `UID:${c.id}-${trip.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART:${stamp(c.start)}`, `DTEND:${stamp(new Date(endOf(c)).toISOString())}`, `SUMMARY:${esc(c.title + (c.isDemo ? " (demo)" : ""))}`, `LOCATION:${esc(`${c.venueName}, ${c.city}`)}`, `URL:${window.location.origin}/events/${c.slug}`, "END:VEVENT");
