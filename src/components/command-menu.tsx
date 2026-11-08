@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, Loader2, MapPin, Mic2, Moon, Plane, Plus, Search, Sparkles, Sun, MonitorSmartphone, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, History, Loader2, MapPin, Mic2, Moon, Plane, Plus, Search, Sparkles, Sun, MonitorSmartphone, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { setTheme } from "./theme-toggle";
+import { useUser } from "@/lib/user/store";
 
 type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string; run?: () => void };
 
@@ -52,6 +53,10 @@ export function CommandMenu() {
   const [found, setFound] = useState<Suggest | null>(null);
   const [loading, setLoading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const user = useUser();
+  // The last few events opened on this device, offered first when nothing is typed yet.
+  const [recent, setRecent] = useState<{ slug: string; title: string; city: string }[]>([]);
+  const recentKey = user.recent.slice(0, 4).join(",");
   const back = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -78,6 +83,20 @@ export function CommandMenu() {
       setFound(null);
     } else back.current?.focus?.();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !recentKey) return;
+    const ctrl = new AbortController();
+    fetch(`/api/events/batch?ids=${encodeURIComponent(recentKey)}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { items: { id: string; slug: string; title: string; city: string }[] } | null) => {
+        if (!j) return;
+        const byId = new Map(j.items.map((c) => [c.id, c]));
+        setRecent(recentKey.split(",").map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => !!c).slice(0, 3));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [open, recentKey]);
 
   // Things that match what's typed, after a short pause.
   useEffect(() => {
@@ -108,10 +127,11 @@ export function CommandMenu() {
       for (const p of found.participants.slice(0, 3)) dyn.push({ id: `p-${p.slug}`, label: p.name, hint: p.kind, href: `/participants/${p.slug}`, icon: Mic2, group: "Artists & teams" });
       for (const v of found.venues.slice(0, 3)) dyn.push({ id: `v-${v.slug}`, label: v.name, hint: v.city, href: `/venues/${v.slug}`, icon: MapPin, group: "Venues" });
     }
+    if (!t) for (const r of recent) dyn.push({ id: `r-${r.slug}`, label: r.title, hint: r.city, href: `/events/${r.slug}`, icon: History, group: "Recently viewed" });
     const all = [...dyn, ...statics];
     if (t) all.push({ id: "search", label: `Search everything for “${q.trim()}”`, href: `/events?q=${encodeURIComponent(q.trim())}&where=any`, icon: Search, group: "Search" });
     return all;
-  }, [q, found]);
+  }, [q, found, recent]);
 
   useEffect(() => setActive(0), [items.length]);
 

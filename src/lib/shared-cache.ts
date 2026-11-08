@@ -1,5 +1,11 @@
 import "server-only";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { gunzip as gunzipCb, gzip as gzipCb } from "node:zlib";
+import { promisify } from "node:util";
+
+// Packing and unpacking run on Node's worker threads, so a server loading tens of megabytes
+// of shared copies keeps answering visitors meanwhile.
+const gunzip = promisify(gunzipCb);
+const gzip = promisify(gzipCb);
 import { getCache, type RuntimeCache } from "@vercel/functions";
 import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
 import type { ProviderBatch } from "./providers/types";
@@ -52,7 +58,7 @@ async function inBatches<T, R>(items: T[], limit: number, fn: (x: T, i: number) 
 /** Saves a source's batch, compressed and split into chunks under the store's size limits. */
 export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.now()): Promise<void> {
   if (!sharedEnabled) return;
-  const data = gzipSync(Buffer.from(JSON.stringify(batch))).toString("base64");
+  const data = (await gzip(Buffer.from(JSON.stringify(batch)))).toString("base64");
   if (rc) {
     // Each copy has its own version; readers only follow the meta entry, written last, and
     // older copies expire by themselves.
@@ -131,7 +137,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
   if (rc) {
     const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 8, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
     if (parts.some((p) => typeof p !== "string")) return undefined;
-    return JSON.parse(gunzipSync(Buffer.from(parts.join(""), "base64")).toString("utf8")) as ProviderBatch;
+    return JSON.parse((await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8")) as ProviderBatch;
   }
   if (!persistent) return undefined;
   // One chunk per request: a single reply carrying every chunk can exceed Redis' size limit.
@@ -143,7 +149,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
       }),
     );
   if (parts.some((p) => typeof p !== "string")) return undefined;
-  return JSON.parse(gunzipSync(Buffer.from(parts.join(""), "base64")).toString("utf8")) as ProviderBatch;
+  return JSON.parse((await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8")) as ProviderBatch;
 }
 
 /** True when this instance now holds the lock; it expires by itself after `ttlSec`. */
