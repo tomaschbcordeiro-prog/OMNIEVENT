@@ -259,13 +259,20 @@ function Saved({ cards, missing, loading }: { cards: Map<string, EventCard>; mis
   const now = Date.now();
   const shown = (show === "upcoming" ? list.filter((c) => c.status !== "completed" && (c.eventType === "daily_attraction" || new Date(c.start).getTime() > now - 86400000)) : list).sort((a, b) => a.start.localeCompare(b.start));
   const savedMissing = user.saved.filter((s) => missing.includes(s.id));
+  const upcomingIds = list.filter((c) => c.status !== "completed" && c.eventType !== "daily_attraction" && new Date(c.start).getTime() > now).slice(0, 100).map((c) => c.id);
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="t-h1">Saved events</h1>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <button className="chip" aria-pressed={show === "upcoming"} onClick={() => setShow("upcoming")}>Upcoming</button>
           <button className="chip" aria-pressed={show === "all"} onClick={() => setShow("all")}>All</button>
+          {/* Every upcoming saved event in one file, for Google, Apple or Outlook calendars. */}
+          {upcomingIds.length > 0 && (
+            <a className="chip" href={`/api/events/calendar?ids=${encodeURIComponent(upcomingIds.join(","))}`} download>
+              <CalendarPlus size={13} aria-hidden /> Add {upcomingIds.length === 1 ? "it" : `all ${upcomingIds.length}`} to calendar
+            </a>
+          )}
         </div>
       </div>
       {loading && !list.length ? (
