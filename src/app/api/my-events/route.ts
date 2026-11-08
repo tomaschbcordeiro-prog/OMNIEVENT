@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { refreshSource } from "@/lib/store";
 import { apiError, clientKey, handler, ok, rateLimit, readJson } from "@/lib/api";
 import { CommunityError } from "@/lib/community/service";
@@ -61,8 +62,14 @@ export const POST = handler(async (req: Request) => {
       default:
         return apiError(400, "unknown_action", "Unknown action.");
     }
-    // This server shows the change at once; the others pick it up within a minute.
+    // This server shows the change at once; the others pick it up within a minute. Event
+    // pages are kept ready for a few minutes: drop those copies so the change shows now.
     await refreshSource(PROVIDER_ID).catch(() => {});
+    try {
+      revalidatePath("/events/[slug]", "page");
+    } catch {
+      // Not on a host with a page cache.
+    }
     return ok(result);
   } catch (err) {
     return fail(err);

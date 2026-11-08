@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
-import { ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
+import { dataReady, ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
@@ -19,7 +19,13 @@ import { EventActionBar } from "@/components/event-action-bar";
 import { ListedBy } from "@/components/create/my-events";
 import { Countdown } from "@/components/countdown";
 
-export const dynamic = "force-dynamic";
+// Event pages are the same for everyone: each is kept ready (on the network edge) and
+// rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
+export const revalidate = 600;
+export const dynamicParams = true;
+export async function generateStaticParams() {
+  return [];
+}
 type P = Promise<{ slug: string }>;
 
 /** An event a member just listed may not have reached this server yet: read the listings again once. */
@@ -32,7 +38,10 @@ async function findEvent(slug: string) {
   }
   // A server that has just started may still be loading the event's source.
   await waitForData(20000);
-  return getEventView(slug);
+  const late = getEventView(slug);
+  // Still loading: fail this once (not kept) rather than keep a "not found" page for minutes.
+  if (!late && !dataReady()) throw new Error("Events are still loading on this server. Try again in a moment.");
+  return late;
 }
 
 export async function generateMetadata({ params }: { params: P }): Promise<Metadata> {
