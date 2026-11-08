@@ -133,11 +133,20 @@ export async function snapshotIndex(ids: string[] = []): Promise<Record<string, 
   return out;
 }
 
+/** How long the last load of each source's copy took, step by step (for the status page). */
+export const loadTimings: Record<string, string> = {};
+
 export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<ProviderBatch | undefined> {
   if (rc) {
+    const t0 = Date.now();
     const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 12, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
+    const t1 = Date.now();
     if (parts.some((p) => typeof p !== "string")) return undefined;
-    return JSON.parse((await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8")) as ProviderBatch;
+    const raw = (await gunzip(Buffer.from(parts.join(""), "base64"))).toString("utf8");
+    const t2 = Date.now();
+    const batch = JSON.parse(raw) as ProviderBatch;
+    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks: fetch ${t1 - t0} ms, unzip ${t2 - t1} ms, parse ${Date.now() - t2} ms`;
+    return batch;
   }
   if (!persistent) return undefined;
   // One chunk per request: a single reply carrying every chunk can exceed Redis' size limit.
