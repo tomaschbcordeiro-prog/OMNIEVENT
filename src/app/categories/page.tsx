@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ensureFresh, groupCounts } from "@/lib/store";
-import { GROUPS, childrenOf } from "@/lib/categories";
+import { GROUPS, GROUP_HEX, childrenOf } from "@/lib/categories";
 import { CategoryIcon } from "@/components/ui";
 import { Footer } from "@/components/footer";
 
@@ -30,9 +30,14 @@ export default async function CategoriesPage() {
         <div className="mt-8 grid gap-3 md:grid-cols-3">
           {lead.map((g) => (
             // The whole card opens the category; each genre chip opens straight to that genre.
-            <div key={g.slug} className="group relative overflow-hidden rounded-[var(--radius-l)] border border-line bg-panel p-5 hover:border-line-strong">
-              <CategoryIcon slug={g.slug} size={28} />
-              <h2 className="t-h2 mt-4 group-hover:text-cyan">
+            <div key={g.slug} className="cat-lead group relative overflow-hidden rounded-[var(--radius-l)] border border-line p-5" style={{ "--cat": GROUP_HEX[g.slug] ?? GROUP_HEX.other } as React.CSSProperties}>
+              <span className="cat-lead-mark" aria-hidden>
+                <CategoryIcon slug={g.slug} size={150} />
+              </span>
+              <span className="cat-lead-icon">
+                <CategoryIcon slug={g.slug} size={24} />
+              </span>
+              <h2 className="cat-lead-title mt-4">
                 <Link href={`/categories/${g.slug}`} className="after:absolute after:inset-0 after:content-['']">{g.name}</Link>
               </h2>
               <p className="t-small text-text-2 mt-1">{g.description}</p>
@@ -52,7 +57,9 @@ export default async function CategoriesPage() {
           {rest.flat().map((g) => (
             <li key={g.slug} className="md:border-b md:border-line">
               <Link href={`/categories/${g.slug}`} className="group flex items-start gap-4 py-4">
-                <CategoryIcon slug={g.slug} size={22} className="mt-0.5 shrink-0" />
+                <span className="cat-row-icon" style={{ "--cat": GROUP_HEX[g.slug] ?? GROUP_HEX.other } as React.CSSProperties}>
+                  <CategoryIcon slug={g.slug} size={19} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="t-h3 group-hover:text-cyan">{g.name}</span>

@@ -10,6 +10,7 @@ import { Toaster } from "@/components/toast";
 import { SITE } from "@/lib/site";
 import { Suspense } from "react";
 import { NavProgress } from "@/components/nav-progress";
+import { CommandMenu } from "@/components/command-menu";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div id="main">{children}</div>
         <JoinHost />
         <Shortcuts />
+        <CommandMenu />
         <TiltCards />
         <Toaster />
       </body>

@@ -252,6 +252,7 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
  * Loads snapshots other instances saved that are newer than what this instance has.
  * Checked when an instance starts and then every five minutes (one small request).
  */
+let lastHydrateRebuild = 0;
 async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   let index: Awaited<ReturnType<typeof snapshotIndex>>;
   try {
@@ -262,8 +263,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     return;
   }
   let changed = false;
-  // Four sources at a time: each snapshot is unpacked in memory before it's kept.
-  const queue = [...providers];
+  // Four sources at a time (each snapshot is unpacked in memory before it's kept), the
+  // smallest first so most of the catalogue shows within the first seconds.
+  const queue = [...providers].sort((a, b) => (index[a.id]?.events ?? 0) - (index[b.id]?.events ?? 0));
   const loadOne = async (p: ProviderAdapter) => {
       const meta = index[p.id];
       if (!meta || p.isDemo || p.selfShared || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
@@ -278,6 +280,11 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         state.providerData.set(p.id, batch);
         dataAt.set(p.id, meta.at);
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
+        // A new server shows each source as it arrives (at most every two seconds).
+        if (Date.now() - lastHydrateRebuild > 2000) {
+          lastHydrateRebuild = Date.now();
+          rebuildIndexes();
+        }
         if (!state.runs.has(p.id))
           state.runs.set(p.id, { provider: p.id, runId: `shared-${meta.ver}`, startedAt: new Date(meta.at).toISOString(), finishedAt: new Date(meta.at).toISOString(), imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true });
         changed = true;

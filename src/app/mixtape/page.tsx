@@ -36,7 +36,10 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
 export default async function MixtapePage({ searchParams }: { searchParams: SP }) {
   await ensureFresh();
   const stats = cityStats();
-  const link = parseTapeQuery(await searchParams);
+  const sp = await searchParams;
+  const link = parseTapeQuery(sp);
+  // "?w=tonight" alone (from the command menu): that window, in the visitor's city.
+  const w = typeof sp.w === "string" && ["tonight", "tomorrow", "weekend", "next-weekend"].includes(sp.w) ? (sp.w as "tonight" | "tomorrow" | "weekend" | "next-weekend") : undefined;
   const toCity = (c: (typeof CITIES)[number]): MixCity => ({ id: c.id, name: c.name, country: c.country ?? "", tz: c.timeZone ?? "UTC", currency: c.currency ?? "EUR", lat: c.lat, lng: c.lng, n: stats[c.id]?.total ?? 0 });
   // Cities with enough on to make a tape, busiest first (plus the one a shared tape is from).
   const cities = CITIES.filter((c) => (stats[c.id]?.total ?? 0) >= 8 || c.id === link?.city)
@@ -44,5 +47,5 @@ export default async function MixtapePage({ searchParams }: { searchParams: SP }
     .sort((a, b) => b.n - a.n)
     .slice(0, 400);
   const here = await getHere();
-  return <MixtapeStudio cities={cities} link={link} here={here.city ? { id: here.city.id, chosen: here.source === "chosen" || here.source === "gps" } : null} />;
+  return <MixtapeStudio cities={cities} link={link} when={w} here={here.city ? { id: here.city.id, chosen: here.source === "chosen" || here.source === "gps" } : null} />;
 }

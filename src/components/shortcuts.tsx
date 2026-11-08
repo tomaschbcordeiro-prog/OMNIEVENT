@@ -83,6 +83,8 @@ export function Shortcuts() {
           </button>
         </div>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 t-small">
+          <dt><kbd className="kbd">⌘</kbd> <kbd className="kbd">K</kbd></dt>
+          <dd>Command menu: jump anywhere</dd>
           <dt><kbd className="kbd">/</kbd></dt>
           <dd>Search</dd>
           <dt><kbd className="kbd">?</kbd></dt>

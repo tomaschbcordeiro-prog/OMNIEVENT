@@ -88,7 +88,7 @@ function gapNote(from: number, to: number, tz: string): string | null {
  * Shuffle, lock, swap or drop tracks, play it on the map, then share it, put it in your
  * calendar or keep it on your shelf.
  */
-export function MixtapeStudio({ cities, link, here }: { cities: MixCity[]; link: TapeLink | null; /** The visitor's city, and whether they chose it (or their device found it). */ here?: { id: string; chosen: boolean } | null }) {
+export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[]; link: TapeLink | null; /** The visitor's city, and whether they chose it (or their device found it). */ here?: { id: string; chosen: boolean } | null; /** Start on this window (a link without a tape). */ when?: WhenKind }) {
   const [now, setNow] = useState<number | null>(null);
   const [cityId, setCityId] = useState(link?.city ?? "");
   const [kind, setKind] = useState<WhenKind>(link?.kind ?? "weekend");
@@ -174,6 +174,7 @@ export function MixtapeStudio({ cities, link, here }: { cities: MixCity[]; link:
     setNow(at);
     setShelf(readShelf());
     if (link && openLink(link, at)) return;
+    if (when) setKind(when);
     let last: { city?: string; vibe?: Vibe } = {};
     try {
       last = JSON.parse(localStorage.getItem(LAST_KEY) ?? "{}");

@@ -144,6 +144,7 @@ export function DiscoverClient() {
   const spaceBefore = useRef(false);
   const baseBefore = useRef<BaseStyle>("map");
   const flightAsked = useRef(false);
+  const spinAsked = useRef(false);
   const flyKey = useRef(0);
   const history = useRef<CameraState[]>([]);
   const mapApi = useRef<EarthMapHandle>(null);
@@ -154,9 +155,11 @@ export function DiscoverClient() {
     const ok = hasWebGL();
     setWebgl(ok);
     const sp = new URLSearchParams(window.location.search);
-    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style", "flight"].includes(k))));
+    const p = parseFilterParams(new URLSearchParams([...sp].filter(([k]) => !["v", "at", "view", "pin", "style", "flight", "spin"].includes(k))));
     // A shared Night Flight link takes off as soon as the globe is ready.
     flightAsked.current = sp.get("flight") === "1" && ok;
+    // A link (or the command menu) can ask for a spin as soon as the globe is ready.
+    spinAsked.current = sp.get("spin") === "1" && ok;
     if (p.ok) setFilters(p.filters);
     const narrow = window.innerWidth < 640;
     // The whole planet, as big as the screen allows.
@@ -551,9 +554,14 @@ export function DiscoverClient() {
     [exitFlight, fly],
   );
   useEffect(() => {
-    if (!mapReady || !flightAsked.current) return;
-    flightAsked.current = false;
-    startFlight();
+    if (!mapReady) return;
+    if (flightAsked.current) {
+      flightAsked.current = false;
+      startFlight();
+    } else if (spinAsked.current) {
+      spinAsked.current = false;
+      startSpin();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
