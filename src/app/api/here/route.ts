@@ -6,6 +6,9 @@ import { HERE_COOKIE, hereCookieValue, type Here } from "@/lib/here-shared";
 import { handler, validationError, rateLimit, clientKey, apiError, readJson } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
+// A new server's loading keeps going after the answer (after()) for up to this many seconds:
+// without it the platform's default limit stopped that loading within seconds.
+export const maxDuration = 300;
 
 const noStore = (body: unknown, init?: ResponseInit) => {
   const res = NextResponse.json(body, init);

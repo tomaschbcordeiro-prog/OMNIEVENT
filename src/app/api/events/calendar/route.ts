@@ -4,6 +4,9 @@ import { apiError, clientKey, rateLimit } from "@/lib/api";
 import { calendar, vevent } from "@/lib/ics";
 
 export const dynamic = "force-dynamic";
+// A new server's loading keeps going after the answer (after()) for up to this many seconds:
+// without it the platform's default limit stopped that loading within seconds.
+export const maxDuration = 300;
 
 /** GET /api/events/calendar?ids=a,b,c — several events (saved ones, a trip) in one calendar file. */
 export async function GET(req: NextRequest) {

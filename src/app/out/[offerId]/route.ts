@@ -3,6 +3,9 @@ import { ensureFresh, getOffer } from "@/lib/store";
 import { log } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
+// A new server's loading keeps going after the answer (after()) for up to this many seconds:
+// without it the platform's default limit stopped that loading within seconds.
+export const maxDuration = 30;
 
 /**
  * Outbound ticket link. Only redirects to URLs stored on a known offer (no open

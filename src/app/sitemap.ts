@@ -5,6 +5,9 @@ import { GROUPS } from "@/lib/categories";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+// A new server's loading keeps going after the answer (after()) for up to this many seconds:
+// without it the platform's default limit stopped that loading within seconds.
+export const maxDuration = 300;
 
 /** Only real (non-demo) events, venues and participants are listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

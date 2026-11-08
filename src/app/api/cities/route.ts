@@ -3,6 +3,9 @@ import { CITIES } from "@/lib/destinations";
 import { handler, ok } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
+// A new server's loading keeps going after the answer (after()) for up to this many seconds:
+// without it the platform's default limit stopped that loading within seconds.
+export const maxDuration = 300;
 
 /** GET /api/cities — cities with events on, busiest first: id, name, country and how many. */
 export const GET = handler(async () => {
