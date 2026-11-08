@@ -1127,6 +1127,28 @@ export function batchSizes(id: string): Record<string, unknown> | undefined {
   return { counts: { events: b.events.length, venues: b.venues.length, participants: b.participants.length, offers: b.offers.length }, kb: { events: fields(b.events), venues: fields(b.venues), participants: fields(b.participants), offers: fields(b.offers) } };
 }
 
+/** One-off measurement: how small and how fast each way of packing a source's copy is. */
+export async function packTrial(id: string): Promise<Record<string, unknown> | undefined> {
+  const b = state.providerData.get(id);
+  if (!b) return undefined;
+  const z = await import("node:zlib");
+  let t = Date.now();
+  const json = Buffer.from(JSON.stringify(b));
+  const out: Record<string, unknown> = { jsonMb: +(json.length / 1048576).toFixed(1), stringifyMs: Date.now() - t };
+  const trial = (name: string, pack: () => Buffer, unpack: (x: Buffer) => Buffer) => {
+    t = Date.now();
+    const p = pack();
+    const packMs = Date.now() - t;
+    t = Date.now();
+    unpack(p);
+    out[name] = { mb: +(p.length / 1048576).toFixed(2), packMs, unpackMs: Date.now() - t };
+  };
+  trial("gzip6", () => z.gzipSync(json), (x) => z.gunzipSync(x));
+  for (const q of [4, 5, 6])
+    trial(`br${q}w24`, () => z.brotliCompressSync(json, { params: { [z.constants.BROTLI_PARAM_QUALITY]: q, [z.constants.BROTLI_PARAM_LGWIN]: 24, [z.constants.BROTLI_PARAM_SIZE_HINT]: json.length } }), (x) => z.brotliDecompressSync(x));
+  return out;
+}
+
 export const __testing = {
   matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f),
   matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f),

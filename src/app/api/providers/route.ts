@@ -1,4 +1,4 @@
-import { ensureFresh, providerStatuses, dataSummary, hydrateInfo, batchSizes } from "@/lib/store";
+import { ensureFresh, providerStatuses, dataSummary, hydrateInfo, batchSizes, packTrial } from "@/lib/store";
 import { loadTimings } from "@/lib/shared-cache";
 import { FX_SOURCE } from "@/lib/currency";
 import { handler, ok, redactSecrets } from "@/lib/api";
@@ -15,6 +15,8 @@ export const GET = handler(async (req: Request) => {
   await ensureFresh();
   const sizes = new URL(req.url).searchParams.get("sizes");
   if (sizes && /^[a-z0-9-]{1,40}$/.test(sizes)) return ok({ sizes: batchSizes(sizes) ?? null });
+  const pack = new URL(req.url).searchParams.get("pack");
+  if (pack === "ticketmaster" || pack === "seatgeek") return ok({ pack: (await packTrial(pack)) ?? null });
   // When each source's shared snapshot was saved and how many events it holds.
   const shared = await snapshotIndex(providerStatuses().map((p) => p.id)).catch(() => ({}));
   // This instance may not be the one that ran a source: fall back to the last run any instance
