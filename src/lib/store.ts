@@ -90,6 +90,47 @@ const state: StoreState =
 const QUOTA_SOURCES = new Set(["ticketmaster", "seatgeek", "skiddle"]);
 /** Catalogues big or slow enough that reading them takes minutes of server time. */
 const HEAVY_SOURCES = new Set(["openagenda", "localist", "livewhale", "helsinki", "espoo", "berlin", "wikidata"]);
+/**
+ * The most events one source may hold; the soonest are kept. The two worldwide ticket
+ * catalogues grow as their crawls reach further ahead, and every server holds the whole
+ * catalogue in 2 GB of memory.
+ */
+const SOURCE_MAX_EVENTS = Number(process.env.SOURCE_MAX_EVENTS ?? 65000);
+/** Above this much memory in use, big sources wait before reading more (they come back later). */
+const MEMORY_SOFT_LIMIT_MB = Number(process.env.MEMORY_SOFT_LIMIT_MB ?? 1700);
+
+/** A source over its limit keeps its soonest events, and only the venues, people and tickets they use. */
+export function trimBatch(batch: ProviderBatch, max = SOURCE_MAX_EVENTS): ProviderBatch {
+  if (!(max > 0) || batch.events.length <= max) return batch;
+  const when = (e: OmniEvent) => {
+    const t = Date.parse(e.start);
+    return Number.isFinite(t) ? t : Infinity;
+  };
+  const events = batch.events
+    .map((e) => [when(e), e] as const)
+    .sort((x, y) => x[0] - y[0])
+    .slice(0, max)
+    .map(([, e]) => e);
+  const ids = new Set(events.map((e) => e.id));
+  const venues = new Set(events.map((e) => e.venueId));
+  const people = new Set(events.flatMap((e) => e.participants.map((x) => x.participantId)));
+  return {
+    ...batch,
+    events,
+    venues: batch.venues.filter((v) => venues.has(v.id)),
+    participants: batch.participants.filter((x) => people.has(x.id)),
+    offers: batch.offers.filter((o) => ids.has(o.eventId)),
+  };
+}
+
+function memoryMb(): number {
+  try {
+    return process.memoryUsage.rss() / 1048576;
+  } catch {
+    return 0;
+  }
+}
+
 /** When this instance last uploaded each source's snapshot. */
 const savedAt = new Map<string, number>();
 /** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
@@ -148,6 +189,13 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
     // Without the shared storage, instances can't share one read of a source: each would spend
     // a daily quota, or minutes of server time on a big catalogue, on its own. Those wait for
     // the storage instead; the smaller sources still load.
+    // Close to the server's memory limit, the big catalogues wait (they'd add more than there's room for).
+    if ((QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && state.providerData.has(p.id) && memoryMb() > MEMORY_SOFT_LIMIT_MB) {
+      log("info", "sync deferred: memory", { provider: p.id, rssMb: Math.round(memoryMb()) });
+      state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 30 * 60000);
+      state.syncing.delete(p.id);
+      return;
+    }
     if (shared && (QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && !sharedStoreUp()) {
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
       state.syncing.delete(p.id);
@@ -169,7 +217,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       let lastPublish = 0;
       // What we had before this run: partial results published during it don't count as "updated".
       const before = state.providerData.get(p.id);
-      const { batch, run } = await p.sync({
+      const synced = await p.sync({
         maxEvents: Number(process.env.SYNC_MAX_EVENTS ?? 25000),
         log: (msg, extra) => log("info", msg, { provider: p.id, runId, ...extra }),
         // Partial results join what we already had; published at most every 20 seconds.
@@ -179,10 +227,12 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
           const prev = state.providerData.get(p.id);
           const merged: ProviderBatch = { events: [...partial.events], venues: [...partial.venues], participants: [...partial.participants], offers: [...partial.offers] };
           if (prev) mergeMissing(merged, prev);
-          state.providerData.set(p.id, merged);
+          state.providerData.set(p.id, trimBatch(merged));
           rebuildIndexes();
         },
       });
+      let batch = synced.batch;
+      const run = synced.run;
       const fresh = batch.events.length;
       const prev = state.providerData.get(p.id);
       const prevIds = new Set(before?.events.map((e) => e.id));
@@ -197,6 +247,11 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
           const snap = await loadSnapshot(p.id, meta).catch(() => undefined);
           if (snap) mergeMissing(batch, snap);
         }
+      }
+      const trimmed = trimBatch(batch);
+      if (trimmed !== batch) {
+        log("info", "source trimmed to its limit", { provider: p.id, events: batch.events.length, kept: trimmed.events.length });
+        batch = trimmed;
       }
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       // The same data as before (the members' listings re-read every minute, mostly unchanged):
@@ -309,8 +364,10 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
       const have = dataAt.get(p.id);
       if (have !== undefined && state.providerData.has(p.id) && meta.at - have < SNAPSHOT_REFRESH_MS) return;
       try {
-        const batch = await loadSnapshot(p.id, meta);
-        if (!batch || state.syncing.has(p.id)) return;
+        const loaded = await loadSnapshot(p.id, meta);
+        if (!loaded || state.syncing.has(p.id)) return;
+        // A copy saved before the limit (or with a higher one) is trimmed as it arrives.
+        const batch = trimBatch(loaded);
         state.providerData.set(p.id, batch);
         dataAt.set(p.id, meta.at);
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
