@@ -14,3 +14,10 @@ export function outsideRender<T>(fn: () => T): T {
   if (!(workAsyncStorage instanceof AsyncLocalStorage) || !(workUnitAsyncStorage instanceof AsyncLocalStorage)) return fn();
   return workUnitAsyncStorage.exit(() => workAsyncStorage.exit(fn));
 }
+
+/** True while Next renders a page to keep in its cache (an event page), not for one visitor. */
+export function inPrerender(): boolean {
+  if (!(workUnitAsyncStorage instanceof AsyncLocalStorage)) return false;
+  const type = (workUnitAsyncStorage.getStore() as { type?: string } | undefined)?.type;
+  return typeof type === "string" && type.startsWith("prerender");
+}

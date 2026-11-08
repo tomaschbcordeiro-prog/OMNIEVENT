@@ -1,4 +1,4 @@
-import { outsideRender } from "./outside-render";
+import { inPrerender, outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, sharedStoreUp, snapshotIndex } from "./shared-cache";
@@ -436,6 +436,13 @@ export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void>
   if (dropped) rebuildIndexes();
 
   const now = Date.now();
+  // A page rendered for the cache (an event page) only takes what's loaded or shared: reading
+  // sources from inside it would hold the page until they finish. Pages rendered for a visitor,
+  // the API and the scheduled tick keep the sources fresh.
+  if (inPrerender()) {
+    if (state.hydrating && state.firstLoadDeadline) await Promise.race([state.hydrating, new Promise((r) => setTimeout(r, Math.max(0, state.firstLoadDeadline! - Date.now())))]);
+    return;
+  }
   const waits: Promise<void>[] = [];
   for (const p of providers) {
     const last = state.lastSync.get(p.id);
