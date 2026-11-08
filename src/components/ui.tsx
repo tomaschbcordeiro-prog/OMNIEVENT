@@ -90,7 +90,6 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
         src={src}
         alt=""
         className="hero-img-fg"
-        data-ready={fit ? "" : undefined}
         style={fit ? { width: `${fit.w}%`, height: `${fit.h}%` } : undefined}
         fetchPriority="high"
         decoding="async"

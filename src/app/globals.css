@@ -3114,24 +3114,8 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   object-fit: contain;
   border-radius: 6px;
   box-shadow: 0 18px 50px -18px rgb(0 0 0 / 0.55);
-  opacity: 0;
-  transform: scale(0.985);
-  transition: opacity 420ms ease, transform 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.hero-img-fg[data-ready] {
-  opacity: 1;
-  transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-img-fg {
-    transition: none;
-  }
-}
-@media (scripting: none) {
-  .hero-img-fg {
-    opacity: 1;
-    transform: none;
-  }
+  /* Shown as soon as it arrives (it's the page's main picture), not after the page's script
+     has measured it: that wait made phones show it about 0.7 s later. */
 }
 
 /* ---- Motion: pages fade in, sections rise into view as they scroll in, a thin bar while a page loads ---- */
