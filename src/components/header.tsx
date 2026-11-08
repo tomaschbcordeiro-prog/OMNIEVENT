@@ -88,7 +88,7 @@ export function Header() {
         </div>
         <div className="flex-1" />
         {/* Below 1440 px the full navigation and a search field don't both fit: search folds into a button. */}
-        {!isHome && <SearchBox className="hidden md:block lg:hidden wide:block w-full max-w-md min-w-0" placeholder={t("search.placeholder")} />}
+        {!isHome && <SearchBox className="hidden md:block lg:hidden wide:block w-full max-w-md min-w-0" placeholder={t("search.short")} />}
         {!isHome && (
           <button className="btn btn-ghost btn-icon hidden lg:inline-flex wide:hidden" aria-label={search ? "Close search" : "Search"} aria-expanded={search} onClick={() => setSearch((v) => !v)}>
             {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}

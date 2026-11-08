@@ -3394,3 +3394,40 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   color: var(--info);
   font-weight: 600;
 }
+/* The ⌘K chip at the end of the header search field. */
+.search-cmdk {
+  flex-shrink: 0;
+  color: var(--color-text-3);
+  opacity: 0.85;
+  transition: opacity 150ms, color 150ms;
+}
+.search-cmdk:hover {
+  opacity: 1;
+  color: var(--color-text);
+}
+.search-cmdk .kbd {
+  font-size: 11px;
+  height: 1.55em;
+  border-bottom-width: 1px;
+  font-weight: 600;
+}
+/* "Install the app" in the footer. */
+.install-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 150ms, transform 150ms;
+}
+.install-app:hover {
+  border-color: var(--color-cyan);
+}
+.install-app:active {
+  transform: scale(0.97);
+}

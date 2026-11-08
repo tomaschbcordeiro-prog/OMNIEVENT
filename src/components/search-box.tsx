@@ -56,6 +56,11 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(-1);
+  // "⌘" on Apple keyboards, "Ctrl " elsewhere (known only in the browser).
+  const [modKey, setModKey] = useState("⌘");
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) setModKey("Ctrl ");
+  }, []);
   const [geo, setGeo] = useState<{ results: GeoPlace[]; loading: boolean; failed: boolean }>({ results: [], loading: false, failed: false });
   const centerRef = useRef(mapCenter);
   centerRef.current = mapCenter;
@@ -249,6 +254,12 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
           {q && (
             <button type="button" aria-label="Clear search" className="text-text-3 hover:text-text" onClick={() => (setQ(""), input.current?.focus())}>
               <X size={15} aria-hidden />
+            </button>
+          )}
+          {!q && size !== "lg" && (
+            // The command menu: pages, Spin, Night Flight, Mixtape and search in one box.
+            <button type="button" className="search-cmdk max-lg:hidden" aria-label="Open the command menu (Control or Command + K)" title="Command menu" onClick={() => window.dispatchEvent(new Event("omni:command"))}>
+              <kbd className="kbd">{modKey}K</kbd>
             </button>
           )}
         </div>

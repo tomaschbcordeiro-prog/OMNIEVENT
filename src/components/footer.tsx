@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { providerStatuses, dataSummary } from "@/lib/store";
 import { Logo } from "./header";
+import { InstallApp } from "./install-app";
 
 /** Every page states where its data comes from. */
 export function Footer() {
@@ -15,6 +16,7 @@ export function Footer() {
           <p className="t-small text-text-2 mt-3 measure">
             Events from many sources on one planet. We link you to the seller; we don&apos;t sell tickets.
           </p>
+          <InstallApp className="mt-4" />
         </div>
         <div className="grid gap-6 sm:grid-cols-3 t-small">
           <nav aria-label="Explore">
