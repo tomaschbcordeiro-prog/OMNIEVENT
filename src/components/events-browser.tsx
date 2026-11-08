@@ -21,8 +21,10 @@ import { FilterForm, ActiveFilters } from "./discover/filters";
 const STOP = new Set(["the", "and", "for", "with", "this", "that", "next", "near", "from", "until", "der", "die", "das", "und", "les", "des", "pour", "avec", "del", "los", "las", "con", "para", "dos", "das", "com", "por", "uma", "um"]);
 
 export function EventsBrowser({
-  result, filters, facets, hideCategoryStrip = false, basePath, implicitCity, anywhere = false,
+  result, filters, facets, hideCategoryStrip = false, basePath, implicitCity, anywhere = false, suggestion,
 }: {
+  /** For a search that found nothing: the same search with a typo fixed. */
+  suggestion?: string;
   result: Paged<EventCard>;
   filters: SearchFilters;
   facets?: { groups: Record<string, number> };
@@ -129,7 +131,20 @@ export function EventsBrowser({
           {result.items.length === 0 ? (
             <EmptyState
               title="No events match"
-              body={<>Try removing a filter or widening the dates. Our sources don&apos;t cover every event on Earth, so a missing result doesn&apos;t mean nothing is on.</>}
+              body={
+                <>
+                  {suggestion && (
+                    <span className="block mb-2 text-text">
+                      Did you mean{" "}
+                      <button type="button" className="font-semibold text-cyan underline underline-offset-4" onClick={() => go({ ...filters, q: suggestion, page: undefined })}>
+                        “{suggestion}”
+                      </button>
+                      ?
+                    </span>
+                  )}
+                  Try removing a filter or widening the dates. Our sources don&apos;t cover every event on Earth, so a missing result doesn&apos;t mean nothing is on.
+                </>
+              }
               action={n > 0 ? <button className="btn btn-secondary btn-sm" onClick={() => go({ q: filters.q })}>Clear filters</button> : <Link className="btn btn-secondary btn-sm" href="/">Explore the globe</Link>}
             />
           ) : layout === "list" ? (

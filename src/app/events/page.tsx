@@ -4,6 +4,7 @@ import { ensureFresh, searchEvents } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { parseQuery } from "@/lib/search/parse";
 import { EventsBrowser } from "@/components/events-browser";
+import { didYouMean } from "@/lib/search/did-you-mean";
 import { Footer } from "@/components/footer";
 import { Notice } from "@/components/ui";
 import { getDestination } from "@/lib/destinations";
@@ -109,7 +110,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <Suspense fallback={null}>
           <ContinueSearch />
         </Suspense>
-        <EventsBrowser result={result} filters={filters} facets={result.facets} implicitCity={here.city && filters.city === here.city.id ? here.city.id : undefined} anywhere={anywhere} />
+        <EventsBrowser result={result} filters={filters} facets={result.facets} implicitCity={here.city && filters.city === here.city.id ? here.city.id : undefined} anywhere={anywhere} suggestion={!result.total && filters.q ? didYouMean(filters.q) : undefined} />
       </main>
       <Footer />
     </>
