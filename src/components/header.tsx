@@ -109,10 +109,10 @@ export function Header() {
       )}
       {menu && (
         <div className="lg:hidden border-t border-line bg-panel shadow-lg px-4 pb-4 pt-3 panel-in">
-          {!isHome && <SearchBox className="mb-3" placeholder={t("search.placeholder")} />}
+          {!isHome && <SearchBox className="mb-3" placeholder={t("search.short")} />}
           <nav aria-label="Main mobile" className="grid gap-1">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : n.studio ? "nav-studio flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
+              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : n.studio ? "nav-studio flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
                 {n.studio ? (
                   <>
                     <span className="nav-studio-dot" aria-hidden /> {t(n.key)}

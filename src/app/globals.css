@@ -3751,3 +3751,18 @@ html.theme-vt::view-transition-new(root) {
     filter: brightness(0.62) saturate(1.25);
   }
 }
+/* The Clubs entry after dark: the same gold-to-violet, in tones that read on the dark bar. */
+:root[data-theme="dark"] .nav-premium-text {
+  background-image: linear-gradient(100deg, #ffd36b, #ff9f5a 35%, #c4a1ff 75%);
+}
+:root[data-theme="dark"] .nav-premium-star {
+  color: #ffd36b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .nav-premium-text {
+    background-image: linear-gradient(100deg, #ffd36b, #ff9f5a 35%, #c4a1ff 75%);
+  }
+  :root:not([data-theme="light"]) .nav-premium-star {
+    color: #ffd36b;
+  }
+}
