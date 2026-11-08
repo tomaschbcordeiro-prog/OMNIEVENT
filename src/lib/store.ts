@@ -339,7 +339,7 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
  * Checked when an instance starts and then every five minutes (one small request).
  */
 /** How the last load of shared copies went on this server (for the status page). */
-export const hydrateInfo: { runs: number; startedAt?: number; indexMs?: number; indexed?: number; loaded: string[]; failed: string[]; doneMs?: number; rebuilds: number } = { runs: 0, loaded: [], failed: [], rebuilds: 0 };
+export const hydrateInfo: { runs: number; startedAt?: number; indexMs?: number; indexed?: number; loaded: string[]; failed: string[]; doneMs?: number; rebuilds: number; /** Sources being loaded now, and since when (ms after the start). */ loading: Record<string, number>; rebuildErrors: string[] } = { runs: 0, loaded: [], failed: [], rebuilds: 0, loading: {}, rebuildErrors: [] };
 async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   let index: Awaited<ReturnType<typeof snapshotIndex>>;
   const t0 = Date.now();
@@ -371,17 +371,28 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   const queue = [...providers].sort((a, b) => (index[a.id]?.events ?? 0) - (index[b.id]?.events ?? 0));
   const loadOne = async (p: ProviderAdapter) => {
       const meta = index[p.id];
-      if (!meta || p.isDemo || p.selfShared || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
+      // A source being read live here still takes its shared copy (merged with what the live
+      // read has found so far): a big catalogue's live read takes minutes, and meanwhile the
+      // server would show none, or only part, of its events.
+      if (!meta || p.isDemo || p.selfShared || meta.at <= (dataAt.get(p.id) ?? 0)) return;
       // An instance that already holds a source re-downloads it at most every few hours:
       // big catalogues are tens of megabytes, and long crawls save new copies often, so
       // fetching each one on every instance used up the storage plan's transfer allowance.
       const have = dataAt.get(p.id);
       if (have !== undefined && state.providerData.has(p.id) && meta.at - have < SNAPSHOT_REFRESH_MS) return;
+      const since = Date.now();
+      hydrateInfo.loading[p.id] = since - t0;
       try {
         const loaded = await loadSnapshot(p.id, meta);
-        if (!loaded || state.syncing.has(p.id)) return;
+        if (!loaded) return;
         // A copy saved before the limit (or with a higher one) is trimmed as it arrives.
-        const batch = trimBatch(loaded);
+        let batch = trimBatch(loaded);
+        const partial = state.syncing.has(p.id) ? state.providerData.get(p.id) : undefined;
+        if (partial) {
+          const merged: ProviderBatch = { events: [...partial.events], venues: [...partial.venues], participants: [...partial.participants], offers: [...partial.offers] };
+          mergeMissing(merged, batch);
+          batch = trimBatch(merged);
+        }
         state.providerData.set(p.id, batch);
         dataAt.set(p.id, meta.at);
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
@@ -396,6 +407,8 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         hydrateInfo.failed.push(`${p.id}: ${String(err).slice(0, 80)}`);
         (state.snapFailed ??= new Set()).add(p.id);
         log("error", "snapshot load failed", { provider: p.id, err: String(err) });
+      } finally {
+        delete hydrateInfo.loading[p.id];
       }
   };
   await Promise.all(
@@ -816,7 +829,13 @@ function rebuildIndexesSliced(): Promise<void> {
         until = Date.now() + 30;
       }
     } while (slicedAgain);
-  })().finally(() => (sliced = undefined));
+  })()
+    .catch((err) => {
+      // Kept for the status page; the index in place stays as it was.
+      hydrateInfo.rebuildErrors.push(String(err).slice(0, 160));
+      log("error", "index rebuild failed", { err: String(err) });
+    })
+    .finally(() => (sliced = undefined));
   return sliced;
 }
 
