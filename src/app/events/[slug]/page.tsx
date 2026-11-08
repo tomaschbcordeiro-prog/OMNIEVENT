@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE } from "@/lib/site";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
@@ -72,6 +73,7 @@ function jsonLd(e: EventView) {
     "@context": "https://schema.org",
     "@type": groupOf(e.categorySlug) === "sports" ? "SportsEvent" : groupOf(e.categorySlug) === "music" ? "MusicEvent" : "Event",
     name: e.title,
+    url: `${SITE}/events/${e.slug}`,
     startDate: e.start,
     endDate: e.end,
     eventStatus: statusMap[e.status] ?? "https://schema.org/EventScheduled",

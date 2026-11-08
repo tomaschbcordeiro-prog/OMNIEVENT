@@ -12,6 +12,7 @@ import { CommunityPanel } from "@/components/community/community-panel";
 import { MonthList, NextUp } from "@/components/event-list-parts";
 import { WeatherNow } from "@/components/weather";
 import { getCategory } from "@/lib/categories";
+import { ldJson, venueLd } from "@/lib/structured-data";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -57,6 +58,7 @@ export default async function VenuePage({ params }: { params: P }) {
   return (
     <>
       <main className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8">
+        {!v.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(venueLd(v, res.items)) }} />}
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
           <Link href="/destinations" className="inline-block py-1 hover:text-text">Destinations</Link>
           {v.cityId && (<><span aria-hidden>/</span><Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link></>)}

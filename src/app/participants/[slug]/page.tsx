@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDestination } from "@/lib/destinations";
+import { ldJson, performerLd } from "@/lib/structured-data";
 import { ensureFresh, getParticipantBySlug, searchEvents, waitForData } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
 import { MonthList, NextUp } from "@/components/event-list-parts";
@@ -56,6 +57,7 @@ export default async function ParticipantPage({ params }: { params: P }) {
   return (
     <>
       <main className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8">
+        {!p.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(performerLd(p, res.items)) }} />}
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
           <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
           <span aria-hidden>/</span><span className="py-1 text-text-2">{KIND[p.kind] ?? "Performer"}</span>
