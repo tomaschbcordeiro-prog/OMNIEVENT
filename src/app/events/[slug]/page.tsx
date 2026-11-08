@@ -60,7 +60,9 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
     alternates: { canonical: `/events/${e.slug}` },
     // Fictional demo pages must never be indexed as if they were real events.
     robots: e.provenance.isDemo ? { index: false, follow: false } : undefined,
-    openGraph: { title: e.title, description: desc, images: e.imageUrl ? [e.imageUrl] : undefined, type: "website" },
+    // Without a photo of its own, a drawn card (date, title, place) shows when the link is shared.
+    openGraph: { title: e.title, description: desc, images: e.imageUrl ? [e.imageUrl] : [{ url: `/api/events/${e.slug}/card`, width: 1200, height: 630, alt: `${e.title}, ${when}` }], type: "website" },
+    twitter: { card: "summary_large_image", title: e.title, description: desc, images: [e.imageUrl ?? `/api/events/${e.slug}/card`] },
   };
 }
 
