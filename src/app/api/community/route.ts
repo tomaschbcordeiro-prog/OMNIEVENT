@@ -85,6 +85,14 @@ export const GET = handler(async (req: Request) => {
     // Live-update checks are the same for everyone, so the CDN answers most of them.
     if (view === "head") return ok(await threadHead(url.searchParams.get("target") ?? ""), { maxAge: 10, swr: 20 });
     if (view === "feed-head") return ok(await feedHead(), { maxAge: 10, swr: 20 });
+    // Counts on cards are extras: with the storage not answering, cards simply show none.
+    if (view === "summaries")
+      return ok(
+        await summaries((url.searchParams.get("targets") ?? "").split(",")).catch((err) => {
+          if (String((err as Error)?.message).startsWith("community storage")) return {};
+          throw err;
+        }),
+      );
     const viewer = await viewerOf(req);
     if (view === "duel") return ok({ duel: (await getDuel(viewer, duelSource)) ?? null });
     if (view === "blocked") {
@@ -134,7 +142,6 @@ export const GET = handler(async (req: Request) => {
         .slice(0, 8);
       return ok({ items, total: items.length });
     }
-    if (view === "summaries") return ok(await summaries((url.searchParams.get("targets") ?? "").split(",")));
     return ok(await getHome(viewer));
   } catch (err) {
     return fail(err);

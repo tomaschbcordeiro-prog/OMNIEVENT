@@ -52,7 +52,9 @@ export function ClusterMap({
     if (typeof IntersectionObserver === "undefined") return setNear(true);
     const io = new IntersectionObserver(
       (entries) => entries.some((e) => e.isIntersecting) && setNear(true),
-      { rootMargin: "500px 0px" },
+      // Close enough that it is ready as it arrives, far enough that a phone opening an event
+      // page (map about one and a half screens down) doesn't fetch it straight away.
+      { rootMargin: "250px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
