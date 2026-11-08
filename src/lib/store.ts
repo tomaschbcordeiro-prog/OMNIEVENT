@@ -1,3 +1,4 @@
+import { outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, sharedStoreUp, snapshotIndex } from "./shared-cache";
@@ -182,7 +183,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   const startedAt = new Date().toISOString();
   // A source that already lives in the shared storage is read directly by every server.
   const shared = sharedEnabled && !p.isDemo && !p.selfShared;
-  const job = (async () => {
+  // Outside any page being rendered: see outsideRender.
+  const job = outsideRender(async () => {
     // One instance reads a source at a time; the others pick up its snapshot. An instance
     // with nothing at all from a source reads it anyway, except sources with a daily quota.
     let locked = false;
@@ -290,7 +292,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       state.syncing.delete(p.id);
       if (locked) await releaseLock(`sync:${p.id}`);
     }
-  })();
+  });
   state.syncing.set(p.id, job);
   return job;
 }
@@ -412,9 +414,9 @@ export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void>
   if (sharedEnabled && !state.hydrating && Date.now() - (state.sharedCheckedAt ?? 0) > 5 * 60000) {
     const first = state.sharedCheckedAt === undefined;
     state.sharedCheckedAt = Date.now();
-    state.hydrating = hydrate(providers).finally(() => (state.hydrating = undefined));
+    state.hydrating = outsideRender(() => hydrate(providers)).finally(() => (state.hydrating = undefined));
     // Old snapshot copies are cleared out (one instance, at most hourly).
-    void cleanupSnapshots()
+    void outsideRender(() => cleanupSnapshots())
       .then((n) => n && log("info", "old snapshot chunks removed", { n }))
       .catch((err) => log("error", "snapshot cleanup failed", { err: String(err) }));
     // A new instance starts from the shared snapshots before deciding what to re-read, within

@@ -3582,3 +3582,51 @@ a.city-chip:hover {
   font-weight: 600;
   color: var(--color-text-3);
 }
+/* A run's dates on an event page: a small calendar, one row of days per month. */
+.sched-month-name {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.2rem;
+}
+.sched-month-name span {
+  font-family: var(--font-geist-sans, system-ui), sans-serif;
+  font-size: 12px;
+}
+.sched-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.sched-day {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 6px 2px 7px;
+  border-radius: var(--radius-s, 8px);
+  border: 1px solid var(--color-line-strong);
+  background: var(--panel);
+  line-height: 1.1;
+}
+.sched-wd {
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+.sched-d {
+  font-size: 17px;
+  font-weight: 600;
+}
+.sched-t {
+  font-size: 11px;
+  color: var(--color-text-2);
+}
+.sched-more > summary {
+  list-style: none;
+  cursor: pointer;
+  width: fit-content;
+}
+.sched-more > summary::-webkit-details-marker {
+  display: none;
+}
+.sched-more[open] > summary {
+  display: none;
+}

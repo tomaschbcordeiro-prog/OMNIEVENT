@@ -118,6 +118,7 @@ export default async function EventPage({ params }: { params: P }) {
   const cat = getCategory(e.categorySlug);
   const group = groupOf(e.categorySlug);
   const v = e.venue;
+  const sellerNames = [...new Set(e.offers.map((o) => o.provider))];
   const sellers = e.provenance.isDemo ? [] : sellerSearches(v.countryCode, e.title, v.city, e.offers.map((o) => o.provider));
   const sameVenue = searchEvents({ venue: v.slug, pageSize: 6 }).items.filter((c) => c.id !== e.id).slice(0, 5);
   const nearby = searchEvents({ near: { lat: v.lat, lng: v.lng, radiusKm: 15 }, pageSize: 8, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 5);
@@ -271,14 +272,18 @@ export default async function EventPage({ params }: { params: P }) {
               <section className="reveal mt-8" aria-labelledby="sched">
                 <h2 id="sched" className="t-h2">{e.timeSlots ? "Entry times" : "More performances"}</h2>
                 {e.timeSlots && <p className="t-small text-text-3 mt-1">Today&apos;s timed-entry slots as reported by the seller.</p>}
-                <ul className="mt-3 flex flex-wrap gap-2">
-                  {(e.timeSlots ?? e.schedule!.map((s) => ({ start: s, availability: "unknown" as const }))).map((s) => (
-                    <li key={s.start} className={`rounded-[var(--radius-s)] border px-3 py-2 t-small tnum ${s.availability === "sold_out" ? "border-line text-text-3 line-through" : "border-line-strong"}`}>
-                      {e.timeSlots ? formatEventTime(s.start, e.timeZone) : `${formatEventDate(s.start, e.timeZone)}, ${formatEventTime(s.start, e.timeZone)}`}
-                      {s.availability === "limited" && <span className="text-warn"> limited</span>}
-                    </li>
-                  ))}
-                </ul>
+                {e.timeSlots ? (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {e.timeSlots.map((s) => (
+                      <li key={s.start} className={`rounded-[var(--radius-s)] border px-3 py-2 t-small tnum ${s.availability === "sold_out" ? "border-line text-text-3 line-through" : "border-line-strong"}`}>
+                        {formatEventTime(s.start, e.timeZone)}
+                        {s.availability === "limited" && <span className="text-warn"> limited</span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ScheduleCalendar dates={e.schedule!} timeZone={e.timeZone} hoursUnknown={e.hoursUnknown} />
+                )}
               </section>
             )}
 
@@ -388,15 +393,22 @@ export default async function EventPage({ params }: { params: P }) {
           <section className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start grid gap-4">
             <div className="surface rounded-[var(--radius-l)] p-5">
               <p className="t-micro text-text-3">{e.isFree ? "Entry" : "Tickets"}</p>
-              <p className="t-h2 mt-1">
-                <Price amount={e.fromPrice?.amount} currency={e.fromPrice?.currency} feesIncluded={e.fromPrice?.feesIncluded} isFree={e.isFree} />
-              </p>
+              {!e.isFree && e.fromPrice?.amount == null ? (
+                // No price published: say where it is rather than that it's missing.
+                <p className="t-h3 mt-1">Price on the seller&apos;s site</p>
+              ) : (
+                <p className="t-h2 mt-1">
+                  <Price amount={e.fromPrice?.amount} currency={e.fromPrice?.currency} feesIncluded={e.fromPrice?.feesIncluded} isFree={e.isFree} />
+                </p>
+              )}
               {!e.isFree && e.offers.length > 0 && (
-                <p className="t-small text-text-2 mt-1">{plural(e.offers.length, "offer")} from {plural(new Set(e.offers.map((o) => o.provider)).size, "seller")}</p>
+                <p className="t-small text-text-2 mt-1">
+                  {sellerNames.length === 1 ? <>Sold by {sellerNames[0]}</> : <>{plural(e.offers.length, "offer")} from {plural(sellerNames.length, "seller")}</>}
+                </p>
               )}
               <div className="mt-4 grid gap-2">
                 {!e.isFree && e.offers.length > 0 && (
-                  <a href="#tickets" className={`btn ${inactive ? "btn-secondary" : "btn-primary"} w-full`}>Compare ticket options</a>
+                  <a href="#tickets" className={`btn ${inactive ? "btn-secondary" : "btn-primary"} w-full`}>{e.offers.length > 1 ? `Compare ${e.offers.length} ticket options` : "Ticket options"}</a>
                 )}
                 {e.officialUrl && (
                   // With no offers to compare, the official page is the main way on.
@@ -436,5 +448,63 @@ export default async function EventPage({ params }: { params: P }) {
       {/* Room for the phone action bar, so it never covers the footer. */}
       <div className="h-20 lg:hidden" aria-hidden />
     </>
+  );
+}
+
+/**
+ * A run's other dates as a small calendar: one row of days per month, the time once when
+ * every date shares it, and months after the first two folded away.
+ */
+function ScheduleCalendar({ dates, timeZone, hoursUnknown }: { dates: string[]; timeZone: string; hoursUnknown?: boolean }) {
+  const months: { key: string; name: string; days: { iso: string; ymd: string }[] }[] = [];
+  for (const iso of [...dates].sort()) {
+    const ymd = localDateKey(iso, timeZone);
+    const key = ymd.slice(0, 7);
+    let m = months[months.length - 1];
+    if (!m || m.key !== key) {
+      const [y, mo] = key.split("-").map(Number);
+      m = { key, name: new Date(Date.UTC(y, mo - 1, 15)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }), days: [] };
+      months.push(m);
+    }
+    m.days.push({ iso, ymd });
+  }
+  const times = new Set(dates.map((d) => formatEventTime(d, timeZone)));
+  const oneTime = !hoursUnknown && times.size === 1 ? [...times][0] : null;
+  const month = (m: (typeof months)[number]) => (
+    <div key={m.key} className="sched-month">
+      <h3 className="sched-month-name">
+        {m.name} <span className="text-text-3 tnum">· {m.days.length} {m.days.length === 1 ? "date" : "dates"}</span>
+      </h3>
+      <ul className="sched-days">
+        {m.days.map((d) => {
+          const day = new Date(`${d.ymd}T12:00:00Z`);
+          return (
+            <li key={d.iso} className="sched-day" title={`${formatEventDate(d.iso, timeZone)}${hoursUnknown ? "" : `, ${formatEventTime(d.iso, timeZone)}`}`}>
+              <span className="sched-wd">{day.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
+              <span className="sched-d tnum">{day.getUTCDate()}</span>
+              {!oneTime && !hoursUnknown && <span className="sched-t tnum">{formatEventTime(d.iso, timeZone)}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+  const shown = months.slice(0, 2);
+  const rest = months.slice(2);
+  const restCount = rest.reduce((n, m) => n + m.days.length, 0);
+  return (
+    <div className="mt-3">
+      <p className="t-small text-text-2 tnum">
+        {dates.length} more {dates.length === 1 ? "date" : "dates"}
+        {oneTime && <>, all at {oneTime}</>}
+      </p>
+      <div className="mt-2 grid gap-4">{shown.map(month)}</div>
+      {rest.length > 0 && (
+        <details className="sched-more mt-3">
+          <summary className="btn btn-secondary btn-sm">Show {restCount} more {restCount === 1 ? "date" : "dates"}</summary>
+          <div className="mt-4 grid gap-4">{rest.map(month)}</div>
+        </details>
+      )}
+    </div>
   );
 }
