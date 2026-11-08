@@ -41,7 +41,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: { "/api/poster/[id]": ["./public/fonts/**"], "/api/mixtape/card": ["./public/fonts/**"], "/api/events/[slug]/card": ["./public/fonts/**"], "/api/img": ["./node_modules/sharp/**", "./node_modules/@img/colour/**", "./node_modules/@img/sharp-linux-x64/**", "./node_modules/@img/sharp-libvips-linux-x64/**"] },
   // Listing an event moved into the Studio; old links keep working (query strings carry over).
   async redirects() {
-    return [{ source: "/events/new", destination: "/studio/new", permanent: false }];
+    return [
+      { source: "/events/new", destination: "/studio/new", permanent: false },
+      // A venue's or performer's address with its name taken off: where to find them instead.
+      { source: "/venues", destination: "/destinations", permanent: false },
+      { source: "/participants", destination: "/search", permanent: false },
+    ];
   },
   async headers() {
     // Files whose name or address changes with their content can be kept by browsers for good.
