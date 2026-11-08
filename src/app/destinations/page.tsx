@@ -1,3 +1,5 @@
+import { GROUP_HEX, getCategory } from "@/lib/categories";
+import { WeatherNow } from "@/components/weather";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ensureFresh, cityStats } from "@/lib/store";
@@ -18,6 +20,12 @@ export default async function DestinationsPage() {
   await ensureFresh();
   const stats = cityStats();
   const here = await getHere();
+  // The eight busiest cities, each with its main kinds of event.
+  const busiest = CITIES.map((c) => ({ c, s: stats[c.id] }))
+    .filter((x): x is { c: (typeof CITIES)[number]; s: NonNullable<typeof x.s> } => !!x.s && x.s.total >= 50)
+    .sort((a, b) => b.s.total - a.s.total)
+    .slice(0, 8)
+    .map((x) => ({ ...x, top: Object.entries(x.s.groups).sort((a, b) => b[1] - a[1]).slice(0, 5) }));
   return (
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
@@ -54,6 +62,43 @@ export default async function DestinationsPage() {
           </div>
           <ClusterMap params="" initial={{ lat: 25, lng: 10, zoom: 0.6 }} className="h-72" />
         </div>
+
+        {busiest.length > 0 && (
+          <section className="mt-12" aria-labelledby="busiest">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="busiest" className="t-h2">Busiest right now</h2>
+              <p className="t-small text-text-3 max-sm:hidden">Local time, weather and what&apos;s on</p>
+            </div>
+            <ul className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {busiest.map(({ c, s, top }) => (
+                <li key={c.id}>
+                  <Link href={`/destinations/${c.slug}`} className="city-card group" style={{ "--cat": GROUP_HEX[top[0]?.[0] ?? "other"] ?? GROUP_HEX.other } as React.CSSProperties}>
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="city-card-name">{c.name}</span>
+                        <span className="block t-micro text-text-3 truncate">{c.country}</span>
+                      </span>
+                      <span className="t-small text-text-2 shrink-0 text-right">
+                        <WeatherNow lat={c.lat} lng={c.lng} bare />
+                        <span className="block t-micro text-text-3 tnum">{localClock(c.timeZone)}</span>
+                      </span>
+                    </span>
+                    <span className="mt-4 block t-small tnum">
+                      <strong className="text-text">{s.total.toLocaleString("en-GB")}</strong> <span className="text-text-3">upcoming</span>
+                    </span>
+                    {/* What's on there, by share: a bar of category colours. */}
+                    <span className="city-card-bar" aria-hidden>
+                      {top.map(([g, n]) => (
+                        <span key={g} style={{ flexGrow: n, background: GROUP_HEX[g] ?? GROUP_HEX.other }} />
+                      ))}
+                    </span>
+                    <span className="mt-1.5 block t-micro text-text-3 truncate">{top.slice(0, 2).map(([g]) => getCategory(g)?.name ?? g).join(" · ")}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="mt-14 grid gap-10">
           {CONTINENTS.map((ct) => {
@@ -103,4 +148,13 @@ export default async function DestinationsPage() {
       <Footer />
     </>
   );
+}
+
+/** "Sun 09:12" in a city's own time. */
+function localClock(tz?: string): string {
+  try {
+    return new Date().toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: tz ?? "UTC" });
+  } catch {
+    return "";
+  }
 }
