@@ -58,10 +58,31 @@ export function redactSecrets(text: string): string {
     .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/g, "$1 [hidden]");
 }
 
+/**
+ * Whether a request that changes something comes from this site's own pages. Browsers always
+ * say where a cross-site POST comes from (Origin), so a page elsewhere can't act for a visitor
+ * (choose their city, post as them). Requests without an Origin (scripts, cron) aren't browser
+ * page requests and carry no visitor's cookies.
+ */
+export function sameOrigin(req: Request): boolean {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return true;
+  const origin = req.headers.get("origin");
+  if (!origin) return true;
+  if (origin === "null") return false;
+  try {
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 /** Wrap a handler so unexpected errors become a logged 500 with a stable shape. */
 export function handler<A extends unknown[]>(fn: (...args: A) => Promise<Response>) {
   return async (...args: A): Promise<Response> => {
     try {
+      const req = args[0];
+      if (req instanceof Request && !sameOrigin(req)) return apiError(403, "cross_site", "Requests that change something must come from this site.");
       return await fn(...args);
     } catch (err) {
       log("error", "unhandled api error", { err: String(err), stack: err instanceof Error ? err.stack : undefined });

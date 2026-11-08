@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readJson, redactSecrets } from "@/lib/api";
+import { handler, readJson, redactSecrets, sameOrigin } from "@/lib/api";
 
 const post = (body: string, headers: Record<string, string> = {}) => new Request("http://x/api", { method: "POST", body, headers: { "content-type": "application/json", ...headers } });
 
@@ -23,5 +23,21 @@ describe("hiding secrets in public status text", () => {
     expect(redactSecrets("client_id=foo&client_secret=bar")).toBe("client_id=foo&client_secret=[hidden]");
     expect(redactSecrets("Authorization: Bearer abcdefghijklmnop")).toBe("Authorization: Bearer [hidden]");
     expect(redactSecrets("HTTP 429 rate limited")).toBe("HTTP 429 rate limited");
+  });
+});
+
+describe("refusing writes from other sites", () => {
+  const req = (method: string, origin?: string) => new Request("https://omnievent.vercel.app/api/here", { method, headers: { host: "omnievent.vercel.app", ...(origin ? { origin } : {}) }, body: method === "GET" ? undefined : "{}" });
+  it("lets the site's own pages, scripts and reads through", () => {
+    expect(sameOrigin(req("POST", "https://omnievent.vercel.app"))).toBe(true);
+    expect(sameOrigin(req("POST"))).toBe(true);
+    expect(sameOrigin(req("GET", "https://evil.example"))).toBe(true);
+  });
+  it("refuses a write sent from another site", async () => {
+    expect(sameOrigin(req("POST", "https://evil.example"))).toBe(false);
+    expect(sameOrigin(req("POST", "null"))).toBe(false);
+    const h = handler(async (r: Request) => new Response(r.method === "POST" ? "done" : "read"));
+    expect((await h(req("POST", "https://evil.example"))).status).toBe(403);
+    expect((await h(req("POST", "https://omnievent.vercel.app"))).status).toBe(200);
   });
 });
