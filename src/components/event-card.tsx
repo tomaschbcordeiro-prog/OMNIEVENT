@@ -55,7 +55,7 @@ export function EventRow({
   const body = (
     <>
       <DateBlock c={c} />
-      {!compact && <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-14 w-14 shrink-0 rounded-[var(--radius-s)] hidden sm:block" />}
+      {!compact && <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-[var(--radius-s)]" />}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-[12px] text-text-2">
           <CategoryIcon slug={c.categorySlug} size={13} />
