@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const GET = handler(async () => {
   await ensureFresh();
   // When each source's shared snapshot was saved and how many events it holds.
-  const shared = await snapshotIndex().catch(() => ({}));
+  const shared = await snapshotIndex(providerStatuses().map((p) => p.id)).catch(() => ({}));
   // This instance may not be the one that ran a source: fall back to the last run any instance
   // shared, and show where long crawls stand.
   const statuses = providerStatuses();

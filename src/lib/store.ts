@@ -1,7 +1,6 @@
 import "server-only";
 import { after } from "next/server";
-import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, snapshotIndex } from "./shared-cache";
-import { storageAvailable } from "./community/kv";
+import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, sharedStoreUp, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { CATEGORIES, descendantsOf, getCategory } from "./categories";
@@ -98,6 +97,36 @@ const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 36
 // A new server answers within a few seconds with what it has; the rest keeps loading.
 const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 4000);
 
+const SYNC_SLOTS = Number(process.env.SYNC_CONCURRENCY ?? 8);
+const HEAVY_SLOTS = 2;
+const slotsBusy = { all: 0, heavy: 0 };
+const slotQueue: { heavy: boolean; go: () => void }[] = [];
+function pumpSlots() {
+  for (let i = 0; i < slotQueue.length; i++) {
+    const q = slotQueue[i];
+    if (slotsBusy.all >= SYNC_SLOTS || (q.heavy && slotsBusy.heavy >= HEAVY_SLOTS)) continue;
+    slotQueue.splice(i--, 1);
+    slotsBusy.all++;
+    if (q.heavy) slotsBusy.heavy++;
+    q.go();
+  }
+}
+/** Waits for a turn to read a source; returns the function that gives the turn back. */
+async function syncSlot(heavy: boolean): Promise<() => void> {
+  await new Promise<void>((go) => {
+    slotQueue.push({ heavy, go });
+    pumpSlots();
+  });
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    slotsBusy.all--;
+    if (heavy) slotsBusy.heavy--;
+    pumpSlots();
+  };
+}
+
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
   if (existing) return existing;
@@ -112,19 +141,23 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
     // Without the shared storage, instances can't share one read of a source: each would spend
     // a daily quota, or minutes of server time on a big catalogue, on its own. Those wait for
     // the storage instead; the smaller sources still load.
-    if (shared && (QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && !storageAvailable()) {
+    if (shared && (QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && !sharedStoreUp()) {
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
       state.syncing.delete(p.id);
       return;
     }
     if (shared) {
-      locked = await acquireLock(`sync:${p.id}`, 330);
+      // Big catalogues take minutes (and may wait their turn first): their lock lasts longer.
+      locked = await acquireLock(`sync:${p.id}`, HEAVY_SOURCES.has(p.id) ? 900 : 330);
       if (!locked && (QUOTA_SOURCES.has(p.id) || state.providerData.has(p.id))) {
         state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 10 * 60000);
         state.syncing.delete(p.id);
         return;
       }
     }
+    // A few sources at a time (one big catalogue at a time): reading them all at once on a new
+    // server held more in memory than it has.
+    const release = await syncSlot(HEAVY_SOURCES.has(p.id));
     try {
       let lastPublish = 0;
       // What we had before this run: partial results published during it don't count as "updated".
@@ -152,7 +185,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // Part of a crawl also joins the shared snapshot, which may hold earlier parts read by
       // other instances.
       if (shared && run.partial) {
-        const meta = (await snapshotIndex().catch(() => ({}) as Record<string, never>))[p.id];
+        const meta = (await snapshotIndex([p.id]).catch(() => ({}) as Record<string, never>))[p.id];
         if (meta && meta.at > (dataAt.get(p.id) ?? 0)) {
           const snap = await loadSnapshot(p.id, meta).catch(() => undefined);
           if (snap) mergeMissing(batch, snap);
@@ -188,6 +221,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 5 * 60000);
       log("error", "provider sync failed", { provider: p.id, runId, err: String(err) });
     } finally {
+      release();
       state.syncing.delete(p.id);
       if (locked) await releaseLock(`sync:${p.id}`);
     }
@@ -221,15 +255,16 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
 async function hydrate(providers: ProviderAdapter[]): Promise<void> {
   let index: Awaited<ReturnType<typeof snapshotIndex>>;
   try {
-    index = await snapshotIndex();
+    index = await snapshotIndex(providers.map((p) => p.id));
     state.snapIndex = index;
   } catch (err) {
     log("error", "snapshot index failed", { err: String(err) });
     return;
   }
   let changed = false;
-  await Promise.all(
-    providers.map(async (p) => {
+  // Four sources at a time: each snapshot is unpacked in memory before it's kept.
+  const queue = [...providers];
+  const loadOne = async (p: ProviderAdapter) => {
       const meta = index[p.id];
       if (!meta || p.isDemo || p.selfShared || state.syncing.has(p.id) || meta.at <= (dataAt.get(p.id) ?? 0)) return;
       // An instance that already holds a source re-downloads it at most every few hours:
@@ -250,12 +285,24 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         (state.snapFailed ??= new Set()).add(p.id);
         log("error", "snapshot load failed", { provider: p.id, err: String(err) });
       }
+  };
+  await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      while (queue.length) await loadOne(queue.shift()!);
     }),
   );
   if (changed) rebuildIndexes();
 }
 
-export async function ensureFresh(): Promise<void> {
+/**
+ * On Vercel, a visitor's request may only keep reading for five minutes after it's answered:
+ * too short for the biggest catalogues (Berlin, Espoo take over five). Those are read by the
+ * scheduled tick, which may run for longer, and every server takes them from its snapshot.
+ */
+const heavyOnlyInTick = process.env.VERCEL === "1";
+
+export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void> {
+  const heavyOk = !!opts.heavy || !heavyOnlyInTick;
   const providers = activeProviders();
   // A check stuck for over two minutes is abandoned so the next one can run.
   if (state.hydrating && Date.now() - (state.sharedCheckedAt ?? 0) > 120000) state.hydrating = undefined;
@@ -287,6 +334,11 @@ export async function ensureFresh(): Promise<void> {
   const waits: Promise<void>[] = [];
   for (const p of providers) {
     const last = state.lastSync.get(p.id);
+    if (!heavyOk && HEAVY_SOURCES.has(p.id) && sharedEnabled) {
+      // Left to the tick; until its snapshot arrives, look again for one in ten minutes.
+      if (last === undefined && !state.snapIndex?.[p.id]) state.lastSync.set(p.id, now - p.refreshIntervalMs + 10 * 60000);
+      continue;
+    }
     if (last === undefined) {
       // A recent shared snapshot is on its way (or loading): don't re-read the whole source.
       const meta = state.snapIndex?.[p.id];
