@@ -177,7 +177,8 @@ export const loadTimings: Record<string, string> = {};
 export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<ProviderBatch | undefined> {
   if (rc) {
     const t0 = Date.now();
-    const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 12, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
+    // All of a copy's chunks at once (about 20 at most since Brotli): each answer takes a while however small.
+    const parts = await inBatches(Array.from({ length: meta.n }, (_, i) => i), 24, (i) => rc.get(`snap:${id}:${meta.ver}:${i}`).catch(() => null));
     const t1 = Date.now();
     if (parts.some((p) => typeof p !== "string")) return undefined;
     const raw = unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8");
