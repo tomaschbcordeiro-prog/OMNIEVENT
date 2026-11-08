@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { ensureFresh, searchEvents, dataSummary, dataReady } from "@/lib/store";
+import { ensureFresh, searchEvents, dataSummary, dataReady, eventCount, waitFor } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
@@ -18,6 +18,9 @@ export const GET = handler(async (req: NextRequest) => {
   const parsed = parseFilterParams(req.nextUrl.searchParams);
   if (!parsed.ok) return validationError(parsed.error);
   await ensureFresh();
+  // A server that has just started has its first events about two seconds in: wait for them
+  // rather than answer "no events".
+  await waitFor(() => (eventCount() > 0 ? true : undefined), 5000);
   const result = searchEvents(parsed.filters);
   return ok({ ...result, data: dataSummary() }, { ...(parsed.filters.live ? LIVE_CACHE : CACHE), partial: !dataReady() });
 });

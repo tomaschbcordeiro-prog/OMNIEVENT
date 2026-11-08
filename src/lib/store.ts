@@ -579,6 +579,11 @@ export async function waitFor<T>(find: () => T | undefined, ms = 20000): Promise
   return found;
 }
 
+/** How many events this server can show right now (cheap). */
+export function eventCount(): number {
+  return state.cards.size;
+}
+
 export function dataReady(): boolean {
   if (state.hydrating) return false;
   return activeProviders().every((p) => state.lastSync.has(p.id));

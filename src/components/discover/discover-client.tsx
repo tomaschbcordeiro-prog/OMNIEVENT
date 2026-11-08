@@ -349,6 +349,8 @@ export function DiscoverClient() {
     fetchedOnce.current = true;
     const t = setTimeout(async () => {
       setLoading(true);
+      // Nothing yet from a server still loading isn't "no events": it stays "Loading events".
+      let stillLoading = false;
       try {
         const json = await loadGeo(qs, pending ? undefined : ctrl.signal);
         if (!ctrl.signal.aborted) {
@@ -356,13 +358,14 @@ export function DiscoverClient() {
           // Answered by a server that was still loading: look again shortly, until it's whole.
           if (json.partial && partialTries.current < 15) {
             partialTries.current++;
-            setTimeout(() => setGeoAgain((n) => n + 1), 4000);
+            stillLoading = json.total === 0;
+            setTimeout(() => setGeoAgain((n) => n + 1), stillLoading ? 2500 : 4000);
           }
         }
       } catch (e) {
         if ((e as Error).name !== "AbortError" && !ctrl.signal.aborted) setError((e as Error).message);
       } finally {
-        if (!ctrl.signal.aborted) setLoading(false);
+        if (!ctrl.signal.aborted && !stillLoading) setLoading(false);
       }
     }, wait);
     return () => {

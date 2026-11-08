@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ensureFresh, clusterEvents, dataSummary, dataReady, catalogueComplete } from "@/lib/store";
+import { ensureFresh, clusterEvents, dataSummary, dataReady, catalogueComplete, eventCount, waitFor } from "@/lib/store";
 import { parseFilterParams } from "@/lib/search/params";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 
@@ -35,6 +35,9 @@ export const GET = handler(async (req: NextRequest) => {
   const v = viewSchema.safeParse(Object.fromEntries([...sp].filter(([k]) => ["vlat", "vlng", "vr", "cell", "z"].includes(k))));
   if (!v.success) return validationError(v.error);
   await ensureFresh();
+  // A server that has just started shows its first events about two seconds in: wait for
+  // them rather than answer "nothing here" (which the globe would show as no events at all).
+  await waitFor(() => (eventCount() > 0 ? true : undefined), 5000);
   // Markers are ~36 px wide; groups closer than 44 px on screen are merged.
   const mergeDeg = v.data.z != null ? (44 * 360) / (512 * 2 ** v.data.z) : 0;
   const res = clusterEvents(parsed.filters, { lat: v.data.vlat, lng: v.data.vlng, radiusKm: v.data.vr, cellDeg: v.data.cell, mergeDeg });
