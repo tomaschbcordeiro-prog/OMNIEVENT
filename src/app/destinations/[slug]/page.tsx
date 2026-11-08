@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { DateRangeFields } from "@/components/date-range";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { catalogueComplete, dataSummary, ensureFresh, searchEvents, venuesInCity, cityStats, dayCounts } from "@/lib/store";
+import { catalogueComplete, dataSummary, ensureFresh, searchEvents, venuesInCity, cityStats, dayCounts, soonestByCategories } from "@/lib/store";
 import { StillLoading } from "@/components/still-loading";
 import { getDestination, citiesIn, CONTINENTS } from "@/lib/destinations";
 import { parseFilterParams, filtersToParams } from "@/lib/search/params";
@@ -70,6 +70,8 @@ export default async function DestinationPage({ params, searchParams }: { params
   const perDay = counts.map((n, i) => ({ key: new Date(Date.parse(startKey) + i * 86400000).toISOString().slice(0, 10), n }));
   const maxDay = Math.max(1, ...perDay.map((p) => p.n));
   const groups = Object.entries(result.facets.groups).sort((a, b) => b[1] - a[1]);
+  // The four rows of highlights, found in one pass.
+  const highlights = soonestByCategories({ ...base, status: undefined }, HIGHLIGHTS.map((h) => h.cats), 4);
   const venues = d.kind === "city" ? venuesInCity(d.id).slice(0, 8) : [];
   const stats = cityStats();
   const childCities = d.kind !== "city" ? citiesIn(d).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0)) : [];
@@ -168,8 +170,8 @@ export default async function DestinationPage({ params, searchParams }: { params
         )}
 
         <div className="mt-10 grid gap-10">
-          {HIGHLIGHTS.map((h) => {
-            const items = searchEvents({ ...base, categories: h.cats, pageSize: 4, status: undefined }).items;
+          {HIGHLIGHTS.map((h, i) => {
+            const items = highlights[i];
             if (!items.length) return null;
             return (
               <section key={h.title} aria-label={h.title}>

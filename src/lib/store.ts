@@ -1489,6 +1489,36 @@ export function levenshtein(a: string, b: string): number {
   return prev[n];
 }
 
+/**
+ * For each list of categories, the `n` soonest events matching `f` in one of them: what
+ * searchEvents({ ...f, categories: list, pageSize: n }).items gives for each list, in one
+ * pass over the cards instead of one search per list (a continent's page shows four such rows).
+ */
+export function soonestByCategories(f: SearchFilters, lists: string[][], n: number): EventCard[][] {
+  const sets = lists.map((list) => list.map((cat) => descendantsOf(cat)));
+  const base: SearchFilters = { ...f, categories: undefined, q: undefined };
+  const found: EventCard[][] = lists.map(() => []);
+  const now = Date.now();
+  const hit: boolean[] = new Array(lists.length);
+  for (const c of candidates(base)) {
+    // The categories first: the cheapest test, and it rules out most cards.
+    let any = false;
+    for (let i = 0; i < sets.length; i++) any = (hit[i] = sets[i].some((s) => s.has(c.categorySlug) || s.has(c.groupSlug))) || any;
+    if (!any || !matches(c, base)) continue;
+    const shown = present(c, base, now);
+    for (let i = 0; i < sets.length; i++) if (hit[i]) found[i].push(shown);
+  }
+  // The same order as a search by date.
+  const windowStart = base.from ? Date.parse(`${base.from}T00:00:00Z`) : Date.now() - 6 * 3600000;
+  const late = (c: EventCard) => Number(c.eventType === "daily_attraction" || !!c.ongoing || !!c.hoursUnknown);
+  const at = (c: EventCard) => (c.ongoing ? windowStart : startMsOf(c));
+  return found.map((list) => {
+    const keyed = list.map((c, i) => ({ c, u: late(c), t: at(c), i }));
+    keyed.sort((a, b) => a.u - b.u || a.t - b.t || a.i - b.i);
+    return keyed.slice(0, n).map((k) => k.c);
+  });
+}
+
 function catSetsFor(f: SearchFilters) {
   return f.categories?.length ? f.categories.map((c) => descendantsOf(c)) : undefined;
 }

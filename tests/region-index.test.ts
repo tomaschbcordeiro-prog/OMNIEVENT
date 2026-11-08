@@ -26,3 +26,21 @@ describe("country and continent searches", () => {
     __testing.rebuild();
   });
 });
+
+describe("soonest events by categories", () => {
+  it("match one search per list of categories", async () => {
+    const { soonestByCategories } = await import("@/lib/store");
+    const base = generateDemoData(new Date("2026-11-08T10:00:00Z"));
+    __testing.load("rows", { ...base, events: base.events.map((e) => ({ ...e, provenance: { ...e.provenance, provider: "rows", isDemo: false } })) });
+    __testing.rebuild();
+    const lists = [["festivals", "culture", "food-drink"], ["sports"], ["exhibitions", "attractions"], ["family"], ["music"]];
+    for (const f of [{}, { country: base.venues[0].countryCode }, { city: "lisbon" }]) {
+      const rows = soonestByCategories(f, lists, 4);
+      lists.forEach((cats, i) => {
+        expect(rows[i].map((c) => c.id)).toEqual(searchEvents({ ...f, categories: cats, pageSize: 4 }).items.map((c) => c.id));
+      });
+    }
+    __testing.drop("rows");
+    __testing.rebuild();
+  });
+});
