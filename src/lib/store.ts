@@ -1124,7 +1124,6 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
   return { ...c, start: new Date(a).toISOString(), until: long ? new Date(b).toISOString() : undefined, ongoing: ongoing || undefined };
 }
 
-/** Internals exposed to unit tests only. */
 /** Where a source's copy spends its bytes (for the status page): per field, in a sample. */
 export function batchSizes(id: string): Record<string, unknown> | undefined {
   const b = state.providerData.get(id);
@@ -1139,6 +1138,7 @@ export function batchSizes(id: string): Record<string, unknown> | undefined {
   return { counts: { events: b.events.length, venues: b.venues.length, participants: b.participants.length, offers: b.offers.length }, kb: { events: fields(b.events), venues: fields(b.venues), participants: fields(b.participants), offers: fields(b.offers) } };
 }
 
+/** Internals exposed to unit tests only. */
 export const __testing = {
   matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f),
   matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f),

@@ -149,4 +149,15 @@ describe("listings without hours", () => {
     const q = normalizeParis([{ id: "2", title: "Day", lat_lon: { lat: 48.8, lon: 2.3 }, occurrences: "2026-11-03T00:00:00+01:00_2026-11-03T23:59:00+01:00" }], SYNC, NOW);
     expect(q.events[0].hoursUnknown).toBe(true);
   });
+
+  it("read Paris sessions with a summer offset in winter as the wall-clock time written", () => {
+    // Listed as "+02:00" in November: midnight in Paris, not 23:00 the day before.
+    const p = normalizeParis([{ id: "3", title: "Expo days", lat_lon: { lat: 48.8, lon: 2.3 }, occurrences: "2026-11-08T00:00:00+02:00_2026-11-08T23:59:00+02:00;2026-11-09T09:30:00+02:00_2026-11-09T18:00:00+02:00" }], SYNC, NOW);
+    expect(p.events[0].start).toBe("2026-11-07T23:00:00.000Z");
+    expect(p.events[0].hoursUnknown).toBe(true);
+    expect(p.events[0].schedule).toEqual(["2026-11-09T08:30:00.000Z"]);
+    // Correct offsets read as they are.
+    const q = normalizeParis([{ id: "4", title: "Summer", lat_lon: { lat: 48.8, lon: 2.3 }, occurrences: "2026-11-20T20:00:00+01:00_2026-11-20T22:00:00+01:00" }], SYNC, NOW);
+    expect(q.events[0].start).toBe("2026-11-20T19:00:00.000Z");
+  });
 });

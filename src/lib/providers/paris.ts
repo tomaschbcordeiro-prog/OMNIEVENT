@@ -60,14 +60,26 @@ export function mapParisTags(tags?: string | null): string {
   return "culture";
 }
 
+/**
+ * A session time as the listing means it. Times are written in Paris wall-clock time, but
+ * some carry the wrong summer/winter offset (+02:00 in November): an all-day session then
+ * read as starting at 23:00 the day before. The wall-clock time is what the organiser meant.
+ */
+function parisInstant(s: string): number {
+  const t = Date.parse(s);
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?([+-]0[12]:00)$/);
+  if (!m || !Number.isFinite(t)) return t;
+  return parseLocal(`${m[1]} ${m[2]}`, TZ) ?? t;
+}
+
 /** Parse "start_end;start_end" sessions into [start, end] instants. */
 export function parseOccurrences(s?: string | null): [number, number][] {
   if (!s) return [];
   const out: [number, number][] = [];
   for (const part of s.split(";")) {
     const [a, b] = part.split("_");
-    const st = Date.parse(a);
-    const en = Date.parse(b ?? "");
+    const st = parisInstant(a);
+    const en = parisInstant(b ?? "");
     if (Number.isFinite(st)) out.push([st, Number.isFinite(en) && en > st ? en : st + 2 * 3600000]);
   }
   return out.sort((x, y) => x[0] - y[0]);
