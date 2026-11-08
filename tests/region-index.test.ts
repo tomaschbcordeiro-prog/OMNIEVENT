@@ -44,3 +44,19 @@ describe("soonest events by categories", () => {
     __testing.rebuild();
   });
 });
+
+describe("first results in order", () => {
+  it("are what a full stable sort puts first", async () => {
+    const { firstInOrder } = await import("@/lib/store");
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (const n of [0, 1, 50, 1000, 20000]) {
+      const keys = Array.from({ length: n }, () => Math.floor(rnd() * 40)); // many ties
+      const cmp = (a: number, b: number) => keys[a] - keys[b];
+      for (const k of [1, 24, 48, 300]) {
+        const want = Array.from({ length: n }, (_, i) => i).sort(cmp).slice(0, k);
+        expect(firstInOrder(n, k, cmp)).toEqual(want);
+      }
+    }
+  });
+});

@@ -1523,7 +1523,60 @@ function catSetsFor(f: SearchFilters) {
   return f.categories?.length ? f.categories.map((c) => descendantsOf(c)) : undefined;
 }
 
-export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { groups: Record<string, number>; cities: Record<string, number> } } {
+/**
+ * The first `k` of `0…n-1` in the order `cmp` gives, as a stable sort would put them. A page
+ * of 24 out of 200,000 results doesn't need the other 199,976 put in order.
+ */
+export function firstInOrder(n: number, k: number, cmp: (a: number, b: number) => number): number[] {
+  if (n <= 4 * k || k > 2000) {
+    const all = Array.from({ length: n }, (_, i) => i);
+    return all.sort(cmp).slice(0, k);
+  }
+  const top: number[] = [];
+  for (let i = 0; i < n; i++) {
+    // Not before the last kept one: a stable sort would put it after (ties keep their order).
+    if (top.length === k && cmp(i, top[k - 1]) >= 0) continue;
+    let lo = 0;
+    let hi = top.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (cmp(top[mid], i) <= 0) lo = mid + 1;
+      else hi = mid;
+    }
+    top.splice(lo, 0, i);
+    if (top.length > k) top.pop();
+  }
+  return top;
+}
+
+type SearchResult = Paged<EventCard> & { facets: { groups: Record<string, number>; cities: Record<string, number> } };
+
+/**
+ * Answers to the searches asked for most (the events page, each category's, each city's), kept
+ * for half a minute: the same search over a couple of hundred thousand events then costs
+ * nothing for the next visitors. Dropped whenever the index changes.
+ */
+const searchMemo = new Map<string, { at: number; cards: Map<string, EventCard>; r: SearchResult }>();
+const SEARCH_MEMO_MS = 30000;
+
+export function searchEvents(f: SearchFilters): SearchResult {
+  const key = JSON.stringify(f);
+  const now = Date.now();
+  const hit = searchMemo.get(key);
+  if (hit && hit.cards === state.cards && now >= hit.at && now - hit.at < SEARCH_MEMO_MS) {
+    // Most recently used last, so the oldest go first.
+    searchMemo.delete(key);
+    searchMemo.set(key, hit);
+    return hit.r;
+  }
+  const r = runSearch(f);
+  searchMemo.delete(key);
+  searchMemo.set(key, { at: now, cards: state.cards, r });
+  if (searchMemo.size > 120) searchMemo.delete(searchMemo.keys().next().value!);
+  return r;
+}
+
+function runSearch(f: SearchFilters): SearchResult {
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
   const catSets = catSetsFor(f);
   // Matches in two parallel lists (cards and their scores): no object per match.
@@ -1563,8 +1616,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
     if (sort === "price") P[i] = price(c);
     if (sort === "announced") A[i] = state.events.get(c.id)?.announcedAt ?? "";
   }
-  const order = Array.from({ length: n }, (_, i) => i);
-  order.sort((a, b) => {
+  const cmp = (a: number, b: number) => {
     switch (sort) {
       case "price": return P[a] - P[b] || T[a] - T[b];
       case "distance": return (found[a].distanceKm ?? Infinity) - (found[b].distanceKm ?? Infinity);
@@ -1572,10 +1624,11 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
       case "relevance": return score[b] - score[a] || T[a] - T[b];
       default: return U[a] - U[b] || T[a] - T[b];
     }
-  });
+  };
   const pageSize = Math.min(100, Math.max(1, f.pageSize ?? 24));
   const page = Math.max(1, f.page ?? 1);
   const total = n;
+  const order = firstInOrder(n, page * pageSize, cmp);
   return {
     items: order.slice((page - 1) * pageSize, page * pageSize).map((i) => found[i]),
     total,
