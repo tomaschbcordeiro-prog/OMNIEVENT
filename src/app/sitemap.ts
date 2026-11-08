@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { ensureFresh, allSlugs } from "@/lib/store";
+import { ensureFresh, allSlugs, catalogueComplete, waitFor } from "@/lib/store";
 import { ALL_DESTINATIONS } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { SITE } from "@/lib/site";
@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 /** Only real (non-demo) events, venues and participants are listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await ensureFresh();
+  // A server still loading would list only part of the catalogue: wait for the rest first.
+  await waitFor(() => (catalogueComplete() ? true : undefined), 40000);
   const s = allSlugs();
   const now = new Date();
   const fixed = [
