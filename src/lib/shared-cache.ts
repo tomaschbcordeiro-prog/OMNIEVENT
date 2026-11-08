@@ -3,6 +3,7 @@ import { brotliDecompressSync, constants as zc, createBrotliCompress, gunzipSync
 import { getCache, type RuntimeCache } from "@vercel/functions";
 import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
 import type { ProviderBatch } from "./providers/types";
+import { internBatch } from "./intern";
 
 // Packed with Brotli and a 16 MB window: the same descriptions and links recur across a tour's
 // dates far apart in a copy, which gzip's 32 KB window can't see. Ticketmaster's 122 MB of
@@ -182,7 +183,9 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
     const raw = unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8");
     const t2 = Date.now();
     const batch = JSON.parse(raw) as ProviderBatch;
-    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks: fetch ${t1 - t0} ms, unzip ${t2 - t1} ms, parse ${Date.now() - t2} ms`;
+    const t3 = Date.now();
+    internBatch(batch);
+    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks: fetch ${t1 - t0} ms, unzip ${t2 - t1} ms, parse ${t3 - t2} ms, share texts ${Date.now() - t3} ms`;
     return batch;
   }
   if (!persistent) return undefined;
@@ -195,7 +198,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
       }),
     );
   if (parts.some((p) => typeof p !== "string")) return undefined;
-  return JSON.parse(unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8")) as ProviderBatch;
+  return internBatch(JSON.parse(unpack(Buffer.from(parts.join(""), "base64"), meta.enc).toString("utf8")) as ProviderBatch);
 }
 
 /** True when this instance now holds the lock; it expires by itself after `ttlSec`. */

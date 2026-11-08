@@ -1,6 +1,7 @@
 import { inPrerender, outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
+import { internBatch } from "./intern";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, sharedStoreUp, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
 import type { ProviderAdapter, ProviderBatch } from "./providers/types";
@@ -258,6 +259,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
         log("info", "source trimmed to its limit", { provider: p.id, events: batch.events.length, kept: trimmed.events.length });
         batch = trimmed;
       }
+      // One copy of each repeated text (see internBatch).
+      internBatch(batch);
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
       // The same data as before (the members' listings re-read every minute, mostly unchanged):
       // nothing to rebuild.
@@ -899,6 +902,35 @@ function fromPrice(offers: TicketOffer[]): EventCard["fromPrice"] {
   return { amount: best.basePrice!, currency: best.currency, feesIncluded: best.feesIncluded };
 }
 
+/**
+ * Lists many cards share, kept once: who sells the tickets (["ticketmaster"] on tens of
+ * thousands of cards) and who performs (the same on every date of a tour). Cards are never
+ * changed after they're made, so sharing is safe. Started afresh when large.
+ */
+const sharedLists = new Map<string, unknown>();
+function sharedList<T>(key: string, make: () => T): T {
+  let v = sharedLists.get(key) as T | undefined;
+  if (v === undefined) {
+    if (sharedLists.size > 200_000) sharedLists.clear();
+    sharedLists.set(key, (v = make()));
+  }
+  return v;
+}
+function sellers(offers: TicketOffer[]): string[] {
+  const list = [...new Set(offers.map((o) => o.provider))];
+  return sharedList(`s${list.join("|")}`, () => list);
+}
+function cardPeople(e: OmniEvent, participants: Map<string, Participant>): EventCard["people"] {
+  if (!e.participants.length) return sharedList("p", () => []);
+  const list = e.participants
+    .map((ep) => {
+      const p = participants.get(ep.participantId);
+      return p ? { name: p.name, slug: p.slug, role: ep.role } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  return sharedList(`p${list.map((p) => `${p.slug}\u0000${p.name}\u0000${p.role}`).join("\u0001")}`, () => list);
+}
+
 function toCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<string, Participant>, offers: TicketOffer[]): EventCard {
   const v = venues.get(e.venueId)!;
   return {
@@ -923,15 +955,10 @@ function toCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<stri
     lng: v.lng,
     imageUrl: e.imageUrl,
     posterHue: e.posterHue,
-    people: e.participants
-      .map((ep) => {
-        const p = participants.get(ep.participantId);
-        return p ? { name: p.name, slug: p.slug, role: ep.role } : null;
-      })
-      .filter((x): x is NonNullable<typeof x> => !!x),
+    people: cardPeople(e, participants),
     sports: e.sports,
     fromPrice: fromPrice(offers),
-    providers: [...new Set(offers.map((o) => o.provider))],
+    providers: sellers(offers),
     isDemo: e.provenance.isDemo,
     provider: e.provenance.provider,
     lastSyncedAt: e.provenance.lastSyncedAt,
@@ -1308,17 +1335,45 @@ const categoryNames = (slug: string) => getCategory(slug)?.name ?? "";
 
 // Normalised text of each card for keyword search, worked out once per card.
 const textCache = new WeakMap<EventCard, { title: string; people: string; place: string; cat: string; words: string[] }>();
+/**
+ * One copy of texts many cards share (a venue's place line, a category's words, a tour's
+ * title, common words): the search text of a couple of hundred thousand cards otherwise
+ * holds the same few thousand texts over and over. Started afresh when it grows large.
+ */
+const textPool = new Map<string, string>();
+function pooled(s: string): string {
+  const kept = textPool.get(s);
+  if (kept !== undefined) return kept;
+  if (textPool.size > 400_000) textPool.clear();
+  textPool.set(s, s);
+  return s;
+}
+/** The longer words of a title and its people (shared by a tour's dates). */
+const wordLists = new Map<string, string[]>();
+function wordsOf(title: string, people: string): string[] {
+  const key = `${title}|${people}`;
+  let w = wordLists.get(key);
+  if (!w) {
+    if (wordLists.size > 200_000) wordLists.clear();
+    w = `${title} ${people}`
+      .split(" ")
+      .filter((x) => x.length >= 5)
+      .map(pooled);
+    wordLists.set(key, w);
+  }
+  return w;
+}
 function cardText(c: EventCard) {
   let t = textCache.get(c);
   if (!t) {
-    const title = ` ${norm(c.title)}`;
-    const people = ` ${(c.people ?? []).map((p) => norm(p?.name)).join(" ")}`;
+    const title = pooled(` ${norm(c.title)}`);
+    const people = pooled(` ${(c.people ?? []).map((p) => norm(p?.name)).join(" ")}`);
     t = {
       title,
       people,
-      place: ` ${norm(`${c.venueName} ${c.city} ${c.country}`)}`,
-      cat: ` ${norm(`${c.categorySlug} ${c.groupSlug} ${categoryNames(c.categorySlug)} ${c.sports?.competition ?? ""} ${c.sports?.sport ?? ""}`)}`,
-      words: `${title} ${people}`.split(" ").filter((w) => w.length >= 5),
+      place: pooled(` ${norm(`${c.venueName} ${c.city} ${c.country}`)}`),
+      cat: pooled(` ${norm(`${c.categorySlug} ${c.groupSlug} ${categoryNames(c.categorySlug)} ${c.sports?.competition ?? ""} ${c.sports?.sport ?? ""}`)}`),
+      words: wordsOf(title, people),
     };
     textCache.set(c, t);
   }
