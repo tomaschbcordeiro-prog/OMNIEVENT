@@ -74,7 +74,9 @@ export async function unpackLines(packed: Buffer): Promise<ProviderBatch> {
     const list = batch[key as keyof ProviderBatch] as unknown[];
     for (const r of rows) list.push(r);
   };
-  const stream = Readable.from([packed]).pipe(createBrotliDecompress());
+  // Unpacked in large pieces: each piece is a round trip between the worker thread and the
+  // main thread, and with small ones (16 KB) a busy server spent most of the read waiting.
+  const stream = Readable.from([packed]).pipe(createBrotliDecompress({ chunkSize: 1 << 22 }));
   for await (const chunk of stream as AsyncIterable<Buffer>) {
     const text = decoder.write(chunk);
     let from = 0;
