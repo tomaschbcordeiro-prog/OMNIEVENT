@@ -477,6 +477,39 @@ function sane(e: OmniEvent): OmniEvent {
   return e;
 }
 
+// What a rebuild works out per record is kept with the source's own objects, which stay the
+// same until that source is read again: rebuilding then mostly reuses (and every cache keyed
+// on an event or card, such as its days or its search text, stays warm).
+const titles = new WeakMap<OmniEvent, string>();
+function titleOf(e: OmniEvent): string {
+  let t = titles.get(e);
+  if (t === undefined) titles.set(e, (t = norm(e.title)));
+  return t;
+}
+const copies = new WeakMap<OmniEvent, OmniEvent>();
+function canonicalCopy(e: OmniEvent): OmniEvent {
+  let c = copies.get(e);
+  if (!c) copies.set(e, (c = { ...sane(e), canonicalId: e.id }));
+  return c;
+}
+const offerCopies = new WeakMap<TicketOffer, TicketOffer>();
+function offerCopy(o: TicketOffer, eventId: string): TicketOffer {
+  let c = offerCopies.get(o);
+  if (!c || c.eventId !== eventId) offerCopies.set(o, (c = { ...o, eventId }));
+  return c;
+}
+const NO_OFFERS: TicketOffer[] = [];
+const cardMemo = new WeakMap<OmniEvent, { card: EventCard; venue: Venue | undefined; offers: TicketOffer[]; people: (Participant | undefined)[] }>();
+function cardFor(e: OmniEvent, venues: Map<string, Venue>, participants: Map<string, Participant>, offers: TicketOffer[]): EventCard {
+  const venue = venues.get(e.venueId);
+  const people = e.participants.map((ep) => participants.get(ep.participantId));
+  const m = cardMemo.get(e);
+  if (m && m.venue === venue && m.offers.length === offers.length && m.offers.every((o, i) => o === offers[i]) && m.people.every((p, i) => p === people[i]) && m.people.length === people.length) return m.card;
+  const card = toCard(e, venues, participants, offers);
+  cardMemo.set(e, { card, venue, offers: [...offers], people });
+  return card;
+}
+
 /** A 1° map cell's key (longitudes wrapped to -180…179). */
 const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 360) % 360) - 180}`;
 
@@ -509,10 +542,9 @@ function rebuildIndexes() {
   // exact coordinates or start times: same title, same day and venues within 400 m merge,
   // so its page compares both sellers.
   const byTitleDay = new Map<string, { id: string; lat: number; lng: number; provider: string }[]>();
-  const sameShowElsewhere = (e: OmniEvent, v: Venue) => {
-    const t = norm(e.title);
+  const sameShowElsewhere = (e: OmniEvent, v: Venue, t: string, startMs: number) => {
     if (t.length < 6) return undefined;
-    const day = `${t}|${Math.floor(new Date(e.start).getTime() / 86400000)}`;
+    const day = `${t}|${Math.floor(startMs / 86400000)}`;
     return byTitleDay.get(day)?.find((c) => c.provider !== e.provenance.provider && haversineKm(c.lat, c.lng, v.lat, v.lng) < 0.4)?.id;
   };
 
@@ -529,33 +561,39 @@ function rebuildIndexes() {
   for (const [, batch] of ordered) {
     for (const e of batch.events) {
       const v = venues.get(e.venueId);
-      if (!v || !Number.isFinite(Date.parse(e.start)) || !Number.isFinite(v.lat) || !Number.isFinite(v.lng)) continue;
+      const startMs = Date.parse(e.start);
+      if (!v || !Number.isFinite(startMs) || !Number.isFinite(v.lat) || !Number.isFinite(v.lng)) continue;
       // Conservative duplicate key: identical normalised title, same ~100 m venue cell,
       // start within the same 15-minute window. Similar names alone never merge.
-      const key = `${norm(e.title)}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(new Date(e.start).getTime() / 900000)}`;
-      const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v);
+      const t = titleOf(e);
+      const key = `${t}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(startMs / 900000)}`;
+      const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v, t, startMs);
       if (canonical && events.get(canonical)?.provenance.isDemo === e.provenance.isDemo) {
         aliases.set(e.id, canonical);
         slugAliases.set(e.slug, canonical);
         continue;
       }
       dedupe.set(key, e.id);
-      events.set(e.id, { ...sane(e), canonicalId: e.id });
-      const day = `${norm(e.title)}|${Math.floor(new Date(e.start).getTime() / 86400000)}`;
-      byTitleDay.set(day, [...(byTitleDay.get(day) ?? []), { id: e.id, lat: v.lat, lng: v.lng, provider: e.provenance.provider }]);
+      events.set(e.id, canonicalCopy(e));
+      const day = `${t}|${Math.floor(startMs / 86400000)}`;
+      const same = byTitleDay.get(day);
+      const entry = { id: e.id, lat: v.lat, lng: v.lng, provider: e.provenance.provider };
+      if (same) same.push(entry);
+      else byTitleDay.set(day, [entry]);
     }
     for (const o of batch.offers) {
       const eventId = aliases.get(o.eventId) ?? o.eventId;
       if (!events.has(eventId)) continue;
-      const list = offers.get(eventId) ?? [];
-      list.push({ ...o, eventId });
-      offers.set(eventId, list);
-      offersById.set(o.id, { ...o, eventId });
+      const copy = offerCopy(o, eventId);
+      const list = offers.get(eventId);
+      if (list) list.push(copy);
+      else offers.set(eventId, [copy]);
+      offersById.set(o.id, copy);
     }
   }
 
   const cards = new Map<string, EventCard>();
-  for (const e of events.values()) cards.set(e.id, toCard(e, venues, participants, offers.get(e.id) ?? []));
+  for (const e of events.values()) cards.set(e.id, cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS));
 
   state.events = events;
   state.venues = venues;
