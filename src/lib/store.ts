@@ -735,8 +735,6 @@ const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 
  * (40 km) and those filed under it; otherwise every card. `matches` still decides.
  */
 function candidates(f: SearchFilters): Iterable<EventCard> {
-  // A country's or continent's: only its countries' cards (a continent page ran its searches
-  // over every card on Earth, seconds per page).
   // A performer's or a venue's dates: only theirs.
   if (f.participant && state.byPerson) return state.byPerson.get(f.participant) ?? [];
   if (f.venue && state.byVenue) return state.byVenue.get(f.venue) ?? [];
@@ -745,6 +743,8 @@ function candidates(f: SearchFilters): Iterable<EventCard> {
     const near = cardsAround(f.near.lat, f.near.lng, f.near.radiusKm);
     if (near) return near;
   }
+  // A country's or continent's: only its countries' cards (a continent page ran its searches
+  // over every card on Earth, seconds per page).
   const byCountry = state.byCountry;
   if (byCountry) {
     if (f.country) return byCountry.get(f.country.toUpperCase()) ?? [];
@@ -857,11 +857,7 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
     file(byVenue, c.venueSlug, c);
     for (const p of c.people) file(byPerson, p.slug, c);
     const cc = venues.get(events.get(c.id)?.venueId ?? "")?.countryCode;
-    if (cc) {
-      const list = byCountry.get(cc);
-      if (list) list.push(c);
-      else byCountry.set(cc, [c]);
-    }
+    if (cc) file(byCountry, cc, c);
     if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
       const k = cellKey(Math.floor(c.lat), Math.floor(c.lng));
       const list = grid.get(k);
