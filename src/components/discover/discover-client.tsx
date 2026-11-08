@@ -15,7 +15,7 @@ import { getDestination } from "@/lib/destinations";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
 import { cardWhen, formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
 import { useUser, userActions } from "@/lib/user/store";
-import { DEFAULT_LAYERS, type BaseStyle, type LayerState } from "@/lib/map/style";
+import { DEFAULT_LAYERS, isBaseStyle, type BaseStyle, type LayerState } from "@/lib/map/style";
 import { HOME, altToZoom, cellForZoom, fitGlobeZoom, globeRadiusPx, viewRadiusKm, zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
@@ -142,6 +142,7 @@ export function DiscoverClient() {
   const [flightSpin, setFlightSpin] = useState(false);
   const [flightGrab, setFlightGrab] = useState(0);
   const spaceBefore = useRef(false);
+  const baseBefore = useRef<BaseStyle>("map");
   const flightAsked = useRef(false);
   const flyKey = useRef(0);
   const history = useRef<CameraState[]>([]);
@@ -170,14 +171,14 @@ export function DiscoverClient() {
     if (pin.length === 2 && pin.every(Number.isFinite)) setPlace({ lat: pin[0], lng: pin[1] });
     try {
       const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
-      if (saved?.base === "map" || saved?.base === "satellite") setBase(saved.base);
+      if (isBaseStyle(saved?.base)) setBase(saved.base);
       if (saved?.space === true) setSpace(true);
       if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(narrow ? { terrain: false } : {}) });
       else if (narrow) setLayers({ ...DEFAULT_LAYERS, terrain: false });
     } catch {
       // storage unavailable
     }
-    if (sp.get("style") === "map" || sp.get("style") === "satellite") setBase(sp.get("style") as BaseStyle);
+    if (isBaseStyle(sp.get("style"))) setBase(sp.get("style") as BaseStyle);
     const m = sp.get("view") as ViewMode | null;
     setMode(!ok ? "list" : m === "map" || m === "list" ? m : "globe");
     linkedView.current = !!(sp.get("at") || sp.get("v") || sp.get("pin"));
@@ -189,7 +190,7 @@ export function DiscoverClient() {
   useEffect(() => {
     try {
       // A flight turns space view on for itself; the visitor's own choice is what's kept.
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ base, layers, space: flightOn ? spaceBefore.current : space }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ base: flightOn ? baseBefore.current : base, layers, space: flightOn ? spaceBefore.current : space }));
     } catch {
       // storage unavailable
     }
@@ -523,9 +524,13 @@ export function DiscoverClient() {
     setHint(false);
     setAutoRotate(false);
     if (mode === "list") setMode("globe");
-    if (!flightOn) spaceBefore.current = space;
-    // Night falls: the starry sky and the real night side of the planet, for the whole flight.
+    if (!flightOn) {
+      spaceBefore.current = space;
+      baseBefore.current = base;
+    }
+    // Night falls: the starry sky, the Earth's city lights and its real night side, for the whole flight.
     setSpace(true);
+    setBase("lights");
     setFlightOn(true);
   };
   const exitFlight = useCallback(() => {
@@ -533,6 +538,7 @@ export function DiscoverClient() {
     setFlightSpin(false);
     setHovered(null);
     setSpace(spaceBefore.current);
+    setBase(baseBefore.current);
   }, []);
   const getMap = useCallback(() => mapApi.current, []);
   const onFlightStop = useCallback((c: EventCard | null) => setHovered(c ? { lat: c.lat, lng: c.lng } : null), []);
@@ -582,11 +588,11 @@ export function DiscoverClient() {
   const tilted = view.pitch > 10;
 
   return (
-    <div ref={root} className={`relative h-[100dvh] w-full overflow-hidden sky ${space && mode !== "list" ? "space" : ""}`}>
+    <div ref={root} className={`relative h-[100dvh] w-full overflow-hidden sky ${(space || base === "lights") && mode !== "list" ? "space" : ""}`}>
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
       {/* Behind the planet: a glow of light and a soft shadow below, so it floats. */}
-      {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space} shift={padRight} />}
+      {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space || base === "lights"} shift={padRight} />}
       {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && !flightOn && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} />}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (

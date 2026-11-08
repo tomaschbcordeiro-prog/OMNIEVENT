@@ -684,17 +684,19 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     if (!map || !ready.current) return;
     const { base, layers, projection, variant, space } = latest.current;
     const orbit = !!space && variant !== "embed";
+    // The night-lights Earth is seen from orbit too: dark sky, light labels.
+    const dark = base === "lights";
     // Seen from space, the night side of the planet is shaded in.
     const vis = layerVisibility(map.getStyle(), base, { ...layers, night: (layers.night || orbit) && variant !== "embed" });
     for (const [id, on] of Object.entries(vis)) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     map.setProjection({ type: projection });
-    map.setSky(orbit ? SPACE_SKY : DAY_SKY);
+    map.setSky(orbit || dark ? SPACE_SKY : DAY_SKY);
     if (map.getLayer("night")) {
       map.setPaintProperty("night", "fill-color", orbit ? "#050B26" : "#1B2A5C");
       // Three nested twilight bands stack up: deep night ends up about 70% shaded in space view.
       map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.34 : 0.22, 7, orbit ? 0.22 : 0.12, 10, 0]);
     }
-    for (const [id, p] of Object.entries(labelPaint(orbit))) {
+    for (const [id, p] of Object.entries(labelPaint(orbit, dark))) {
       if (!map.getLayer(id)) continue;
       map.setPaintProperty(id, "text-color", p.color);
       map.setPaintProperty(id, "text-halo-color", p.halo);

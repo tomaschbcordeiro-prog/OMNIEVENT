@@ -15,7 +15,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://tiles.openfreemap.org https://api.maptiler.com https://tiles.maps.eox.at https://s3.amazonaws.com",
+  "connect-src 'self' https://tiles.openfreemap.org https://api.maptiler.com https://tiles.maps.eox.at https://s3.amazonaws.com https://gibs.earthdata.nasa.gov",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "frame-src 'none'",

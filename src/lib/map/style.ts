@@ -11,9 +11,11 @@ import type { StyleSpecification, LayerSpecification, ExpressionSpecification, S
  * - Satellite: MapTiler Satellite (up to ~z20, needs NEXT_PUBLIC_MAPTILER_KEY) or, without a key,
  *   EOX Sentinel-2 cloudless 2016 (CC BY 4.0, ~10 m/pixel, sharp to city scale but not street scale).
  * - Terrain: MapTiler Terrain RGB (with key) or AWS Open Data Terrain Tiles (terrarium, no key).
+ * - Night lights: NASA's Black Marble (VIIRS, 2016) via NASA GIBS. Free, no key, up to ~z8.
  */
 
-export type BaseStyle = "satellite" | "map";
+export type BaseStyle = "satellite" | "map" | "lights";
+export const isBaseStyle = (s: unknown): s is BaseStyle => s === "satellite" || s === "map" || s === "lights";
 export type LayerKey = "labels" | "roads" | "borders" | "poi" | "buildings" | "terrain" | "night" | "events" | "density";
 export type LayerState = Record<LayerKey, boolean>;
 
@@ -75,8 +77,9 @@ export const SPACE_SKY: SkySpecification = {
  * Label colours for the space view: light text on a dark halo while the night side shows,
  * back to the usual dark-on-white once the map is zoomed in to street level.
  */
-export function labelPaint(space: boolean): Record<string, { color: string | ExpressionSpecification; halo: string | ExpressionSpecification }> {
-  const fade = (light: string, normal: string): string | ExpressionSpecification => (space ? ["interpolate", ["linear"], ["zoom"], 6, light, 9, normal] : normal);
+export function labelPaint(space: boolean, dark = false): Record<string, { color: string | ExpressionSpecification; halo: string | ExpressionSpecification }> {
+  // On the night-lights Earth the ground stays dark at every zoom: light labels throughout.
+  const fade = (light: string, normal: string): string | ExpressionSpecification => (dark ? light : space ? ["interpolate", ["linear"], ["zoom"], 6, light, 9, normal] : normal);
   const halo = (normal: string) => fade("rgba(6,12,38,0.85)", normal);
   return {
     "label-country": { color: fade("#F4F6FF", "#2B2350"), halo: halo("rgba(255,255,255,0.9)") },
@@ -139,14 +142,18 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     // ------------------------------------------------ base: satellite
     L({ id: "satellite", type: "raster", source: "satellite", paint: { "raster-saturation": 0.16, "raster-contrast": 0.02, "raster-brightness-min": 0.02, "raster-brightness-max": 0.82, "raster-fade-duration": 250, "raster-resampling": "linear" } }, { base: "satellite" }),
 
+    // ------------------------------------------------ base: night lights (the Earth at night)
+    L({ id: "lights", type: "raster", source: "lights", paint: { "raster-saturation": 0.25, "raster-contrast": 0.12, "raster-brightness-min": 0, "raster-brightness-max": 1, "raster-fade-duration": 300, "raster-resampling": "linear" } }, { base: "lights" }),
+
     // ------------------------------------------------ terrain shading (both)
     // The elevation tiles include the sea floor, so a strong highlight would wash the oceans out
     // in pale patches when the whole globe is in view: the shading starts faint and grows.
     L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 0, 0.06, 4, 0.14, 8, 0.3], "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": ["interpolate", ["linear"], ["zoom"], 0, "rgba(255,255,255,0.12)", 6, "rgba(255,255,255,0.35)", 10, "rgba(255,255,255,0.55)"], "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
 
     // ------------------------------------------------ roads (two looks)
-    ...(["map", "satellite"] as const).flatMap((b) => {
-      const sat = b === "satellite";
+    ...(["map", "satellite", "lights"] as const).flatMap((b) => {
+      // Dark imagery (satellite, night lights) gets light, see-through roads.
+      const sat = b !== "map";
       const c = (major: string, minor: string) => (sat ? major : minor);
       return [
         ...(sat ? [] : [L({ id: "road-casing-map", type: "line", source: "omt", "source-layer": "transportation", minzoom: 8, filter: ["match", ["get", "class"], ["motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service"], true, false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#D9DEE6", "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 8, 0.8, 14, 4.5, 18, 22] } }, { base: "map", group: "roads" })]),
@@ -204,6 +211,13 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     sources: {
       omt: { type: "vector", url: "https://tiles.openfreemap.org/planet" },
       satellite: sat,
+      lights: {
+        type: "raster",
+        tiles: ["https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"],
+        tileSize: 256,
+        maxzoom: 8,
+        attribution: '<a href="https://earthobservatory.nasa.gov/features/NightLights" target="_blank">Black Marble: NASA Earth Observatory</a>',
+      },
       dem: dem,
       // Same elevation tiles for hillshading; attribution is already credited once via "dem".
       "dem-hs": Object.fromEntries(Object.entries(dem).filter(([k]) => k !== "attribution")) as typeof dem,
