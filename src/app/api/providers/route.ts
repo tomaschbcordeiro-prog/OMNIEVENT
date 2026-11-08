@@ -1,4 +1,4 @@
-import { ensureFresh, providerStatuses, dataSummary, hydrateInfo } from "@/lib/store";
+import { ensureFresh, providerStatuses, dataSummary, hydrateInfo, batchSizes } from "@/lib/store";
 import { loadTimings } from "@/lib/shared-cache";
 import { FX_SOURCE } from "@/lib/currency";
 import { handler, ok, redactSecrets } from "@/lib/api";
@@ -11,8 +11,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 /** GET /api/providers — data sources, configuration state and last sync runs (no secrets). */
-export const GET = handler(async () => {
+export const GET = handler(async (req: Request) => {
   await ensureFresh();
+  const sizes = new URL(req.url).searchParams.get("sizes");
+  if (sizes && /^[a-z0-9-]{1,40}$/.test(sizes)) return ok({ sizes: batchSizes(sizes) ?? null });
   // When each source's shared snapshot was saved and how many events it holds.
   const shared = await snapshotIndex(providerStatuses().map((p) => p.id)).catch(() => ({}));
   // This instance may not be the one that ran a source: fall back to the last run any instance

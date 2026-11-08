@@ -1113,6 +1113,20 @@ export function present(c: EventCard, f: SearchFilters, now = Date.now()): Event
 }
 
 /** Internals exposed to unit tests only. */
+/** Where a source's copy spends its bytes (for the status page): per field, in a sample. */
+export function batchSizes(id: string): Record<string, unknown> | undefined {
+  const b = state.providerData.get(id);
+  if (!b) return undefined;
+  const fields = (rows: object[]) => {
+    const out: Record<string, number> = {};
+    const sample = rows.slice(0, 3000);
+    for (const r of sample) for (const [k, v] of Object.entries(r)) out[k] = (out[k] ?? 0) + JSON.stringify(v ?? null).length + k.length + 4;
+    const scale = rows.length / Math.max(1, sample.length);
+    return Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, Math.round((n * scale) / 1024)]));
+  };
+  return { counts: { events: b.events.length, venues: b.venues.length, participants: b.participants.length, offers: b.offers.length }, kb: { events: fields(b.events), venues: fields(b.venues), participants: fields(b.participants), offers: fields(b.offers) } };
+}
+
 export const __testing = {
   matchesWhen: (e: OmniEvent, f: SearchFilters) => matchesWhen(e, f),
   matchesWhenSlow: (e: OmniEvent, f: SearchFilters) => matchesWhenSlow(e, f),
