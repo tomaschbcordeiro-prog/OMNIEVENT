@@ -433,6 +433,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     if (lastLoadAt >= lastPassAt) await pass();
   }
   hydrateInfo.doneMs = Date.now() - t0;
+  // Then, in slices, what every search needs (words, dates, intervals), so the first searches
+  // are quick; done after the loading, which it would otherwise slow down.
+  void warmSearch();
 }
 
 /**
@@ -754,14 +757,7 @@ function* rebuildSteps(gen: number): Generator<void, void, void> {
   const cards = new Map<string, EventCard>();
   for (const e of events.values()) {
     if (++n % 2000 === 0) yield;
-    const card = cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS);
-    // What every search needs (its words, dates and intervals) is worked out now, not on the
-    // first search a new server answers.
-    cardText(card);
-    startMsOf(card);
-    simpleEvent(e);
-    lastEnd(e);
-    cards.set(e.id, card);
+    cards.set(e.id, cardFor(e, venues, participants, offers.get(e.id) ?? NO_OFFERS));
   }
   const grid = new Map<string, EventCard[]>();
   const byCity = new Map<string, EventCard[]>();
@@ -852,6 +848,26 @@ function rebuildIndexesSliced(): Promise<void> {
     })
     .finally(() => (sliced = undefined));
   return sliced;
+}
+
+/** Works out, in slices, what searches need for every card not yet prepared. */
+async function warmSearch(): Promise<void> {
+  const cards = state.cards;
+  let until = Date.now() + 25;
+  for (const c of cards.values()) {
+    if (state.cards !== cards) return; // a newer index: it gets prepared as searches use it
+    cardText(c);
+    startMsOf(c);
+    const e = state.events.get(c.id);
+    if (e) {
+      simpleEvent(e);
+      lastEnd(e);
+    }
+    if (Date.now() >= until) {
+      await new Promise((r) => setImmediate(r));
+      until = Date.now() + 25;
+    }
+  }
 }
 
 /** True while the indexes are being rebuilt in slices (the catalogue shown may be incomplete). */

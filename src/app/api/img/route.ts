@@ -2,6 +2,7 @@ import { Resolver } from "node:dns/promises";
 import { isIP } from "node:net";
 import { clientKey, rateLimit } from "@/lib/api";
 import { THUMB_WIDTHS } from "@/lib/thumb";
+import { loadingNow } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
@@ -87,6 +88,8 @@ export async function GET(req: Request) {
   if (!rateLimit(`img:${clientKey(req)}`, 400)) return original(url.href, "rate");
 
   if ((unreachable.get(url.hostname) ?? 0) > Date.now()) return original(url.href, "host-paused");
+  // A server still loading its catalogue keeps its processor for that: pictures as they are.
+  if (loadingNow()) return original(url.href, "busy");
   // Two pictures at a time per server: downloads look up names on Node's small pool of worker
   // threads, which the rest of the server needs too. Beyond that, the original picture.
   if (inFlight >= 2) return original(url.href, "busy");
