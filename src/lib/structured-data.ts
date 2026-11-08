@@ -62,3 +62,14 @@ export function performerLd(p: { name: string; slug: string; kind: string; url?:
 export function ldJson(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
+
+/**
+ * Link-preview picture for a venue or performer page: the photo of its next event that has one,
+ * or else the drawn card of its next event.
+ */
+export function shareImage(events: EventCard[], title: string) {
+  const withPhoto = events.find((c) => c.imageUrl?.startsWith("https://"));
+  const url = withPhoto?.imageUrl ?? (events[0] ? `/api/events/${events[0].slug}/card` : undefined);
+  if (!url) return {};
+  return { openGraph: { title, images: [url] }, twitter: { card: "summary_large_image" as const, title, images: [url] } };
+}

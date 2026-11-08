@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDestination } from "@/lib/destinations";
-import { ldJson, performerLd } from "@/lib/structured-data";
+import { shareImage, ldJson, performerLd } from "@/lib/structured-data";
 import { ensureFresh, getParticipantBySlug, searchEvents, waitForData } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
 import { MonthList, NextUp } from "@/components/event-list-parts";
@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
     description: `Upcoming events featuring ${p.name}, with dates, venues and ticket options.`,
     alternates: { canonical: `/participants/${p.slug}` },
     robots: p.provenance.isDemo ? { index: false, follow: false } : undefined,
+    ...shareImage(searchEvents({ participant: p.slug, pageSize: 10, sort: "date" }).items, p.name),
   };
 }
 

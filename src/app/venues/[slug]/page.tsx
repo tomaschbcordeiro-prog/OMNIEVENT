@@ -12,7 +12,7 @@ import { CommunityPanel } from "@/components/community/community-panel";
 import { MonthList, NextUp } from "@/components/event-list-parts";
 import { WeatherNow } from "@/components/weather";
 import { getCategory } from "@/lib/categories";
-import { ldJson, venueLd } from "@/lib/structured-data";
+import { shareImage, ldJson, venueLd } from "@/lib/structured-data";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
     description: `What's on at ${v.name} in ${v.city}, with dates and ticket options.`,
     alternates: { canonical: `/venues/${v.slug}` },
     robots: v.provenance.isDemo ? { index: false, follow: false } : undefined,
+    ...shareImage(searchEvents({ venue: v.slug, pageSize: 10, sort: "date" }).items, `${v.name}, ${v.city}`),
   };
 }
 

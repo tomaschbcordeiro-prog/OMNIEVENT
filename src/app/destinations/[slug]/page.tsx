@@ -1,3 +1,4 @@
+import { shareImage } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import { DateRangeFields } from "@/components/date-range";
 import Link from "next/link";
@@ -32,6 +33,8 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
     title: `Events in ${d.name}`,
     description: `Concerts, sport, theatre, festivals, museums and family activities in ${d.name}${d.country ? `, ${d.country}` : ""}. Filter by your trip dates and budget.`,
     alternates: { canonical: `/destinations/${d.slug}` },
+    // A city's link preview: a photo from what's on there soon.
+    ...(d.kind === "city" ? (await ensureFresh(), shareImage(searchEvents({ city: d.id, pageSize: 24, sort: "date" }).items, `Events in ${d.name}`)) : {}),
   };
 }
 
