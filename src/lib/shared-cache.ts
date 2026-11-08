@@ -1,17 +1,49 @@
 import "server-only";
-import { brotliCompressSync, brotliDecompressSync, constants as zc, gunzipSync } from "node:zlib";
+import { brotliDecompressSync, constants as zc, createBrotliCompress, gunzipSync } from "node:zlib";
+import { getCache, type RuntimeCache } from "@vercel/functions";
+import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
+import type { ProviderBatch } from "./providers/types";
 
 // Packed with Brotli and a 16 MB window: the same descriptions and links recur across a tour's
 // dates far apart in a copy, which gzip's 32 KB window can't see. Ticketmaster's 122 MB of
 // JSON packs to 8.7 MB instead of 18.9 MB (gzip), and packs and unpacks a little faster.
 // Unpacked on the main thread: done on Node's small pool of worker threads instead, it could
 // wait behind other work there (slow name lookups) and a new server never finished loading.
-const pack = (b: Buffer) => brotliCompressSync(b, { params: { [zc.BROTLI_PARAM_QUALITY]: 4, [zc.BROTLI_PARAM_LGWIN]: 24, [zc.BROTLI_PARAM_SIZE_HINT]: b.length } });
+//
+// Packed as it's written, a few thousand records at a time: writing a big source's whole copy
+// as one string first (122 MB, twice that in memory for text outside Latin-1) could take a
+// server near its memory limit on top of everything it already holds, and saves stopped.
+export async function packBatch(batch: ProviderBatch): Promise<Buffer> {
+  const z = createBrotliCompress({ params: { [zc.BROTLI_PARAM_QUALITY]: 4, [zc.BROTLI_PARAM_LGWIN]: 24 } });
+  const out: Buffer[] = [];
+  z.on("data", (b: Buffer) => out.push(b));
+  const done = new Promise<void>((resolve, reject) => {
+    z.on("end", resolve);
+    z.on("error", reject);
+  });
+  const write = (text: string) => new Promise<void>((resolve, reject) => z.write(text, (err) => (err ? reject(err) : resolve())));
+  const keys = ["events", "venues", "participants", "offers"] as const;
+  await write("{");
+  for (const [k, key] of keys.entries()) {
+    await write(`${k ? "," : ""}"${key}":[`);
+    const rows: readonly unknown[] = batch[key] ?? [];
+    for (let i = 0; i < rows.length; i += 2000)
+      await write(
+        (i ? "," : "") +
+          rows
+            .slice(i, i + 2000)
+            .map((r) => JSON.stringify(r) ?? "null")
+            .join(","),
+      );
+    await write("]");
+  }
+  z.end("}");
+  await done;
+  return Buffer.concat(out);
+}
+
 /** Copies saved before the switch to Brotli are gzip. */
-const unpack = (b: Buffer, enc?: string) => (enc === "br" ? brotliDecompressSync(b) : gunzipSync(b));
-import { getCache, type RuntimeCache } from "@vercel/functions";
-import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
-import type { ProviderBatch } from "./providers/types";
+export const unpack = (b: Buffer, enc?: string) => (enc === "br" ? brotliDecompressSync(b) : gunzipSync(b));
 
 /**
  * Data shared by every server instance:
@@ -63,7 +95,7 @@ async function inBatches<T, R>(items: T[], limit: number, fn: (x: T, i: number) 
 /** Saves a source's batch, compressed and split into chunks under the store's size limits. */
 export async function saveSnapshot(id: string, batch: ProviderBatch, at = Date.now()): Promise<void> {
   if (!sharedEnabled) return;
-  const data = pack(Buffer.from(JSON.stringify(batch))).toString("base64");
+  const data = (await packBatch(batch)).toString("base64");
   if (rc) {
     // Each copy has its own version; readers only follow the meta entry, written last, and
     // older copies expire by themselves.

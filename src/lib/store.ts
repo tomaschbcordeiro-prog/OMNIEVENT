@@ -281,6 +281,8 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       if (shared && fresh && (!run.partial || Date.now() - lastSave > 90 * 60000 || !(run.error ?? "").includes("left"))) {
         savedAt.set(p.id, Date.now());
         const t0 = Date.now();
+        // Left as "started" if the server stops mid-save (out of memory, for one).
+        await setState(`save:${p.id}`, { at: new Date().toISOString(), started: true, events: batch.events.length, rssMb: Math.round(memoryMb()) }, 7 * 86400);
         await saveSnapshot(p.id, batch).then(
           // How the last save of each source went, wherever it ran (for the status page).
           () => setState(`save:${p.id}`, { at: new Date().toISOString(), ok: true, ms: Date.now() - t0, events: batch.events.length }, 7 * 86400),
