@@ -1,5 +1,6 @@
 "use client";
 
+import { ThemeToggle } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -78,7 +79,7 @@ export function Header() {
                 key={n.href}
                 href={n.href}
                 aria-current={isActive(n.href) ? "page" : undefined}
-                className={`px-1.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-white" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
+                className={`px-1.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-on-ink" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
               >
                 {t(n.key)}
               </Link>
@@ -94,6 +95,7 @@ export function Header() {
             {search ? <X size={19} aria-hidden /> : <Search size={19} aria-hidden />}
           </button>
         )}
+        <ThemeToggle className={`max-lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} />
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <AccountMenu floating={isHome} />
         <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
@@ -132,6 +134,10 @@ export function Header() {
               </Link>
             ))}
           </nav>
+          <div className="mt-3 pt-3 border-t border-line flex items-center justify-between px-3">
+            <span className="t-small text-text-2">Light or dark</span>
+            <ThemeToggle className="border border-line-strong" />
+          </div>
         </div>
       )}
     </header>

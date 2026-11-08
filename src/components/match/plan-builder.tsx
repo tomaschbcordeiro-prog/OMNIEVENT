@@ -284,12 +284,12 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
       {/* ---- when */}
       <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="radiogroup" aria-label="When">
         {(Object.keys(WHEN_LABEL) as WhenPreset[]).map((w) => (
-          <button key={w} type="button" role="radio" aria-checked={plan.when === w} onClick={() => onChange({ ...plan, when: w })} className={`chip press shrink-0 ${plan.when === w ? "bg-text text-white border-text" : ""}`}>
+          <button key={w} type="button" role="radio" aria-checked={plan.when === w} onClick={() => onChange({ ...plan, when: w })} className={`chip press shrink-0 ${plan.when === w ? "bg-text text-on-ink border-text" : ""}`}>
             {WHEN_LABEL[w]}
           </button>
         ))}
         {typeof plan.when === "object" && (
-          <button type="button" role="radio" aria-checked className="chip press shrink-0 bg-text text-white border-text" onClick={() => onChange({ ...plan, when: "month" })}>
+          <button type="button" role="radio" aria-checked className="chip press shrink-0 bg-text text-on-ink border-text" onClick={() => onChange({ ...plan, when: "month" })}>
             {plan.when.label} <X size={12} aria-hidden />
           </button>
         )}

@@ -207,7 +207,7 @@ export function CommunityPanel({
           <>
             <div className="flex items-center gap-1 mb-3" role="tablist" aria-label="Sort posts">
               {(["top", "new"] as Sort[]).map((s) => (
-                <button key={s} role="tab" aria-selected={sort === s} onClick={() => setSort(s)} className={`chip ${sort === s ? "!bg-text !text-white !border-text" : ""}`}>
+                <button key={s} role="tab" aria-selected={sort === s} onClick={() => setSort(s)} className={`chip ${sort === s ? "!bg-text !text-on-ink !border-text" : ""}`}>
                   {s === "top" ? "Top" : "Newest"}
                 </button>
               ))}
@@ -250,7 +250,7 @@ function PlanCard({ thread, past, onPlan }: { thread: Thread | null; past: boole
     <div className="surface rounded-[var(--radius-l)] p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
-          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.going} onClick={() => click("going")} className={`btn ${me?.going ? "bg-sun text-text border-sun hover:brightness-105" : "btn-primary"} press`}>
+          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.going} onClick={() => click("going")} className={`btn ${me?.going ? "bg-sun text-on-sun border-sun hover:brightness-105" : "btn-primary"} press`}>
             <span key={me?.going ? "on" : "off"} className={me?.going ? "pop" : ""}>{me?.going ? "✓" : "🎟️"}</span>
             {past ? "I was there" : me?.going ? "You're going" : "I'm going"}
           </button>
@@ -368,7 +368,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
       {!parent && (
         <div className="flex flex-wrap gap-1.5 mb-3" role="radiogroup" aria-label="What kind of post">
           {kinds.map((k) => (
-            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`chip press ${kind === k ? "!bg-text !text-white !border-text" : ""}`}>
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`chip press ${kind === k ? "!bg-text !text-on-ink !border-text" : ""}`}>
               <span aria-hidden>{KIND_META[k].emoji}</span> {KIND_META[k].label}
             </button>
           ))}

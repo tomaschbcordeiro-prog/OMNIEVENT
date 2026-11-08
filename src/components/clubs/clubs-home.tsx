@@ -104,9 +104,9 @@ export function ClubsHome() {
             <input className="field w-full pl-9" placeholder="Search by name, taste or city" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1" role="group" aria-label="Filter by vibe">
-            <button type="button" aria-pressed={!vibe} className={`chip shrink-0 ${!vibe ? "!bg-text !text-white !border-text" : ""}`} onClick={() => setVibe("")}>All</button>
+            <button type="button" aria-pressed={!vibe} className={`chip shrink-0 ${!vibe ? "!bg-text !text-on-ink !border-text" : ""}`} onClick={() => setVibe("")}>All</button>
             {VIBE_FILTERS.map((g) => (
-              <button key={g} type="button" aria-pressed={vibe === g} className={`chip shrink-0 ${vibe === g ? "!bg-text !text-white !border-text" : ""}`} onClick={() => setVibe(vibe === g ? "" : g)}>
+              <button key={g} type="button" aria-pressed={vibe === g} className={`chip shrink-0 ${vibe === g ? "!bg-text !text-on-ink !border-text" : ""}`} onClick={() => setVibe(vibe === g ? "" : g)}>
                 <span aria-hidden>{vibeEmoji(g)}</span> {vibeLabel(g)}
               </button>
             ))}

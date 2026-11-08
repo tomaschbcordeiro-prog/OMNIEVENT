@@ -417,7 +417,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
             {STEPS.map((s, i) => (
               <li key={s.id}>
                 <button type="button" disabled={i > reached} onClick={() => go(i)} className={`flex w-full items-center gap-2.5 rounded-[var(--radius-s)] px-2 py-1.5 text-left t-small ${i === at ? "bg-text/[0.06] font-semibold" : "hover:bg-text/[0.04] disabled:opacity-50 disabled:hover:bg-transparent"}`}>
-                  <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${okSteps.has(s.id) && i <= reached ? "bg-ok text-white" : "bg-text/10 text-text-2"}`} aria-hidden>
+                  <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold ${okSteps.has(s.id) && i <= reached ? "bg-ok text-on-ink" : "bg-text/10 text-text-2"}`} aria-hidden>
                     {okSteps.has(s.id) && i <= reached ? <Check size={12} strokeWidth={3} /> : i + 1}
                   </span>
                   {s.label}
@@ -469,7 +469,7 @@ function Basics({ d, set, errs }: StepProps) {
         <Field label="The closest genre" optional hint="Helps people who filter by genre.">
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Genre">
             {subs.map((c) => (
-              <button key={c.slug} type="button" role="radio" aria-checked={d.category === c.slug} onClick={() => set("category", d.category === c.slug ? "" : c.slug)} className={`chip press ${d.category === c.slug ? "!bg-text !text-white !border-text" : ""}`}>
+              <button key={c.slug} type="button" role="radio" aria-checked={d.category === c.slug} onClick={() => set("category", d.category === c.slug ? "" : c.slug)} className={`chip press ${d.category === c.slug ? "!bg-text !text-on-ink !border-text" : ""}`}>
                 {c.name}
               </button>
             ))}

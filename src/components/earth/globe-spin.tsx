@@ -211,7 +211,7 @@ export function GlobeSpin({
         </div>
         <div role="group" aria-label="Vibe" className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
           {VIBES.map((v) => (
-            <button key={v.id} type="button" aria-pressed={vibe === v.id} disabled={spinning} onClick={() => choose(when, v.id)} className={`chip press shrink-0 ${vibe === v.id ? "!bg-text !text-white !border-text" : ""}`}>
+            <button key={v.id} type="button" aria-pressed={vibe === v.id} disabled={spinning} onClick={() => choose(when, v.id)} className={`chip press shrink-0 ${vibe === v.id ? "!bg-text !text-on-ink !border-text" : ""}`}>
               <span aria-hidden>{v.emoji}</span> {v.label}
             </button>
           ))}

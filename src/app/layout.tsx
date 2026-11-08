@@ -1,3 +1,4 @@
+import { THEME_BOOT } from "@/lib/theme-boot";
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import localFont from "next/font/local";
@@ -38,11 +39,23 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "OMNIEVENT", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { themeColor: "#3F97F2", width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#3F97F2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a111e" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${display.variable}`}>
+    // data-theme is set by the script below before React starts, hence the warning switched off.
+    <html lang="en" className={`${GeistSans.variable} ${display.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+      </head>
       <body className="min-h-dvh">
         <Suspense fallback={null}>
           <NavProgress />

@@ -31,6 +31,7 @@ import { NightFlight, flightPadBottom } from "../earth/night-flight";
 import { rememberSearch } from "@/lib/search/session";
 import { formatKm } from "@/lib/map/circle";
 import { sellerSearches } from "@/lib/sellers";
+import { isDarkNow, useDark } from "../theme-toggle";
 import { HerePill } from "../here-pill";
 import type { Here } from "@/lib/here-shared";
 
@@ -145,6 +146,10 @@ export function DiscoverClient() {
   const [flightGrab, setFlightGrab] = useState(0);
   const spaceBefore = useRef(false);
   const baseBefore = useRef<BaseStyle>("map");
+  // Whether the visitor picked the map style themselves. Until they do, it follows the site's
+  // theme: the day map in light mode, the Earth at night in dark mode.
+  const baseChosen = useRef(false);
+  const dark = useDark();
   const flightAsked = useRef(false);
   const spinAsked = useRef(false);
   const flyKey = useRef(0);
@@ -176,14 +181,20 @@ export function DiscoverClient() {
     if (pin.length === 2 && pin.every(Number.isFinite)) setPlace({ lat: pin[0], lng: pin[1] });
     try {
       const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
-      if (isBaseStyle(saved?.base)) setBase(saved.base);
+      if (isBaseStyle(saved?.base) && saved?.chosen) {
+        setBase(saved.base);
+        baseChosen.current = true;
+      } else if (isDarkNow()) setBase("lights");
       if (saved?.space === true) setSpace(true);
       if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(narrow ? { terrain: false } : {}) });
       else if (narrow) setLayers({ ...DEFAULT_LAYERS, terrain: false });
     } catch {
       // storage unavailable
     }
-    if (isBaseStyle(sp.get("style"))) setBase(sp.get("style") as BaseStyle);
+    if (isBaseStyle(sp.get("style"))) {
+      setBase(sp.get("style") as BaseStyle);
+      baseChosen.current = true;
+    }
     const m = sp.get("view") as ViewMode | null;
     setMode(!ok ? "list" : m === "map" || m === "list" ? m : "globe");
     linkedView.current = !!(sp.get("at") || sp.get("v") || sp.get("pin"));
@@ -192,10 +203,16 @@ export function DiscoverClient() {
     else setIntro(true);
   }, []);
 
+  // Switching the site's theme turns the globe to night or day too, unless a style was picked.
+  useEffect(() => {
+    if (dark === null || baseChosen.current || flightOn) return;
+    setBase(dark ? "lights" : "map");
+  }, [dark]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     try {
       // A flight turns space view on for itself; the visitor's own choice is what's kept.
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ base: flightOn ? baseBefore.current : base, layers, space: flightOn ? spaceBefore.current : space }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ base: flightOn ? baseBefore.current : base, chosen: baseChosen.current, layers, space: flightOn ? spaceBefore.current : space }));
     } catch {
       // storage unavailable
     }
@@ -670,7 +687,7 @@ export function DiscoverClient() {
                     }} />
                   </div>
                 )}
-                <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-text hover:brightness-105">
+                <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-on-sun hover:brightness-105">
                   <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
                 </button>
                 <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
@@ -783,7 +800,10 @@ export function DiscoverClient() {
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
       <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"} ${flightOn ? "hidden" : ""}`}>
         {showLayers && mode !== "list" && (
-          <LayersPanel base={base} layers={layers} onBase={setBase} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} space={space} onSpace={setSpace} onLegend={() => (setShowLayers(false), setShowLegend(true))} />
+          <LayersPanel base={base} layers={layers} onBase={(b) => {
+            baseChosen.current = true;
+            setBase(b);
+          }} onLayer={(k, on) => setLayers((l) => ({ ...l, [k]: on }))} onClose={() => setShowLayers(false)} space={space} onSpace={setSpace} onLegend={() => (setShowLayers(false), setShowLegend(true))} />
         )}
         {mode !== "list" && filters.live && liveList.length > 0 && !selection && (
           <button type="button" onClick={hopLive} className="press panel-in inline-flex items-center gap-2 rounded-full bg-live text-white px-4 h-9 text-[13.5px] font-semibold shadow-[0_10px_24px_-10px_rgb(225_29_72_/_0.8)] hover:brightness-110">
@@ -1111,7 +1131,7 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; o
           </span>
           {c.isDemo && <span className="absolute right-1.5 top-1.5"><DemoBadge /></span>}
           {buzz && (buzz.going > 0 || buzz.posts > 0) && (
-            <span className="absolute left-1.5 bottom-1.5 inline-flex items-center gap-1.5 rounded-full bg-text/85 px-1.5 py-0.5 text-[11px] font-semibold tnum text-white backdrop-blur">
+            <span className="absolute left-1.5 bottom-1.5 inline-flex items-center gap-1.5 rounded-full bg-text/85 px-1.5 py-0.5 text-[11px] font-semibold tnum text-on-ink backdrop-blur">
               {buzz.going > 0 && <span>🎟️ {buzz.going}</span>}
               {buzz.posts > 0 && <span>💬 {buzz.posts}</span>}
             </span>

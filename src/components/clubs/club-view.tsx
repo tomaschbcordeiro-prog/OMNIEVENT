@@ -291,7 +291,7 @@ function Picks({ page, run, me }: { page: ClubPage; run: Run; me: PublicProfile 
                     <p className="t-micro text-text-3 mt-0.5">Shared by {by?.firstName ?? by?.name ?? "a member"} · {ago(p.at)}</p>
                   </div>
                   <div className="flex flex-col items-end justify-between gap-2">
-                    <button type="button" aria-pressed={v.voted} disabled={!role} onClick={() => void vote(p)} className={`btn btn-sm press ${v.voted ? "bg-sun text-text border-sun" : "btn-secondary"}`} title={role ? undefined : "Join to vote"}>
+                    <button type="button" aria-pressed={v.voted} disabled={!role} onClick={() => void vote(p)} className={`btn btn-sm press ${v.voted ? "bg-sun text-on-sun border-sun" : "btn-secondary"}`} title={role ? undefined : "Join to vote"}>
                       🙋 <span className="tnum">{v.votes}</span> <span className="max-sm:hidden">{v.voted ? "You'd go" : "I'd go"}</span>
                     </button>
                     {(p.by === me?.id || role === "owner" || role === "admin") && (

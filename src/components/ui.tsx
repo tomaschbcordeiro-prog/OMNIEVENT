@@ -109,7 +109,7 @@ export function Poster({
   return (
     <div
       aria-hidden
-      className={`relative overflow-hidden ${className}`}
+      className={`poster-art relative overflow-hidden ${className}`}
       style={{
         background: `radial-gradient(120% 90% at 85% 10%, ${accent}55 0%, transparent 60%), linear-gradient(160deg, hsl(${hue} 85% 94%) 0%, hsl(${(hue + 40) % 360} 75% 86%) 100%)`,
       }}

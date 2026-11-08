@@ -168,7 +168,7 @@ export function MeetupJoin({ post, profiles, me }: { post: Post; profiles: Recor
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-m)] bg-sun/10 border border-sun/40 px-3 py-2">
       {!mine && (
-        <button type="button" disabled={busy} onClick={() => void toggle()} aria-pressed={joined} className={`btn btn-sm press ${joined ? "bg-text text-white" : "bg-sun text-text hover:brightness-105"}`}>
+        <button type="button" disabled={busy} onClick={() => void toggle()} aria-pressed={joined} className={`btn btn-sm press ${joined ? "bg-text text-on-ink" : "bg-sun text-on-sun hover:brightness-105"}`}>
           {joined ? "✓ You're in" : "👋 I'm in"}
         </button>
       )}

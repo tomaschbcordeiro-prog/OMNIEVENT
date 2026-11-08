@@ -179,7 +179,7 @@ export function TimeBar({
           onClick={() => openTimeline(true)}
           aria-label="Open the timeline and play the next two weeks on the globe"
           title="Travel in time"
-          className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full pl-2.5 pr-3 bg-text text-white hover:bg-cyan transition-colors text-[13px] font-semibold"
+          className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full pl-2.5 pr-3 bg-text text-on-ink hover:bg-cyan transition-colors text-[13px] font-semibold"
         >
           <Play size={13} aria-hidden className="translate-x-[1px]" /> Timeline
         </button>
@@ -218,7 +218,7 @@ export function TimeBar({
               setPlaying(true);
             }}
             aria-label={playing ? "Pause" : "Play the days one by one"}
-            className={`shrink-0 grid place-items-center h-9 w-9 rounded-full text-white transition-colors ${playing ? "bg-cyan" : "bg-text hover:bg-cyan"}`}
+            className={`shrink-0 grid place-items-center h-9 w-9 rounded-full text-on-ink transition-colors ${playing ? "bg-cyan" : "bg-text hover:bg-cyan"}`}
           >
             {playing ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden className="translate-x-[1px]" />}
           </button>

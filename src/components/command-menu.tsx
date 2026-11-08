@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, Loader2, MapPin, Mic2, Moon, Plane, Plus, Search, Sparkles, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, Loader2, MapPin, Mic2, Moon, Plane, Plus, Search, Sparkles, Sun, MonitorSmartphone, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { setTheme } from "./theme-toggle";
 
-type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string };
+type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string; run?: () => void };
 
 /** Places and things to do, always offered (filtered as you type). */
 const STATIC: Item[] = [
@@ -25,6 +26,9 @@ const STATIC: Item[] = [
   { id: "do-weekend", label: "Plan this weekend", href: "/mixtape?w=weekend", icon: Sparkles, group: "Do", words: "mixtape plan" },
   { id: "do-tonight", label: "What's on tonight", href: "/mixtape?w=tonight", icon: Moon, group: "Do", words: "tonight now" },
   { id: "do-list", label: "List your event", href: "/studio/new", icon: Plus, group: "Do", words: "create add organiser" },
+  { id: "theme-dark", label: "Dark mode", hint: "Night colours everywhere", href: "#", icon: Moon, group: "Theme", words: "theme night black", run: () => setTheme("dark") },
+  { id: "theme-light", label: "Light mode", href: "#", icon: Sun, group: "Theme", words: "theme day white bright", run: () => setTheme("light") },
+  { id: "theme-system", label: "Match my device", hint: "Light or dark, as your device is set", href: "#", icon: MonitorSmartphone, group: "Theme", words: "theme system auto", run: () => setTheme("system") },
 ];
 
 const strip = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -114,6 +118,7 @@ export function CommandMenu() {
   const go = (i: Item | undefined) => {
     if (!i) return;
     setOpen(false);
+    if (i.run) return i.run();
     // The globe reads its links on arrival: a fresh load starts Spin, Night Flight or night lights.
     if (i.href.startsWith("/?")) window.location.assign(i.href);
     else router.push(i.href);

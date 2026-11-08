@@ -42,6 +42,84 @@
   --header-h: 56px;
   /* Events on right now. */
   --live: #c8102e;
+  /* Text on ink-coloured surfaces (selected chips, dark buttons), and the main button. */
+  --on-ink: #ffffff;
+  /* Text on the sun-yellow surfaces: dark ink in both themes. */
+  --on-sun: #0d1b33;
+  --primary: #0f5ae6;
+  --primary-top: #2a6ff0;
+  --primary-hover: #0a49c2;
+}
+
+/*
+ * Night atlas: the same tokens after dark. Follows the device unless someone picks a theme
+ * (data-theme on <html>, set before the first paint from what they chose last time).
+ */
+:root[data-theme="dark"] {
+  --bg: #0a111e;
+  --bg-2: #0e1727;
+  --panel: #111b2d;
+  --panel-2: #172338;
+  --line: #1f2c43;
+  --line-strong: #2d3d5a;
+  --text: #e9eef7;
+  --text-2: #b0bdd3;
+  /* Still 4.5:1 or more on the panels. */
+  --text-3: #8e9db6;
+  --cyan: #6aa5ff;
+  --cyan-strong: #8cb9ff;
+  --sun: #ffc533;
+  --violet: #9a7bff;
+  --coral: #ff6b7c;
+  --amber: #ffb340;
+  --emerald: #34c99a;
+  --blue: #7c95ff;
+  --sky-top: #071131;
+  --sky-mid: #0f2763;
+  --sky-low: #1d4594;
+  --ok: #3fd3a3;
+  --warn: #ffbf5c;
+  --bad: #ff7a8a;
+  --info: #6aa5ff;
+  --live: #ff5470;
+  --on-ink: #0a111e;
+  --primary: #2f6fe0;
+  --primary-top: #3d7cf0;
+  --primary-hover: #2560cc;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a111e;
+    --bg-2: #0e1727;
+    --panel: #111b2d;
+    --panel-2: #172338;
+    --line: #1f2c43;
+    --line-strong: #2d3d5a;
+    --text: #e9eef7;
+    --text-2: #b0bdd3;
+    /* Still 4.5:1 or more on the panels. */
+    --text-3: #8e9db6;
+    --cyan: #6aa5ff;
+    --cyan-strong: #8cb9ff;
+    --sun: #ffc533;
+    --violet: #9a7bff;
+    --coral: #ff6b7c;
+    --amber: #ffb340;
+    --emerald: #34c99a;
+    --blue: #7c95ff;
+    --sky-top: #071131;
+    --sky-mid: #0f2763;
+    --sky-low: #1d4594;
+    --ok: #3fd3a3;
+    --warn: #ffbf5c;
+    --bad: #ff7a8a;
+    --info: #6aa5ff;
+    --live: #ff5470;
+    --on-ink: #0a111e;
+    --primary: #2f6fe0;
+    --primary-top: #3d7cf0;
+    --primary-hover: #2560cc;
+  }
 }
 
 /* "wide": laptops from 1440 px, where the full navigation and the search field both fit. */
@@ -68,6 +146,8 @@
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --color-live: var(--live);
+  --color-on-ink: var(--on-ink);
+  --color-on-sun: var(--on-sun);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --radius-s: var(--radius-s);
   --radius-m: var(--radius-m);
@@ -77,6 +157,14 @@
 html {
   color-scheme: light;
   background: var(--bg);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
 }
 
 body {
@@ -227,12 +315,12 @@ body {
   cursor: not-allowed;
 }
 .btn-primary {
-  background: var(--cyan);
+  background: var(--primary);
   color: #fff;
   box-shadow: 0 6px 16px -8px rgb(15 90 230 / 0.7);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--cyan-strong);
+  background: var(--primary-hover);
 }
 .btn-secondary {
   background: var(--panel);
@@ -306,7 +394,7 @@ body {
 }
 .chip[aria-pressed="true"],
 .chip[data-active="true"] {
-  color: #fff;
+  color: var(--on-ink);
   background: var(--text);
   border-color: var(--text);
 }
@@ -426,7 +514,7 @@ select.field {
   font-family: var(--font-sans);
 }
 .maplibregl-ctrl-attrib {
-  background: rgb(255 255 255 / 0.75) !important;
+  background: color-mix(in srgb, var(--panel) 75%, transparent) !important;
   color: var(--text-3);
   font-size: 10px;
 }
@@ -685,8 +773,8 @@ select.field {
 }
 /* Chips that sit on the sky: solid white so they read against any blue. */
 .chip.sky-chip {
-  background: rgb(255 255 255 / 0.86);
-  border-color: rgb(255 255 255 / 0.9);
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  border-color: color-mix(in srgb, var(--panel) 90%, transparent);
   color: var(--text);
   box-shadow: 0 4px 14px -8px rgb(10 50 120 / 0.5);
   backdrop-filter: blur(8px);
@@ -696,15 +784,15 @@ select.field {
   font-weight: 600;
 }
 .chip.sky-chip:hover {
-  background: #fff;
-  border-color: #fff;
+  background: var(--panel);
+  border-color: var(--panel);
   transform: translateY(-1px);
 }
 .chip.sky-chip[aria-pressed="true"],
 .chip.sky-chip[data-active="true"] {
   background: var(--text);
   border-color: var(--text);
-  color: #fff;
+  color: var(--on-ink);
 }
 
 /* ---------------------------------------------------------------- interaction motion */
@@ -1401,11 +1489,11 @@ select.field {
 @layer components {
 /* Frosted glass for everything that floats over the planet. */
 .glass-dock {
-  background: rgb(255 255 255 / 0.74);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
   backdrop-filter: blur(16px) saturate(1.5);
   -webkit-backdrop-filter: blur(16px) saturate(1.5);
-  border: 1px solid rgb(255 255 255 / 0.75);
-  box-shadow: 0 12px 32px -16px rgb(10 40 110 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.6);
+  border: 1px solid color-mix(in srgb, var(--panel) 75%, transparent);
+  box-shadow: 0 12px 32px -16px rgb(10 40 110 / 0.6), inset 0 1px 0 color-mix(in srgb, var(--panel) 60%, transparent);
 }
 .dock-btn {
   display: inline-flex;
@@ -1436,7 +1524,7 @@ select.field {
 }
 .dock-btn[aria-checked="true"] {
   background: var(--text);
-  color: #fff;
+  color: var(--on-ink);
 }
 .dock-btn[aria-pressed="true"] {
   background: rgb(15 90 230 / 0.13);
@@ -1444,7 +1532,7 @@ select.field {
 }
 .dock-btn--spin {
   background: linear-gradient(120deg, var(--sun), #ff8a3d 60%, var(--coral));
-  color: var(--text);
+  color: var(--on-sun);
 }
 .dock-btn--spin:hover:not(:disabled) {
   background: linear-gradient(120deg, var(--sun), #ff8a3d 60%, var(--coral));
@@ -2121,7 +2209,7 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   min-width: 1.35em;
   padding: 0 0.15em;
   border-radius: 5px;
-  background: rgb(255 255 255 / 0.8);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
   box-shadow: inset 0 0 0 1px rgb(13 27 51 / 0.08);
   text-align: center;
   font-weight: 700;
@@ -2904,9 +2992,9 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 }
 .here-glass {
   color: var(--text);
-  background: rgb(255 255 255 / 0.9);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid rgb(255 255 255 / 0.7);
+  border: 1px solid color-mix(in srgb, var(--panel) 70%, transparent);
   box-shadow: 0 8px 24px -12px rgb(10 50 120 / 0.45);
 }
 .here-glass .here-pill-icon {
@@ -3117,11 +3205,11 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 }
 /* Buttons with a little depth: a highlight on top, a soft shadow below. */
 .btn-primary {
-  background: linear-gradient(180deg, #2a6ff0, var(--cyan));
+  background: linear-gradient(180deg, var(--primary-top), var(--primary));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 8px 20px -10px rgb(15 90 230 / 0.75);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #1f63e6, var(--cyan-strong));
+  background: linear-gradient(180deg, var(--primary-hover), var(--primary-hover));
 }
 .btn-secondary {
   box-shadow: 0 1px 2px rgb(13 27 51 / 0.05);
@@ -3143,7 +3231,7 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 .cat-lead {
   background:
     radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--cat) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, #fff, color-mix(in srgb, var(--cat) 5%, #fff));
+    linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--cat) 5%, var(--panel)));
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease;
 }
 .cat-lead:hover {
@@ -3169,7 +3257,7 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   display: inline-grid;
   place-items: center;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--cat) 14%, #fff);
+  background: color-mix(in srgb, var(--cat) 14%, var(--panel));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat) 22%, transparent);
 }
 .cat-lead-icon {
@@ -3629,4 +3717,37 @@ a.city-chip:hover {
 }
 .sched-more[open] > summary {
   display: none;
+}
+/* The theme button: a moon by day, a sun by night, turning into each other. */
+.theme-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+}
+.theme-icon > svg {
+  grid-area: 1 / 1;
+  transition: transform 450ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 250ms;
+}
+.theme-icon:not([data-dark]) > svg {
+  opacity: 0;
+}
+.theme-icon[data-dark="false"] .theme-sun,
+.theme-icon[data-dark="true"] .theme-moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.4);
+}
+/* While the theme changes, the new page grows out of the button instead of cross-fading. */
+html.theme-vt::view-transition-old(root),
+html.theme-vt::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* After dark, drawn posters (pale pastel by day) are dimmed so they don't glare. */
+:root[data-theme="dark"] .poster-art {
+  filter: brightness(0.62) saturate(1.25);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .poster-art {
+    filter: brightness(0.62) saturate(1.25);
+  }
 }

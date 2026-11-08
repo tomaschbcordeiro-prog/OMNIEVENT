@@ -173,7 +173,7 @@ export function DailyDuel() {
     <section id="duel" aria-labelledby="duel-h" className="relative overflow-hidden rounded-[var(--radius-l)] border border-violet/25 bg-gradient-to-br from-violet/10 via-panel to-cyan/10 p-4 sm:p-5 scroll-mt-24">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 id="duel-h" className="t-h2 flex items-center gap-2"><Swords size={20} className="text-violet" aria-hidden /> Daily duel</h2>
-        <span className="rounded-full bg-text px-2.5 py-0.5 t-micro font-semibold text-white">📍 {duel.city}</span>
+        <span className="rounded-full bg-text px-2.5 py-0.5 t-micro font-semibold text-on-ink">📍 {duel.city}</span>
         {duel.streak.days > 0 && (
           <span className="rounded-full bg-sun/20 px-2.5 py-0.5 t-micro font-semibold" title={`Best: ${duel.streak.best} days`}>
             <span className="flame" aria-hidden>🔥</span> {duel.streak.days}-day streak
@@ -228,14 +228,14 @@ export function DailyDuel() {
                   </span>
                   {state === "won" && (
                     <>
-                      <span className="absolute right-2 top-2 rounded-full bg-sun px-2 py-0.5 t-micro font-bold text-text shadow pop">Your pick</span>
+                      <span className="absolute right-2 top-2 rounded-full bg-sun px-2 py-0.5 t-micro font-bold text-on-sun shadow pop">Your pick</span>
                       <Burst key={burst} />
                     </>
                   )}
                 </button>
               );
             })}
-            <span className="vs-badge pointer-events-none z-10 grid h-12 w-12 place-items-center rounded-full bg-text text-white font-black shadow-lg ring-4 ring-panel sm:h-14 sm:w-14 sm:text-lg" aria-hidden>
+            <span className="vs-badge pointer-events-none z-10 grid h-12 w-12 place-items-center rounded-full bg-text text-on-ink font-black shadow-lg ring-4 ring-panel sm:h-14 sm:w-14 sm:text-lg" aria-hidden>
               VS
             </span>
           </div>

@@ -110,7 +110,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
               </button>
             )}
             {FILTERS.map((f) => (
-              <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)} className={`chip press shrink-0 ${filter === f ? "!bg-text !text-white !border-text" : ""}`}>
+              <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)} className={`chip press shrink-0 ${filter === f ? "!bg-text !text-on-ink !border-text" : ""}`}>
                 {f === "all" ? "Everything" : `${KIND_META[f].emoji} ${KIND_META[f].label}`}
               </button>
             ))}
