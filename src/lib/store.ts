@@ -38,6 +38,11 @@ interface StoreState {
   bySlug: Map<string, string>;
   venues: Map<string, Venue>;
   venuesBySlug: Map<string, string>;
+  /** Cards by 1° map cell, and by city: a city's searches only look at what's near it. */
+  grid?: Map<string, EventCard[]>;
+  byCity?: Map<string, EventCard[]>;
+  /** Event counts per city, worked out once per rebuild. */
+  cityStatsCache?: Record<string, { total: number; groups: Record<string, number> }>;
   participants: Map<string, Participant>;
   participantsBySlug: Map<string, string>;
   offers: Map<string, TicketOffer[]>;
@@ -440,6 +445,25 @@ function sane(e: OmniEvent): OmniEvent {
   return e;
 }
 
+/** A 1° map cell's key (longitudes wrapped to -180…179). */
+const cellKey = (lat: number, lng: number) => `${lat}|${((((lng + 180) % 360) + 360) % 360) - 180}`;
+
+/**
+ * The cards a search could match: for a city, only those in the map cells within reach of it
+ * (40 km) and those filed under it; otherwise every card. `matches` still decides.
+ */
+function candidates(f: SearchFilters): Iterable<EventCard> {
+  if (!f.city || !state.grid) return state.cards.values();
+  const d = getDestination(f.city);
+  if (!d || d.kind !== "city") return state.cards.values();
+  const out = new Set<EventCard>(state.byCity?.get(d.id) ?? []);
+  const dLat = 0.4;
+  const dLng = 0.4 / Math.max(0.15, Math.cos((d.lat * Math.PI) / 180));
+  for (let la = Math.floor(d.lat - dLat); la <= Math.floor(d.lat + dLat); la++)
+    for (let lo = Math.floor(d.lng - dLng); lo <= Math.floor(d.lng + dLng); lo++) for (const c of state.grid.get(cellKey(la, lo)) ?? []) out.add(c);
+  return out;
+}
+
 function rebuildIndexes() {
   const events = new Map<string, OmniEvent>();
   const venues = new Map<string, Venue>();
@@ -511,6 +535,24 @@ function rebuildIndexes() {
   // A merged duplicate's own link leads to the event it was merged into.
   for (const [slug, id] of slugAliases) if (!state.bySlug.has(slug)) state.bySlug.set(slug, id);
   state.venuesBySlug = new Map([...venues.values()].map((v) => [v.slug, v.id]));
+  const grid = new Map<string, EventCard[]>();
+  const byCity = new Map<string, EventCard[]>();
+  for (const c of cards.values()) {
+    if (Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+      const k = cellKey(Math.floor(c.lat), Math.floor(c.lng));
+      const list = grid.get(k);
+      if (list) list.push(c);
+      else grid.set(k, [c]);
+    }
+    if (c.cityId) {
+      const list = byCity.get(c.cityId);
+      if (list) list.push(c);
+      else byCity.set(c.cityId, [c]);
+    }
+  }
+  state.grid = grid;
+  state.byCity = byCity;
+  state.cityStatsCache = undefined;
   state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
 }
 
@@ -946,7 +988,7 @@ export function searchEvents(f: SearchFilters): Paged<EventCard> & { facets: { g
   const scored: { c: EventCard; s: number }[] = [];
   const groups: Record<string, number> = {};
   const cities: Record<string, number> = {};
-  for (const c of state.cards.values()) {
+  for (const c of candidates(f)) {
     if (!matches(c, f, catSets)) continue;
     const s = textScore(c, terms);
     if (!s) continue;
@@ -1023,7 +1065,7 @@ export function sampleEvents(f: SearchFilters, n: number, random = Math.random):
     (c.imageUrl ? 4 : 1) * (LIVELY.has(c.groupSlug) ? 4 : 1) * (c.hoursUnknown ? 0.4 : 1) * (c.eventType === "daily_attraction" ? 0.15 : 1) * (c.isDemo ? 0.05 : 1);
   // Weighted sampling without replacement (Efraimidis–Spirakis): keep the largest keys.
   const keyed: { c: EventCard; k: number }[] = [];
-  for (const c of state.cards.values()) {
+  for (const c of candidates(f)) {
     if (c.status === "cancelled" || c.status === "postponed" || c.online || !matches(c, f, catSets)) continue;
     keyed.push({ c, k: Math.pow(random(), 1 / weight(c)) });
   }
@@ -1138,7 +1180,7 @@ export function mixtapePool(cityId: string, fromDate: string, toDate: string, li
 
   type Scored = { c: MixCandidate; s: number };
   const all: Scored[] = [];
-  for (const c of state.cards.values()) {
+  for (const c of candidates(f)) {
     if (c.status === "cancelled" || c.status === "postponed" || c.online || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) continue;
     if (!matches(c, f)) continue;
     const e = state.events.get(c.id);
@@ -1260,7 +1302,7 @@ export function dayCounts(f: SearchFilters, view: { lat?: number; lng?: number; 
   const catSets = catSetsFor(base);
   const terms = base.q ? norm(base.q).split(" ").filter((t) => t.length > 1) : [];
   const counts = new Array<number>(n).fill(0);
-  for (const c of state.cards.values()) {
+  for (const c of candidates(base)) {
     if (!matches(c, base, catSets) || !textScore(c, terms)) continue;
     if (view.radiusKm != null && view.lat != null && view.lng != null && haversineKm(c.lat, c.lng, view.lat, view.lng) > view.radiusKm) continue;
     const e = state.events.get(c.id)!;
@@ -1461,7 +1503,7 @@ export function getParticipantBySlug(slug: string): Participant | undefined {
 
 export function venuesInCity(cityId: string): (Venue & { upcoming: number })[] {
   const counts = new Map<string, number>();
-  for (const c of state.cards.values())
+  for (const c of state.byCity?.get(cityId) ?? state.cards.values())
     if (c.cityId === cityId && c.status !== "completed") {
       const vid = state.events.get(c.id)!.venueId;
       counts.set(vid, (counts.get(vid) ?? 0) + 1);
@@ -1483,6 +1525,7 @@ export function participantsList(kind?: string, limit = 50): (Participant & { up
 }
 
 export function cityStats(): Record<string, { total: number; groups: Record<string, number> }> {
+  if (state.cityStatsCache) return state.cityStatsCache;
   const out: Record<string, { total: number; groups: Record<string, number> }> = {};
   for (const c of state.cards.values()) {
     if (!c.cityId || c.status === "completed") continue;
@@ -1490,6 +1533,7 @@ export function cityStats(): Record<string, { total: number; groups: Record<stri
     s.total++;
     s.groups[c.groupSlug] = (s.groups[c.groupSlug] ?? 0) + 1;
   }
+  state.cityStatsCache = out;
   return out;
 }
 
@@ -1564,6 +1608,6 @@ export function matchingCards(f: SearchFilters): EventCard[] {
   const catSets = catSetsFor(f);
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
   const out: EventCard[] = [];
-  for (const c of state.cards.values()) if (matches(c, f, catSets) && textScore(c, terms)) out.push(c);
+  for (const c of candidates(f)) if (matches(c, f, catSets) && textScore(c, terms)) out.push(c);
   return out;
 }
