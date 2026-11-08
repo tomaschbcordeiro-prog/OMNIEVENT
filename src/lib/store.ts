@@ -317,7 +317,9 @@ function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
   const have = <T extends { id: string }>(list: T[]) => new Set(list.map((x) => x.id));
   const ev = have(batch.events);
   const now = Date.now();
-  for (const e of prev.events) if (!ev.has(e.id) && Date.parse(e.schedule?.at(-1) ?? e.end ?? e.start) > now) batch.events.push(e);
+  // Kept while still to come or on: one with no end counts as on for six hours after it starts,
+  // so a show that began this morning doesn't vanish while its source is read again.
+  for (const e of prev.events) if (!ev.has(e.id) && Date.parse(e.schedule?.at(-1) ?? e.end ?? e.start) + (e.end || e.schedule?.length ? 0 : 6 * 3600000) > now) batch.events.push(e);
   const keep = have(batch.events);
   const vn = have(batch.venues);
   for (const v of prev.venues) if (!vn.has(v.id)) batch.venues.push(v);
@@ -556,6 +558,11 @@ function sane(e: OmniEvent): OmniEvent {
 // What a rebuild works out per record is kept with the source's own objects, which stay the
 // same until that source is read again: rebuilding then mostly reuses (and every cache keyed
 // on an event or card, such as its days or its search text, stays warm).
+/** Keeps a worked-out value on a record without it showing up in copies ({...e}) or JSON. */
+function keep<T extends object, V>(o: T, key: symbol, value: V): V {
+  Object.defineProperty(o, key, { value, writable: true, configurable: true, enumerable: false });
+  return value;
+}
 const TITLE = Symbol("title");
 const COPY = Symbol("copy");
 const CARD = Symbol("card");
@@ -566,7 +573,7 @@ const DEDUPE = Symbol("dedupe");
 type DedupeKey = { v: Venue; t: string; startMs: number; key: string; day: string };
 function titleOf(e: OmniEvent): string {
   let t = (e as Memo)[TITLE];
-  if (t === undefined) (e as Memo)[TITLE] = t = norm(e.title);
+  if (t === undefined) t = keep(e, TITLE, norm(e.title));
   return t;
 }
 function canonicalCopy(e: OmniEvent): OmniEvent {
@@ -576,7 +583,7 @@ function canonicalCopy(e: OmniEvent): OmniEvent {
     // Most records are already their own canonical copy: kept as they are, not copied (copying
     // a big catalogue's every record cost seconds on a new server, mostly in garbage collection).
     c = s === e && e.canonicalId === e.id ? e : { ...s, canonicalId: e.id };
-    (e as Memo)[COPY] = c;
+    keep(e, COPY, c);
   }
   return c;
 }
@@ -595,7 +602,7 @@ function cardFor(e: OmniEvent, venues: Map<string, Venue>, participants: Map<str
   const m = (e as Memo)[CARD];
   if (m && m.venue === venue && m.offers.length === offers.length && m.offers.every((o, i) => o === offers[i]) && m.people.every((p, i) => p === people[i]) && m.people.length === people.length) return m.card;
   const card = toCard(e, venues, participants, offers);
-  (e as Memo)[CARD] = { card, venue, offers: [...offers], people };
+  keep(e, CARD, { card, venue, offers: [...offers], people });
   return card;
 }
 
@@ -659,7 +666,7 @@ function rebuildIndexes() {
         // start within the same 15-minute window. Similar names alone never merge.
         const t = titleOf(e);
         k = { v, t, startMs, key: `${t}|${v.lat.toFixed(3)},${v.lng.toFixed(3)}|${Math.round(startMs / 900000)}`, day: `${t}|${Math.floor(startMs / 86400000)}` };
-        (e as OmniEvent & { [DEDUPE]?: DedupeKey })[DEDUPE] = k;
+        keep(e, DEDUPE, k);
       }
       const { t, key } = k;
       const canonical = dedupe.get(key) ?? sameShowElsewhere(e, v, t, k.day);
