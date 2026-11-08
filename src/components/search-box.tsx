@@ -10,6 +10,7 @@ import { userActions, useUser } from "@/lib/user/store";
 import { formatShortDate } from "@/lib/format";
 import type { ParsedQuery } from "@/lib/types";
 import { DemoBadge } from "./ui";
+import { Marked } from "./marked";
 
 interface Suggest {
   destinations: { id: string; slug: string; name: string; kind: string; country?: string; lat: number; lng: number; events?: number }[];
@@ -297,7 +298,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                 >
                   <span className="text-text-3">{it.icon}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{it.label}</span>
+                    <span className="block truncate text-sm"><Marked text={it.label} terms={term.length >= 2 ? term.split(/\s+/) : undefined} /></span>
                     {it.sub && <span className="block truncate text-[12px] text-text-3 capitalize-first">{it.sub}</span>}
                   </span>
                   {it.demo && <DemoBadge />}

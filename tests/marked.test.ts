@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Marked } from "@/components/event-card";
+import { Marked } from "@/components/marked";
 
 const html = (text: string, terms?: string[]) => renderToStaticMarkup(createElement(Marked, { text, terms }));
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, History, Loader2, MapPin, Mic2, Moon, Plane, Plus, Search, Sparkles, Sun, MonitorSmartphone, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { setTheme } from "./theme-toggle";
+import { Marked } from "./marked";
 import { useUser } from "@/lib/user/store";
 
 type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string; run?: () => void };
@@ -193,7 +194,7 @@ export function CommandMenu() {
                     <Icon size={16} aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{i.label}</span>
+                    <span className="block truncate font-medium">{i.group === "Search" ? i.label : <Marked text={i.label} terms={q.trim().length >= 2 ? q.trim().split(/\s+/) : undefined} />}</span>
                     {i.hint && <span className="block truncate t-micro text-text-3">{i.hint}</span>}
                   </span>
                   <ArrowRight size={15} className="cmdk-go" aria-hidden />
