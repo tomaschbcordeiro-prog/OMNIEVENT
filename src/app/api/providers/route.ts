@@ -32,12 +32,15 @@ export const GET = handler(async (req: Request) => {
   );
   // What Ticketmaster says it lists per country, to compare with what we hold.
   const [tmTotals, tmStarted] = await getStates<unknown>(["ticketmaster:totals", "ticketmaster:started"]);
+  // How each big source's last shared save went.
+  const saveIds = ["ticketmaster", "seatgeek", "openagenda", "localist", "livewhale"];
+  const saves = Object.fromEntries((await getStates<unknown>(saveIds.map((id) => `save:${id}`))).map((v, i) => [saveIds[i], v ?? null]));
   Object.assign(crawl.ticketmaster, { ...(tmTotals ? { listed: tmTotals } : {}), ...(tmStarted ? { started: tmStarted } : {}) });
   const providers = statuses.map((p, i) => ({ ...p, lastRun: p.lastRun ?? runs[i], lastRealRun: runs[i] }));
   // Errors from sources are shown as they came: anything shaped like a key is hidden first.
   // How this server is doing (how long it has run, how much memory it holds).
   const mem = process.memoryUsage();
   const server = { uptimeSec: Math.round(process.uptime()), rssMb: Math.round(mem.rss / 1048576), heapMb: Math.round(mem.heapUsed / 1048576), hydrate: { ...hydrateInfo, loaded: hydrateInfo.loaded.slice(-40), failed: hydrateInfo.failed.slice(-10), timings: loadTimings } };
-  const body = { providers, data: dataSummary(), server, storage: await storageStatus(), shared, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } };
+  const body = { providers, data: dataSummary(), server, storage: await storageStatus(), shared, saves, crawl, fx: FX_SOURCE, auth: { configured: false, mode: "local-demo" } };
   return ok(JSON.parse(redactSecrets(JSON.stringify(body))));
 });
