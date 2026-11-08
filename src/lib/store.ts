@@ -271,11 +271,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // Every instance can then report how the last real run went, wherever it ran.
       // (A crawl's idle turn — nothing read, nothing wrong — doesn't replace the last real one.)
       if (shared && (fresh || run.error || !run.partial)) void setState(`run:${p.id}`, { ...state.runs.get(p.id), fresh }, 7 * 86400).catch(() => {});
-      // A big source is indexed in slices (the server keeps answering); a small one at once.
-      if (!unchanged) {
-        if (batch.events.length > 20000) await rebuildIndexesSliced();
-        else rebuildIndexes();
-      }
+      // Indexed in slices, the server answering meanwhile; sources that finish close together
+      // share one rebuild (each full rebuild of a big catalogue costs seconds).
+      if (!unchanged) await rebuildIndexesSliced();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
       // Shared only when this run brought something (a run that found nothing new doesn't
       // re-upload), and during a long crawl at most every 90 minutes to spare bandwidth.
@@ -483,8 +481,11 @@ export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void>
     }
     if (last === undefined) {
       // A recent shared snapshot is on its way (or loading): don't re-read the whole source.
+      // While a new server loads its shared copies, even an older copy is loaded first: reading
+      // sources live at the same time slowed the loading down to a minute; the live read follows
+      // once the server is whole (the copy's date then makes it due).
       const meta = state.snapIndex?.[p.id];
-      if (meta && now - meta.at < p.refreshIntervalMs && !state.snapFailed?.has(p.id)) continue;
+      if (meta && (now - meta.at < p.refreshIntervalMs || state.hydrating) && !state.snapFailed?.has(p.id)) continue;
       waits.push(syncProvider(p));
     } else if (now - last > p.refreshIntervalMs) void syncProvider(p);
   }
