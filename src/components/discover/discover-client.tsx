@@ -1149,6 +1149,26 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; o
   );
 }
 
+/**
+ * Eight to show from a longer list: ones with a picture first and, when the list is for the
+ * whole world, no more than three from one city (a busy morning in one place doesn't fill the
+ * panel). Otherwise in the list's order.
+ */
+function showcase(list: EventCard[], n: number, spread: boolean): EventCard[] {
+  const perCity = new Map<string, number>();
+  const pick: EventCard[] = [];
+  for (const pass of [true, false])
+    for (const c of list) {
+      if (pick.length >= n) break;
+      if (!!c.imageUrl !== pass || pick.includes(c)) continue;
+      const k = c.cityId ?? c.city;
+      if (spread && pass && (perCity.get(k) ?? 0) >= 3) continue;
+      perCity.set(k, (perCity.get(k) ?? 0) + 1);
+      pick.push(c);
+    }
+  return pick;
+}
+
 function DiscoveryPanel({ filters, here, onHere, interests, onPick, onCity, onHover }: { filters: SearchFilters; here: Here | null | undefined; onHere: (h: Here) => void; interests: string[]; onPick: (c: EventCard) => void; onCity: (id: string) => void; onHover: (c: EventCard | null) => void }) {
   const [open, setOpen] = useState(true);
   // Lists open on the visitor's city unless the search already says where.
@@ -1159,10 +1179,10 @@ function DiscoveryPanel({ filters, here, onHere, interests, onPick, onCity, onHo
   const weekend = new URLSearchParams(base);
   weekend.set("from", wk.from);
   weekend.set("to", wk.to);
-  weekend.set("size", "8");
+  weekend.set("size", "24");
   const fresh = new URLSearchParams(filtersToParams({ ...filters, city: near?.id ?? filters.city, sort: "announced", page: undefined }));
-  fresh.set("size", "8");
-  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "8", status: "on_sale", ...(near ? { city: near.id } : {}) }) : null;
+  fresh.set("size", "24");
+  const forYou = interests.length ? new URLSearchParams({ cat: interests.join(","), size: "24", status: "on_sale", ...(near ? { city: near.id } : {}) }) : null;
   const tabs = [
     ...(forYou ? [{ id: "you", label: "For you", params: forYou.toString(), empty: "Nothing on sale matches your interests right now." }] : []),
     { id: "weekend", label: "This weekend", params: weekend.toString(), empty: "Nothing this weekend matches your filters." },
@@ -1171,7 +1191,8 @@ function DiscoveryPanel({ filters, here, onHere, interests, onPick, onCity, onHo
   ];
   const [tab, setTab] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === tab) ?? tabs[0];
-  const { items, loading, error } = useEvents(here === undefined && active.id !== "buzz" ? null : active.params);
+  const { items: found, loading, error } = useEvents(here === undefined && active.id !== "buzz" ? null : active.params);
+  const items = useMemo(() => (active.id === "buzz" ? found : showcase(found, 8, !placed && !near)), [found, active.id, placed, near]);
   const [cities, setCities] = useState<{ id: string; name: string; country?: string; stats?: { total: number } }[]>([]);
   useEffect(() => {
     fetch("/api/destinations")
