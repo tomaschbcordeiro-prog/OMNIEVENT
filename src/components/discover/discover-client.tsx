@@ -37,7 +37,6 @@ import type { Here } from "@/lib/here-shared";
 // MapLibre touches `window` on import, so the map only loads in the browser. Its download
 // starts as soon as this page's script runs, not when the map first renders.
 const loadEarthMap = () => import("../earth/earth-map");
-if (typeof window !== "undefined") void loadEarthMap();
 const EarthMap = dynamic(() => loadEarthMap().then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
@@ -71,6 +70,9 @@ function useReducedMotion(): boolean {
 const num = (s: string | null) => (s ?? "").split(",").map(Number);
 
 export function DiscoverClient() {
+  // The globe's code (1 MB) starts loading as this page first renders, not when another page
+  // merely prefetches this one (the logo links here from every page).
+  if (typeof window !== "undefined") void loadEarthMap();
   const user = useUser();
   const reduced = useReducedMotion();
   const [webgl, setWebgl] = useState<boolean | null>(null);
