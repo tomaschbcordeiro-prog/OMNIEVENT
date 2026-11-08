@@ -8,7 +8,7 @@ import type { ProviderAdapter, ProviderBatch } from "./providers/types";
 import { CATEGORIES, descendantsOf, getCategory } from "./categories";
 import { convert } from "./currency";
 import { getDestination, CITIES } from "./destinations";
-import { haversineKm, gridKey, latLngToVec3 } from "./geo";
+import { haversineKm, gridKey, latLngToVec3, cellWidthFactor, gridCell, EARTH_RADIUS_KM } from "./geo";
 import { localDateKey } from "./format";
 import { windowIntervals, overlaps, todayIn, isValidTimeZone, parseHM, tzOffsetMs } from "./time";
 import { log } from "./log";
@@ -1201,6 +1201,8 @@ export const __testing = {
   rebuild: () => rebuildIndexes(),
   rebuildSliced: () => rebuildIndexesSliced(),
   drop: (id: string) => state.providerData.delete(id),
+  /** Whether zoomed-in globe views look only at nearby map cells (off: at every card). */
+  around: (on: boolean) => void (aroundOn = on),
 };
 
 /** The general date and local-time-window match (slower: builds each day's window in the venue's zone). */
@@ -1922,6 +1924,60 @@ export function dayCounts(f: SearchFilters, view: { lat?: number; lng?: number; 
   return counts;
 }
 
+/**
+ * The cards in the 1° map cells that can hold a point within `radiusKm` of a place (a box
+ * around the circle on the sphere), or null when that is most of the planet (then every card
+ * is looked at anyway).
+ */
+let aroundOn = true;
+function cardsAround(lat: number, lng: number, radiusKm: number): Iterable<EventCard> | null {
+  const grid = aroundOn ? state.grid : undefined;
+  // Wider views take in most cards anyway: looking at them all is then quicker.
+  if (!grid || radiusKm > 800) return null;
+  const r = radiusKm / EARTH_RADIUS_KM;
+  const phi = (lat * Math.PI) / 180;
+  // A pole within reach: every longitude is.
+  if (Math.abs(phi) + r >= Math.PI / 2 - 0.01) return null;
+  const dLat = (r * 180) / Math.PI + 0.01;
+  const dLng = (Math.asin(Math.min(1, Math.sin(r) / Math.cos(phi))) * 180) / Math.PI + 0.01;
+  if (dLng >= 179) return null;
+  const lists: EventCard[][] = [];
+  for (let la = Math.floor(lat - dLat); la <= Math.floor(lat + dLat); la++)
+    for (let lo = Math.floor(lng - dLng); lo <= Math.floor(lng + dLng); lo++) {
+      const list = grid.get(cellKey(la, lo));
+      if (list) lists.push(list);
+    }
+  return (function* () {
+    for (const list of lists) yield* list;
+  })();
+}
+
+/** How many cards match (as a search counts them), kept for half a minute per filter set. */
+const countMemo = new Map<string, { at: number; cards: Map<string, EventCard>; n: number }>();
+function matchCount(f: SearchFilters, catSets: Set<string>[] | undefined, terms: string[]): number {
+  const key = JSON.stringify(f);
+  const now = Date.now();
+  const hit = countMemo.get(key);
+  if (hit && hit.cards === state.cards && now >= hit.at && now - hit.at < SEARCH_MEMO_MS) return hit.n;
+  let n = 0;
+  for (const c of candidates(f)) if (matches(c, f, catSets) && textScore(c, terms)) n++;
+  countMemo.delete(key);
+  countMemo.set(key, { at: now, cards: state.cards, n });
+  if (countMemo.size > 120) countMemo.delete(countMemo.keys().next().value!);
+  return n;
+}
+
+/** Where a card sits on the globe (a point on the unit sphere) and how wide grid cells are there, worked out once per card. */
+const geoCache = new WeakMap<EventCard, { x: number; y: number; z: number; w: number }>();
+function geoOf(c: EventCard) {
+  let g = geoCache.get(c);
+  if (!g) {
+    const [x, y, z] = latLngToVec3(c.lat, c.lng);
+    geoCache.set(c, (g = { x, y, z, w: cellWidthFactor(c.lat) }));
+  }
+  return g;
+}
+
 /** The `n` earliest-starting cards, in order (one pass; big groups hold tens of thousands). */
 function earliest(cards: EventCard[], n: number): EventCard[] {
   const top: EventCard[] = [];
@@ -1941,26 +1997,46 @@ export function clusterEvents(
 ): { clusters: Cluster[]; total: number; inView: number } {
   const catSets = catSetsFor(f);
   const terms = f.q ? norm(f.q).split(" ").filter((t) => t.length > 1) : [];
-  const buckets = new Map<string, { cards: EventCard[]; sx: number; sy: number; sz: number; live: number }>();
+  // Grid cells are numbered while counting (cheaper than naming each card's cell) and named
+  // once per group at the end, as gridKey names them.
+  const buckets = new Map<string | number, { cards: EventCard[]; sx: number; sy: number; sz: number; live: number }>();
   let total = 0;
   let inView = 0;
   const now = Date.now();
-  for (const c of state.cards.values()) {
-    if (!matches(c, f, catSets) || !textScore(c, terms)) continue;
-    total++;
-    if (view.radiusKm != null && view.lat != null && view.lng != null && haversineKm(c.lat, c.lng, view.lat, view.lng) > view.radiusKm) continue;
+  const cell = view.cellDeg;
+  // Zoomed in: only the map cells around the view are looked at, and the total (the same
+  // while the globe is moved around) is counted once and kept for a moment.
+  const around = view.radiusKm != null && view.lat != null && view.lng != null ? cardsAround(view.lat, view.lng, view.radiusKm) : null;
+  if (around) total = matchCount(f, catSets, terms);
+  for (const c of around ?? candidates(f)) {
+    if (around) {
+      if (haversineKm(c.lat, c.lng, view.lat!, view.lng!) > view.radiusKm! || !matches(c, f, catSets) || !textScore(c, terms)) continue;
+    } else {
+      if (!matches(c, f, catSets) || !textScore(c, terms)) continue;
+      total++;
+      if (view.radiusKm != null && view.lat != null && view.lng != null && haversineKm(c.lat, c.lng, view.lat, view.lng) > view.radiusKm) continue;
+    }
     inView++;
-    const key = view.cellDeg <= 0 ? `v:${state.events.get(c.id)?.venueId}` : gridKey(c.lat, c.lng, view.cellDeg);
-    const b = buckets.get(key) ?? { cards: [], sx: 0, sy: 0, sz: 0, live: 0 };
-    const [x, y, z] = latLngToVec3(c.lat, c.lng);
-    b.sx += x; b.sy += y; b.sz += z;
+    const g = geoOf(c);
+    let key: string | number;
+    if (cell <= 0) key = `v:${state.events.get(c.id)?.venueId}`;
+    else {
+      const [latCell, lngCell] = gridCell(c.lat, c.lng, cell, g.w);
+      key = latCell * 1e6 + lngCell;
+    }
+    let b = buckets.get(key);
+    if (!b) buckets.set(key, (b = { cards: [], sx: 0, sy: 0, sz: 0, live: 0 }));
+    b.sx += g.x; b.sy += g.y; b.sz += g.z;
     b.cards.push(c);
-    const e = state.events.get(c.id);
-    if (e && isLiveNow(e, now)) b.live++;
-    buckets.set(key, b);
+    // Only something that has started can be on now.
+    if (startMsOf(c) <= now) {
+      const e = state.events.get(c.id);
+      if (e && isLiveNow(e, now)) b.live++;
+    }
   }
   const clusters: Cluster[] = [];
-  for (const [key, b] of buckets) {
+  for (const [k, b] of buckets) {
+    const key = typeof k === "number" ? `${Math.floor(k / 1e6)}:${k % 1e6}` : k;
     const n = b.cards.length;
     // Spherical centroid (robust across the antimeridian).
     const len = Math.hypot(b.sx, b.sy, b.sz) || 1;
@@ -1979,8 +2055,16 @@ export function clusterEvents(
     const cityName = getDestination(topCity)?.name ?? b.cards[0].city;
     const extraCities = Object.keys(cityCounts).length - 1;
     const sample = earliest(b.cards, 6).map((c) => present(c, f));
-    let radiusKm = 0;
-    for (const c of b.cards) radiusKm = Math.max(radiusKm, haversineKm(lat, lng, c.lat, c.lng));
+    // The farthest member from the centre, along the globe (the smallest dot product of
+    // unit vectors is the widest angle).
+    let minDot = 1;
+    const ux = b.sx / len, uy = b.sy / len, uz = b.sz / len;
+    for (const c of b.cards) {
+      const g = geoOf(c);
+      const dot = g.x * ux + g.y * uy + g.z * uz;
+      if (dot < minDot) minDot = dot;
+    }
+    const radiusKm = Math.acos(Math.max(-1, Math.min(1, minDot))) * EARTH_RADIUS_KM;
     clusters.push({
       radiusKm,
       group: { deg: Math.max(0, view.cellDeg), keys: [key] },

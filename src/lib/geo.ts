@@ -66,10 +66,18 @@ export interface GeoPoint {
  */
 export function gridKey(lat: number, lng: number, cellDeg: number): string {
   if (cellDeg <= 0) return `${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const latCell = Math.floor((lat + 90) / cellDeg);
-  const lngCellDeg = cellDeg / Math.max(0.25, Math.cos(lat * D2R));
-  const lngCell = Math.floor((lng + 180) / lngCellDeg);
+  const [latCell, lngCell] = gridCell(lat, lng, cellDeg, cellWidthFactor(lat));
   return `${latCell}:${lngCell}`;
+}
+
+/** How much wider grid cells are at this latitude (worked out once per place by callers that can). */
+export function cellWidthFactor(lat: number): number {
+  return Math.max(0.25, Math.cos(lat * D2R));
+}
+
+/** The grid cell of a point, as gridKey names it ("latCell:lngCell"), from its cellWidthFactor. */
+export function gridCell(lat: number, lng: number, cellDeg: number, widthFactor: number): [number, number] {
+  return [Math.floor((lat + 90) / cellDeg), Math.floor((lng + 180) / (cellDeg / widthFactor))];
 }
 
 export function bboxContains(

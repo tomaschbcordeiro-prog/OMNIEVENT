@@ -60,3 +60,30 @@ describe("first results in order", () => {
     }
   });
 });
+
+describe("zoomed-in globe views", () => {
+  it("group the same events whether they look at nearby map cells or at every card", async () => {
+    const { clusterEvents } = await import("@/lib/store");
+    const base = generateDemoData(new Date("2026-11-08T10:00:00Z"));
+    __testing.load("globe", { ...base, events: base.events.map((e) => ({ ...e, provenance: { ...e.provenance, provider: "globe", isDemo: false } })) });
+    __testing.rebuild();
+    const views = base.venues.slice(0, 12).flatMap((v, i) => [
+      { lat: v.lat + 0.05, lng: v.lng - 0.05, radiusKm: [5, 40, 300, 790][i % 4], cellDeg: [0, 0.25, 1, 2][i % 4] },
+      { lat: v.lat, lng: v.lng, radiusKm: 120, cellDeg: 0.5, mergeDeg: 0.2 },
+    ]);
+    let seen = 0;
+    for (const view of views)
+      for (const f of [{}, { categories: ["music"] }]) {
+        __testing.around(true);
+        const fast = clusterEvents(f, view);
+        __testing.around(false);
+        const slow = clusterEvents(f, view);
+        seen += fast.inView;
+        expect({ total: fast.total, inView: fast.inView, clusters: fast.clusters.map((c) => [c.id, c.count, c.live]) }).toEqual({ total: slow.total, inView: slow.inView, clusters: slow.clusters.map((c) => [c.id, c.count, c.live]) });
+      }
+    expect(seen).toBeGreaterThan(50);
+    __testing.around(true);
+    __testing.drop("globe");
+    __testing.rebuild();
+  });
+});
