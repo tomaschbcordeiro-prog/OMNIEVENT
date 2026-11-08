@@ -8,9 +8,10 @@ import { dataReady, ensureFresh, getEventView, refreshSource, searchEvents, wait
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
-import { CategoryIcon, DemoBadge, HeroImage, Poster, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
+import { CategoryIcon, DemoBadge, HeroImage, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
+import { EventPoster } from "@/components/event-poster";
 import { ShareToClub } from "@/components/clubs/share-to-club";
 import type { EventView } from "@/lib/types";
 import { sellerSearches } from "@/lib/sellers";
@@ -165,7 +166,7 @@ export default async function EventPage({ params }: { params: P }) {
               {e.imageUrl ? (
                 <HeroImage src={e.imageUrl} title={e.title} hue={e.posterHue} categorySlug={e.categorySlug} />
               ) : (
-                <Poster priority title={e.title} hue={e.posterHue} categorySlug={e.categorySlug} size="lg" className="h-32 sm:h-40 w-full" />
+                <EventPoster e={e} />
               )}
             </div>
 
