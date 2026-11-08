@@ -354,6 +354,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
     return;
   }
   let changed = false;
+  // Whether something arrived since the last rebuild (the last source to arrive usually
+  // triggers one already; a second full rebuild of a big catalogue would cost seconds).
+  let dirty = false;
   // Four sources at a time (each snapshot is unpacked in memory before it's kept), the
   // smallest first so most of the catalogue shows within the first seconds.
   const queue = [...providers].sort((a, b) => (index[a.id]?.events ?? 0) - (index[b.id]?.events ?? 0));
@@ -376,9 +379,11 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         // A new server shows the sources as they arrive, rebuilding at most every eight seconds
         // (each rebuild goes over everything loaded so far).
         hydrateInfo.loaded.push(`${p.id}@${Math.round((Date.now() - t0) / 100) / 10}s`);
+        dirty = true;
         if (Date.now() - lastHydrateRebuild > 8000) {
           lastHydrateRebuild = Date.now();
           rebuildIndexes();
+          dirty = false;
           hydrateInfo.rebuilds++;
         }
         if (!state.runs.has(p.id))
@@ -395,7 +400,10 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
       while (queue.length) await loadOne(queue.shift()!);
     }),
   );
-  if (changed) rebuildIndexes();
+  if (changed && dirty) {
+    rebuildIndexes();
+    hydrateInfo.rebuilds++;
+  }
   hydrateInfo.doneMs = Date.now() - t0;
 }
 
