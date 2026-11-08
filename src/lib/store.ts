@@ -1,6 +1,8 @@
 import { inPrerender, outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import { internBatch } from "./intern";
 import { acquireLock, cleanupSnapshots, loadSnapshot, releaseLock, saveSnapshot, setState, sharedEnabled, sharedStoreUp, snapshotIndex } from "./shared-cache";
 import { activeProviders, ALL_PROVIDERS } from "./providers/registry";
@@ -138,6 +140,37 @@ function memoryMb(): number {
   }
 }
 
+/**
+ * What this server really holds, in MB: its memory after a full garbage collection, not
+ * counting space the process keeps but isn't using. The process's total (RSS) rarely shrinks
+ * once grown, so a server that went past the soft limit while loading looked full for good
+ * and never refreshed its big sources again. Asking for a collection takes a moment, so this
+ * is only asked when the total is high. Falls back to the total if it can't be asked for.
+ */
+let collect: (() => void) | null | undefined;
+/** The last such check (for the status page). */
+export const memoryCheck: { at?: string; settledMb?: number; rssMb?: number } = {};
+function settledMemoryMb(): number {
+  try {
+    if (collect === undefined) {
+      setFlagsFromString("--expose-gc");
+      collect = runInNewContext("gc") as () => void;
+    }
+    if (!collect) return memoryMb();
+    const rss = memoryMb();
+    collect();
+    const m = process.memoryUsage();
+    const settled = (m.heapUsed + m.external) / 1048576;
+    Object.assign(memoryCheck, { at: new Date().toISOString(), settledMb: Math.round(settled), rssMb: Math.round(rss) });
+    return settled;
+  } catch {
+    collect = null;
+    return memoryMb();
+  }
+}
+/** In use after a collection, above which the big catalogues wait (they need a few hundred MB more while read). */
+const SETTLED_LIMIT_MB = Number(process.env.SETTLED_MEMORY_LIMIT_MB ?? 1250);
+
 /** When this instance last uploaded each source's snapshot. */
 const savedAt = new Map<string, number>();
 /** How recent each source's data on this instance is (its own sync or a loaded snapshot). */
@@ -199,7 +232,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
     // a daily quota, or minutes of server time on a big catalogue, on its own. Those wait for
     // the storage instead; the smaller sources still load.
     // Close to the server's memory limit, the big catalogues wait (they'd add more than there's room for).
-    if ((QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && state.providerData.has(p.id) && memoryMb() > MEMORY_SOFT_LIMIT_MB) {
+    if ((QUOTA_SOURCES.has(p.id) || HEAVY_SOURCES.has(p.id)) && state.providerData.has(p.id) && memoryMb() > MEMORY_SOFT_LIMIT_MB && settledMemoryMb() > SETTLED_LIMIT_MB) {
       log("info", "sync deferred: memory", { provider: p.id, rssMb: Math.round(memoryMb()) });
       state.lastSync.set(p.id, Date.now() - p.refreshIntervalMs + 30 * 60000);
       state.syncing.delete(p.id);
