@@ -231,7 +231,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
           const merged: ProviderBatch = { events: [...partial.events], venues: [...partial.venues], participants: [...partial.participants], offers: [...partial.offers] };
           if (prev) mergeMissing(merged, prev);
           state.providerData.set(p.id, trimBatch(merged));
-          rebuildIndexes();
+          // In slices: a big catalogue's crawl publishes every 20 s, and a full rebuild at once
+          // would stop the server answering for seconds each time.
+          void rebuildIndexesSliced();
         },
       });
       let batch = synced.batch;
@@ -269,7 +271,11 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // Every instance can then report how the last real run went, wherever it ran.
       // (A crawl's idle turn — nothing read, nothing wrong — doesn't replace the last real one.)
       if (shared && (fresh || run.error || !run.partial)) void setState(`run:${p.id}`, { ...state.runs.get(p.id), fresh }, 7 * 86400).catch(() => {});
-      if (!unchanged) rebuildIndexes();
+      // A big source is indexed in slices (the server keeps answering); a small one at once.
+      if (!unchanged) {
+        if (batch.events.length > 20000) await rebuildIndexesSliced();
+        else rebuildIndexes();
+      }
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
       // Shared only when this run brought something (a run that found nothing new doesn't
       // re-upload), and during a long crawl at most every 90 minutes to spare bandwidth.

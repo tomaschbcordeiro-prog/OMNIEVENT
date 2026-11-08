@@ -1,11 +1,11 @@
 import "server-only";
-import { gunzip as gunzipCb, gzip as gzipCb } from "node:zlib";
-import { promisify } from "node:util";
+import { gunzipSync, gzipSync } from "node:zlib";
 
-// Packing and unpacking run on Node's worker threads, so a server loading tens of megabytes
-// of shared copies keeps answering visitors meanwhile.
-const gunzip = promisify(gunzipCb);
-const gzip = promisify(gzipCb);
+// Unpacked on the main thread (about half a second for the biggest copy): done on Node's small
+// pool of worker threads instead, it could wait behind other work there (slow name lookups)
+// and a new server never finished loading.
+const gunzip = async (b: Buffer) => gunzipSync(b);
+const gzip = async (b: Buffer) => gzipSync(b);
 import { getCache, type RuntimeCache } from "@vercel/functions";
 import { cmd, persistent, pipe, storageAvailable } from "./community/kv";
 import type { ProviderBatch } from "./providers/types";

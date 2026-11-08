@@ -1,4 +1,4 @@
-import { lookup } from "node:dns/promises";
+import { Resolver } from "node:dns/promises";
 import { isIP } from "node:net";
 import { clientKey, rateLimit } from "@/lib/api";
 import { THUMB_WIDTHS } from "@/lib/thumb";
@@ -20,13 +20,27 @@ function privateAddress(ip: string): boolean {
 }
 
 /** The original picture, when ours can't be made: the browser loads it as it would have. */
-const original = (u: string, why: string) => new Response(null, { status: 302, headers: { Location: u, "Cache-Control": "public, max-age=3600, s-maxage=3600", "X-Img-Fallback": why } });
+const original = (u: string, why: string) =>
+  new Response(null, {
+    status: 302,
+    // A passing reason (busy, too many requests) isn't kept: the next look may get the small one.
+    headers: { Location: u, "Cache-Control": why === "busy" || why === "rate" ? "no-store" : "public, max-age=3600, s-maxage=3600", "X-Img-Fallback": why },
+  });
+
+let inFlight = 0;
+
+// Names are resolved with the DNS client that doesn't use Node's small pool of worker threads
+// (dns.lookup does): slow lookups there held up everything else using that pool, such as
+// unpacking the shared copies a new server loads.
+const resolver = new Resolver({ timeout: 2000, tries: 1 });
 
 /** Only public addresses on the internet. */
 async function publicHost(url: URL): Promise<boolean> {
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  const addrs = isIP(host) ? [{ address: host }] : await lookup(host, { all: true });
-  return addrs.length > 0 && !addrs.some((a) => privateAddress(a.address));
+  if (isIP(host)) return !privateAddress(host);
+  const [v4, v6] = await Promise.all([resolver.resolve4(host).catch(() => [] as string[]), resolver.resolve6(host).catch(() => [] as string[])]);
+  const addrs = [...v4, ...v6];
+  return addrs.length > 0 && !addrs.some((a) => privateAddress(a));
 }
 
 /**
@@ -73,6 +87,10 @@ export async function GET(req: Request) {
   if (!rateLimit(`img:${clientKey(req)}`, 400)) return original(url.href, "rate");
 
   if ((unreachable.get(url.hostname) ?? 0) > Date.now()) return original(url.href, "host-paused");
+  // Two pictures at a time per server: downloads look up names on Node's small pool of worker
+  // threads, which the rest of the server needs too. Beyond that, the original picture.
+  if (inFlight >= 2) return original(url.href, "busy");
+  inFlight++;
   try {
     if (!(await publicHost(url))) return new Response("Not allowed", { status: 403 });
     const res = await fetchImage(url);
@@ -112,5 +130,7 @@ export async function GET(req: Request) {
       if (unreachable.size > 500) unreachable.delete(unreachable.keys().next().value!);
     }
     return original(url.href, `error-${String(e?.cause?.code ?? e?.name ?? "unknown").slice(0, 40)}`);
+  } finally {
+    inFlight--;
   }
 }
