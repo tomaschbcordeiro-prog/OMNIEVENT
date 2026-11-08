@@ -72,12 +72,14 @@ export function ClusterMap({
     [initial.lat, initial.lng, initial.zoom],
   );
 
-  const viewKey = radius == null ? "g" : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${Math.round(radius)}`;
+  const viewKey = `${view.zoom.toFixed(1)}|${radius == null ? "g" : `${view.lat.toFixed(2)},${view.lng.toFixed(2)},${Math.round(radius)}`}`;
   useEffect(() => {
     if (fixed || params === undefined || !near) return;
     const ctrl = new AbortController();
     const p = new URLSearchParams(params);
     p.set("cell", String(cell));
+    // Lets the server merge groups that would sit on top of each other at this zoom.
+    p.set("z", view.zoom.toFixed(1));
     if (radius != null) {
       p.set("vlat", view.lat.toFixed(3));
       p.set("vlng", view.lng.toFixed(3));

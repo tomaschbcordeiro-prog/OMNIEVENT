@@ -3917,3 +3917,19 @@ mark.hit {
 .tile-strip > li {
   scroll-snap-align: start;
 }
+/* A category page's header: a soft wash of the category's colour behind it. */
+.cat-hero {
+  position: relative;
+  isolation: isolate;
+}
+.cat-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -32px -24px -24px -24px;
+  border-radius: 28px;
+  background:
+    radial-gradient(60% 90% at 0% 0%, color-mix(in srgb, var(--cat) 14%, transparent), transparent 70%),
+    radial-gradient(50% 80% at 70% 10%, color-mix(in srgb, var(--cat) 8%, transparent), transparent 70%);
+  pointer-events: none;
+}

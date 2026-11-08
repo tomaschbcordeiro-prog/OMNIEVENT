@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ensureFresh, searchEvents, sportsMeta } from "@/lib/store";
-import { getCategory, childrenOf, GLOBE_MODES, GROUPS } from "@/lib/categories";
+import { getCategory, childrenOf, GLOBE_MODES, GROUPS, GROUP_HEX, groupOf } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { parseFilterParams, filtersToParams } from "@/lib/search/params";
 import { formatEventTime, formatShortDate } from "@/lib/format";
@@ -116,9 +116,9 @@ export default async function CategoryPage({ params, searchParams }: { params: P
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4">
           <Link href="/categories" className="inline-block py-1 hover:text-text">Categories</Link> <span aria-hidden>/</span> {cat.name}
         </nav>
-        <div className="grid gap-8 lg:grid-cols-[1fr_440px] items-start">
+        <div className="cat-hero grid gap-8 lg:grid-cols-[1fr_440px] items-start" style={{ "--cat": GROUP_HEX[groupOf(slug)] ?? GROUP_HEX.other } as React.CSSProperties}>
           <div>
-            <CategoryIcon slug={slug} size={34} />
+            <span className="cat-lead-icon"><CategoryIcon slug={slug} size={24} /></span>
             <h1 className="t-display mt-3">{cat.name}</h1>
             <p className="t-body text-text-2 mt-2 measure">{cat.description}</p>
             <p className="t-small text-text-3 mt-2 tnum">{result.total.toLocaleString()} upcoming events listed{selectedSub ? ` in ${getCategory(selectedSub)?.name}` : ""}</p>
@@ -136,11 +136,13 @@ export default async function CategoryPage({ params, searchParams }: { params: P
               <div className="mt-6">
                 <h2 className="t-h3">Where it&apos;s happening</h2>
                 <p className="t-micro text-text-3">Cities with the most listed events in this category.</p>
-                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 t-small">
+                <ul className="mt-2 flex flex-wrap gap-1.5">
                   {topCities.map(([id, n]) => (
                     <li key={id}>
-                      <Link href={`/destinations/${id}?cat=${filters.categories!.join(",")}`} className="hover:text-cyan">{getDestination(id)?.name ?? id}</Link>
-                      <span className="text-text-3 tnum"> {n}</span>
+                      <Link href={`/destinations/${id}?cat=${filters.categories!.join(",")}`} className="city-chip">
+                        {getDestination(id)?.name ?? id}
+                        <span className="tnum">{n.toLocaleString("en-GB")}</span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
