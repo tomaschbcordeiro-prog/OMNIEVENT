@@ -3,6 +3,7 @@ import { ensureFresh, getEventView, waitForData } from "@/lib/store";
 import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
 import { formatEventTime, formatShortDate } from "@/lib/format";
 import { loadOgFonts } from "@/lib/og-fonts";
+import { clientKey, rateLimit } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -16,8 +17,12 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trim
  * shared (WhatsApp, Messages, social posts): its date set large, the title, the place, in its
  * category's colours. 1200×630.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  // Drawing a picture costs time on the server: a visitor gets thirty a minute (link previews
+  // ask once, and the CDN keeps each card for a day).
+  if (!rateLimit(`card:${clientKey(req)}`, 30)) return new Response("Too many requests", { status: 429, headers: { "Retry-After": "60" } });
   const { slug } = await params;
+  if (!/^[\w.-]{1,200}$/.test(slug)) return new Response("Not found", { status: 404 });
   await ensureFresh();
   let e = getEventView(slug);
   if (!e) {
