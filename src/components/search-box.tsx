@@ -9,7 +9,7 @@ import { filtersToParams } from "@/lib/search/params";
 import { userActions, useUser } from "@/lib/user/store";
 import { formatShortDate } from "@/lib/format";
 import type { ParsedQuery } from "@/lib/types";
-import { DemoBadge } from "./ui";
+import { DemoBadge, Poster } from "./ui";
 import { Marked } from "./marked";
 
 interface Suggest {
@@ -17,7 +17,7 @@ interface Suggest {
   categories: { slug: string; name: string; parent?: string }[];
   participants: { slug: string; name: string; kind: string; isDemo: boolean }[];
   venues: { slug: string; name: string; city: string; isDemo: boolean }[];
-  events: { slug: string; title: string; city: string; start: string; timeZone: string; isDemo: boolean }[];
+  events: { slug: string; title: string; city: string; start: string; timeZone: string; isDemo: boolean; imageUrl?: string; categorySlug?: string; posterHue?: number }[];
 }
 
 type Item = { key: string; label: string; sub?: string; icon: React.ReactNode; demo?: boolean; run: () => void; section?: string };
@@ -195,7 +195,9 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
     );
     data?.events.forEach((e) => {
       const d = formatShortDate(e.start, e.timeZone);
-      items.push({ key: `e-${e.slug}`, label: e.title, sub: `${e.city}, ${d.day} ${d.month}`, demo: e.isDemo, icon: <CalendarDays size={15} aria-hidden />, run: () => (setOpen(false), router.push(`/events/${e.slug}`)) });
+      // A small picture of the event (its own, or the drawn poster), so suggestions are easy to tell apart.
+      const icon = e.categorySlug ? <Poster title={e.title} imageUrl={e.imageUrl} hue={e.posterHue} categorySlug={e.categorySlug} size="sm" className="h-8 w-8 rounded-[6px] shrink-0" /> : <CalendarDays size={15} aria-hidden />;
+      items.push({ key: `e-${e.slug}`, label: e.title, sub: `${e.city}, ${d.day} ${d.month}`, demo: e.isDemo, icon, run: () => (setOpen(false), router.push(`/events/${e.slug}`)) });
     });
   } else {
     user.recentSearches.forEach((s) => items.push({ key: `r-${s}`, label: s, icon: <History size={15} aria-hidden />, run: () => (setQ(s), submit(s)) }));

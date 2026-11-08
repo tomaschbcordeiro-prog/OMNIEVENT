@@ -1920,28 +1920,58 @@ export function dataSummary() {
 }
 
 /** Suggestions for autocomplete across participants, venues and event titles. */
+/** Names as compared in suggestions, worked out once per venue or performer. */
+const nameNorms = new WeakMap<object, string>();
+function normName(o: object, name: string): string {
+  let n = nameNorms.get(o);
+  if (n === undefined) nameNorms.set(o, (n = norm(name)));
+  return n;
+}
+
 export function suggestEntities(q: string, limit = 6) {
   const t = norm(q);
   if (t.length < 2) return { participants: [], venues: [], events: [] };
-  const score = (name: string) => {
-    const n = norm(name);
-    if (n.startsWith(t)) return 3;
-    if (n.includes(` ${t}`)) return 2;
-    if (n.includes(t)) return 1;
-    if (t.length >= 4 && n.split(" ").some((w) => levenshtein(w.slice(0, t.length), t) <= 1)) return 0.5;
-    return 0;
+  const exact = (n: string) => (n.startsWith(t) ? 3 : n.includes(` ${t}`) ? 2 : n.includes(t) ? 1 : 0);
+  // A word starting with what was typed, give or take one letter ("lisbn" → Lisbon).
+  const near = (n: string) => {
+    for (const w of n.split(" ")) if (w.length >= t.length - 1 && withinOneEdit(w.slice(0, t.length), t)) return true;
+    return false;
   };
-  const top = <T,>(items: Iterable<T>, name: (x: T) => string) =>
-    [...items]
-      .map((x) => ({ x, s: score(name(x)) }))
-      .filter((r) => r.s > 0)
+  // Exact matches first; only when the search as a whole finds too few, words one letter off
+  // (looked for in a bounded number of names, so a search that matches nothing stays quick).
+  const exactHits = <T extends object>(items: () => Iterable<T>, name: (x: T) => string, ok: (x: T) => boolean = () => true) => {
+    const hits: { x: T; s: number }[] = [];
+    for (const x of items()) {
+      if (!ok(x)) continue;
+      const s = exact(name(x));
+      if (s) hits.push({ x, s });
+    }
+    return hits;
+  };
+  const people = exactHits(() => state.participants.values(), (p) => normName(p, p.name));
+  const places = exactHits(() => state.venues.values(), (v) => normName(v, v.name));
+  const shows = exactHits(() => state.cards.values(), (c) => cardText(c).title.slice(1), (c) => c.status !== "completed");
+  const fuzzy = people.length + places.length + shows.length < limit && t.length >= 4;
+  const top = <T extends object>(hits: { x: T; s: number }[], items: () => Iterable<T>, name: (x: T) => string, ok: (x: T) => boolean = () => true) => {
+    if (fuzzy && hits.length < limit) {
+      let looked = 0;
+      for (const x of items()) {
+        if (++looked > 80000 || hits.length >= limit * 3) break;
+        if (!ok(x)) continue;
+        const n = name(x);
+        if (!exact(n) && near(n)) hits.push({ x, s: 0.5 });
+      }
+    }
+    return hits
       .sort((a, b) => b.s - a.s)
       .slice(0, limit)
       .map((r) => r.x);
+  };
   return {
-    participants: top(state.participants.values(), (p) => p.name).map((p) => ({ slug: p.slug, name: p.name, kind: p.kind, isDemo: p.provenance.isDemo })),
-    venues: top(state.venues.values(), (v) => v.name).map((v) => ({ slug: v.slug, name: v.name, city: v.city, isDemo: v.provenance.isDemo })),
-    events: top([...state.cards.values()].filter((c) => c.status !== "completed"), (c) => c.title).map((c) => ({ slug: c.slug, title: c.title, city: c.city, start: c.start, timeZone: c.timeZone, groupSlug: c.groupSlug, isDemo: c.isDemo })),
+    participants: top(people, () => state.participants.values(), (p) => normName(p, p.name)).map((p) => ({ slug: p.slug, name: p.name, kind: p.kind, isDemo: p.provenance.isDemo })),
+    venues: top(places, () => state.venues.values(), (v) => normName(v, v.name)).map((v) => ({ slug: v.slug, name: v.name, city: v.city, isDemo: v.provenance.isDemo })),
+    // Event titles use the search text worked out for every card when the index is built.
+    events: top(shows, () => state.cards.values(), (c) => cardText(c).title.slice(1), (c) => c.status !== "completed").map((c) => ({ slug: c.slug, title: c.title, city: c.city, start: c.start, timeZone: c.timeZone, groupSlug: c.groupSlug, isDemo: c.isDemo, imageUrl: c.imageUrl, categorySlug: c.categorySlug, posterHue: c.posterHue })),
   };
 }
 

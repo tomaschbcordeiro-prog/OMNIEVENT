@@ -3950,3 +3950,10 @@ mark.hit {
   background: var(--text);
   box-shadow: 0 14px 34px -14px rgb(10 20 50 / 0.55);
 }
+/* An event's own picture in the command menu, the size of the icons beside it. */
+.cmdk-thumb {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 8px;
+}

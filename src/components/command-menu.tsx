@@ -6,9 +6,10 @@ import { ArrowRight, CalendarDays, Clapperboard, Compass, Dices, Globe2, Heart, 
 import type { LucideIcon } from "lucide-react";
 import { setTheme } from "./theme-toggle";
 import { Marked } from "./marked";
+import { Poster } from "./ui";
 import { useUser } from "@/lib/user/store";
 
-type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string; run?: () => void };
+type Item = { id: string; label: string; hint?: string; href: string; icon: LucideIcon; group: string; words?: string; run?: () => void; thumb?: { title: string; imageUrl?: string; categorySlug: string; posterHue?: number } };
 
 /** Places and things to do, always offered (filtered as you type). */
 const STATIC: Item[] = [
@@ -39,7 +40,7 @@ type Suggest = {
   destinations: { slug: string; name: string; kind: string; country?: string; events?: number }[];
   participants: { slug: string; name: string; kind: string }[];
   venues: { slug: string; name: string; city: string }[];
-  events: { slug: string; title: string; city: string }[];
+  events: { slug: string; title: string; city: string; imageUrl?: string; categorySlug?: string; posterHue?: number }[];
   /** Nothing matched: the likely search, with a typo fixed. */
   didYouMean?: string;
 };
@@ -126,7 +127,7 @@ export function CommandMenu() {
     const dyn: Item[] = [];
     if (found && t.length >= 2) {
       for (const d of found.destinations.slice(0, 4)) dyn.push({ id: `d-${d.slug}`, label: d.name, hint: [d.kind === "city" ? d.country : d.kind, d.events ? `${d.events.toLocaleString("en-GB")} events` : ""].filter(Boolean).join(" · "), href: `/destinations/${d.slug}`, icon: MapPin, group: "Places" });
-      for (const e of found.events.slice(0, 5)) dyn.push({ id: `e-${e.slug}`, label: e.title, hint: e.city, href: `/events/${e.slug}`, icon: CalendarDays, group: "Events" });
+      for (const e of found.events.slice(0, 5)) dyn.push({ id: `e-${e.slug}`, label: e.title, hint: e.city, href: `/events/${e.slug}`, icon: CalendarDays, group: "Events", thumb: e.categorySlug ? { title: e.title, imageUrl: e.imageUrl, categorySlug: e.categorySlug, posterHue: e.posterHue } : undefined });
       for (const p of found.participants.slice(0, 3)) dyn.push({ id: `p-${p.slug}`, label: p.name, hint: p.kind, href: `/participants/${p.slug}`, icon: Mic2, group: "Artists & teams" });
       for (const v of found.venues.slice(0, 3)) dyn.push({ id: `v-${v.slug}`, label: v.name, hint: v.city, href: `/venues/${v.slug}`, icon: MapPin, group: "Venues" });
     }
@@ -196,9 +197,13 @@ export function CommandMenu() {
               <li key={i.id} role="presentation">
                 {head && <p className="cmdk-group">{head}</p>}
                 <div id={`cmdk-${i.id}`} role="option" aria-selected={n === active} className="cmdk-item" onMouseMove={() => setActive(n)} onClick={() => go(i)}>
-                  <span className="cmdk-icon">
-                    <Icon size={16} aria-hidden />
-                  </span>
+                  {i.thumb ? (
+                    <Poster title={i.thumb.title} imageUrl={i.thumb.imageUrl} hue={i.thumb.posterHue} categorySlug={i.thumb.categorySlug} size="sm" className="cmdk-thumb" />
+                  ) : (
+                    <span className="cmdk-icon">
+                      <Icon size={16} aria-hidden />
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{i.group === "Search" ? i.label : <Marked text={i.label} terms={q.trim().length >= 2 ? q.trim().split(/\s+/) : undefined} />}</span>
                     {i.hint && <span className="block truncate t-micro text-text-3">{i.hint}</span>}
