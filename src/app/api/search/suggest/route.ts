@@ -4,6 +4,7 @@ import { ensureFresh, suggestEntities, cityStats } from "@/lib/store";
 import { ALL_DESTINATIONS } from "@/lib/destinations";
 import { CATEGORIES } from "@/lib/categories";
 import { handler, ok, validationError } from "@/lib/api";
+import { didYouMean } from "@/lib/search/did-you-mean";
 
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
@@ -33,5 +34,8 @@ export const GET = handler(async (req: NextRequest) => {
   const categories = CATEGORIES.filter((c) => match([c.name, ...(c.keywords ?? [])]))
     .slice(0, 5)
     .map((c) => ({ slug: c.slug, name: c.name, parent: c.parent }));
-  return ok({ destinations, categories, ...suggestEntities(p.data.q, 5) }, { maxAge: 30 });
+  const found = { destinations, categories, ...suggestEntities(p.data.q, 5) };
+  // No place or kind of event matched: perhaps a typo ("lisbn"), so offer the likely search.
+  const empty = !found.destinations.length && !found.categories.length;
+  return ok({ ...found, didYouMean: empty && q.length >= 4 ? didYouMean(p.data.q.trim()) : undefined }, { maxAge: 30 });
 });

@@ -40,6 +40,8 @@ type Suggest = {
   participants: { slug: string; name: string; kind: string }[];
   venues: { slug: string; name: string; city: string }[];
   events: { slug: string; title: string; city: string }[];
+  /** Nothing matched: the likely search, with a typo fixed. */
+  didYouMean?: string;
 };
 
 /**
@@ -127,6 +129,10 @@ export function CommandMenu() {
       for (const e of found.events.slice(0, 5)) dyn.push({ id: `e-${e.slug}`, label: e.title, hint: e.city, href: `/events/${e.slug}`, icon: CalendarDays, group: "Events" });
       for (const p of found.participants.slice(0, 3)) dyn.push({ id: `p-${p.slug}`, label: p.name, hint: p.kind, href: `/participants/${p.slug}`, icon: Mic2, group: "Artists & teams" });
       for (const v of found.venues.slice(0, 3)) dyn.push({ id: `v-${v.slug}`, label: v.name, hint: v.city, href: `/venues/${v.slug}`, icon: MapPin, group: "Venues" });
+    }
+    if (found?.didYouMean && t.length >= 2) {
+      const fix = found.didYouMean;
+      dyn.push({ id: "dym", label: fix, hint: "Did you mean this?", href: `/events?q=${encodeURIComponent(fix)}&where=any`, icon: Search, group: "Did you mean" });
     }
     if (!t) for (const r of recent) dyn.push({ id: `r-${r.slug}`, label: r.title, hint: r.city, href: `/events/${r.slug}`, icon: History, group: "Recently viewed" });
     const all = [...dyn, ...statics];
