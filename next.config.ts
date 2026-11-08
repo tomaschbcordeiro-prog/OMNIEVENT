@@ -38,7 +38,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The Studio's poster images are drawn with the site's typeface, read from disk.
-  outputFileTracingIncludes: { "/api/poster/[id]": ["./public/fonts/**"], "/api/mixtape/card": ["./public/fonts/**"], "/api/events/[slug]/card": ["./public/fonts/**"] },
+  outputFileTracingIncludes: { "/api/poster/[id]": ["./public/fonts/**"], "/api/mixtape/card": ["./public/fonts/**"], "/api/events/[slug]/card": ["./public/fonts/**"], "/api/img": ["./node_modules/sharp/**", "./node_modules/@img/colour/**", "./node_modules/@img/sharp-linux-x64/**", "./node_modules/@img/sharp-libvips-linux-x64/**"] },
   // Listing an event moved into the Studio; old links keep working (query strings carry over).
   async redirects() {
     return [{ source: "/events/new", destination: "/studio/new", permanent: false }];

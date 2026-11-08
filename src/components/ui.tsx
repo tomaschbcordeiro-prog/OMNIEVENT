@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
 import { formatMoney, STATUS_META } from "@/lib/format";
+import { thumb } from "@/lib/thumb";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
 import { userActions, useUser } from "@/lib/user/store";
@@ -54,8 +55,12 @@ export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number 
  * blown up past a little over its own size (no blur), on a soft backdrop made from the picture
  * itself. Falls back to the drawn poster when it can't load.
  */
-export function HeroImage({ src, title, hue, categorySlug }: { src: string; title: string; hue?: number; categorySlug: string }) {
+export function HeroImage({ src: original, title, hue, categorySlug }: { src: string; title: string; hue?: number; categorySlug: string }) {
   const [broken, setBroken] = useState(false);
+  // At the size it's shown; the original if that can't be made.
+  const [full, setFull] = useState(false);
+  const src = full ? original : (thumb(original, 480) ?? original);
+  const backdrop = thumb(original, 64) ?? original;
   const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const img = useRef<HTMLImageElement>(null);
@@ -63,8 +68,11 @@ export function HeroImage({ src, title, hue, categorySlug }: { src: string; titl
   useEffect(() => {
     const el = img.current;
     if (el?.complete && el.naturalWidth) measure(el);
-    else if (el?.complete) setBroken(true);
-  }, []);
+    else if (el?.complete) {
+      if (src !== original) setFull(true);
+      else setBroken(true);
+    }
+  }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
   if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="h-32 sm:h-40 w-full" />;
   function measure(img: HTMLImageElement) {
     const b = box.current?.getBoundingClientRect();
@@ -76,7 +84,7 @@ export function HeroImage({ src, title, hue, categorySlug }: { src: string; titl
   return (
     <div ref={box} className="hero-img aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" aria-hidden className="hero-img-bg" referrerPolicy="no-referrer" decoding="async" />
+      <img src={backdrop} alt="" aria-hidden className="hero-img-bg" referrerPolicy="no-referrer" decoding="async" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -89,22 +97,27 @@ export function HeroImage({ src, title, hue, categorySlug }: { src: string; titl
         referrerPolicy="no-referrer"
         ref={img}
         onLoad={(e) => measure(e.currentTarget)}
-        onError={() => setBroken(true)}
+        onError={() => (src !== original ? setFull(true) : setBroken(true))}
       />
     </div>
   );
 }
 
+/** About how wide each poster size is shown, in CSS pixels (pictures are fetched at about twice that). */
+const SHOWN_PX = { sm: 64, md: 280, lg: 560 } as const;
+
 export function Poster({
   imageUrl, hue = 210, categorySlug, className = "", size = "md", priority = false,
 }: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg"; /** The page's main picture: loaded first, not lazily. */ priority?: boolean }) {
-  // A picture that fails to load (moved or blocked by its source) falls back to the drawn poster.
-  const [broken, setBroken] = useState(false);
+  // The picture at the size it's shown; if that fails, the original; if that fails too (moved
+  // or blocked by its source), the drawn poster.
+  const [stage, setStage] = useState(0);
   const group = groupOf(categorySlug);
   const accent = GROUP_HEX[group] ?? "#9AA8BA";
-  if (imageUrl && !broken)
+  const src = stage === 0 ? thumb(imageUrl, SHOWN_PX[size]) : imageUrl;
+  if (src && stage < 2)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imageUrl} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} className={`object-cover bg-panel-2 ${className}`} />;
+    return <img key={src} src={src} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" referrerPolicy="no-referrer" onError={() => setStage((n) => (n === 0 && src !== imageUrl ? 1 : 2))} className={`object-cover bg-panel-2 ${className}`} />;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
     <div
