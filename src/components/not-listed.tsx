@@ -40,7 +40,7 @@ export function NotListed({ kind }: { kind: "event" | "venue" | "performer" }) {
     const tries = [...new Set([all, ...[3, 2, 1].map((n) => all.split(" ").slice(0, n).join(" "))])];
     (async () => {
       for (const q of tries) {
-        const r = await fetch(`/api/events?q=${encodeURIComponent(q)}&pageSize=6`, { signal: ctrl.signal });
+        const r = await fetch(`/api/events?q=${encodeURIComponent(q)}&size=6`, { signal: ctrl.signal });
         const j = (r.ok ? await r.json() : { items: [] }) as { items?: EventCard[] };
         if (j.items?.length) {
           setWords(q);
