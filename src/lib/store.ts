@@ -197,6 +197,9 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
         }
       }
       const updated = batch.events.filter((e) => prevIds.has(e.id)).length;
+      // The same data as before (the members' listings re-read every minute, mostly unchanged):
+      // nothing to rebuild.
+      const unchanged = !!before && batchSig(before) === batchSig(batch);
       state.providerData.set(p.id, batch);
       dataAt.set(p.id, Date.now());
       // A source that refused us with nothing to show is retried in 30 minutes, not after
@@ -206,7 +209,7 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
       // Every instance can then report how the last real run went, wherever it ran.
       // (A crawl's idle turn — nothing read, nothing wrong — doesn't replace the last real one.)
       if (shared && (fresh || run.error || !run.partial)) void setState(`run:${p.id}`, { ...state.runs.get(p.id), fresh }, 7 * 86400).catch(() => {});
-      rebuildIndexes();
+      if (!unchanged) rebuildIndexes();
       log("info", "provider sync complete", { provider: p.id, runId, events: batch.events.length, failures: run.failures });
       // Shared only when this run brought something (a run that found nothing new doesn't
       // re-upload), and during a long crawl at most every 90 minutes to spare bandwidth.
@@ -233,6 +236,22 @@ async function syncProvider(p: ProviderAdapter): Promise<void> {
   })();
   state.syncing.set(p.id, job);
   return job;
+}
+
+/** A fingerprint of a batch: its events (ids, times, status, titles) and the counts of the rest. */
+const sigCache = new WeakMap<ProviderBatch, string>();
+function batchSig(b: ProviderBatch): string {
+  let sig = sigCache.get(b);
+  if (sig) return sig;
+  let h = 2166136261;
+  const mix = (str: string) => {
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  };
+  for (const e of b.events) mix(`${e.id}|${e.start}|${e.end ?? ""}|${e.status}|${e.title}|${e.imageUrl ?? ""};`);
+  for (const o of b.offers) mix(`${o.id}|${o.basePrice ?? ""}|${o.availability};`);
+  sig = `${b.events.length}/${b.venues.length}/${b.participants.length}/${b.offers.length}/${(h >>> 0).toString(36)}`;
+  sigCache.set(b, sig);
+  return sig;
 }
 
 function mergeMissing(batch: ProviderBatch, prev: ProviderBatch) {
@@ -285,8 +304,9 @@ async function hydrate(providers: ProviderAdapter[]): Promise<void> {
         state.providerData.set(p.id, batch);
         dataAt.set(p.id, meta.at);
         state.lastSync.set(p.id, Math.max(meta.at, state.lastSync.get(p.id) ?? 0));
-        // A new server shows each source as it arrives (at most every two seconds).
-        if (Date.now() - lastHydrateRebuild > 2000) {
+        // A new server shows the sources as they arrive, rebuilding at most every eight seconds
+        // (each rebuild goes over everything loaded so far).
+        if (Date.now() - lastHydrateRebuild > 8000) {
           lastHydrateRebuild = Date.now();
           rebuildIndexes();
         }
@@ -465,6 +485,7 @@ function candidates(f: SearchFilters): Iterable<EventCard> {
 }
 
 function rebuildIndexes() {
+  const t0 = Date.now();
   const events = new Map<string, OmniEvent>();
   const venues = new Map<string, Venue>();
   const participants = new Map<string, Participant>();
@@ -553,6 +574,8 @@ function rebuildIndexes() {
   state.grid = grid;
   state.byCity = byCity;
   state.cityStatsCache = undefined;
+  const ms = Date.now() - t0;
+  if (ms > 300) log("info", "indexes rebuilt", { ms, events: cards.size });
   state.participantsBySlug = new Map([...participants.values()].map((p) => [p.slug, p.id]));
 }
 
