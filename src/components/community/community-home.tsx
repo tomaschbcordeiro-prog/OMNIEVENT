@@ -5,9 +5,9 @@ import Link from "next/link";
 import { Flame, MessageCircle, ShieldCheck, Sparkles, Star, Trophy, Users } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type FollowingFeed, type PostKind, type PublicProfile, type TargetMeta } from "@/lib/community/types";
-import { ago, communityGet, useMe } from "@/lib/community/client";
+import { ago, communityGet, CommunityRequestError, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
-import { Poster } from "../ui";
+import { Notice, Poster } from "../ui";
 import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
 import { MeetupJoin, NewPostsPill, Reactions, RichText, useNewPosts } from "./interact";
 import { DailyDuel } from "./duel";
@@ -32,6 +32,8 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const seen = useRef<Set<string> | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
+  // The community's storage not answering: said plainly, not shown as an empty community.
+  const [down, setDown] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -40,7 +42,9 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
       if (seen.current) setFresh(new Set([...ids].filter((id) => !seen.current!.has(id))));
       seen.current = ids;
       setHome(h);
-    } catch {
+      setDown(null);
+    } catch (err) {
+      if (err instanceof CommunityRequestError && err.status === 503) setDown(err.message);
       setHome((h) => h ?? { stats: { members: 0, posts: 0, ratings: 0, plans: 0 }, feed: [], trending: [], topRated: [], leaders: [], profiles: {}, persistent: true });
     }
   }, []);
@@ -59,7 +63,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
   }, [filter, profile?.username]);
 
   const feed = filter === "following" ? (follow?.feed ?? []) : (home?.feed ?? []).filter((f) => filter === "all" || f.post.kind === filter);
-  const quiet = home && home.feed.length === 0 && filter !== "following";
+  const quiet = home && !down && home.feed.length === 0 && filter !== "following";
 
   return (
     <main>
@@ -118,6 +122,11 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
 
           {!home && <div className="mt-4 grid gap-3" aria-hidden>{[0, 1, 2].map((i) => <div key={i} className="skeleton h-28" />)}</div>}
 
+          {down && (
+            <div className="mt-4" role="status">
+              <Notice>{down}</Notice>
+            </div>
+          )}
           {quiet && (
             <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
               <Sparkles size={24} className="text-sun" aria-hidden />
