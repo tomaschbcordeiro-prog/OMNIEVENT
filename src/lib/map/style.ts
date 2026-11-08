@@ -148,7 +148,7 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     // ------------------------------------------------ terrain shading (both)
     // The elevation tiles include the sea floor, so a strong highlight would wash the oceans out
     // in pale patches when the whole globe is in view: the shading starts faint and grows.
-    L({ id: "hillshade", type: "hillshade", source: "dem-hs", paint: { "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 0, 0.06, 4, 0.14, 8, 0.3], "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": ["interpolate", ["linear"], ["zoom"], 0, "rgba(255,255,255,0.12)", 6, "rgba(255,255,255,0.35)", 10, "rgba(255,255,255,0.55)"], "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
+    L({ id: "hillshade", type: "hillshade", source: "dem-hs", minzoom: 4, paint: { "hillshade-exaggeration": ["interpolate", ["linear"], ["zoom"], 0, 0.06, 4, 0.14, 8, 0.3], "hillshade-shadow-color": "rgba(60,80,110,0.5)", "hillshade-highlight-color": ["interpolate", ["linear"], ["zoom"], 0, "rgba(255,255,255,0.12)", 6, "rgba(255,255,255,0.35)", 10, "rgba(255,255,255,0.55)"], "hillshade-accent-color": "rgba(80,100,90,0.3)" } }, { group: "terrain" }),
 
     // ------------------------------------------------ roads (two looks)
     ...(["map", "satellite", "lights"] as const).flatMap((b) => {

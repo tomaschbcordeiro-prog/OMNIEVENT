@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ensureFresh, getParticipantBySlug, searchEvents } from "@/lib/store";
+import { ensureFresh, getParticipantBySlug, searchEvents, waitForData } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
 import { ClusterMap } from "@/components/cluster-map";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
@@ -30,7 +30,12 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
 export default async function ParticipantPage({ params }: { params: P }) {
   const { slug } = await params;
   await ensureFresh();
-  const p = getParticipantBySlug(slug);
+  let p = getParticipantBySlug(slug);
+  // A server that has just started may still be loading its source.
+  if (!p) {
+    await waitForData(20000);
+    p = getParticipantBySlug(slug);
+  }
   if (!p) notFound();
   const res = searchEvents({ participant: p.slug, pageSize: 50, sort: "date" });
   const past = searchEvents({ participant: p.slug, status: ["completed"], from: "2000-01-01", pageSize: 10 });

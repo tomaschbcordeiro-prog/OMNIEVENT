@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
-import { ensureFresh, getEventView, refreshSource, searchEvents } from "@/lib/store";
+import { ensureFresh, getEventView, refreshSource, searchEvents, waitForData } from "@/lib/store";
 import { formatEventDate, formatEventTime, tzAbbrev, relativeTime } from "@/lib/format";
 import { getCategory, groupOf } from "@/lib/categories";
 import { EventRow } from "@/components/event-card";
@@ -25,8 +25,13 @@ type P = Promise<{ slug: string }>;
 /** An event a member just listed may not have reached this server yet: read the listings again once. */
 async function findEvent(slug: string) {
   const e = getEventView(slug);
-  if (e || !/-ue[a-z0-9]{8}$/.test(slug)) return e;
-  await refreshSource("members").catch(() => {});
+  if (e) return e;
+  if (/-ue[a-z0-9]{8}$/.test(slug)) {
+    await refreshSource("members").catch(() => {});
+    return getEventView(slug);
+  }
+  // A server that has just started may still be loading the event's source.
+  await waitForData(20000);
   return getEventView(slug);
 }
 

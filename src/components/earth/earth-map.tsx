@@ -502,6 +502,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       latest.current.onView?.({ lat: c.lat, lng: c.wrap().lng, zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(), bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] });
     };
     map.on("moveend", () => {
+      syncTerrain();
       // A spin's frames each end a move; the view is reported once it lands.
       if (tour.current) return;
       latest.current.onCamera?.(map.getZoom(), map.getCenter().lat);
@@ -701,8 +702,20 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       map.setPaintProperty(id, "text-color", p.color);
       map.setPaintProperty(id, "text-halo-color", p.halo);
     }
-    const wantTerrain = layers.terrain && variant !== "embed";
+    syncTerrain();
+  }
+
+  /**
+   * 3D relief only once zoomed in to where it shows (from zoom 5, off again below 4): with the
+   * whole planet in view it can't be seen, and its elevation tiles were most of the download.
+   */
+  function syncTerrain() {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const { layers, variant } = latest.current;
+    const z = map.getZoom();
     const hasTerrain = !!map.getTerrain();
+    const wantTerrain = layers.terrain && variant !== "embed" && (hasTerrain ? z >= 4 : z >= 5);
     if (wantTerrain && !hasTerrain) map.setTerrain({ source: "dem", exaggeration: 1.25 });
     if (!wantTerrain && hasTerrain) map.setTerrain(null);
   }

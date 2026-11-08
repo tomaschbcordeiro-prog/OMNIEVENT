@@ -95,7 +95,8 @@ const dataAt = new Map<string, number>();
 const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 3600000;
 
 /** How long the first requests a server answers may wait for its data. */
-const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 10000);
+// A new server answers within a few seconds with what it has; the rest keeps loading.
+const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? 4000);
 
 async function syncProvider(p: ProviderAdapter): Promise<void> {
   const existing = state.syncing.get(p.id);
@@ -323,6 +324,17 @@ export async function refreshSource(id: string): Promise<void> {
   if (!p) return;
   await state.syncing.get(id)?.catch(() => {});
   await syncProvider(p);
+}
+
+/**
+ * Waits (at most `ms`) for the sources still loading on this server: for a page about one
+ * event, venue or performer that isn't here yet, before saying it doesn't exist.
+ */
+export async function waitForData(ms: number): Promise<void> {
+  if (dataReady()) return;
+  const pending = [...state.syncing.values(), ...(state.hydrating ? [state.hydrating] : [])];
+  if (!pending.length) return;
+  await Promise.race([Promise.allSettled(pending), new Promise((r) => setTimeout(r, ms))]);
 }
 
 /**

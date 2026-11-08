@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Accessibility, Navigation } from "lucide-react";
-import { ensureFresh, getVenueBySlug, searchEvents } from "@/lib/store";
+import { ensureFresh, getVenueBySlug, searchEvents, waitForData } from "@/lib/store";
 import { EventRow } from "@/components/event-card";
 import { LocationMap } from "@/components/event-detail-client";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
@@ -29,7 +29,12 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
 export default async function VenuePage({ params }: { params: P }) {
   const { slug } = await params;
   await ensureFresh();
-  const v = getVenueBySlug(slug);
+  let v = getVenueBySlug(slug);
+  // A server that has just started may still be loading its source.
+  if (!v) {
+    await waitForData(20000);
+    v = getVenueBySlug(slug);
+  }
   if (!v) notFound();
   const res = searchEvents({ venue: v.slug, pageSize: 60, sort: "date" });
   const type = v.venueType?.replace(/_/g, " ");
