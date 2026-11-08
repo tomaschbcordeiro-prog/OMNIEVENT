@@ -51,7 +51,11 @@ const KEYS = new Set(["events", "venues", "participants", "offers"]);
  * Reads a copy written by packBatch: unpacked as a stream (off the main thread), each line
  * parsed as it completes, the server free to answer between lines.
  */
+/** The longest stretch the server was held by one step of the last read (for the status page). */
+export let lastReadLongestMs = 0;
+
 export async function unpackLines(packed: Buffer): Promise<ProviderBatch> {
+  lastReadLongestMs = 0;
   const batch: ProviderBatch = { events: [], venues: [], participants: [], offers: [] };
   const share = textSharer();
   const decoder = new StringDecoder("utf8");
@@ -77,7 +81,9 @@ export async function unpackLines(packed: Buffer): Promise<ProviderBatch> {
     let at: number;
     while ((at = text.indexOf("\n", from)) >= 0) {
       pending.push(text.slice(from, at));
+      const t = Date.now();
       take(pending.join(""));
+      lastReadLongestMs = Math.max(lastReadLongestMs, Date.now() - t);
       pending = [];
       from = at + 1;
       // Lets the server answer requests between lines.
@@ -236,7 +242,7 @@ export async function loadSnapshot(id: string, meta: SnapshotMeta): Promise<Prov
     const t1 = Date.now();
     if (parts.some((p) => typeof p !== "string")) return undefined;
     const batch = await readCopy(Buffer.from(parts.join(""), "base64"), meta.enc);
-    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks (${meta.enc ?? "gzip"}): fetch ${t1 - t0} ms, read ${Date.now() - t1} ms`;
+    if (meta.n > 2) loadTimings[id] = `${meta.n} chunks (${meta.enc ?? "gzip"}): fetch ${t1 - t0} ms, read ${Date.now() - t1} ms${meta.enc === "brl" ? ` (longest step ${lastReadLongestMs} ms)` : ""}`;
     return batch;
   }
   if (!persistent) return undefined;
