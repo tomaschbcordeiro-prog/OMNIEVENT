@@ -4500,3 +4500,50 @@ mark.hit {
     display: none !important;
   }
 }
+
+/* ---- Page transitions (View Transitions): an event's picture grows from the list into the page ---- */
+.event-hero {
+  view-transition-name: event-hero;
+}
+/* The bars stay put while the page changes beneath them. */
+.site-header {
+  view-transition-name: site-header;
+}
+.tabbar {
+  view-transition-name: tabbar;
+}
+::view-transition-group(event-hero) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+::view-transition-old(event-hero),
+::view-transition-new(event-hero) {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+::view-transition-old(root) {
+  animation: 180ms ease both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 260ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both vt-rise-in;
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

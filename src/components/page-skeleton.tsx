@@ -9,7 +9,8 @@ export function PageSkeleton({ variant = "list" }: { variant?: "list" | "detail"
       {variant === "detail" ? (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]" aria-hidden>
           <div className="grid gap-4">
-            <div className="skeleton aspect-[16/7] w-full rounded-[var(--radius-l)]" />
+            {/* The same box as the event page's main picture: a picture tapped in a list grows into it. */}
+            <div data-event-hero className="event-hero skeleton aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full rounded-[var(--radius-l)]" />
             <div className="skeleton h-6 w-2/3" />
             <div className="skeleton h-4 w-1/2" />
             <div className="skeleton h-32 w-full" />

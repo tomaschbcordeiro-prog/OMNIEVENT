@@ -26,7 +26,8 @@ export const DEFAULT_LAYERS: LayerState = {
   poi: true,
   buildings: true,
   terrain: true,
-  night: false,
+  // Day and night as they are right now, on by default: the planet looks alive.
+  night: true,
   events: true,
   density: false,
 };

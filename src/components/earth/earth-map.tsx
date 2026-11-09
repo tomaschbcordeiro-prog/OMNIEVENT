@@ -669,7 +669,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     });
 
     // ---- keep the terminator in sync with real time
-    const nightTimer = setInterval(() => (map.getSource("night") as GeoJSONSource | undefined)?.setData(nightGeoJSON()), 5 * 60000);
+    // The terminator moves a quarter of a degree a minute: redrawn every minute, it glides.
+    const nightTimer = setInterval(() => (map.getSource("night") as GeoJSONSource | undefined)?.setData(nightGeoJSON()), 60000);
 
     return () => {
       clearInterval(nightTimer);

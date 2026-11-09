@@ -176,7 +176,8 @@ export default async function EventPage({ params }: { params: P }) {
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <article className="min-w-0">
-            <div className="relative overflow-hidden rounded-[var(--radius-l)] border border-line">
+            {/* The picture tapped in a list grows into this one (view transition "event-hero"). */}
+            <div data-event-hero className="event-hero relative overflow-hidden rounded-[var(--radius-l)] border border-line">
               {/* A real picture gets room, shown whole; without one, a short band keeps the title near the top. */}
               {e.imageUrl ? (
                 <HeroImage src={e.imageUrl} title={e.title} hue={e.posterHue} categorySlug={e.categorySlug} />
