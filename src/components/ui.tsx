@@ -116,6 +116,8 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
 function PictureViewer({ src, preview, title, onClose }: { src: string; preview: string; title: string; onClose: () => void }) {
   const [shown, setShown] = useState(preview);
   const close = useRef<HTMLButtonElement>(null);
+  const drag = useRef<{ y: number; id: number } | null>(null);
+  const [dy, setDy] = useState(0);
   // As large as the screen allows: a small picture is enlarged too (up to three times its
   // own size, past which it would only blur).
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -148,7 +150,31 @@ function PictureViewer({ src, preview, title, onClose }: { src: string; preview:
   return createPortal(
     <div className="picture-viewer panel-in" role="dialog" aria-modal="true" aria-label={`Picture: ${title}`} onClick={(e) => (e.stopPropagation(), onClose())}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={shown} alt={title} referrerPolicy="no-referrer" onClick={(e) => e.stopPropagation()} onLoad={(e) => fit(e.currentTarget)} style={size ? { width: size.w, height: size.h } : undefined} />
+      <img
+        src={shown}
+        alt={title}
+        referrerPolicy="no-referrer"
+        onClick={(e) => e.stopPropagation()}
+        onLoad={(e) => fit(e.currentTarget)}
+        // A swipe down (or up) on a touch screen sends the picture away, as in a photo app.
+        onPointerDown={(e) => {
+          if (e.pointerType !== "touch") return;
+          // A second finger means a pinch (to zoom), not a swipe.
+          if (drag.current) {
+            drag.current = { y: 0, id: -1 };
+            return setDy(0);
+          }
+          drag.current = { y: e.clientY, id: e.pointerId };
+        }}
+        onPointerMove={(e) => drag.current?.id === e.pointerId && setDy(e.clientY - drag.current.y)}
+        onPointerUp={() => {
+          if (Math.abs(dy) > 110) onClose();
+          drag.current = null;
+          setDy(0);
+        }}
+        onPointerCancel={() => ((drag.current = null), setDy(0))}
+        style={{ ...(size ? { width: size.w, height: size.h } : {}), transform: dy ? `translateY(${dy}px)` : undefined, opacity: dy ? Math.max(0.35, 1 - Math.abs(dy) / 400) : undefined, transition: dy ? "none" : "transform 180ms ease, opacity 180ms ease", touchAction: "pinch-zoom" }}
+      />
       <button ref={close} type="button" className="picture-close btn btn-icon" aria-label="Close the picture" onClick={(e) => (e.stopPropagation(), onClose())}>
         <X size={20} aria-hidden />
       </button>
