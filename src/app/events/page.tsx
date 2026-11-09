@@ -69,8 +69,8 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
 
   return (
     <>
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-8">
-        <div className="mb-6">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-5 sm:pt-8">
+        <div className="mb-4 sm:mb-6">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
               <h1 className="t-display">
@@ -88,12 +88,12 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
             </div>
             <Link href="/studio/new" className="btn btn-secondary btn-sm press max-sm:hidden">＋ List your event</Link>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2.5">
             <HerePill here={here} label={local ? "Near" : undefined} />
             {local ? (
               <Link href={`/events?${everywhere}`} className="t-small text-text-2 hover:text-text underline-offset-4 hover:underline">See everywhere</Link>
             ) : (
-              <p className="t-small text-text-2">Every category, every city, in one search.</p>
+              <p className="t-small text-text-2 max-sm:hidden">Every category, every city, in one search.</p>
             )}
           </div>
         </div>

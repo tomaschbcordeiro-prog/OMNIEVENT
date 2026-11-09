@@ -99,6 +99,8 @@ export interface EarthMapProps {
   padRight?: number;
   /** Screen space at the bottom taken by a panel (phones). */
   padBottom?: number;
+  /** Screen space at the top taken by the search and chips (phones). */
+  padTop?: number;
   onReady?: () => void;
   onFatal?: (reason: string) => void;
 }
@@ -337,12 +339,19 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       return;
     }
     mapRef.current = map;
-    map.setPadding({ top: 0, bottom: p.padBottom ?? 0, left: 0, right: p.padRight ?? 0 });
+    map.setPadding({ top: p.padTop ?? 0, bottom: p.padBottom ?? 0, left: 0, right: p.padRight ?? 0 });
     // Exposed for automated browser tests (read-only use).
     (window as unknown as { __omniMaps?: MLMap[] }).__omniMaps = [...((window as unknown as { __omniMaps?: MLMap[] }).__omniMaps ?? []), map];
     map.getCanvas().setAttribute("aria-label", p.ariaLabel ?? "Interactive map");
 
     map.on("load", () => {
+      // Phones: the map's credits start folded into their "i" button (a tap opens them), not
+      // spread across the bottom of a small screen.
+      if (window.innerWidth < 640) {
+        const attrib = box.current?.querySelector<HTMLElement>(".maplibregl-ctrl-attrib");
+        attrib?.classList.remove("maplibregl-compact-show");
+        attrib?.removeAttribute("open");
+      }
       for (const g of Object.keys(GROUP_HEX)) {
         if (!map.hasImage(`m1-${g}`)) map.addImage(`m1-${g}`, singleMarker(g), { pixelRatio: 2 });
         for (const b of SHARE_BUCKETS) if (!map.hasImage(`mc-${g}-${b}`)) map.addImage(`mc-${g}-${b}`, clusterMarker(g, b), { pixelRatio: 2 });
@@ -928,13 +937,14 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     if (!map) return;
     const right = props.padRight ?? 0;
     const bottom = props.padBottom ?? 0;
+    const top = props.padTop ?? 0;
     const now = map.getPadding();
-    if (Math.abs((now.right ?? 0) - right) < 1 && Math.abs((now.bottom ?? 0) - bottom) < 1) return;
-    const padding = { top: 0, bottom, left: 0, right };
+    if (Math.abs((now.right ?? 0) - right) < 1 && Math.abs((now.bottom ?? 0) - bottom) < 1 && Math.abs((now.top ?? 0) - top) < 1) return;
+    const padding = { top, bottom, left: 0, right };
     // A camera move in progress (a flight) takes the new padding at once rather than being stopped.
     if (latest.current.reducedMotion || tour.current || map.isMoving()) map.setPadding(padding);
     else map.easeTo({ padding, duration: 500 });
-  }, [props.padRight, props.padBottom]);
+  }, [props.padRight, props.padBottom, props.padTop]);
 
   // ---- camera requests (search results, cluster clicks, resets). User input interrupts them.
   useEffect(() => {

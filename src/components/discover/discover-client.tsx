@@ -3,10 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play,
-  ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane,
-} from "lucide-react";
+import { Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play, ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane, Ellipsis } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
 import { CommunityPulse } from "../community/pulse";
@@ -39,6 +36,8 @@ import type { Here } from "@/lib/here-shared";
 // MapLibre touches `window` on import, so the map only loads in the browser. Its download
 // starts as soon as this page's script runs, not when the map first renders.
 const loadEarthMap = () => import("../earth/earth-map");
+/** Phones, and any screen too short for the full layout (a phone on its side): the compact globe page (the `compact:` variant). */
+const COMPACT = "(max-width: 639px), (max-height: 520px)";
 const EarthMap = dynamic(() => loadEarthMap().then((m) => m.EarthMap), { ssr: false, loading: () => null });
 
 type ViewMode = "globe" | "map" | "list";
@@ -123,8 +122,31 @@ export function DiscoverClient() {
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
+  // Phones: the search at the top and the controls at the bottom leave the planet the room
+  // between them, and the globe is centred there (not behind them).
+  const topBox = useRef<HTMLDivElement>(null);
+  const bottomBox = useRef<HTMLDivElement>(null);
+  const [phonePad, setPhonePad] = useState({ top: 0, bottom: 0 });
+  useEffect(() => {
+    const measure = () => {
+      const r = root.current?.getBoundingClientRect();
+      const t = topBox.current?.getBoundingClientRect();
+      const b = bottomBox.current?.getBoundingClientRect();
+      if (!window.matchMedia(COMPACT).matches || !r || !t || !b || !t.height || !b.height) return setPhonePad((p) => (p.top || p.bottom ? { top: 0, bottom: 0 } : p));
+      const top = Math.max(0, Math.round(t.bottom - r.top + 6));
+      const bottom = Math.max(0, Math.round(r.bottom - b.top + 6));
+      setPhonePad((p) => (Math.abs(p.top - top) < 4 && Math.abs(p.bottom - bottom) < 4 ? p : { top, bottom }));
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    [root.current, topBox.current, bottomBox.current].forEach((el) => el && ro?.observe(el));
+    window.addEventListener("resize", measure);
+    return () => (ro?.disconnect(), window.removeEventListener("resize", measure));
+  }, []);
   // The map controls, whose icons say their names when tapped (TapLabel).
   const dockRef = useRef<HTMLDivElement>(null);
+  // Phones: the tools that don't fit beside the timeline, in a sheet with their names.
+  const [tools, setTools] = useState(false);
   // A first-visit hint on how to handle the globe; gone at the first touch or after a while.
   const [hint, setHint] = useState(true);
   useEffect(() => {
@@ -173,7 +195,10 @@ export function DiscoverClient() {
     if (p.ok) setFilters(p.filters);
     const narrow = window.innerWidth < 640;
     // The whole planet, as big as the screen allows.
-    let iv: CameraState = { ...HOME, zoom: fitGlobeZoom(window.innerWidth - (window.innerWidth >= 1024 ? 400 : 0), window.innerHeight) };
+    // Phones: sized to the room between the search and the controls (about 175 px of them,
+    // and the bottom bar), so the planet fills the width.
+    const phone = window.matchMedia(COMPACT).matches;
+    let iv: CameraState = { ...HOME, zoom: fitGlobeZoom(window.innerWidth - (window.innerWidth >= 1024 ? 400 : 0), phone ? window.innerHeight - 58 - 175 + 80 : window.innerHeight) };
     const at = num(sp.get("at"));
     const v = num(sp.get("v"));
     if (at.length >= 3 && at.slice(0, 3).every(Number.isFinite)) iv = { lat: at[0], lng: at[1], zoom: at[2], bearing: at[3] || 0, pitch: at[4] || 0 };
@@ -601,6 +626,20 @@ export function DiscoverClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady]);
 
+  // The bottom bar's globe, tapped on this page: the whole planet again.
+  useEffect(() => {
+    const home = () => {
+      setSelection(null);
+      setPlace(null);
+      setTools(false);
+      if (mode === "list") setMode("globe");
+      const w = window.innerWidth - (window.innerWidth >= 1024 ? 400 : 0);
+      fly({ ...HOME, zoom: fitGlobeZoom(w, window.innerHeight - phonePad.top - phonePad.bottom + 80) });
+    };
+    window.addEventListener("omni:globe", home);
+    return () => window.removeEventListener("omni:globe", home);
+  });
+
   const locate = () => {
     if (!navigator.geolocation) return setError("Location isn't available in this browser.");
     navigator.geolocation.getCurrentPosition(
@@ -627,17 +666,18 @@ export function DiscoverClient() {
     }
   };
 
+  const phoneRoom = !flightOn && mode !== "list" ? phonePad : { top: 0, bottom: 0 };
   const projection = mode === "map" ? "mercator" : "globe";
   const showMap = mode !== "list" && webgl && initialView && !mapFailure;
   const tilted = view.pitch > 10;
 
   return (
-    <div ref={root} className={`relative h-[100dvh] w-full overflow-hidden sky ${(space || base === "lights") && mode !== "list" ? "space" : ""}`}>
+    <div ref={root} style={{ "--map-bottom-pad": `${phoneRoom.bottom}px` } as React.CSSProperties} className={`globe-stage relative h-[calc(100dvh-var(--tabbar-h))] w-full overflow-hidden sky ${(space || base === "lights") && mode !== "list" ? "space" : ""}`}>
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
       {/* Behind the planet: a glow of light and a soft shadow below, so it floats. */}
-      {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space || base === "lights"} shift={padRight} />}
-      {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && !flightOn && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} />}
+      {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space || base === "lights"} shift={padRight} room={phoneRoom} />}
+      {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && !flightOn && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} room={phoneRoom} />}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
         {showMap && (
           <EarthMap
@@ -669,7 +709,8 @@ export function DiscoverClient() {
             onUserInteract={() => (setAutoRotate(false), setHint(false), flightOn && setFlightGrab((g) => g + 1))}
             onCamera={(zoom, lat) => setCam((c) => (c && Math.abs(c.zoom - zoom) < 0.02 && Math.abs(c.lat - lat) < 1 ? c : { zoom, lat }))}
             padRight={padRight}
-            padBottom={flightOn ? flightPadBottom() : 0}
+            padTop={phoneRoom.top}
+            padBottom={flightOn ? flightPadBottom() : phoneRoom.bottom}
             onReady={() => (setMapReady(true), setIntro(false))}
             onFatal={(r) => setMapFailure(r)}
           />
@@ -684,18 +725,19 @@ export function DiscoverClient() {
       </div>
 
       {/* ---------- Top: purpose + search + modes ---------- */}
-      <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] z-20 px-4 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
-        {/* A compact column in the corner: the globe is the page. */}
-        <div className="max-w-[min(34rem,100%)]">
+      <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] compact:top-[calc((var(--header-h)-3rem)/2)] z-20 px-4 compact:px-3 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
+        {/* A compact column in the corner: the globe is the page. On phones, the search shares
+            the top row with the account button and one row of chips follows: nothing else. */}
+        <div ref={topBox} className="max-w-[min(34rem,100%)]">
           <div className="pointer-events-auto">
-            <h1 className={`text-balance on-sky ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
+            <h1 className={`text-balance on-sky compact:sr-only ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
               <span className="block t-hero">One planet. <em className="text-white/85">Every experience.</em></span>
               <span className="max-sm:sr-only block font-medium text-[0.9375rem] leading-snug mt-1.5 text-white/90">
                 Spin it, tap a glowing marker, or ask for anything.
               </span>
             </h1>
             {!(view.zoom > 4 || place || mode === "list") && (
-              <div className="hero-ctas mt-3 flex items-center gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:no-scrollbar max-sm:-mx-4 max-sm:px-4 sm:flex-wrap">
+              <div className="hero-ctas mt-3 flex items-center gap-2 compact:hidden sm:flex-wrap">
                 {here && (
                   <div className="lg:hidden shrink-0">
                     <HerePill here={here} tone="glass" onChange={(h) => {
@@ -716,7 +758,7 @@ export function DiscoverClient() {
               </div>
             )}
             <SearchBox
-              className="mt-3.5"
+              className="mt-3.5 compact:mt-0 compact:mr-[5.75rem]"
               size="lg"
               mapCenter={{ lat: view.lat, lng: view.lng }}
               onQuery={(p) => applyParsed(p)}
@@ -745,7 +787,15 @@ export function DiscoverClient() {
             )}
           </div>
 
-          <div className="pointer-events-auto mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" role="group" aria-label="Event categories">
+          <div className="pointer-events-auto mt-3 compact:mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" role="group" aria-label="Event categories">
+            {here && (
+              <div className="hidden compact:block shrink-0">
+                <HerePill here={here} tone="glass" onChange={(h) => {
+                  setHere(h);
+                  if (h.city) fly({ lat: h.city.lat, lng: h.city.lng, zoom: 10.5 });
+                }} />
+              </div>
+            )}
             {GLOBE_MODES.map((m) => {
               const on = modeId === m.id;
               const hue = m.groups[0] ? GROUP_HEX[m.groups[0]] : undefined;
@@ -815,7 +865,7 @@ export function DiscoverClient() {
       )}
 
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
-      <div className={`absolute z-20 left-4 sm:left-6 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8"} ${flightOn ? "hidden" : ""}`}>
+      <div ref={bottomBox} className={`absolute z-20 left-4 sm:left-6 compact:left-3 compact:right-3 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8 compact:bottom-3"} ${flightOn ? "hidden" : ""}`}>
         {showLayers && mode !== "list" && (
           <LayersPanel base={base} layers={layers} onBase={(b) => {
             baseChosen.current = true;
@@ -828,6 +878,9 @@ export function DiscoverClient() {
           </button>
         )}
         {mode !== "list" && (
+          // Phones: the timeline and two round buttons share one row (spin, and the other tools).
+          <div className="flex items-end gap-2 compact:w-full">
+          <div className="min-w-0 compact:flex-1">
           <TimeBar
             filters={filters}
             onChange={(patch) => setFilters((f) => ({ ...f, ...patch, page: undefined }))}
@@ -839,11 +892,21 @@ export function DiscoverClient() {
             prefetch={prefetchDays}
             reduced={reduced}
           />
+          </div>
+          <div className="hidden compact:flex items-center gap-1.5 shrink-0 pb-px">
+            <button type="button" className="phone-tool phone-tool--spin press" aria-label="Spin the globe: land on a random event" onClick={startSpin}>
+              <Dices size={19} aria-hidden />
+            </button>
+            <button type="button" className="phone-tool press" aria-label="Map tools" aria-expanded={tools} onClick={() => setTools((t) => !t)}>
+              <Ellipsis size={19} aria-hidden />
+            </button>
+          </div>
+          </div>
         )}
         {showLegend && mode !== "list" && !showLayers && <LegendPanel onClose={() => setShowLegend(false)} />}
         {/* One slim glass dock: view, camera and map tools as icons, their names on hover. */}
         <TapLabel within={dockRef} />
-        <div ref={dockRef} className="glass-dock flex items-center gap-0.5 rounded-full p-1 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="toolbar" aria-label="Map controls">
+        <div ref={dockRef} className="glass-dock compact:hidden flex items-center gap-0.5 rounded-full p-1 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="toolbar" aria-label="Map controls">
           <div className="flex items-center gap-0.5" role="radiogroup" aria-label="View">
             {([
               ["globe", Globe2, "3D globe"],
@@ -921,6 +984,44 @@ export function DiscoverClient() {
           )}
         </div>
       </div>
+
+      {/* ---------- Phones: map tools, each with its name ---------- */}
+      {tools && mode !== "list" && !flightOn && (
+        <>
+          <button type="button" className="absolute inset-0 z-30 bg-black/25" aria-label="Close map tools" tabIndex={-1} onClick={() => setTools(false)} />
+          <section className="phone-tools-sheet panel-in" role="dialog" aria-modal="true" aria-label="Map tools">
+            <div className="flex items-center justify-between mb-2">
+              <p className="t-h3">Map tools</p>
+              <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Close" onClick={() => setTools(false)}>
+                <X size={16} aria-hidden />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-full bg-panel-2 mb-3" role="radiogroup" aria-label="View">
+              {([["globe", Globe2, "Globe"], ["map", MapIcon, "Map"], ["list", List, "List"]] as const).map(([m, Icon, label]) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} disabled={m !== "list" && webgl === false} className="phone-seg" onClick={() => {
+                  if (m === "list") setInitialView(mapApi.current?.getCamera() ?? view);
+                  setMode(m);
+                  setTools(false);
+                }}>
+                  <Icon size={16} aria-hidden /> {label}
+                </button>
+              ))}
+            </div>
+            <ul className="grid grid-cols-2 gap-2">
+              {mode === "globe" && (
+                <li><button type="button" className="phone-tile" disabled={reduced} onClick={() => (setAutoRotate((a) => !a), setTools(false))}>{autoRotate && !reduced ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}{autoRotate && !reduced ? "Stop turning" : "Let it turn"}</button></li>
+              )}
+              <li><button type="button" className="phone-tile" onClick={() => (setSelection(null), setPlace(null), fly({ ...HOME, zoom: fitGlobeZoom(window.innerWidth, window.innerHeight - phonePad.top - phonePad.bottom + 80) }), setTools(false))}><RotateCcw size={18} aria-hidden /> Whole planet</button></li>
+              <li><button type="button" className="phone-tile" onClick={() => (locate(), setTools(false))}><LocateFixed size={18} aria-hidden /> Near me</button></li>
+              <li><button type="button" className="phone-tile" onClick={() => (setPickMode(true), setTools(false))}><Crosshair size={18} aria-hidden /> Explore an area</button></li>
+              <li><button type="button" className="phone-tile" onClick={() => (setShowLegend(false), setShowLayers(true), setTools(false))}><Layers size={18} aria-hidden /> Map layers</button></li>
+              <li><button type="button" className="phone-tile" onClick={() => (setTools(false), startFlight())}><Plane size={18} aria-hidden /> Night Flight</button></li>
+              <li><Link href="/mixtape" className="phone-tile" onClick={() => setTools(false)}><span aria-hidden>📼</span> Mixtape</Link></li>
+              <li><button type="button" className="phone-tile" onClick={() => (setTools(false), startSpin())}><Dices size={18} aria-hidden /> Spin the globe</button></li>
+            </ul>
+          </section>
+        </>
+      )}
 
       {/* ---------- Status line ---------- */}
       <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none ${mode === "list" || flightOn ? "hidden" : "hidden md:block"}`} aria-live="polite">
@@ -1039,11 +1140,11 @@ export function DiscoverClient() {
  * Light behind the planet and a soft shadow beneath it, sized to the globe on screen. Only
  * while the whole planet is in view; drawn under the map, which is clear around the globe.
  */
-function GlobeAura({ zoom, lat, space, shift }: { zoom: number; lat: number; space: boolean; shift: number }) {
+function GlobeAura({ zoom, lat, space, shift, room }: { zoom: number; lat: number; space: boolean; shift: number; room: { top: number; bottom: number } }) {
   const r = globeRadiusPx(zoom, lat);
   if (zoom > 3.2 || !Number.isFinite(r)) return null;
   return (
-    <div className="pointer-events-none absolute inset-y-0 left-0 overflow-hidden" style={{ right: shift }} aria-hidden>
+    <div className="pointer-events-none absolute left-0 overflow-visible" style={{ right: shift, top: room.top, bottom: room.bottom }} aria-hidden>
       <div className={`globe-halo ${space ? "globe-halo--space" : ""}`} style={{ width: r * 2.9, height: r * 2.9 }} />
       <div className="globe-shadow" style={{ width: r * 1.5, height: r * 0.2, transform: `translate(-50%, ${r * 1.04}px)` }} />
     </div>
@@ -1051,13 +1152,13 @@ function GlobeAura({ zoom, lat, space, shift }: { zoom: number; lat: number; spa
 }
 
 /** How to handle the globe, shown on its lower part for a first-time visitor. */
-function GlobeHint({ zoom, lat, shift }: { zoom: number; lat: number; shift: number }) {
+function GlobeHint({ zoom, lat, shift, room }: { zoom: number; lat: number; shift: number; room: { top: number; bottom: number } }) {
   const [touch, setTouch] = useState(false);
   useEffect(() => setTouch(window.matchMedia("(pointer: coarse)").matches), []);
   const r = globeRadiusPx(zoom, lat);
   if (zoom > 3.2 || !Number.isFinite(r)) return null;
   return (
-    <p className="globe-hint pointer-events-none absolute z-10 left-1/2 glass-dock rounded-full px-3.5 py-1.5 t-micro font-semibold text-text whitespace-nowrap" style={{ top: `calc(50% + ${Math.round(r * 0.66)}px)`, left: `calc(50% - ${shift / 2}px)` }} role="note">
+    <p className="globe-hint pointer-events-none absolute z-10 left-1/2 glass-dock rounded-full px-3.5 py-1.5 t-micro font-semibold text-text whitespace-nowrap" style={{ top: `calc(${room.top}px + (100% - ${room.top + room.bottom}px) / 2 + ${Math.round(r * 0.66)}px)`, left: `calc(50% - ${shift / 2}px)` }} role="note">
       <span aria-hidden>👆</span> Drag to spin · {touch ? "Pinch" : "Scroll"} to zoom · Tap a glowing marker
     </p>
   );

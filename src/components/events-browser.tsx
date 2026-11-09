@@ -124,14 +124,14 @@ export function EventsBrowser({
             {pending && <Loader2 size={14} className="animate-spin" aria-hidden />}
             {result.total.toLocaleString()} {result.total === 1 ? "event" : "events"}
           </p>
-          <Link href={`/?${filtersToParams({ ...filters, page: undefined, pageSize: undefined, sort: undefined })}`} className="btn btn-secondary btn-sm">
-            <MapIcon size={14} aria-hidden /> Show on map
+          <Link href={`/?${filtersToParams({ ...filters, page: undefined, pageSize: undefined, sort: undefined })}`} className="btn btn-secondary btn-sm" aria-label="Show on map">
+            <MapIcon size={14} aria-hidden /> <span className="max-sm:hidden">Show on map</span>
           </Link>
           <button className="btn btn-secondary btn-sm lg:hidden" onClick={() => setDrawer(true)}>
             <SlidersHorizontal size={14} aria-hidden /> Filters{n ? <span className="text-cyan tnum">{n}</span> : null}
           </button>
           <label className="sr-only" htmlFor="sort">Sort by</label>
-          <select id="sort" className="field lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
+          <select id="sort" className="field max-sm:!h-9 max-sm:!text-[14px] lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
             <option value="date">Soonest first</option>
             <option value="relevance">Best match</option>
             <option value="price">Lowest price</option>

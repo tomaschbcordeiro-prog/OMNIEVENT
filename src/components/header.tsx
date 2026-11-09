@@ -4,7 +4,7 @@ import { ThemeToggle } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
@@ -42,7 +42,6 @@ export function Logo() {
 export function Header() {
   const path = usePathname();
   const user = useUser();
-  const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const t = (k: string) => translate(user.prefs.language, k);
   const isHome = path === "/";
@@ -62,7 +61,8 @@ export function Header() {
         Skip to content
       </a>
       <div className="mx-auto flex h-[var(--header-h)] max-w-[1600px] items-center gap-4 px-4 sm:px-6">
-        <div className={`flex items-center gap-2 ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] pl-3 pr-3 lg:pr-1 py-1.5 lg:py-1" : ""}`}>
+        {/* On the globe page on phones, the search takes this place (the bottom bar has the globe). */}
+        <div className={`flex items-center gap-2 ${isHome ? "compact:hidden rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] pl-3 pr-3 lg:pr-1 py-1.5 lg:py-1" : ""}`}>
         <Logo />
         <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-1 xl:ml-2">
           {NAV.map((n) => (
@@ -98,46 +98,11 @@ export function Header() {
         <ThemeToggle className={`max-lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} />
         <NotificationBell className={isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""} />
         <AccountMenu floating={isHome} />
-        <button className={`btn btn-ghost btn-icon lg:hidden ${isHome ? "rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-label={menu ? "Close menu" : "Open menu"} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
-          {menu ? <X size={19} aria-hidden /> : <Menu size={19} aria-hidden />}
-        </button>
+        {/* Phones and tablets: the menu is the bottom bar's "More" (MobileTabBar). */}
       </div>
       {search && !isHome && (
         <div className="hidden lg:block wide:hidden border-t border-line bg-panel shadow-lg px-6 py-3 panel-in">
           <SearchBox className="mx-auto max-w-2xl" autoFocus placeholder={t("search.placeholder")} />
-        </div>
-      )}
-      {menu && (
-        <div className="lg:hidden border-t border-line bg-panel shadow-lg px-4 pb-4 pt-3 panel-in">
-          {!isHome && <SearchBox className="mb-3" placeholder={t("search.short")} />}
-          <nav aria-label="Main mobile" className="grid gap-1">
-            {NAV.map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setMenu(false)} aria-current={isActive(n.href) ? "page" : undefined} className={n.premium ? "nav-premium flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : n.studio ? "nav-studio flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)]" : `flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-s)] ${isActive(n.href) ? "bg-text/[0.07]" : "text-text-2"}`}>
-                {n.studio ? (
-                  <>
-                    <span className="nav-studio-dot" aria-hidden /> {t(n.key)}
-                    <span className="ml-auto t-micro text-text-3">List your event</span>
-                  </>
-                ) : n.premium ? (
-                  <>
-                    <span className="nav-premium-star" aria-hidden>✦</span> <span className="nav-premium-text">{t(n.key)}</span>
-                    <span className="ml-auto rounded-full bg-[#2a1450] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-[#ffe29a]">New</span>
-                  </>
-                ) : n.fresh ? (
-                  <>
-                    {t(n.key)}
-                    <span className="ml-auto t-micro text-text-3">Plan a weekend</span>
-                  </>
-                ) : (
-                  t(n.key)
-                )}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-3 pt-3 border-t border-line flex items-center justify-between px-3">
-            <span className="t-small text-text-2">Light or dark</span>
-            <ThemeToggle className="border border-line-strong" />
-          </div>
         </div>
       )}
     </header>

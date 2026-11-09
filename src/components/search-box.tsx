@@ -218,7 +218,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
         <label htmlFor={`${listId}-input`} className="sr-only">
           Search events, artists, teams, venues and places
         </label>
-        <div className={`flex items-center gap-2 border bg-panel focus-within:border-cyan focus-within:shadow-[0_0_0_4px_rgb(20_99_255_/_0.18)] ${size === "lg" ? "h-14 px-5 rounded-full border-white shadow-[0_12px_32px_-12px_rgb(10_50_120_/_0.45)]" : "h-9 px-3 rounded-full border-line-strong"}`}>
+        <div className={`flex items-center gap-2 border bg-panel focus-within:border-cyan focus-within:shadow-[0_0_0_4px_rgb(20_99_255_/_0.18)] ${size === "lg" ? "h-12 px-4 sm:h-14 sm:px-5 rounded-full border-white shadow-[0_12px_32px_-12px_rgb(10_50_120_/_0.45)]" : "h-9 px-3 rounded-full border-line-strong"}`}>
           {loading ? <Loader2 size={size === "lg" ? 19 : 16} className="animate-spin text-cyan shrink-0" aria-hidden /> : <Search size={size === "lg" ? 19 : 16} className={`shrink-0 ${size === "lg" ? "text-cyan" : "text-text-3"}`} aria-hidden />}
           <input
             ref={input}
