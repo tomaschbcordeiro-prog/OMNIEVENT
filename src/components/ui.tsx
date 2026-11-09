@@ -3,7 +3,7 @@
 import {
   Music, Trophy, Drama, Laugh, Sparkles, Clapperboard, Presentation, Cpu, Frame, FerrisWheel, Utensils, MoonStar,
   Baby, Mountain, GraduationCap, Shirt, Landmark, CircleDot, Bookmark, BookmarkCheck, SearchX, TriangleAlert, Info,
-  type LucideIcon,
+  Expand, X, type LucideIcon,
 } from "lucide-react";
 import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
 import { formatMoney, STATUS_META } from "@/lib/format";
@@ -12,6 +12,7 @@ import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
 import { userActions, useUser } from "@/lib/user/store";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "./toast";
 import type { ReactNode } from "react";
 
@@ -57,6 +58,8 @@ export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number 
  */
 export function HeroImage({ src: original, title, hue, categorySlug }: { src: string; title: string; hue?: number; categorySlug: string }) {
   const [broken, setBroken] = useState(false);
+  // The picture shown large, over the page.
+  const [open, setOpen] = useState(false);
   // At the size it's shown; the original if that can't be made.
   const [full, setFull] = useState(false);
   const src = full ? original : (thumb(original, 480) ?? original);
@@ -82,9 +85,13 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
     setFit({ w: Math.min(100, ((img.naturalWidth * s) / b.width) * 100), h: Math.min(100, ((img.naturalHeight * s) / b.height) * 100) });
   }
   return (
-    <div ref={box} className="hero-img aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full">
+    <div ref={box} className="hero-img hero-zoomable aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full" onClick={() => setOpen(true)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={backdrop} alt="" aria-hidden className="hero-img-bg" referrerPolicy="no-referrer" decoding="async" />
+      <button type="button" className="hero-expand" aria-label={`See the picture of ${title} larger`} onClick={(e) => (e.stopPropagation(), setOpen(true))}>
+        <Expand size={16} aria-hidden />
+      </button>
+      {open && <PictureViewer src={original} preview={src} title={title} onClose={() => setOpen(false)} />}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -99,6 +106,54 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
         onError={() => (src !== original ? setFull(true) : setBroken(true))}
       />
     </div>
+  );
+}
+
+/**
+ * A picture as large as the screen allows, over a dark backdrop: the resized copy at once,
+ * then the original once it has loaded. Closes with Escape, a tap anywhere or the button.
+ */
+function PictureViewer({ src, preview, title, onClose }: { src: string; preview: string; title: string; onClose: () => void }) {
+  const [shown, setShown] = useState(preview);
+  const close = useRef<HTMLButtonElement>(null);
+  // As large as the screen allows: a small picture is enlarged too (up to three times its
+  // own size, past which it would only blur).
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const fit = (img: HTMLImageElement) => {
+    if (!img.naturalWidth) return;
+    const s = Math.min((window.innerWidth * 0.96) / img.naturalWidth, (window.innerHeight * 0.88) / img.naturalHeight, 3);
+    setSize({ w: Math.round(img.naturalWidth * s), h: Math.round(img.naturalHeight * s) });
+  };
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    close.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // The full picture, swapped in once it's here (it may weigh megabytes).
+    const full = new Image();
+    full.referrerPolicy = "no-referrer";
+    full.onload = () => setShown(src);
+    full.src = src;
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      full.onload = null;
+      before?.focus();
+    };
+  }, [src, onClose]);
+  // Over everything else on the page, whatever its ancestors do (a moving or isolated parent
+  // would hold a fixed layer inside it).
+  return createPortal(
+    <div className="picture-viewer panel-in" role="dialog" aria-modal="true" aria-label={`Picture: ${title}`} onClick={(e) => (e.stopPropagation(), onClose())}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={shown} alt={title} referrerPolicy="no-referrer" onClick={(e) => e.stopPropagation()} onLoad={(e) => fit(e.currentTarget)} style={size ? { width: size.w, height: size.h } : undefined} />
+      <button ref={close} type="button" className="picture-close btn btn-icon" aria-label="Close the picture" onClick={(e) => (e.stopPropagation(), onClose())}>
+        <X size={20} aria-hidden />
+      </button>
+    </div>,
+    document.body,
   );
 }
 

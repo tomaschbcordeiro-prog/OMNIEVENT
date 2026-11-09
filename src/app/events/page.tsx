@@ -77,7 +77,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
                 {asked || filters.q ? (
                   <>Results for <em>“{asked ?? filters.q}”</em></>
                 ) : filters.near ? (
-                  <>Events near <em>{filters.nearLabel?.split(",")[0] ?? "the selected point"}</em></>
+                  filters.nearLabel === "Near you" ? <>Events <em>near you</em></> : <>Events near <em>{filters.nearLabel?.split(",")[0] ?? "the selected point"}</em></>
                 ) : cityName ? (
                   <>What&apos;s on in <em>{cityName}</em></>
                 ) : (

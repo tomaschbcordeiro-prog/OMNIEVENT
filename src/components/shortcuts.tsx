@@ -89,6 +89,8 @@ export function Shortcuts() {
           <dd>Search</dd>
           <dt><kbd className="kbd">?</kbd></dt>
           <dd>Show or hide this list</dd>
+          <dt><kbd className="kbd">j</kbd> <kbd className="kbd">k</kbd></dt>
+          <dd>Next or previous event in a list (Enter opens it)</dd>
           {GO.map(([k, , label]) => (
             <div key={k} className="contents">
               <dt><kbd className="kbd">g</kbd> <kbd className="kbd">{k}</kbd></dt>

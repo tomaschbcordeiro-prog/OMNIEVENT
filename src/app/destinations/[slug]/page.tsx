@@ -227,7 +227,7 @@ export default async function DestinationPage({ params, searchParams }: { params
             <ContinueSearch keep={["near", "nearLabel", "city", "country", "continent"]} />
           </Suspense>
           <h2 id="alltitle" className="t-h2 mb-4">Everything in {d.name}</h2>
-          <EventsBrowser result={result} filters={user} facets={result.facets} basePath={`/destinations/${d.slug}`} />
+          <EventsBrowser result={result} filters={user} query={filters} facets={result.facets} basePath={`/destinations/${d.slug}`} />
         </section>
       </main>
       {/* A server that had only just started: the rest of the catalogue is on its way. */}

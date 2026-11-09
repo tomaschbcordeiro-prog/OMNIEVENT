@@ -21,6 +21,7 @@ import { EventActionBar } from "@/components/event-action-bar";
 import { ListedBy } from "@/components/create/my-events";
 import { Countdown } from "@/components/countdown";
 import { DayForecast } from "@/components/weather";
+import { TileStrip } from "@/components/tile-strip";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -395,7 +396,7 @@ export default async function EventPage({ params }: { params: P }) {
                       <h2 id="more-dates" className="t-h3">More dates: {lead.name}</h2>
                       <Link href={`/participants/${lead.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
                     </div>
-                    <ul className="tile-strip no-scrollbar mt-3">{moreDates.map((c) => <EventTile key={c.id} c={c} />)}</ul>
+                    <TileStrip label={`More dates: ${lead.name}`}>{moreDates.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
                 )}
                 {sameVenue.length > 0 && (
@@ -404,7 +405,7 @@ export default async function EventPage({ params }: { params: P }) {
                       <h2 id="same" className="t-h3">Also at {v.name}</h2>
                       <Link href={`/venues/${v.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
                     </div>
-                    <ul className="tile-strip no-scrollbar mt-3">{sameVenue.map((c) => <EventTile key={c.id} c={c} />)}</ul>
+                    <TileStrip label={`Also at ${v.name}`}>{sameVenue.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
                 )}
                 {nearby.length > 0 && (
@@ -413,7 +414,7 @@ export default async function EventPage({ params }: { params: P }) {
                       <h2 id="near" className="t-h3">Nearby, soon</h2>
                       {v.cityId && <Link href={`/events?city=${v.cityId}`} className="t-small text-text-2 hover:text-text shrink-0">More in {v.city} →</Link>}
                     </div>
-                    <ul className="tile-strip no-scrollbar mt-3">{nearby.map((c) => <EventTile key={c.id} c={c} />)}</ul>
+                    <TileStrip label="Nearby, soon">{nearby.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
                 )}
               </div>
