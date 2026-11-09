@@ -4148,3 +4148,83 @@ mark.hit {
     animation: none;
   }
 }
+
+/* Calendar view of a search: each day shaded by how much is on. */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.cal-weekday {
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  padding-bottom: 2px;
+}
+.cal-day {
+  --heat: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 3.75rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--cyan) calc(var(--heat) * 1%), var(--panel));
+  color: var(--text);
+  text-align: left;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+.cal-day:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--cyan);
+  box-shadow: 0 10px 22px -14px rgb(15 90 230 / 0.6);
+}
+.cal-day:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.cal-day:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.cal-day[data-today] {
+  outline: 2px solid var(--sun);
+  outline-offset: 1px;
+}
+.cal-day[data-picked] {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.cal-num {
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+.cal-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  /* Full-strength text: it sits on a shaded day. */
+  color: var(--text);
+}
+@media (max-width: 480px) {
+  .cal-grid {
+    gap: 4px;
+  }
+  .cal-day {
+    min-height: 3.25rem;
+    padding: 0.3rem 0.35rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-day {
+    transition: none;
+  }
+}

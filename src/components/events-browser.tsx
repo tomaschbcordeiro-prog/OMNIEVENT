@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUp, LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
+import { ArrowUp, CalendarDays, LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
 import { rememberSearch } from "@/lib/search/session";
 import { hasWhereOrWhen } from "@/lib/search/summary";
 import type { EventCard, Paged, SearchFilters } from "@/lib/types";
@@ -13,6 +13,7 @@ import { EventRow, EventTile } from "./event-card";
 import { EmptyState, ShapeGlyph } from "./ui";
 import { FilterForm, ActiveFilters } from "./discover/filters";
 import { QuickWhen } from "./quick-when";
+import { CalendarView } from "./calendar-view";
 
 /**
  * Filter state lives in the URL. Every change navigates, the server re-renders
@@ -42,15 +43,16 @@ export function EventsBrowser({
   const path = usePathname();
   const [pending, start] = useTransition();
   // List or grid, as the visitor last chose.
-  const [layout, setLayoutState] = useState<"list" | "grid">("list");
+  const [layout, setLayoutState] = useState<"list" | "grid" | "calendar">("list");
   useEffect(() => {
     try {
-      if (localStorage.getItem("omnievent:layout") === "grid") setLayoutState("grid");
+      const saved = localStorage.getItem("omnievent:layout");
+      if (saved === "grid" || saved === "calendar") setLayoutState(saved);
     } catch {
       // storage unavailable
     }
   }, []);
-  const setLayout = (l: "list" | "grid") => {
+  const setLayout = (l: "list" | "grid" | "calendar") => {
     setLayoutState(l);
     try {
       localStorage.setItem("omnievent:layout", l);
@@ -143,6 +145,9 @@ export function EventsBrowser({
             <button role="radio" aria-checked={layout === "grid"} aria-label="Grid layout" className={`btn btn-sm btn-icon !h-6 ${layout === "grid" ? "bg-text/[0.08]" : "btn-ghost"}`} onClick={() => setLayout("grid")}>
               <LayoutGrid size={14} aria-hidden />
             </button>
+            <button role="radio" aria-checked={layout === "calendar"} aria-label="Calendar: events per day" title="Calendar" className={`btn btn-sm btn-icon !h-6 ${layout === "calendar" ? "bg-text/[0.08]" : "btn-ghost"}`} onClick={() => setLayout("calendar")}>
+              <CalendarDays size={14} aria-hidden />
+            </button>
           </div>
         </div>
 
@@ -151,7 +156,10 @@ export function EventsBrowser({
         </div>
 
         <div className={pending ? "opacity-60 transition-opacity" : ""}>
-          {items.length === 0 ? (
+          {layout === "calendar" ? (
+            // A day picked on the calendar shows that day's events as a list.
+            <CalendarView query={query ?? filters} onPickDay={(day) => (setLayout("list"), go({ ...filters, from: day, to: day, page: undefined }))} />
+          ) : items.length === 0 ? (
             <EmptyState
               title="No events match"
               body={
@@ -185,7 +193,7 @@ export function EventsBrowser({
           )}
         </div>
 
-        {result.total > 0 && (
+        {result.total > 0 && layout !== "calendar" && (
           <nav className="mt-6 border-t border-line pt-4 grid justify-items-center gap-3" aria-label="More events">
             <p className="t-small text-text-2 tnum" aria-live="polite">
               {more.done ? (result.total > items.length ? `${items.length.toLocaleString()} shown` : `That's all ${result.total.toLocaleString()}`) : `${items.length.toLocaleString()} of ${result.total.toLocaleString()}`}
