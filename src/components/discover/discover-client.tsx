@@ -21,6 +21,7 @@ import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
 import { CategoryIcon, categoryLabel, DemoBadge, EmptyState, ErrorState, Poster, Price, SaveButton, ShapeGlyph, StatusBadge, Notice } from "../ui";
 import { FilterForm, ActiveFilters, datePresets } from "./filters";
+import { TapLabel } from "../tap-label";
 import { TimeBar } from "../earth/time-bar";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
@@ -122,6 +123,8 @@ export function DiscoverClient() {
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, []);
+  // The map controls, whose icons say their names when tapped (TapLabel).
+  const dockRef = useRef<HTMLDivElement>(null);
   // A first-visit hint on how to handle the globe; gone at the first touch or after a while.
   const [hint, setHint] = useState(true);
   useEffect(() => {
@@ -839,7 +842,8 @@ export function DiscoverClient() {
         )}
         {showLegend && mode !== "list" && !showLayers && <LegendPanel onClose={() => setShowLegend(false)} />}
         {/* One slim glass dock: view, camera and map tools as icons, their names on hover. */}
-        <div className="glass-dock flex items-center gap-0.5 rounded-full p-1 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="toolbar" aria-label="Map controls">
+        <TapLabel within={dockRef} />
+        <div ref={dockRef} className="glass-dock flex items-center gap-0.5 rounded-full p-1 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="toolbar" aria-label="Map controls">
           <div className="flex items-center gap-0.5" role="radiogroup" aria-label="View">
             {([
               ["globe", Globe2, "3D globe"],

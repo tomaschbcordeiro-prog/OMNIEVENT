@@ -15,6 +15,8 @@ export interface Toast {
   linkLabel?: string;
   /** Badges and milestones get a bigger, sunnier card. */
   celebrate?: boolean;
+  /** One thing to do about it, such as undoing what just happened. */
+  action?: { label: string; run: () => void };
 }
 
 let toasts: Toast[] = [];
@@ -26,7 +28,8 @@ export function toast(t: Omit<Toast, "id">) {
   const id = next++;
   toasts = [...toasts.slice(-2), { ...t, id }];
   emit();
-  setTimeout(() => dismiss(id), t.celebrate ? 6000 : 3200);
+  // Longer when there's something to do about it (time to reach "Undo").
+  setTimeout(() => dismiss(id), t.celebrate ? 6000 : t.action ? 5500 : 3200);
 }
 
 function dismiss(id: number) {
@@ -60,6 +63,11 @@ export function Toaster() {
             <p className="font-semibold leading-tight">{t.title}</p>
             {t.body && <p className={`t-small leading-snug ${t.celebrate ? "text-text/80" : "text-white/75"}`}>{t.body}</p>}
           </div>
+          {t.action && (
+            <button type="button" className="shrink-0 t-small font-semibold text-sun underline-offset-2 hover:underline" onClick={() => (t.action!.run(), dismiss(t.id))}>
+              {t.action.label}
+            </button>
+          )}
           {t.href && (
             <Link href={t.href} className={`shrink-0 t-small font-semibold underline-offset-2 hover:underline ${t.celebrate ? "text-text" : "text-sun"}`} onClick={() => dismiss(t.id)}>
               {t.linkLabel ?? "Open"}

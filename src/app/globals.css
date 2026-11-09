@@ -4108,3 +4108,43 @@ mark.hit {
   width: 1px;
   background: var(--line-strong);
 }
+
+/* An icon button's name, shown for a moment above it when tapped on a touch screen. */
+.tap-label {
+  position: fixed;
+  z-index: 90;
+  transform: translate(-50%, calc(-100% - 10px));
+  max-width: min(70vw, 260px);
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--on-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.5);
+  animation: tap-label 1400ms ease both;
+}
+@keyframes tap-label {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-label {
+    animation: none;
+  }
+}

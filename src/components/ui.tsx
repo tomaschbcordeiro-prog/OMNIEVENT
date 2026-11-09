@@ -266,7 +266,7 @@ export function SaveButton({ id, title, compact = false, className = "" }: { id:
         e.stopPropagation();
         userActions.toggleSave(id);
         if (!saved) setBurst((n) => n + 1);
-        toast(saved ? { title: "Removed from saved", emoji: "🗑️" } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
+        toast(saved ? { title: "Removed from saved", body: title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.toggleSave(id) } } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
       className={`save-btn btn press ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
     >
