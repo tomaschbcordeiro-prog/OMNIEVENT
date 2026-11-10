@@ -17,6 +17,7 @@ import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
 import { formatEventDate, formatEventTime, localDateKey, tzAbbrev } from "@/lib/format";
 import { EventRow } from "../event-card";
+import { HowWasIt } from "@/components/how-was-it";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { ClusterMap } from "../cluster-map";
 import { MyCommunity } from "../community/my-community";
@@ -152,6 +153,7 @@ function Overview({ cards, loading, onTab }: { cards: Map<string, EventCard>; lo
         <p className="t-lede text-text-2 mt-2">Your saved events, plans, trips and alerts in one place, with picks based on what you like.</p>
       </header>
       {!user.onboarded && <Onboarding />}
+      <HowWasIt cards={cards} />
       <section>
         <div className="flex items-baseline justify-between">
           <h2 className="t-h2">Coming up for you</h2>

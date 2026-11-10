@@ -21,6 +21,8 @@ export interface Profile {
   hue: number;
   bio?: string;
   createdAt: string;
+  /** Member number, in the order people joined (missing on profiles made before numbering). */
+  no?: number;
 }
 
 export interface PublicProfile extends Profile {
@@ -111,6 +113,8 @@ export interface FeedItem {
 
 export interface CommunityHome {
   stats: { members: number; posts: number; ratings: number; plans: number };
+  /** The newest members, newest first: the welcome row. */
+  newcomers?: PublicProfile[];
   feed: FeedItem[];
   trending: (TargetMeta & Summary)[];
   topRated: (TargetMeta & Summary)[];
@@ -121,6 +125,7 @@ export interface CommunityHome {
 
 export const BADGES: Record<string, { label: string; emoji: string; hint: string }> = {
   newcomer: { label: "Newcomer", emoji: "🌱", hint: "Joined the community" },
+  founding: { label: "Founding member", emoji: "✨", hint: "One of the first 1,000 members" },
   voice: { label: "First words", emoji: "💬", hint: "Wrote a first post" },
   critic: { label: "Critic", emoji: "⭐", hint: "Rated 5 places or events" },
   helper: { label: "Helpful", emoji: "🤝", hint: "Got 10 likes" },
@@ -131,6 +136,13 @@ export const BADGES: Record<string, { label: string; emoji: string; hint: string
   legend: { label: "Local legend", emoji: "🏆", hint: "Earned 250 points" },
 };
 
+/** The first members are founding members: the first 1,000, and everyone who joined before launch. */
+export const FOUNDING_LIMIT = 1000;
+export const FOUNDING_UNTIL = "2027-03-01T00:00:00Z";
+export function isFounding(p: { no?: number; createdAt: string }): boolean {
+  return p.no ? p.no <= FOUNDING_LIMIT : p.createdAt < FOUNDING_UNTIL;
+}
+
 export const AVATARS = ["🦊", "🐙", "🦉", "🐝", "🦄", "🐬", "🐸", "🦁", "🐼", "🐧", "🦋", "🐢", "🐳", "🦜", "🐨", "🦩", "🌻", "🌵", "🍉", "🎸", "🎧", "⚽", "🎭", "🎨", "🚲", "🛹", "🌍", "🌙", "⚡", "🔥"];
 
 export const KIND_META: Record<PostKind, { label: string; emoji: string; placeholder: string }> = {
@@ -139,6 +151,46 @@ export const KIND_META: Record<PostKind, { label: string; emoji: string; placeho
   tip: { label: "Tip", emoji: "💡", placeholder: "Share a tip: getting there, where to eat, which entrance…" },
   meetup: { label: "Meet up", emoji: "👋", placeholder: "Going alone? Suggest a place to meet before or after…" },
   review: { label: "Review", emoji: "⭐", placeholder: "How was it? What should others know?" },
+};
+
+/**
+ * Ways to start a conversation, one tap each, for every kind of page: a blank box is the
+ * hardest thing to write in, and a question already half-asked gets people talking. Each
+ * sets the kind of post and the opening words (the writer finishes the sentence).
+ */
+export type StarterMode = "event-upcoming" | "event-past" | "place" | "person" | "city" | "club";
+export const STARTERS: Record<StarterMode, { kind: PostKind; label: string; text: string }[]> = {
+  "event-upcoming": [
+    { kind: "meetup", label: "Going alone", text: "Going on my own. Anyone up for meeting before, at " },
+    { kind: "question", label: "Worth it?", text: "Is this worth it for a first-timer? " },
+    { kind: "question", label: "Getting there", text: "What's the easiest way to get there and back? " },
+    { kind: "tip", label: "Share a tip", text: "Tip for anyone going: " },
+  ],
+  "event-past": [
+    { kind: "review", label: "Highlight", text: "The highlight for me was " },
+    { kind: "comment", label: "Photos?", text: "Anyone take photos? " },
+    { kind: "tip", label: "Next time", text: "If you go next time: " },
+  ],
+  place: [
+    { kind: "tip", label: "Best seats", text: "Best place to sit or stand here: " },
+    { kind: "question", label: "Bags & coats", text: "Is there a cloakroom, and can you bring a bag? " },
+    { kind: "tip", label: "Eat nearby", text: "Good spot to eat or drink nearby: " },
+  ],
+  person: [
+    { kind: "review", label: "Saw them live", text: "Saw them live: " },
+    { kind: "question", label: "Next tour", text: "Any word on when they'll be back? " },
+    { kind: "comment", label: "Favourite", text: "My favourite of theirs is " },
+  ],
+  city: [
+    { kind: "tip", label: "Hidden gem", text: "Hidden gem this week: " },
+    { kind: "question", label: "Tonight?", text: "What's on tonight that locals actually go to? " },
+    { kind: "meetup", label: "New in town", text: "New in town. Anyone want to go out this weekend? " },
+  ],
+  club: [
+    { kind: "comment", label: "What next?", text: "What should we go to next? " },
+    { kind: "meetup", label: "Who's in?", text: "Who's in for " },
+    { kind: "tip", label: "Found one", text: "Found one we'd like: " },
+  ],
 };
 
 export interface Notice {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
-import { KIND_META, REPORT_REASONS, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
+import { KIND_META, REPORT_REASONS, STARTERS, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
 import { safetyProblem } from "@/lib/community/safety";
 import { MeetupJoin, NewPostsPill, Reactions, RichText, useMentions, useNewPosts } from "./interact";
 import { ago, communityGet, communityPost, CommunityRequestError, refreshMe, useMe } from "@/lib/community/client";
@@ -345,6 +345,19 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
   const [busy, setBusy] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const mentions = useMentions(text, setText, people);
+  // Arrived from "How was it?" (?review=4): the review box open with those stars set.
+  useEffect(() => {
+    if (parent || !kinds.includes("review")) return;
+    const r = new URLSearchParams(window.location.search).get("review");
+    if (r === null) return;
+    setKind("review");
+    const n = Number(r);
+    if (Number.isInteger(n) && n >= 1 && n <= 5) setRating(n);
+    // A review of an event at this place, started from "How was it?": it names the event.
+    const about = new URLSearchParams(window.location.search).get("about")?.slice(0, 80).trim();
+    if (about) setText(`${about}: `);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // The same rules the server applies, said while typing rather than after sending.
   const problem = text.trim().length > 6 ? safetyProblem(text) : undefined;
   const isReview = kind === "review" && !parent;
@@ -370,6 +383,32 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
           {kinds.map((k) => (
             <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`chip press ${kind === k ? "!bg-text !text-on-ink !border-text" : ""}`}>
               <span aria-hidden>{KIND_META[k].emoji}</span> {KIND_META[k].label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!parent && !text && (
+        // A half-written opening to finish, one tap each.
+        <div className="mb-3 flex flex-wrap items-center gap-1.5" aria-label="Start with">
+          <span className="t-small text-text-3 mr-0.5">Start with</span>
+          {STARTERS[mode].filter((s) => kinds.includes(s.kind)).map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              className="starter press"
+              onClick={() => {
+                setKind(s.kind);
+                setText(s.text);
+                if (!profile?.username) void requireMember(false);
+                requestAnimationFrame(() => {
+                  const el = area.current;
+                  if (!el) return;
+                  el.focus();
+                  el.setSelectionRange(s.text.length, s.text.length);
+                });
+              }}
+            >
+              {s.label}
             </button>
           ))}
         </div>

@@ -26,6 +26,7 @@ import { TileStrip } from "@/components/tile-strip";
 import { KeepExploring } from "@/components/keep-exploring";
 import { TrailPager } from "@/components/event-trail";
 import { TicketStamp } from "@/components/ticket";
+import { snapOf } from "@/lib/after-event";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -163,6 +164,8 @@ export default async function EventPage({ params }: { params: P }) {
   // small to ever count as the page's main picture).
   const ambient = e.imageUrl ? thumb(e.imageUrl, 64) : undefined;
   const stub = formatShortDate(e.start, e.timeZone);
+  // Kept with the event when it's saved, so it can still be shown (and asked about) once it's over.
+  const snap = snapOf({ slug: e.slug, title: e.title, start: e.start, timeZone: e.timeZone, eventType: e.eventType, hoursUnknown: e.hoursUnknown, venueName: v.name, venueSlug: v.slug, imageUrl: e.imageUrl, posterHue: e.posterHue, categorySlug: e.categorySlug });
 
   return (
     <>
@@ -493,7 +496,7 @@ export default async function EventPage({ params }: { params: P }) {
                 )}
                 <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
-                  <SaveButton id={e.id} title={e.title} />
+                  <SaveButton id={e.id} title={e.title} snap={snap} />
                   <AddToTrip eventId={e.id} />
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />
@@ -538,7 +541,7 @@ export default async function EventPage({ params }: { params: P }) {
             </p>
           </section>
         </div>
-        <EventActionBar id={e.id} title={e.title} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
+        <EventActionBar id={e.id} title={e.title} snap={snap} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
       </main>
       <Footer />
       {/* Room for the phone action bar, so it never covers the footer. */}

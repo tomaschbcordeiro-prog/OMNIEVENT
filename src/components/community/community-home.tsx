@@ -187,6 +187,23 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
         </section>
 
         <section className="grid gap-6 self-start lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+          {home?.newcomers && home.newcomers.length > 0 && (
+            // Everyone who joins is welcomed in public: a hello costs one tap.
+            <section aria-labelledby="new-h" className="surface rounded-[var(--radius-l)] p-4">
+              <h2 id="new-h" className="t-h3 flex items-center gap-2"><Sparkles size={18} className="text-violet" aria-hidden />Just joined</h2>
+              <p className="t-small text-text-2 mt-0.5">Say hello and follow them: the first days decide whether people stay.</p>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {home.newcomers.slice(0, 8).map((p) => (
+                  <li key={p.id}>
+                    <Link href={`/community/u/${p.username ?? p.id}`} className="newcomer press" title={`${p.name}${p.no ? `, member no. ${p.no}` : ""}`}>
+                      <Avatar p={p} size={40} />
+                      <span className="t-micro font-semibold truncate max-w-[4.5rem]">{p.firstName ?? p.name.split(" ")[0]}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <SideList icon={<Flame size={18} className="text-coral" aria-hidden />} title="Trending this week" empty="Plans and posts this week will show up here." items={home?.trending} render={(t) => (
             <>
               <span className="t-micro text-text-3 tnum flex gap-2">

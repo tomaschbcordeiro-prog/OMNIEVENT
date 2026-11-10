@@ -9,6 +9,7 @@ import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/li
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
 import { useUser } from "@/lib/user/store";
 import { GROUP_HEX } from "@/lib/categories";
+import { snapOf } from "@/lib/after-event";
 import { Marked } from "./marked";
 
 export { Marked };
@@ -116,7 +117,7 @@ export function EventRow({
           {body}
         </Link>
       )}
-      <SaveButton id={c.id} title={c.title} compact />
+      <SaveButton id={c.id} title={c.title} compact snap={snapOf(c)} />
     </li>
   );
 }
@@ -154,7 +155,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
         </div>
       </Link>
       <div className="absolute right-2 top-2">
-        <SaveButton id={c.id} title={c.title} compact className="bg-panel/85 backdrop-blur" />
+        <SaveButton id={c.id} title={c.title} compact className="bg-panel/85 backdrop-blur" snap={snapOf(c)} />
       </div>
     </li>
   );

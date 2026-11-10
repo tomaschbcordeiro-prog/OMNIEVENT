@@ -45,10 +45,29 @@ export interface SavedSearch {
   createdAt: string;
 }
 
+/**
+ * What a saved event looked like when it was saved: enough to show it, and to ask how it was,
+ * after it has happened (events leave the catalogue once they're over).
+ */
+export interface SavedSnap {
+  slug: string;
+  title: string;
+  start: string;
+  timeZone: string;
+  eventType: string;
+  hoursUnknown?: boolean;
+  venueName: string;
+  /** Where to review it once the event itself is no longer listed. */
+  venueSlug?: string;
+  imageUrl?: string;
+  posterHue?: number;
+  categorySlug: string;
+}
+
 export interface UserData {
   version: 1;
   searches: SavedSearch[];
-  saved: { id: string; at: string }[];
+  saved: { id: string; at: string; snap?: SavedSnap }[];
   follows: { kind: FollowKind; id: string; name: string; at: string }[];
   trips: Trip[];
   recent: string[]; // event ids
@@ -154,10 +173,10 @@ const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 export const userActions = {
-  toggleSave(id: string) {
+  toggleSave(id: string, snap?: SavedSnap) {
     update((d) => ({
       ...d,
-      saved: d.saved.some((s) => s.id === id) ? d.saved.filter((s) => s.id !== id) : [{ id, at: now() }, ...d.saved],
+      saved: d.saved.some((s) => s.id === id) ? d.saved.filter((s) => s.id !== id) : [{ id, at: now(), ...(snap ? { snap } : {}) }, ...d.saved],
     }));
   },
   toggleFollow(kind: FollowKind, id: string, name: string) {

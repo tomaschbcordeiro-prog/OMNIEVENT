@@ -10,7 +10,7 @@ import { formatMoney, STATUS_META } from "@/lib/format";
 import { thumb } from "@/lib/thumb";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
-import { userActions, useUser } from "@/lib/user/store";
+import { userActions, useUser, type SavedSnap } from "@/lib/user/store";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "./toast";
@@ -279,7 +279,7 @@ export function Price({
   );
 }
 
-export function SaveButton({ id, title, compact = false, className = "" }: { id: string; title: string; compact?: boolean; className?: string }) {
+export function SaveButton({ id, title, compact = false, className = "", snap }: { id: string; title: string; compact?: boolean; className?: string; /** Kept with the saved event, to show it once it's over. */ snap?: SavedSnap }) {
   const user = useUser();
   const saved = user.saved.some((s) => s.id === id);
   const Icon = saved ? BookmarkCheck : Bookmark;
@@ -295,9 +295,9 @@ export function SaveButton({ id, title, compact = false, className = "" }: { id:
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        userActions.toggleSave(id);
+        userActions.toggleSave(id, snap);
         if (!saved) setBurst((n) => n + 1);
-        toast(saved ? { title: "Removed from saved", body: title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.toggleSave(id) } } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
+        toast(saved ? { title: "Removed from saved", body: title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.toggleSave(id, snap) } } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
       className={`save-btn btn press ${compact ? "btn-sm btn-icon" : "btn-secondary btn-sm"} ${saved ? "text-cyan" : compact ? "btn-ghost" : ""} ${className}`}
     >

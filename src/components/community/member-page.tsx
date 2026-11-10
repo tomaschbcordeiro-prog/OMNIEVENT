@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Ban, CalendarHeart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
-import { BADGES, KIND_META, type FeedItem, type PublicProfile, type TargetMeta } from "@/lib/community/types";
+import { BADGES, KIND_META, isFounding, type FeedItem, type PublicProfile, type TargetMeta } from "@/lib/community/types";
 import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
 import { Poster } from "../ui";
@@ -49,7 +49,7 @@ export function MemberPage({ id }: { id: string }) {
       <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4"><Link href="/community" className="inline-block py-1 hover:text-text">Community</Link></nav>
       <header className="surface rounded-[var(--radius-l)] p-5 sm:p-6 flex flex-wrap items-center gap-5 panel-in">
         <Avatar p={p} size={88} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[15rem] flex-1">
           <h1 className="t-h1">{p.name}</h1>
           {p.username && <p className="t-body text-text-2">@{p.username}</p>}
           {p.bio && <p className="t-body text-text-2 mt-1">{p.bio}</p>}
@@ -58,6 +58,7 @@ export function MemberPage({ id }: { id: string }) {
             {p.badges.map((b) => <span key={b} title={BADGES[b]?.hint} className="rounded-full bg-sun/15 px-2 py-0.5 t-micro font-semibold">{BADGES[b]?.emoji} {BADGES[b]?.label}</span>)}
           </div>
         </div>
+        <MemberPass p={p} />
         <dl className="grid grid-cols-4 gap-2 text-center w-full sm:w-auto">
           {([["Followers", m.follow?.followers ?? 0], ["Following", m.follow?.following ?? 0], ["Points", p.karma], ["Posts", p.counts.posts]] as const).map(([k, v]) => (
             <div key={k} className="rounded-[var(--radius-m)] bg-panel-2 px-3 py-2">
@@ -148,5 +149,36 @@ function FollowButton({ member, following, onChange }: { member: PublicProfile; 
       </button>
       {burst > 0 && <Burst key={burst} />}
     </span>
+  );
+}
+
+/**
+ * The member's pass: printed like the event tickets, with their number in the order people
+ * joined on the stub, and a gold edge for founding members.
+ */
+function MemberPass({ p }: { p: PublicProfile }) {
+  const founding = isFounding(p);
+  const since = new Date(p.createdAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  return (
+    <div className={`member-pass ticket-wrap shrink-0 ${founding ? "is-founding" : ""}`} style={{ "--ink": `hsl(${p.hue} 70% 50%)` } as React.CSSProperties}>
+      <div className="ticket">
+        <div className="px-4 pt-3.5 pb-3 flex items-center gap-3">
+          <Avatar p={p} size={44} />
+          <div className="min-w-0">
+            <p className="t-micro text-text-3">OMNIEVENT member</p>
+            <p className="font-semibold truncate">{p.name}</p>
+          </div>
+        </div>
+        <div className="ticket-stub member-pass-stub">
+          <p className="ticket-date">
+            <span className="member-no tnum">{p.no ? `No. ${String(p.no).padStart(4, "0")}` : "Early"}</span>
+          </p>
+          <div className="min-w-0 t-small">
+            <p className="font-semibold">{founding ? "✨ Founding member" : "Member"}</p>
+            <p className="text-text-2">Since {since}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

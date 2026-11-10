@@ -161,6 +161,14 @@ function local(c: Cmd): Val {
       l.unshift(...a.slice(1).reverse());
       return l.length;
     }
+    case "LREM": {
+      // LREM key 0 value: every copy of value goes.
+      const l = list_(k);
+      const kept = l.filter((x) => x !== a[2]);
+      const n = l.length - kept.length;
+      l.splice(0, l.length, ...kept);
+      return n;
+    }
     case "LTRIM": {
       const l = list_(k);
       const kept = range(l, Number(a[1]), Number(a[2]));

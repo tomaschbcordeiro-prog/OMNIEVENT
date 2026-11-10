@@ -24,6 +24,7 @@ import {
   REACTIONS,
   REPORT_REASONS,
   USERNAME_RE,
+  isFounding,
 } from "./types";
 
 /**
@@ -103,8 +104,9 @@ export async function limit(key: string, max: number, windowSec: number) {
 
 // ---- Profiles --------------------------------------------------------------------------
 
-function badgesFor(c: PublicProfile["counts"], karma: number): string[] {
+function badgesFor(c: PublicProfile["counts"], karma: number, p: Profile): string[] {
   const out = ["newcomer"];
+  if (isFounding(p)) out.push("founding");
   if (c.posts >= 1) out.push("voice");
   if (c.reviews >= 5) out.push("critic");
   if (c.likes >= 10) out.push("helper");
@@ -127,7 +129,7 @@ export async function getProfiles(ids: string[]): Promise<Record<string, PublicP
     const c = pairs(res[i * 3 + 1]);
     const counts = { posts: Number(c.posts ?? 0), reviews: Number(c.reviews ?? 0), likes: Number(c.likes ?? 0), going: Number(c.going ?? 0), duels: Number(c.duels ?? 0), founded: Number(c.founded ?? 0) };
     const karma = Math.round(Number(res[i * 3 + 2] ?? 0));
-    out[id] = { ...p, karma, counts, badges: badgesFor(counts, karma) };
+    out[id] = { ...p, karma, counts, badges: badgesFor(counts, karma, p) };
   });
   return out;
 }
@@ -307,15 +309,27 @@ export async function signUp(secret: string, input: Record<string, unknown>, ip:
   const avatar = typeof input.avatar === "string" && AVATARS.includes(input.avatar) ? input.avatar : prev?.avatar ?? AVATARS[0];
   const hue = Number.isFinite(Number(input.hue)) ? Math.abs(Math.round(Number(input.hue))) % 360 : prev?.hue ?? 210;
   const bio = typeof input.bio === "string" && input.bio.trim() ? cleanText(input.bio, { min: 1, max: 160 }) : prev?.bio;
-  const profile: Profile = { id, name: `${firstName} ${lastName}`, firstName, lastName, username, avatar, hue, bio, createdAt: prev?.createdAt ?? now() };
+  // Every member gets a number, in the order they joined (the counter starts after the
+  // members there were before numbering began).
+  const no = prev?.no ?? (await memberNumber());
+  const profile: Profile = { id, name: `${firstName} ${lastName}`, firstName, lastName, username, avatar, hue, bio, createdAt: prev?.createdAt ?? now(), no };
   const cmds: Cmd[] = [
     ["SET", `c:acct:${id}`, JSON.stringify(account)],
     ["SET", `c:u:${id}`, JSON.stringify(profile)],
     ...openSession(secret, id),
   ];
   if (!prev) cmds.push(["HINCRBY", "c:stat", "members", 1], ["ZADD", "c:karma", 1, id]);
+  // The welcome row on the community's home: the twelve newest members.
+  cmds.push(["LREM", "c:new", 0, id], ["LPUSH", "c:new", id], ["LTRIM", "c:new", 0, 11]);
   await pipe(cmds);
   return (await getProfile(id))!;
+}
+
+/** The next member number. */
+async function memberNumber(): Promise<number> {
+  const before = Number((await cmd(["HGET", "c:stat", "members"])) ?? 0);
+  const [, n] = await pipe([["SET", "c:seq", before, "NX"], ["INCR", "c:seq"]]);
+  return Number(n);
 }
 
 /** Signs this browser in with an email or username and the password. */
@@ -893,14 +907,16 @@ export async function getHome(viewer?: string): Promise<CommunityHome> {
     ["ZREVRANGE", "c:feed", 0, 39],
     ["ZREVRANGE", "c:rated", 0, 11],
     ["ZREVRANGE", "c:karma", 0, 9],
+    ["LRANGE", "c:new", 0, 11],
   ]);
   const stat = pairs(res[0]);
+  const newIds = ((res[4] as string[]) ?? []).filter(Boolean);
   const posts = await loadPosts((res[1] as string[]) ?? [], viewer);
   const hotList = await trending(12);
   const rated = ((res[2] as string[]) ?? []).filter(Boolean);
   const leaderIds = ((res[3] as string[]) ?? []).filter(Boolean);
   const targets = [...new Set([...posts.map((p) => p.target), ...hotList, ...rated])];
-  const [meta, sums, profiles] = await Promise.all([metas(targets), summaries([...hotList, ...rated]), getProfiles([...posts.map((p) => p.author), ...posts.flatMap((p) => p.joiners ?? []), ...leaderIds])]);
+  const [meta, sums, profiles] = await Promise.all([metas(targets), summaries([...hotList, ...rated]), getProfiles([...posts.map((p) => p.author), ...posts.flatMap((p) => p.joiners ?? []), ...leaderIds, ...newIds])]);
   const feed: FeedItem[] = posts.map((post) => ({ post, meta: meta[post.target] }));
   const withMeta = (ts: string[]) => ts.filter((t) => meta[t] && sums[t]).map((t) => ({ ...meta[t], ...sums[t] }));
   return {
@@ -909,6 +925,7 @@ export async function getHome(viewer?: string): Promise<CommunityHome> {
     trending: withMeta(hotList),
     topRated: withMeta(rated).filter((x) => x.ratingCount > 0),
     leaders: leaderIds.map((id) => profiles[id]).filter(Boolean),
+    newcomers: newIds.map((id) => profiles[id]).filter(Boolean),
     profiles,
     persistent,
   };
