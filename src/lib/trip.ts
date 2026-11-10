@@ -148,6 +148,21 @@ export function fitOf(stops: TripStop[], e: { lat: number; lng: number; day: str
   return near.length ? { ok: false, why: "wrong-days", stop: near[0] } : { ok: false, why: "elsewhere" };
 }
 
+/**
+ * Where an event that runs for days (an exhibition, a festival, a season) fits: on any of its
+ * days spent near it. Single-day events fit as `fitOf` says.
+ */
+export function fitSpan(stops: TripStop[], e: { lat: number; lng: number; day: string; until?: string }): Fit {
+  const f = fitOf(stops, e);
+  if (f.ok || !stops.length || !e.until || e.until <= e.day) return f;
+  const near = stops.filter((s) => haversineKm(s.lat, s.lng, e.lat, e.lng) <= STOP_RADIUS_KM);
+  const on = near.find((s) => s.from <= e.until! && s.to >= e.day);
+  if (on) return { ok: true, stop: on };
+  if (e.until < stops[0].from) return { ok: false, why: "before", stop: near[0] };
+  if (e.day > stops[stops.length - 1].to) return { ok: false, why: "after", stop: near[0] };
+  return near.length ? { ok: false, why: "wrong-days", stop: near[0] } : { ok: false, why: "elsewhere" };
+}
+
 /** The stop for a day of the trip (the one arrived at, on a travel day). */
 export function stopOn(stops: TripStop[], day: string): TripStop | undefined {
   return [...stops].reverse().find((s) => day >= s.from && day <= s.to);
@@ -282,3 +297,27 @@ export const REGIONS: { id: string; name: string; emoji: string; places: Place[]
 /** The colour of each stop on the timeline and the globe, in route order. */
 export const STOP_COLORS = ["#1463FF", "#F0475A", "#0FA979", "#F59A0B", "#7B4DFF", "#0A9BD6", "#E0398C", "#2F9E44", "#E8890C", "#6F819C"];
 export const stopColor = (i: number) => STOP_COLORS[i % STOP_COLORS.length];
+
+/**
+ * How a trip could stretch to take in an event just outside it: the last city kept a few days
+ * longer (or the first started earlier), or, when the event is somewhere else, that place as a
+ * new city at the end (or start) of the route. Null when the event is within the trip's dates
+ * (it is then a matter of the route, not the dates).
+ */
+export function extendFor(stops: TripStop[], e: { lat: number; lng: number; day: string; place: Place }): { stops: TripStop[]; label: string } | null {
+  if (!stops.length) return null;
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  const near = (s: TripStop) => haversineKm(s.lat, s.lng, e.lat, e.lng) <= STOP_RADIUS_KM;
+  const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+  if (e.day > last.to) {
+    if (near(last)) return { stops: [...stops.slice(0, -1), { ...last, to: e.day }], label: `Stay in ${last.name} until ${day(e.day)}` };
+    const to = addDays(e.day, 1);
+    return { stops: [...stops, { ...e.place, id: `x${e.day}${Math.round(e.lat * 1e3)}`, from: last.to, to }], label: `Add ${e.place.name} after ${last.name}, until ${day(to)}` };
+  }
+  if (e.day < first.from) {
+    if (near(first)) return { stops: [{ ...first, from: e.day }, ...stops.slice(1)], label: `Arrive in ${first.name} on ${day(e.day)}` };
+    return { stops: [{ ...e.place, id: `x${e.day}${Math.round(e.lat * 1e3)}`, from: e.day, to: first.from }, ...stops], label: `Start in ${e.place.name} on ${day(e.day)}` };
+  }
+  return null;
+}

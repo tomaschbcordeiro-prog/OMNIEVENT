@@ -6,6 +6,7 @@ import { ArrowRight, Share2, Swords, Trophy } from "lucide-react";
 import { BADGES, type Duel, type DuelPick, type DuelRound, type DuelSide } from "@/lib/community/types";
 import { communityGet, communityPost, refreshMe, useMe } from "@/lib/community/client";
 import { Poster, SaveButton } from "../ui";
+import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
 import { Burst, requireMember } from "./bits";
 
@@ -329,6 +330,7 @@ function Summary({ duel, countdown, onShare, member }: { duel: Duel; countdown: 
                 <span className="block t-small font-semibold truncate">{s.title}</span>
                 <span className="block t-micro text-text-3 tnum">{votesIn(r) > 1 ? `${share(r)}% agree · ` : ""}{when(s)}</span>
               </Link>
+              <TripButton id={s.id} title={s.title} />
               <SaveButton id={s.id} title={s.title} compact />
             </li>
           );

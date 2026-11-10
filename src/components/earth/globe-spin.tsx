@@ -5,6 +5,7 @@ import { Dices, Loader2, Share2, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { cardWhen } from "@/lib/format";
 import { Poster, SaveButton } from "../ui";
+import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
 import { datePresets } from "../discover/filters";
 
@@ -255,6 +256,7 @@ export function GlobeSpin({
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => onOpen(result)}>Open</button>
               <SaveButton id={result.id} title={result.title} compact />
+              {!result.online && <TripButton card={result} title={result.title} />}
               <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Share" onClick={() => void share(result)}>
                 <Share2 size={15} aria-hidden />
               </button>

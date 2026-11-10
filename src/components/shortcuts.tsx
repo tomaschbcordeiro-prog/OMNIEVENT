@@ -10,6 +10,7 @@ const GO: [string, string, string][] = [
   ["d", "/destinations", "Destinations"],
   ["m", "/match", "Event Match"],
   ["t", "/mixtape", "Mixtape"],
+  ["p", "/trips", "Trips"],
   ["c", "/community", "Community"],
   ["l", "/clubs", "Clubs"],
   ["s", "/studio", "Studio"],
@@ -62,6 +63,16 @@ export function Shortcuts() {
           setOpen(false);
           router.push(hit[1]);
         }
+        return;
+      }
+      // "t": the event in focus (a row of a list), else this page's own event, into a trip.
+      if (e.key === "t" && !open) {
+        const row = (document.activeElement as HTMLElement | null)?.closest("li");
+        const btn = row?.querySelector<HTMLButtonElement>("[data-trip-button]") ?? [...document.querySelectorAll<HTMLButtonElement>("[data-trip-button][data-primary]")].find((b) => b.offsetParent !== null);
+        if (btn) {
+          e.preventDefault();
+          btn.click();
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -91,6 +102,8 @@ export function Shortcuts() {
           <dd>Show or hide this list</dd>
           <dt><kbd className="kbd">j</kbd> <kbd className="kbd">k</kbd></dt>
           <dd>Next or previous event in a list (Enter opens it)</dd>
+          <dt><kbd className="kbd">t</kbd></dt>
+          <dd>Add the event to a trip (the one in focus, or this page&apos;s)</dd>
           {GO.map(([k, , label]) => (
             <div key={k} className="contents">
               <dt><kbd className="kbd">g</kbd> <kbd className="kbd">{k}</kbd></dt>

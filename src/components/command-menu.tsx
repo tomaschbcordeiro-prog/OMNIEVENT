@@ -22,12 +22,14 @@ const STATIC: Item[] = [
   { id: "go-community", label: "Community", href: "/community", icon: Users, group: "Go to", words: "people posts" },
   { id: "go-clubs", label: "Clubs", href: "/clubs", icon: Users, group: "Go to", words: "groups friends" },
   { id: "go-studio", label: "Studio", hint: "List your event", href: "/studio", icon: Mic2, group: "Go to", words: "organiser create" },
+  { id: "go-trips", label: "Trips", hint: "Plan trips with events on a globe", href: "/trips", icon: Plane, group: "Go to", words: "travel holiday plan journey" },
   { id: "go-world", label: "My World", hint: "Saved events, trips, alerts", href: "/my-world", icon: Compass, group: "Go to", words: "saved trips account" },
   { id: "do-spin", label: "Spin the globe", hint: "Land somewhere at random", href: "/?spin=1", icon: Dices, group: "Do", words: "random surprise" },
   { id: "do-flight", label: "Night Flight", hint: "Tonight, round the planet", href: "/?flight=1", icon: Plane, group: "Do", words: "tour tonight" },
   { id: "do-lights", label: "See the Earth at night", hint: "City lights from space", href: "/?style=lights", icon: Moon, group: "Do", words: "night lights dark black marble" },
   { id: "do-weekend", label: "Plan this weekend", href: "/mixtape?w=weekend", icon: Sparkles, group: "Do", words: "mixtape plan" },
   { id: "do-tonight", label: "What's on tonight", href: "/mixtape?w=tonight", icon: Moon, group: "Do", words: "tonight now" },
+  { id: "do-trip", label: "Plan a trip", hint: "Cities, dates and events on the way", href: "/trips/new", icon: Plane, group: "Do", words: "travel holiday new journey" },
   { id: "do-list", label: "List your event", href: "/studio/new", icon: Plus, group: "Do", words: "create add organiser" },
   { id: "theme-dark", label: "Dark mode", hint: "Night colours everywhere", href: "#", icon: Moon, group: "Theme", words: "theme night black", run: () => setTheme("dark") },
   { id: "theme-light", label: "Light mode", href: "#", icon: Sun, group: "Theme", words: "theme day white bright", run: () => setTheme("light") },
@@ -61,6 +63,7 @@ export function CommandMenu() {
   // The last few events opened on this device, offered first when nothing is typed yet.
   const [recent, setRecent] = useState<{ slug: string; title: string; city: string }[]>([]);
   const recentKey = user.recent.slice(0, 4).join(",");
+  const trips = user.trips;
   const back = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -136,10 +139,13 @@ export function CommandMenu() {
       dyn.push({ id: "dym", label: fix, hint: "Did you mean this?", href: `/events?q=${encodeURIComponent(fix)}&where=any`, icon: Search, group: "Did you mean" });
     }
     if (!t) for (const r of recent) dyn.push({ id: `r-${r.slug}`, label: r.title, hint: r.city, href: `/events/${r.slug}`, icon: History, group: "Recently viewed" });
+    // Your trips, by name (the next ones first, when nothing is typed).
+    const today = new Date().toISOString().slice(0, 10);
+    for (const tr of trips.filter((x) => (t ? strip(x.name).includes(t) : !x.end || x.end >= today)).slice(0, 3)) dyn.push({ id: `t-${tr.id}`, label: `${tr.emoji ?? "✈️"} ${tr.name}`, hint: tr.stops?.map((s) => s.name).join(" → "), href: `/trips/${tr.id}`, icon: Plane, group: "Your trips" });
     const all = [...dyn, ...statics];
     if (t) all.push({ id: "search", label: `Search everything for “${q.trim()}”`, href: `/events?q=${encodeURIComponent(q.trim())}&where=any`, icon: Search, group: "Search" });
     return all;
-  }, [q, found, recent]);
+  }, [q, found, recent, trips]);
 
   useEffect(() => setActive(0), [items.length]);
 

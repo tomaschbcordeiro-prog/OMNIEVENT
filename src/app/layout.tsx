@@ -15,6 +15,7 @@ import { NavProgress } from "@/components/nav-progress";
 import { IntentPrefetch } from "@/components/intent-prefetch";
 import { TrailRecorder } from "@/components/event-trail";
 import { AfterEventNudge } from "@/components/how-was-it";
+import { TripDock } from "@/components/trips/trip-add";
 import { CommandMenu } from "@/components/command-menu";
 
 // Background data syncs keep running after the response, up to this many seconds.
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <IntentPrefetch />
         <TrailRecorder />
         <AfterEventNudge />
+        <TripDock />
       </body>
     </html>
   );

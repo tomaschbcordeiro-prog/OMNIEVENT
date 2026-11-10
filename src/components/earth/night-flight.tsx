@@ -8,6 +8,7 @@ import { getDestination } from "@/lib/destinations";
 import { sphereCentre } from "@/lib/map/arc";
 import type { EarthMapHandle } from "./earth-map";
 import { Poster, SaveButton } from "../ui";
+import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
 
 /**
@@ -504,6 +505,7 @@ export function NightFlight({
             <div className="mt-3 flex items-center gap-1.5">
               <button type="button" className="btn btn-gold btn-sm press flex-1 justify-center" onClick={() => onOpen(stop)}>Open event</button>
               <SaveButton id={stop.id} title={stop.title} compact className="nf-icon" />
+              {!stop.online && <TripButton card={stop} title={stop.title} className="nf-icon" />}
               <span className="mx-0.5 h-6 w-px bg-white/15" aria-hidden />
               <button type="button" className="nf-icon btn btn-sm btn-icon press" aria-label="Previous stop" disabled={at === 0} onClick={prev}>
                 <SkipBack size={15} aria-hidden />

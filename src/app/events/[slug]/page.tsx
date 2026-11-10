@@ -10,7 +10,8 @@ import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
 import { thumb } from "@/lib/thumb";
 import { EventTile } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, HeroImage, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
-import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
+import { TripButton } from "@/components/trips/trip-add";
+import { CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
 import { Footer } from "@/components/footer";
 import { EventPoster } from "@/components/event-poster";
 import { ShareToClub } from "@/components/clubs/share-to-club";
@@ -166,6 +167,8 @@ export default async function EventPage({ params }: { params: P }) {
   const stub = formatShortDate(e.start, e.timeZone);
   // Kept with the event when it's saved, so it can still be shown (and asked about) once it's over.
   const snap = snapOf({ slug: e.slug, title: e.title, start: e.start, timeZone: e.timeZone, eventType: e.eventType, hoursUnknown: e.hoursUnknown, venueName: v.name, venueSlug: v.slug, imageUrl: e.imageUrl, posterHue: e.posterHue, categorySlug: e.categorySlug });
+  // What a trip keeps of it (online events go in no trip).
+  const tripEvent = e.online ? undefined : { id: e.id, ...snap, lat: v.lat, lng: v.lng, city: v.city, cityId: v.cityId, countryCode: v.countryCode, groupSlug: group, until: e.end && Date.parse(e.end) - Date.parse(e.start) > 86_400_000 ? e.end : undefined };
 
   return (
     <>
@@ -497,7 +500,7 @@ export default async function EventPage({ params }: { params: P }) {
                 <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
                   <SaveButton id={e.id} title={e.title} snap={snap} />
-                  <AddToTrip event={{ id: e.id, ...snap, lat: v.lat, lng: v.lng, city: v.city, groupSlug: group }} cityId={v.cityId} countryCode={v.countryCode} day={localDateKey(e.start, e.timeZone)} />
+                  {tripEvent && <TripButton variant="label" primary event={tripEvent} title={e.title} />}
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />
                   {!inactive && !e.provenance.isDemo && <ShareToClub eventId={e.id} title={e.title} />}
@@ -541,7 +544,7 @@ export default async function EventPage({ params }: { params: P }) {
             </p>
           </section>
         </div>
-        <EventActionBar id={e.id} title={e.title} snap={snap} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
+        <EventActionBar id={e.id} title={e.title} snap={snap} tripEvent={tripEvent} isFree={e.isFree} fromPrice={e.fromPrice} hasOffers={e.offers.length > 0} officialUrl={e.officialUrl} inactive={inactive} />
       </main>
       <Footer />
       {/* Room for the phone action bar, so it never covers the footer. */}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Heart, MapPin, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
+import { TripButton } from "../trips/trip-add";
 import { cardWhen } from "@/lib/format";
 import { filtersToParams } from "@/lib/search/params";
 import { EMPTY_PLAN, planFromParams, planSentence, planToFilters, planToParams, type Plan, type PlaceChip } from "@/lib/match/plan";
@@ -196,7 +197,7 @@ export function MatchDeck() {
         <div className="text-center">
           <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
           <h1 className="t-h1 mt-3">Swipe your <em>next plan</em></h1>
-          <p className="t-body text-text-2 mt-2">Tell us what you fancy, then swipe: right to save, left to pass, up to open.</p>
+          <p className="t-body text-text-2 mt-2">Tell us what you fancy, then swipe: right to save, left to pass, up to open. The plane adds it to a trip.</p>
         </div>
         <div className="mt-5">
           <PlanBuilder plan={plan} onChange={setPlan} onGo={() => setStage("swipe")} places={popular} />
@@ -266,6 +267,7 @@ export function MatchDeck() {
         <button type="button" className="match-btn h-12 w-12 text-cyan" aria-label="Open the event" title="Open (↑)" onClick={() => decide("up")} disabled={!top}>
           <ArrowUpRight size={20} aria-hidden />
         </button>
+        {top && !top.online && <TripButton key={top.id} card={top} title={top.title} variant="bare" primary className="match-btn h-12 w-12 text-text-2" />}
       </div>
 
       {savedThisVisit.length > 0 && (
@@ -277,10 +279,13 @@ export function MatchDeck() {
           <ul className="mt-3 flex gap-2 overflow-x-auto no-scrollbar">
             {savedThisVisit.map((c) => (
               <li key={c.id} className="shrink-0 w-28">
-                <Link href={`/events/${c.slug}`} className="block press">
-                  <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="h-20 w-28 rounded-[var(--radius-s)]" />
-                  <p className="t-micro font-semibold mt-1 line-clamp-2">{c.title}</p>
-                </Link>
+                <div className="relative">
+                  <Link href={`/events/${c.slug}`} className="block press">
+                    <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="h-20 w-28 rounded-[var(--radius-s)]" />
+                    <p className="t-micro font-semibold mt-1 line-clamp-2">{c.title}</p>
+                  </Link>
+                  {!c.online && <TripButton card={c} title={c.title} className="!absolute right-1 top-1 bg-panel/85 backdrop-blur !h-8 !w-8 !min-h-0" />}
+                </div>
               </li>
             ))}
           </ul>

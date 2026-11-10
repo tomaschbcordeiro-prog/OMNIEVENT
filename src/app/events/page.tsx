@@ -1,3 +1,4 @@
+import { TripStopsBar } from "@/components/trips/trip-shortcuts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { catalogueComplete, dataSummary, ensureFresh, searchEvents } from "@/lib/store";
@@ -117,6 +118,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <Suspense fallback={null}>
           <ContinueSearch />
         </Suspense>
+        <TripStopsBar label={filters.nearLabel} from={filters.from} />
         <EventsBrowser result={result} filters={filters} facets={result.facets} implicitCity={here.city && filters.city === here.city.id ? here.city.id : undefined} anywhere={anywhere} suggestion={!result.total && filters.q ? didYouMean(filters.q) : undefined} />
       </main>
       {/* A server that had only just started: the rest of the catalogue is on its way. */}

@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { EventCard } from "@/lib/types";
-import type { Trip, TripEventSnap } from "@/lib/user/store";
+import type { Trip } from "@/lib/user/store";
+import { tripSnapOf, type TripEvent } from "@/lib/trip-snap";
 import { DEFAULT_LAYERS } from "@/lib/map/style";
 import { codeOf, flagOf, nightsBetween, stopColor, type TripStop } from "@/lib/trip";
 import type { EarthMapHandle, FlightRoute, FlyRequest } from "../earth/earth-map";
@@ -252,29 +253,7 @@ export function longRange(from?: string, to?: string): string {
   return `${fmt(from, { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) })} – ${fmt(to, { day: "numeric", month: "long", year: "numeric" })}`;
 }
 
-/** What a trip keeps of an event: enough to show it and place it on the globe after it's gone. */
-export function tripSnapOf(c: EventCard): TripEventSnap & { id: string } {
-  return {
-    id: c.id,
-    slug: c.slug,
-    title: c.title.slice(0, 200),
-    start: c.start,
-    timeZone: c.timeZone,
-    eventType: c.eventType,
-    hoursUnknown: c.hoursUnknown || undefined,
-    venueName: c.venueName.slice(0, 120),
-    venueSlug: c.venueSlug,
-    imageUrl: c.imageUrl,
-    posterHue: c.posterHue,
-    categorySlug: c.categorySlug,
-    lat: c.lat,
-    lng: c.lng,
-    city: c.city,
-    groupSlug: c.groupSlug,
-  };
-}
-
-export type TripEvent = TripEventSnap & { id: string };
+export { tripSnapOf, type TripEvent } from "@/lib/trip-snap";
 
 /**
  * A trip's events: the copies kept with the trip, refreshed from the catalogue while the

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { TripButton } from "../trips/trip-add";
 import { BookmarkPlus, CalendarPlus, Check, ChevronDown, Dices, Headphones, Lock, LockOpen, Minus, Play, Plus, Search, Share2, Shuffle, Square, Trash2, X } from "lucide-react";
 import { addTrack, BUDGET, DEFAULT_VIBE, ENERGY, fillTape, hop, localMinutes, MOODS, RANGE, rerollTrack, tapeDay, tapeHue, tapeName, tapeStats, type MixCandidate, type TapeContext, type Track, type Vibe } from "@/lib/mixtape/plan";
 import { tapeWindow, windowLabel, WHEN, addDays, type WhenKind } from "@/lib/mixtape/windows";
@@ -717,6 +718,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                             <div className="mx-track-side">
                               {price && <span className={`mx-price ${price === "Free" ? "is-free" : ""}`}>{price}</span>}
                               <div className="mx-track-actions">
+                                <TripButton id={t.id} title={c.title} variant="bare" className="mx-icon" />
                                 <button type="button" className="mx-icon" aria-pressed={!!t.locked} aria-label={t.locked ? `Unlock ${c.title}` : `Lock ${c.title}: keep it when shuffling`} title={t.locked ? "Unlock" : "Lock: keep it when shuffling"} onClick={() => toggleLock(i)}>
                                   {t.locked ? <Lock size={15} aria-hidden /> : <LockOpen size={15} aria-hidden />}
                                 </button>

@@ -5834,3 +5834,388 @@ mark.hit {
   border-radius: 14px;
   border: 1px dashed var(--line-strong);
 }
+
+/* ---- Add to trip, from anywhere ---- */
+.trip-btn {
+  position: relative;
+}
+.trip-btn-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+.trip-btn-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--text-2);
+  color: var(--panel);
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.trip-btn[data-in] .trip-btn-badge {
+  background: var(--cyan);
+  color: #fff;
+}
+.trip-btn[data-in] {
+  color: var(--cyan);
+}
+.trip-btn:hover .trip-btn-icon > svg {
+  transform: translate(1px, -1px) rotate(-8deg);
+}
+.trip-btn-icon > svg {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.trip-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 84;
+  background: rgb(8 15 30 / 0.4);
+  animation: scrim-in 200ms ease both;
+}
+.trip-menu {
+  position: fixed;
+  z-index: 85;
+  width: 20rem;
+  max-height: min(28rem, calc(100dvh - 24px));
+  overflow: auto;
+  padding: 0.9rem;
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px -20px rgb(4 10 30 / 0.55);
+  animation: pop-card 240ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  transform-origin: 90% 0;
+}
+.trip-menu.is-sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  max-height: 80dvh;
+  border-radius: 22px 22px 0 0;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  animation: sheet-up 300ms cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.trip-menu.is-sheet::before {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 4px;
+  margin: -0.35rem auto 0.7rem;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+@keyframes sheet-up {
+  from {
+    translate: 0 100%;
+  }
+}
+.trip-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 12px;
+  transition: background-color 120ms ease;
+}
+.trip-menu-item:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.trip-menu-row[data-fits] .trip-menu-item {
+  background: color-mix(in srgb, var(--ok) 8%, transparent);
+}
+.trip-menu-row[data-fits] .trip-menu-item:hover {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.trip-menu-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-2);
+  transition: background-color 140ms ease, color 140ms ease, transform 160ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.trip-menu-item:hover .trip-menu-toggle {
+  transform: scale(1.08);
+}
+.trip-menu-item[aria-pressed="true"] .trip-menu-toggle {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: #fff;
+}
+.trip-menu-stretch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.15rem 0 0.25rem 2.6rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cyan);
+  border: 1px dashed color-mix(in srgb, var(--cyan) 45%, transparent);
+}
+.trip-menu-stretch:hover {
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+}
+
+/* On a card: where it stands with your trips. */
+.trip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  max-width: 10rem;
+  height: 1.15rem;
+  margin-left: 0.15rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+}
+.trip-tag svg {
+  flex-shrink: 0;
+}
+.trip-tag[data-in] {
+  color: var(--cyan);
+  border-color: color-mix(in srgb, var(--cyan) 35%, transparent);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
+}
+
+/* The trip dock: bottom left on computers, under the header on phones (clear of the toasts). */
+.trip-dock {
+  position: fixed;
+  z-index: 56;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: 1.25rem;
+  transition: opacity 220ms ease, translate 260ms cubic-bezier(0.2, 1, 0.3, 1);
+}
+.trip-dock:not([data-show]) {
+  opacity: 0;
+  translate: 0 14px;
+  pointer-events: none;
+}
+@media (max-width: 639px) {
+  .trip-dock {
+    left: auto;
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: auto;
+    top: calc(var(--header-h) + 0.6rem);
+  }
+  .trip-dock:not([data-landing]):not([data-dragging]) {
+    opacity: 0;
+    translate: 0 -14px;
+    pointer-events: none;
+  }
+}
+.trip-dock-pass {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 16rem;
+  padding: 0.4rem 0.45rem 0.4rem 0.7rem;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 34px -16px rgb(4 10 30 / 0.5);
+  font-size: 0.8125rem;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease;
+}
+.trip-dock-pass:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -16px rgb(4 10 30 / 0.6);
+}
+.trip-dock-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.trip-dock-count {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  margin-left: 0.15rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--on-ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  animation: pop 360ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.trip-dock.is-bump .trip-dock-pass {
+  animation: dock-bump 460ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes dock-bump {
+  35% {
+    transform: scale(1.09);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--cyan) 22%, transparent), 0 18px 40px -16px rgb(4 10 30 / 0.6);
+  }
+}
+.trip-dock-drop {
+  display: grid;
+  gap: 0.35rem;
+  width: 15rem;
+  padding: 0.6rem;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 50px -18px rgb(4 10 30 / 0.55);
+  animation: pop-card 220ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  transform-origin: 0 100%;
+}
+.trip-dock-zone {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.6rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 12px;
+  border: 1.5px dashed var(--line-strong);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 160ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.trip-dock-zone.is-new {
+  color: var(--text-2);
+}
+.trip-dock-zone[data-over] {
+  border-style: solid;
+  border-color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  transform: scale(1.03);
+}
+.trip-fly {
+  position: fixed;
+  z-index: 95;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--cyan) center / cover no-repeat;
+  border: 2px solid #fff;
+  box-shadow: 0 14px 30px -10px rgb(4 10 30 / 0.6);
+  pointer-events: none;
+}
+
+/* The events list: the stops of the trip being planned, one tap each. */
+.trip-stops-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  min-width: 0;
+}
+.trip-stops-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  max-width: 11rem;
+  padding-right: 0.65rem;
+  border-right: 1px dashed var(--line-strong);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.trip-stops-name:hover {
+  color: var(--cyan);
+}
+.trip-stop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ink, var(--cyan));
+}
+.trip-stops-bar .chip[aria-current="page"] {
+  color: var(--on-ink);
+  background: var(--text);
+  border-color: var(--text);
+}
+.trip-stops-bar .chip[aria-current="page"] .text-text-3 {
+  color: inherit;
+  opacity: 0.75;
+}
+.trip-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--ink, var(--cyan)) 35%, transparent);
+  background: color-mix(in srgb, var(--ink, var(--cyan)) 8%, var(--panel));
+}
+.trip-callout-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip-menu,
+  .trip-menu.is-sheet,
+  .trip-dock-drop,
+  .trip-dock-count,
+  .trip-dock.is-bump .trip-dock-pass {
+    animation: none;
+  }
+}
+.trip-fly:not([style*="background-image"]) {
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, #e8f0ff, #ffffff);
+}
+.trip-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  border: 1px dashed var(--line-strong);
+}
+.trip-tip-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+  color: var(--cyan);
+}
+/* A toast's links: sunny on the dark toast, deep amber on the light one (dark mode). */
+.toast-act {
+  color: var(--sun);
+}
+:root[data-theme="dark"] .toast-act {
+  color: #8a5300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .toast-act {
+    color: #8a5300;
+  }
+}
+.trip-chip[aria-selected="true"]:first-child {
+  color: var(--on-ink);
+}

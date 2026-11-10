@@ -17,6 +17,7 @@ import { HOME, altToZoom, cellForZoom, fitGlobeZoom, globeRadiusPx, viewRadiusKm
 import { SearchBox, type GeoPlace } from "../search-box";
 import { EventRow } from "../event-card";
 import { CategoryIcon, categoryLabel, DemoBadge, EmptyState, ErrorState, Poster, Price, SaveButton, ShapeGlyph, StatusBadge, Notice } from "../ui";
+import { TripButton } from "../trips/trip-add";
 import { snapOf } from "@/lib/after-event";
 import { FilterForm, ActiveFilters, datePresets } from "./filters";
 import { TapLabel } from "../tap-label";
@@ -1589,11 +1590,12 @@ function EventPreview({ card, onClose, onBack, backLabel, onNextLive }: { card: 
           ) : null;
         })()}
         <CommunityPulse key={card.id} target={`e:${card.id}`} href={`/events/${card.slug}#community`} />
-        <div className="grid grid-cols-[1fr_auto] gap-2 pt-1">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-2 pt-1">
           <Link href={`/events/${card.slug}`} className="btn btn-primary">View details</Link>
+          {card.online ? <span /> : <TripButton card={card} title={card.title} className="btn-secondary" />}
           <SaveButton id={card.id} title={card.title} snap={snapOf(card)} />
           {offers.length > 0 && (
-            <Link href={`/events/${card.slug}#tickets`} className="btn btn-secondary col-span-2">
+            <Link href={`/events/${card.slug}#tickets`} className="btn btn-secondary col-span-3">
               <ExternalLink size={14} aria-hidden /> Compare ticket options
             </Link>
           )}

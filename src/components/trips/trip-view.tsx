@@ -3,10 +3,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { daysOf, fitOf, flagOf, nightsBetween, stopColor, type TripStop } from "@/lib/trip";
+import { daysOf, fitSpan, flagOf, nightsBetween, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { spanOf } from "@/lib/trip-snap";
+import { rememberTrip } from "./trip-add";
+import { stopSearch } from "./trip-shortcuts";
 import { formatEventTime, localDateKey } from "@/lib/format";
 import type { EarthMapHandle, FlyRequest } from "../earth/earth-map";
 import { Poster } from "../ui";
@@ -19,6 +22,14 @@ const GROUP_EMOJI: Record<string, string> = {
 };
 const RADIUS_KM = 30;
 const dayOf = (e: { start: string; timeZone: string }) => localDateKey(e.start, e.timeZone);
+
+type Placed = { e: TripEvent; fit: Fit; day: string };
+/** Where an event goes in a trip: its city, and the day it's down for (a run: the first day there). */
+function placeIn(stops: TripStop[], e: TripEvent): Placed {
+  const span = spanOf(e);
+  const fit = fitSpan(stops, span);
+  return { e, fit, day: fit.ok && span.day < fit.stop.from ? fit.stop.from : span.day };
+}
 
 /** Events on in each city of the trip on its days (for what the trip is into), nearest first. */
 function useSuggestions(trip: Trip | undefined) {
@@ -69,9 +80,13 @@ export function TripView({ id }: { id: string }) {
   const stops = useMemo(() => trip?.stops ?? [], [trip?.stops]);
   const stop = sel === null ? undefined : stops[sel];
   useEffect(() => setLoaded(true), []);
+  // The trip open here is the one events go to from the rest of the site.
+  useEffect(() => {
+    if (trip) rememberTrip(trip.id);
+  }, [trip?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Each of the trip's events, with the city (and day) it belongs to, or why it doesn't fit.
-  const placed = useMemo(() => events.map((e) => ({ e, fit: fitOf(stops, { lat: e.lat, lng: e.lng, day: dayOf(e) }) })), [events, stops]);
+  const placed = useMemo(() => events.map((e) => placeIn(stops, e)), [events, stops]);
   const inTrip = useMemo(() => new Set(events.map((e) => e.id)), [events]);
 
   const frameAll = () => {
@@ -245,6 +260,16 @@ export function TripView({ id }: { id: string }) {
               );
             })}
 
+          {sel === null && stops.length > 0 && (
+            <p className="trip-tip t-micro text-text-2">
+              <span className="trip-tip-icon" aria-hidden><Plane size={12} /></span>
+              <span>
+                Add events from anywhere on OMNIEVENT: the plane button on any event puts it here, and on a computer you can drag events onto your trip.{" "}
+                <Link href={stopSearch(stops[0])} className="font-semibold text-cyan hover:underline">Browse {stops[0].name} →</Link>
+              </span>
+            </p>
+          )}
+
           {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} placed={placed} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onRemove={remove} onOpen={(eid) => setOpen(eid)} />}
 
           {off.length > 0 && sel === null && (
@@ -338,8 +363,8 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
 }
 
 /** One city of the trip: its days, what's planned on each, and ideas for the free time. */
-function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }: { trip: Trip; stop: TripStop; index: number; placed: { e: TripEvent; fit: ReturnType<typeof fitOf> }[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onRemove: (e: TripEvent) => void; onOpen: (id: string) => void }) {
-  const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === stop.id).map((p) => p.e);
+function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }: { trip: Trip; stop: TripStop; index: number; placed: Placed[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onRemove: (e: TripEvent) => void; onOpen: (id: string) => void }) {
+  const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === stop.id);
   const days = daysOf(stop.from, stop.to);
   const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: stop.name, from: stop.from, to: stop.to });
   if (trip.interests?.length) all.set("cat", trip.interests.join(","));
@@ -350,7 +375,7 @@ function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }:
       </p>
       <ol className="day-list">
         {days.map((d) => {
-          const today = mine.filter((e) => dayOf(e) === d);
+          const today = mine.filter((p) => p.day === d).map((p) => p.e);
           return (
             <li key={d} className="day-row">
               <span className="day-label">{dayLabel(d)}</span>
@@ -418,7 +443,7 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
       `${trip.emoji ?? "✈️"} ${trip.name}, ${longRange(trip.start, trip.end)}`,
       ...(trip.stops ?? []).flatMap((s) => [
         `${s.name}: ${dayLabel(s.from)} to ${dayLabel(s.to)}`,
-        ...events.filter((e) => e.lat && fitOf([s], { lat: e.lat, lng: e.lng, day: localDateKey(e.start, e.timeZone) }).ok).map((e) => `  ${dayLabel(localDateKey(e.start, e.timeZone))}: ${e.title} (${window.location.origin}/events/${e.slug})`),
+        ...events.map((e) => placeIn([s], e)).filter((p) => p.e.lat && p.fit.ok).map((p) => `  ${dayLabel(p.day)}: ${p.e.title} (${window.location.origin}/events/${p.e.slug})`),
       ]),
     ].join("\n");
     try {

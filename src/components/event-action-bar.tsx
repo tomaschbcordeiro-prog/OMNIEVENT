@@ -4,15 +4,18 @@ import { useEffect, useState } from "react";
 import { MessageCircle, Ticket } from "lucide-react";
 import { Price, SaveButton } from "./ui";
 import type { SavedSnap } from "@/lib/user/store";
+import type { TripEvent } from "@/lib/trip-snap";
+import { TripButton } from "./trips/trip-add";
 
 /**
  * Phones: a bar fixed to the bottom of an event page once the visitor scrolls, so tickets,
  * saving and the conversation are always one tap away.
  */
-export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, officialUrl, inactive, snap }: {
+export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, officialUrl, inactive, snap, tripEvent }: {
   id: string;
   title: string;
   snap?: SavedSnap;
+  tripEvent?: TripEvent;
   isFree: boolean;
   fromPrice?: { amount: number; currency: string; feesIncluded?: boolean };
   hasOffers: boolean;
@@ -36,6 +39,7 @@ export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, offici
             <Price amount={fromPrice?.amount} currency={fromPrice?.currency} feesIncluded={fromPrice?.feesIncluded} isFree={isFree} />
           </p>
         </div>
+        {tripEvent && <TripButton event={tripEvent} title={title} className="btn-secondary" />}
         <SaveButton id={id} title={title} compact className="btn-secondary" snap={snap} />
         <a href="#community" className="btn btn-secondary btn-sm btn-icon press" aria-label="Community: who's going, questions and tips" tabIndex={shown ? 0 : -1}>
           <MessageCircle size={16} aria-hidden />

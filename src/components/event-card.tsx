@@ -11,6 +11,7 @@ import { useUser } from "@/lib/user/store";
 import { GROUP_HEX } from "@/lib/categories";
 import { snapOf } from "@/lib/after-event";
 import { Marked } from "./marked";
+import { dragEvent, TripButton, TripTag } from "./trips/trip-add";
 
 export { Marked };
 
@@ -74,6 +75,7 @@ export function EventRow({
             {c.sports?.competition ?? categoryLabel(c.categorySlug)}
             {c.sports?.stage && <span className="text-text-3">, {c.sports.stage}</span>}
           </span>
+          {!compact && <TripTag c={c} className="max-md:!hidden" />}
         </div>
         {/* Phones wrap long titles onto two lines rather than cutting them off. */}
         <p className={`font-semibold leading-snug mt-0.5 group-hover:text-cyan transition-colors ${compact ? "truncate" : "line-clamp-2 md:line-clamp-none md:truncate"}`}><Marked text={c.title} terms={terms} /></p>
@@ -91,6 +93,7 @@ export function EventRow({
           <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-micro" quiet />
           {c.isDemo && <DemoBadge />}
           <StatusBadge status={c.status} quiet />
+          <TripTag c={c} className="!ml-0" />
         </div>
       </div>
       <div className={`${compact ? "hidden" : "hidden md:flex"} flex-col items-end gap-1.5 shrink-0 text-right empty:hidden`}>
@@ -113,11 +116,14 @@ export function EventRow({
           {body}
         </button>
       ) : (
-        <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)}>
+        <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)}>
           {body}
         </Link>
       )}
-      <SaveButton id={c.id} title={c.title} compact snap={snapOf(c)} />
+      <div className="flex shrink-0 items-center -space-x-1">
+        {!c.online && <TripButton card={c} title={c.title} />}
+        <SaveButton id={c.id} title={c.title} compact snap={snapOf(c)} />
+      </div>
     </li>
   );
 }
@@ -128,7 +134,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
   const people = peopleLine(c);
   return (
     <li className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
-      <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)}>
+      <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)}>
         <div className="relative overflow-hidden">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">
@@ -140,6 +146,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
           <div className="flex items-center gap-1.5 text-[12px] text-text-2">
             <CategoryIcon slug={c.categorySlug} size={13} />
             <span className="truncate">{c.sports?.competition ?? categoryLabel(c.categorySlug)}</span>
+            <TripTag c={c} />
           </div>
           <p className="font-semibold leading-snug line-clamp-2 group-hover:text-cyan transition-colors"><Marked text={c.title} terms={terms} /></p>
           {people && people !== c.title && <p className="t-small text-text-2 truncate">{people}</p>}
@@ -154,7 +161,8 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
           </div>
         </div>
       </Link>
-      <div className="absolute right-2 top-2">
+      <div className="absolute right-2 top-2 flex gap-1.5">
+        {!c.online && <TripButton card={c} title={c.title} className="bg-panel/85 backdrop-blur" />}
         <SaveButton id={c.id} title={c.title} compact className="bg-panel/85 backdrop-blur" snap={snapOf(c)} />
       </div>
     </li>

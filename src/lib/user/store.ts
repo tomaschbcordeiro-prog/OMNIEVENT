@@ -37,7 +37,11 @@ export interface TripEventSnap extends SavedSnap {
   lat: number;
   lng: number;
   city: string;
+  cityId?: string;
+  countryCode?: string;
   groupSlug: string;
+  /** Last day of a run (an exhibition, a festival), when it lasts more than a day. */
+  until?: string;
 }
 
 export interface Prefs {

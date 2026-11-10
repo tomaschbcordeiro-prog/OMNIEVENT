@@ -1,3 +1,4 @@
+import { TripCallout } from "@/components/trips/trip-shortcuts";
 import { shareImage } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import { DateRangeFields } from "@/components/date-range";
@@ -123,6 +124,7 @@ export default async function DestinationPage({ params, searchParams }: { params
                 </Link>
               )}
             </div>
+            {d.kind === "city" && <TripCallout name={d.name} lat={d.lat} lng={d.lng} cityId={d.id} />}
 
             <form className="mt-6 grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end rounded-[var(--radius-l)] border border-line p-4" action={`/destinations/${d.slug}`}>
               <p className="col-span-full t-h3">Your trip dates</p>

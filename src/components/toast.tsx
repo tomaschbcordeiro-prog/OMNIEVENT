@@ -64,12 +64,12 @@ export function Toaster() {
             {t.body && <p className={`t-small leading-snug ${t.celebrate ? "text-text/80" : "text-white/75"}`}>{t.body}</p>}
           </div>
           {t.action && (
-            <button type="button" className="shrink-0 t-small font-semibold text-sun underline-offset-2 hover:underline" onClick={() => (t.action!.run(), dismiss(t.id))}>
+            <button type="button" className="toast-act shrink-0 t-small font-semibold underline-offset-2 hover:underline" onClick={() => (t.action!.run(), dismiss(t.id))}>
               {t.action.label}
             </button>
           )}
           {t.href && (
-            <Link href={t.href} className={`shrink-0 t-small font-semibold underline-offset-2 hover:underline ${t.celebrate ? "text-text" : "text-sun"}`} onClick={() => dismiss(t.id)}>
+            <Link href={t.href} className={`shrink-0 t-small font-semibold underline-offset-2 hover:underline ${t.celebrate ? "text-text" : "toast-act"}`} onClick={() => dismiss(t.id)}>
               {t.linkLabel ?? "Open"}
             </Link>
           )}
