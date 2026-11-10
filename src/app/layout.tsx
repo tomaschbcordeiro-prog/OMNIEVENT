@@ -12,6 +12,8 @@ import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SITE } from "@/lib/site";
 import { Suspense } from "react";
 import { NavProgress } from "@/components/nav-progress";
+import { IntentPrefetch } from "@/components/intent-prefetch";
+import { TrailRecorder } from "@/components/event-trail";
 import { CommandMenu } from "@/components/command-menu";
 
 // Background data syncs keep running after the response, up to this many seconds.
@@ -69,6 +71,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TiltCards />
         <Toaster />
         <MobileTabBar />
+        <IntentPrefetch />
+        <TrailRecorder />
       </body>
     </html>
   );

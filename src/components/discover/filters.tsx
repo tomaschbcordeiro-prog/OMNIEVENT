@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { TIME_PRESETS } from "@/lib/time";
 import { formatKm, kmToSlider, sliderToKm, RADIUS_PRESETS } from "@/lib/map/circle";
 import type { SearchFilters, EventStatus } from "@/lib/types";
-import { GROUPS } from "@/lib/categories";
+import { GROUPS, getCategory } from "@/lib/categories";
+import { toast } from "../toast";
 import { CITIES, COUNTRIES, getDestination } from "@/lib/destinations";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { STATUS_META } from "@/lib/format";
@@ -274,7 +275,7 @@ function NearPlace({ f, set }: { f: SearchFilters; set: (p: Partial<SearchFilter
 export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f: SearchFilters) => void }) {
   const chips: { k: string; label: string; clear: Partial<SearchFilters> }[] = [];
   if (f.q) chips.push({ k: "q", label: `“${f.q}”`, clear: { q: undefined } });
-  f.categories?.forEach((c) => chips.push({ k: `c-${c}`, label: GROUPS.find((g) => g.slug === c)?.name ?? c.replace(/-/g, " "), clear: { categories: f.categories!.filter((x) => x !== c) } }));
+  f.categories?.forEach((c) => chips.push({ k: `c-${c}`, label: getCategory(c)?.name ?? c.replace(/-/g, " "), clear: { categories: f.categories!.filter((x) => x !== c) } }));
   const day = (ymd?: string) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "…");
   if (f.live) chips.push({ k: "live", label: "On now", clear: { live: undefined } });
   f.places?.forEach((p) => chips.push({ k: `pl-${p}`, label: getDestination(p)?.name ?? p, clear: { places: f.places!.filter((x) => x !== p).length ? f.places!.filter((x) => x !== p) : undefined } }));
@@ -298,16 +299,21 @@ export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f:
   if (f.competition) chips.push({ k: "comp", label: f.competition, clear: { competition: undefined } });
   if (f.participant) chips.push({ k: "participant", label: `Participant: ${f.participant}`, clear: { participant: undefined } });
   if (!chips.length) return null;
+  // Taking filters off is one tap, and so is putting them back.
+  const change = (next: SearchFilters, title: string) => {
+    onChange(next);
+    toast({ title, emoji: "↩️", action: { label: "Undo", run: () => onChange(f) } });
+  };
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
       {chips.map((c) => (
-        <button key={c.k} type="button" className="chip" data-active="true" onClick={() => onChange({ ...f, ...c.clear, page: undefined })} aria-label={`Remove filter ${c.label}`}>
+        <button key={c.k} type="button" className="chip" data-active="true" onClick={() => change({ ...f, ...c.clear, page: undefined }, `Removed “${c.label}”`)} aria-label={`Remove filter ${c.label}`}>
           {c.label}
           <X size={13} aria-hidden />
         </button>
       ))}
       {activeFilterCount(f) + (f.q ? 1 : 0) > 1 && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ sort: f.sort })}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => change({ sort: f.sort }, "Filters cleared")}>
           Clear all
         </button>
       )}

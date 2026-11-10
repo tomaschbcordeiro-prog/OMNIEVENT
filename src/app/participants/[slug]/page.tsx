@@ -11,6 +11,8 @@ import { DemoBadge, EmptyState, Notice } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
 import { Footer } from "@/components/footer";
 import { CommunityPanel } from "@/components/community/community-panel";
+import { KeepExploring } from "@/components/keep-exploring";
+import { getCategory, groupOf } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -50,6 +52,12 @@ export default async function ParticipantPage({ params }: { params: P }) {
     else where.set(k, { name: (c.cityId && getDestination(c.cityId)?.name) || c.city, id: c.cityId, n: 1 });
   }
   const cities = [...where.values()];
+  // What they mostly do, from their dates: for the way back up and the ways on.
+  const kinds = new Map<string, number>();
+  for (const c of res.items.length ? res.items : past.items) kinds.set(c.categorySlug, (kinds.get(c.categorySlug) ?? 0) + 1);
+  const mainCat = [...kinds.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const cat = mainCat ? getCategory(mainCat) : undefined;
+  const group = mainCat ? getCategory(groupOf(mainCat)) : undefined;
 
   return (
     <>
@@ -57,6 +65,7 @@ export default async function ParticipantPage({ params }: { params: P }) {
         {!p.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(performerLd(p, res.items)) }} />}
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
           <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
+          {group && (<><span aria-hidden>/</span><Link href={`/categories/${group.slug}`} className="inline-block py-1 hover:text-text">{group.name}</Link></>)}
           <span aria-hidden>/</span><span className="py-1 text-text-2">{KIND[p.kind] ?? "Performer"}</span>
         </nav>
         {p.provenance.isDemo && <div className="mb-5"><Notice tone="demo">This is a fictional profile created for demonstration.</Notice></div>}
@@ -120,6 +129,14 @@ export default async function ParticipantPage({ params }: { params: P }) {
           </section>
         )}
         <CommunityPanel target={`p:${p.slug}`} mode="person" title={p.name} />
+        <KeepExploring
+          links={[
+            cat && next?.cityId ? { href: `/events?city=${next.cityId}&cat=${cat.slug}`, label: `More ${cat.name.toLowerCase()} in ${getDestination(next.cityId)?.name ?? next.city}` } : null,
+            cat && group ? { href: group.slug === cat.slug ? `/categories/${group.slug}` : `/categories/${group.slug}?sub=${cat.slug}`, label: `${cat.name} worldwide` } : null,
+            next?.cityId ? { href: `/destinations/${next.cityId}`, label: `${getDestination(next.cityId)?.name ?? next.city} city guide` } : null,
+            next ? { href: `/venues/${next.venueSlug}`, label: `${next.venueName}: what's on` } : null,
+          ]}
+        />
       </main>
       <Footer />
     </>

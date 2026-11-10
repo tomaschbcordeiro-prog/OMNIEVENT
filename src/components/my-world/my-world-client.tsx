@@ -184,7 +184,7 @@ function Overview({ cards, loading, onTab }: { cards: Map<string, EventCard>; lo
         <section>
           <div className="flex items-baseline justify-between">
             <h2 className="t-h2">Recently viewed</h2>
-            <button className="t-small text-text-2 hover:text-cyan" onClick={() => userActions.clearRecent()}>Clear</button>
+            <button className="see-all t-small text-text-2 hover:text-cyan" onClick={() => userActions.clearRecent()}>Clear</button>
           </div>
           <ul className="divide-y divide-line mt-2">{recent.map((c) => <EventRow key={c.id} c={c} />)}</ul>
         </section>

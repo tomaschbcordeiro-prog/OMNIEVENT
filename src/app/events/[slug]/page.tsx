@@ -22,6 +22,8 @@ import { ListedBy } from "@/components/create/my-events";
 import { Countdown } from "@/components/countdown";
 import { DayForecast } from "@/components/weather";
 import { TileStrip } from "@/components/tile-strip";
+import { KeepExploring } from "@/components/keep-exploring";
+import { TrailPager } from "@/components/event-trail";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -138,6 +140,11 @@ export default async function EventPage({ params }: { params: P }) {
   // The main performer's other dates elsewhere: a tour's other cities, a team's other matches.
   const lead = e.people.find((p) => p.role === "headliner") ?? e.people[0];
   const moreDates = lead ? searchEvents({ participant: lead.slug, pageSize: 12, sort: "date" }).items.filter((c) => c.id !== e.id && c.venueSlug !== v.slug).slice(0, 8) : [];
+  // The same kind of thing in the same city, not already shown above.
+  const shown = new Set([e.id, ...sameVenue.map((c) => c.id), ...moreDates.map((c) => c.id)]);
+  const similar = v.cityId ? searchEvents({ city: v.cityId, categories: [e.categorySlug], pageSize: 16, sort: "date" }).items.filter((c) => !shown.has(c.id)).slice(0, 8) : [];
+  for (const c of similar) shown.add(c.id);
+  const nearbyNew = nearby.filter((c) => !shown.has(c.id));
   const isDaily = e.eventType === "daily_attraction";
   // An end time is worth showing only when it's after the start.
   const showEnd = !!e.end && e.eventType !== "multi_day" && Date.parse(e.end) - Date.parse(e.start) >= 15 * 60000;
@@ -154,17 +161,20 @@ export default async function EventPage({ params }: { params: P }) {
       <ViewTracker id={e.id} />
       {!e.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(e)).replace(/</g, "\\u003c") }} />}
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
-        <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap gap-1">
-          <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
-          <span aria-hidden>/</span>
-          <Link href={`/categories/${group}`} className="inline-block py-1 hover:text-text">{getCategory(group)?.name}</Link>
-          {v.cityId && (
-            <>
-              <span aria-hidden>/</span>
-              <Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link>
-            </>
-          )}
-        </nav>
+        <div className="trail-row mb-4">
+          <nav aria-label="Breadcrumb" className="trail-crumbs t-small text-text-3 flex flex-wrap gap-1">
+            <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
+            <span aria-hidden>/</span>
+            <Link href={`/categories/${group}`} className="inline-block py-1 hover:text-text">{getCategory(group)?.name}</Link>
+            {v.cityId && (
+              <>
+                <span aria-hidden>/</span>
+                <Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link>
+              </>
+            )}
+          </nav>
+          <TrailPager slug={e.slug} />
+        </div>
 
         {e.provenance.isDemo && (
           <div className="mb-5">
@@ -389,13 +399,13 @@ export default async function EventPage({ params }: { params: P }) {
               </div>
             </section>
 
-            {(sameVenue.length > 0 || nearby.length > 0 || moreDates.length > 0) && (
+            {(sameVenue.length > 0 || nearbyNew.length > 0 || moreDates.length > 0 || similar.length > 0) && (
               <div className="mt-12 grid gap-10">
                 {lead && moreDates.length > 0 && (
                   <section aria-labelledby="more-dates">
                     <div className="flex items-baseline justify-between gap-3">
                       <h2 id="more-dates" className="t-h3">More dates: {lead.name}</h2>
-                      <Link href={`/participants/${lead.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
+                      <Link href={`/participants/${lead.slug}`} className="see-all t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
                     </div>
                     <TileStrip label={`More dates: ${lead.name}`}>{moreDates.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
@@ -404,22 +414,41 @@ export default async function EventPage({ params }: { params: P }) {
                   <section aria-labelledby="same">
                     <div className="flex items-baseline justify-between gap-3">
                       <h2 id="same" className="t-h3">Also at {v.name}</h2>
-                      <Link href={`/venues/${v.slug}`} className="t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
+                      <Link href={`/venues/${v.slug}`} className="see-all t-small text-text-2 hover:text-text shrink-0">All dates →</Link>
                     </div>
                     <TileStrip label={`Also at ${v.name}`}>{sameVenue.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
                 )}
-                {nearby.length > 0 && (
+                {similar.length > 0 && cat && (
+                  <section aria-labelledby="similar">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 id="similar" className="t-h3">More {cat.name.toLowerCase()} in {v.city}</h2>
+                      <Link href={`/events?city=${v.cityId}&cat=${e.categorySlug}`} className="see-all t-small text-text-2 hover:text-text shrink-0">See all →</Link>
+                    </div>
+                    <TileStrip label={`More ${cat.name.toLowerCase()} in ${v.city}`}>{similar.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
+                  </section>
+                )}
+                {nearbyNew.length > 0 && (
                   <section aria-labelledby="near">
                     <div className="flex items-baseline justify-between gap-3">
                       <h2 id="near" className="t-h3">Nearby, soon</h2>
-                      {v.cityId && <Link href={`/events?city=${v.cityId}`} className="t-small text-text-2 hover:text-text shrink-0">More in {v.city} →</Link>}
+                      {v.cityId && <Link href={`/events?city=${v.cityId}`} className="see-all t-small text-text-2 hover:text-text shrink-0">All of {v.city} →</Link>}
                     </div>
-                    <TileStrip label="Nearby, soon">{nearby.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
+                    <TileStrip label="Nearby, soon">{nearbyNew.map((c) => <EventTile key={c.id} c={c} />)}</TileStrip>
                   </section>
                 )}
               </div>
             )}
+            <KeepExploring
+              links={[
+                v.cityId && cat ? { href: `/events?city=${v.cityId}&cat=${e.categorySlug}`, label: `${cat.name} in ${v.city}` } : null,
+                { href: `/venues/${v.slug}`, label: `Everything at ${v.name}` },
+                lead ? { href: `/participants/${lead.slug}`, label: `${lead.name}: all dates` } : null,
+                v.cityId ? { href: `/destinations/${v.cityId}`, label: `${v.city} city guide` } : null,
+                { href: `/categories/${group}`, label: `${getCategory(group)?.name ?? "This category"} worldwide` },
+                v.cityId ? { href: `/mixtape?c=${v.cityId}`, label: `Plan a weekend in ${v.city}` } : null,
+              ]}
+            />
           </article>
 
           <section className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start grid gap-4">

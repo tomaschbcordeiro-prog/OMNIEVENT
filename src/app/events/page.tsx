@@ -9,6 +9,7 @@ import { didYouMean } from "@/lib/search/did-you-mean";
 import { Footer } from "@/components/footer";
 import { Notice } from "@/components/ui";
 import { getDestination } from "@/lib/destinations";
+import { getCategory } from "@/lib/categories";
 import { Suspense } from "react";
 import { ContinueSearch } from "@/components/continue-search";
 import { summarizeSearch } from "@/lib/search/summary";
@@ -32,8 +33,13 @@ function toParams(sp: Record<string, string | string[] | undefined>) {
 export async function generateMetadata({ searchParams }: { searchParams: SP }): Promise<Metadata> {
   const p = toParams(await searchParams);
   const city = p.get("city") ? getDestination(p.get("city")!)?.name : undefined;
+  // The tab says what's in it: the words searched, the kind of thing, the place.
+  const words = (p.get("asked") ?? p.get("q"))?.trim().slice(0, 60);
+  const cats = (p.get("cat") ?? "").split(",").map((c) => getCategory(c)?.name).filter(Boolean);
+  const where = city ? ` in ${city}` : p.get("pl") ? ` near ${p.get("pl")!.split(",")[0]}` : "";
+  const title = words ? `“${words}”${where}: events` : cats.length ? `${cats.slice(0, 2).join(" and ")}${where}` : city ? `Events in ${city}` : where ? `Events${where}` : "All events";
   return {
-    title: city ? `Events in ${city}` : "All events",
+    title,
     description: "Search concerts, sport, theatre, festivals, conferences, exhibitions and attractions worldwide, with dates, prices and official ticket links.",
     alternates: { canonical: "/events" },
   };

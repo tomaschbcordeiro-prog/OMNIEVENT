@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Accessibility, Navigation } from "lucide-react";
-import { ensureFresh, getVenueBySlug, searchEvents, waitFor } from "@/lib/store";
+import { ensureFresh, getVenueBySlug, searchEvents, venuesInCity, waitFor } from "@/lib/store";
 import { LocationMap } from "@/components/event-detail-client";
 import { DemoBadge, EmptyState, Notice } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
@@ -13,6 +13,8 @@ import { MonthList, NextUp } from "@/components/event-list-parts";
 import { WeatherNow } from "@/components/weather";
 import { getCategory } from "@/lib/categories";
 import { shareImage, ldJson, venueLd } from "@/lib/structured-data";
+import { KeepExploring } from "@/components/keep-exploring";
+import { haversineKm } from "@/lib/geo";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -42,11 +44,16 @@ export default async function VenuePage({ params }: { params: P }) {
   const [next, ...later] = res.items;
   // What this place mostly hosts, from what's on.
   const kinds = new Map<string, number>();
-  for (const c of res.items) {
-    const name = getCategory(c.categorySlug)?.name;
-    if (name) kinds.set(name, (kinds.get(name) ?? 0) + 1);
-  }
-  const mostly = [...kinds.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+  for (const c of res.items) if (getCategory(c.categorySlug)) kinds.set(c.categorySlug, (kinds.get(c.categorySlug) ?? 0) + 1);
+  const mostly = [...kinds.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([slug]) => ({ slug, name: getCategory(slug)!.name }));
+  // Other places in the same city with something on, the closest first.
+  const around = v.cityId
+    ? venuesInCity(v.cityId)
+        .filter((o) => o.slug !== v.slug)
+        .map((o) => ({ ...o, km: haversineKm(v.lat, v.lng, o.lat, o.lng) }))
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 6)
+    : [];
   const facts: [string, string][] = [];
   if (v.capacity) facts.push(["Capacity", v.capacity.toLocaleString("en-GB")]);
   if (v.indoor !== undefined) facts.push(["Setting", v.indoor ? "Indoor" : "Outdoor"]);
@@ -72,7 +79,17 @@ export default async function VenuePage({ params }: { params: P }) {
             </p>
             <p className="t-small text-text-3 mt-3 tnum">
               {res.total ? `${res.total.toLocaleString("en-GB")} upcoming ${res.total === 1 ? "date" : "dates"}` : "Nothing listed right now"}
-              {mostly.length > 0 && <> · mostly {mostly.join(", ").toLowerCase()}</>}
+              {mostly.length > 0 && (
+                <>
+                  {" · mostly "}
+                  {mostly.map((m, i) => (
+                    <Fragment key={m.slug}>
+                      {i > 0 && ", "}
+                      {v.cityId ? <Link href={`/events?city=${v.cityId}&cat=${m.slug}`} className="underline decoration-line-strong underline-offset-4 hover:text-text">{m.name.toLowerCase()}</Link> : m.name.toLowerCase()}
+                    </Fragment>
+                  ))}
+                </>
+              )}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <FollowButton kind="venue" id={v.slug} name={v.name} />
@@ -105,9 +122,33 @@ export default async function VenuePage({ params }: { params: P }) {
                 <p className="t-small text-text-3 mt-1">Nothing published by the venue yet. Ask the venue before you go.</p>
               )}
             </div>
+            {around.length > 0 && (
+              <section className="side-card" aria-labelledby="around">
+                <h2 id="around" className="t-small font-semibold">Other venues nearby</h2>
+                <ul className="mt-1.5 divide-y divide-line">
+                  {around.map((o) => (
+                    <li key={o.slug}>
+                      <Link href={`/venues/${o.slug}`} className="flex items-baseline justify-between gap-3 py-2 t-small hover:text-cyan">
+                        <span className="min-w-0 truncate font-medium">{o.name}</span>
+                        <span className="text-text-3 tnum shrink-0">{o.km < 1 ? `${Math.round(o.km * 1000)} m` : `${o.km.toFixed(1)} km`} · {o.upcoming}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/destinations/${v.cityId}`} className="see-all t-small text-text-2 hover:text-text mt-2">All of {v.city} →</Link>
+              </section>
+            )}
           </aside>
         </div>
         <CommunityPanel target={`v:${v.slug}`} mode="place" title={v.name} />
+        <KeepExploring
+          links={[
+            ...mostly.slice(0, 2).map((m) => (v.cityId ? { href: `/events?city=${v.cityId}&cat=${m.slug}`, label: `${m.name} in ${v.city}` } : null)),
+            v.cityId ? { href: `/destinations/${v.cityId}`, label: `${v.city} city guide` } : null,
+            v.cityId ? { href: `/events?city=${v.cityId}`, label: `Everything on in ${v.city}` } : null,
+            v.cityId ? { href: `/mixtape?c=${v.cityId}`, label: `Plan a weekend in ${v.city}` } : null,
+          ]}
+        />
       </main>
       <Footer />
     </>

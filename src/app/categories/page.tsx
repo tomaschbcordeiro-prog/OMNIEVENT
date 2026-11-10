@@ -45,7 +45,7 @@ export default async function CategoriesPage() {
               <ul className="relative z-10 mt-3 flex flex-wrap gap-1.5" aria-label={`${g.name} genres`}>
                 {childrenOf(g.slug).slice(0, 8).map((c) => (
                   <li key={c.slug}>
-                    <Link href={`/categories/${g.slug}?sub=${c.slug}`} className="inline-block t-micro text-text-2 rounded-full border border-line px-2 py-0.5 hover:border-cyan/50 hover:text-cyan hover:bg-cyan/5 transition-colors">{c.name}</Link>
+                    <Link href={`/categories/${g.slug}?sub=${c.slug}`} className="inline-block t-micro text-text-2 rounded-full border border-line px-2.5 py-1 hover:border-cyan/50 hover:text-cyan hover:bg-cyan/5 transition-colors">{c.name}</Link>
                   </li>
                 ))}
               </ul>

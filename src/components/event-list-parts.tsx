@@ -27,7 +27,7 @@ export function NextUp({ c, showPlace = false }: { c: Card; showPlace?: boolean 
   const user = useUser();
   const soon = soonLabel(c);
   return (
-    <Link href={`/events/${c.slug}`} className="next-up group">
+    <Link href={`/events/${c.slug}`} prefetch={false} className="next-up group">
       <div className="next-up-media">
         <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="lg" priority className="absolute inset-0 h-full w-full" />
         <span className="next-up-chip">

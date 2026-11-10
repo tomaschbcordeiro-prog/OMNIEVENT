@@ -3,9 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
+/** The link followed, while its page loads. */
+let pendingLink: HTMLAnchorElement | null = null;
+function settle() {
+  pendingLink?.removeAttribute("data-pending");
+  pendingLink = null;
+}
+
 /**
  * A thin bar along the top while the next page loads: it starts when a link to another page
- * on the site is followed, and finishes when that page is showing.
+ * on the site is followed, and finishes when that page is showing. The link itself shows it's
+ * on its way too (data-pending), where the eye and the finger are.
  */
 export function NavProgress() {
   const path = usePathname();
@@ -24,9 +32,15 @@ export function NavProgress() {
       // Same page (or just an anchor on it): nothing to load.
       if (url.pathname === window.location.pathname && url.search === window.location.search) return;
       window.clearTimeout(timer.current);
+      settle();
+      a.setAttribute("data-pending", "");
+      pendingLink = a;
       setState("loading");
       // Never stuck: a navigation that's cancelled or fails just fades away.
-      timer.current = window.setTimeout(() => setState("idle"), 8000);
+      timer.current = window.setTimeout(() => {
+        settle();
+        setState("idle");
+      }, 8000);
     };
     // Before the page's own handlers (links navigate in their click handler).
     document.addEventListener("click", onClick, true);
@@ -34,6 +48,7 @@ export function NavProgress() {
   }, []);
 
   useEffect(() => {
+    settle();
     setState((s) => (s === "loading" ? "done" : s));
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setState("idle"), 500);

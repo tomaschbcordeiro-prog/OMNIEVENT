@@ -49,6 +49,8 @@ function DateBlock({ c }: { c: Card }) {
   );
 }
 
+// Event links don't load ahead just for being on screen (a list would ask for every event);
+// the whole page loads when the pointer rests on one or a finger touches it (IntentPrefetch).
 export function EventRow({
   c, onSelect, compact = false, highlighted = false, onHover, terms,
 }: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void; /** Searched words to mark in the title. */ terms?: string[] }) {
@@ -105,7 +107,7 @@ export function EventRow({
           {body}
         </button>
       ) : (
-        <Link href={`/events/${c.slug}`} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)}>
+        <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)}>
           {body}
         </Link>
       )}
@@ -120,7 +122,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
   const people = peopleLine(c);
   return (
     <li className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
-      <Link href={`/events/${c.slug}`} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)}>
+      <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)}>
         <div className="relative overflow-hidden">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">

@@ -16,6 +16,7 @@ import { ClusterMap } from "@/components/cluster-map";
 import { CategoryIcon, ShapeGlyph } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
 import { Suspense } from "react";
+import { KeepExploring } from "@/components/keep-exploring";
 import { Crosshair } from "lucide-react";
 import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
@@ -78,6 +79,8 @@ export default async function DestinationPage({ params, searchParams }: { params
   const nowLocal = d.timeZone ? new Intl.DateTimeFormat("en-GB", { timeZone: d.timeZone, hour: "2-digit", minute: "2-digit", weekday: "short" }).format(new Date()) : null;
   const zoom = d.kind === "city" ? 10.5 : d.kind === "country" ? 4.6 : 2;
   const parent = d.kind === "city" ? getDestination(d.parentId!) : d.kind === "country" ? CONTINENTS.find((c) => c.id === d.continent) : undefined;
+  // Neighbouring cities (the same country, busiest first): the way on from the end of the page.
+  const siblings = d.kind === "city" && parent && parent.kind === "country" ? citiesIn(parent).filter((c) => c.id !== d.id && (stats[c.id]?.total ?? 0) > 0).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0)).slice(0, 8) : [];
 
   return (
     <>
@@ -229,6 +232,9 @@ export default async function DestinationPage({ params, searchParams }: { params
           <h2 id="alltitle" className="t-h2 mb-4">Everything in {d.name}</h2>
           <EventsBrowser result={result} filters={user} query={filters} facets={result.facets} basePath={`/destinations/${d.slug}`} />
         </section>
+        {siblings.length > 0 && parent && (
+          <KeepExploring title={`More cities in ${parent.name}`} links={[...siblings.map((c) => ({ href: `/destinations/${c.slug}`, label: c.name })), { href: `/destinations/${parent.slug}`, label: `All of ${parent.name}` }]} />
+        )}
       </main>
       {/* A server that had only just started: the rest of the catalogue is on its way. */}
       <StillLoading partial={!catalogueComplete()} count={dataSummary().total} />

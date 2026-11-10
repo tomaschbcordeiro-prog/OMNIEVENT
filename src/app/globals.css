@@ -393,6 +393,25 @@ body {
 .chip:active {
   transform: scale(0.96);
 }
+/* A chip that goes somewhere: taller to tap, and the arrow nudges toward where it leads. */
+.chip-link {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  color: var(--text);
+  background: var(--panel);
+}
+.chip-link svg {
+  transition: translate 160ms ease;
+}
+.chip-link:hover svg {
+  translate: 1px -1px;
+}
+/* "See all →" style links beside a heading: the same look, a finger-sized target. */
+.see-all {
+  display: inline-block;
+  padding-block: 0.4rem;
+  margin-block: -0.4rem;
+}
 .chip:hover {
   color: var(--text);
   border-color: #a9bbd0;
@@ -2196,6 +2215,17 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   background: rgb(225 29 72 / 0.1);
   color: #be123c;
 }
+/* On the dark page the red is lifted so it still reads at 4.5:1. */
+:root[data-theme="dark"] .countdown--live {
+  color: #fda4af;
+  background: rgb(225 29 72 / 0.16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .countdown--live {
+    color: #fda4af;
+    background: rgb(225 29 72 / 0.16);
+  }
+}
 .countdown--past {
   background: rgb(13 27 51 / 0.06);
   color: var(--color-text-2);
@@ -3184,6 +3214,25 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 @media (prefers-reduced-motion: reduce) {
   .page-enter {
     animation: none;
+  }
+}
+/* The link just followed, while its page loads (only if that takes more than a moment). */
+a[data-pending] {
+  cursor: progress;
+  animation: link-pending 650ms ease-in-out 150ms infinite alternate both;
+}
+@keyframes link-pending {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  a[data-pending] {
+    animation: none;
+    opacity: 0.7;
   }
 }
 /* Event rows: the picture lifts a little when pointed at. */
@@ -4406,9 +4455,22 @@ mark.hit {
 .tab-tile[aria-current="page"] {
   border-color: var(--cyan);
 }
-/* Bars and notes that sit at the bottom of the screen stay above the bar. */
+/* Bars and notes that sit at the bottom of the screen stay above the bar. The event bar keeps
+   its buttons clear of the raised globe (the globe sits in the bar's lower edge), and while
+   it's tucked away it's hidden outright, not just slid behind the see-through tab bar. */
 .action-bar {
   bottom: var(--tabbar-h) !important;
+  padding-bottom: 28px;
+  visibility: hidden;
+  transition:
+    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 280ms;
+}
+.action-bar.is-shown {
+  visibility: visible;
+  transition:
+    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s;
 }
 
 /* ---- Phones, on the globe: two round buttons beside the timeline, and the tools sheet ---- */
@@ -4545,5 +4607,89 @@ mark.hit {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+}
+
+/* An event opened from a list: the way back, and the previous and next ones. It shares the
+   breadcrumb's row (so nothing below moves when it appears); on phones it takes that row. */
+.trail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+}
+.trail-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  animation: trail-in 220ms ease-out both;
+}
+@keyframes trail-in {
+  from {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+.trail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.trail-back:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.trail-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.125rem;
+  background: var(--panel);
+}
+.trail-step {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  color: var(--text);
+  transition: background-color 120ms ease, transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.trail-step:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.trail-step:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.trail-step:disabled {
+  color: var(--text-3);
+  opacity: 0.45;
+}
+@media (max-width: 639px) {
+  .trail-row:has(.trail-pager) .trail-crumbs {
+    display: none;
+  }
+  .trail-pager {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .trail-back {
+    padding-left: 0.25rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trail-pager {
+    animation: none;
   }
 }
