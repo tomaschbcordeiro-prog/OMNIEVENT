@@ -63,8 +63,11 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
   // At the size it's shown; the original if that can't be made.
   const [full, setFull] = useState(false);
   const src = full ? original : (thumb(original, 480) ?? original);
-  const backdrop = thumb(original, 64) ?? original;
-  const [fit, setFit] = useState<{ w: number; h: number } | null>(null);
+  // The blurred backdrop is the same picture (one download, not two).
+  const backdrop = src;
+  // How much a small picture is enlarged once its size is known: as a transform, so nothing
+  // on the page moves (a change of width or height would shift the layout).
+  const [grow, setGrow] = useState(1);
   const box = useRef<HTMLDivElement>(null);
   const img = useRef<HTMLImageElement>(null);
   // A picture that finished loading before the page's script ran has no load event to wait for.
@@ -76,13 +79,15 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
       else setBroken(true);
     }
   }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="h-32 sm:h-40 w-full" />;
+  // A picture that can't be loaded: the event's poster in the same frame, so nothing below moves.
+  if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full" />;
   function measure(img: HTMLImageElement) {
     const b = box.current?.getBoundingClientRect();
     if (!b?.width || !img.naturalWidth) return;
-    // Fit inside the frame, enlarging small pictures by a third at most.
-    const s = Math.min(b.width / img.naturalWidth, b.height / img.naturalHeight, 1.35);
-    setFit({ w: Math.min(100, ((img.naturalWidth * s) / b.width) * 100), h: Math.min(100, ((img.naturalHeight * s) / b.height) * 100) });
+    // Fit inside the frame, enlarging small pictures by a third at most. CSS already shows it
+    // at its own size or smaller (whichever fits), so only the enlargement is left to do.
+    const fits = Math.min(b.width / img.naturalWidth, b.height / img.naturalHeight);
+    setGrow(Math.min(fits, 1.35) / Math.min(fits, 1));
   }
   return (
     <div ref={box} className="hero-img hero-zoomable aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full" onClick={() => setOpen(true)}>
@@ -97,7 +102,7 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
         src={src}
         alt=""
         className="hero-img-fg"
-        style={fit ? { width: `${fit.w}%`, height: `${fit.h}%` } : undefined}
+        style={grow > 1.005 ? { transform: `scale(${grow.toFixed(3)})` } : undefined}
         fetchPriority="high"
         decoding="async"
         referrerPolicy="no-referrer"

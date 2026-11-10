@@ -3156,6 +3156,12 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   box-shadow: 0 18px 50px -18px rgb(0 0 0 / 0.55);
   /* Shown as soon as it arrives (it's the page's main picture), not after the page's script
      has measured it: that wait made phones show it about 0.7 s later. */
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-img-fg {
+    transition: none;
+  }
 }
 
 /* ---- Motion: pages fade in, sections rise into view as they scroll in, a thin bar while a page loads ---- */
