@@ -117,6 +117,11 @@ export default async function DestinationPage({ params, searchParams }: { params
                   <span aria-hidden>📼</span> Plan a weekend here
                 </Link>
               )}
+              {d.kind === "city" && (
+                <Link className="btn btn-secondary btn-sm" href={`/trips/new?city=${d.id}`}>
+                  <span aria-hidden>✈️</span> Plan a trip with {d.name}
+                </Link>
+              )}
             </div>
 
             <form className="mt-6 grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end rounded-[var(--radius-l)] border border-line p-4" action={`/destinations/${d.slug}`}>

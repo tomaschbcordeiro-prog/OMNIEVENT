@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpDown, Check, ExternalLink, Share2, Plus, CalendarPlus, Info } from "lucide-react";
+import { ArrowUpDown, Check, ExternalLink, Share2, Plus, CalendarPlus, Info, Plane } from "lucide-react";
 import type { EventCard, TicketOffer, Cluster } from "@/lib/types";
 import { formatMoney, relativeTime, AVAILABILITY_META, TICKET_CATEGORY_LABEL } from "@/lib/format";
 import { convert, FX_SOURCE } from "@/lib/currency";
-import { userActions, useUser } from "@/lib/user/store";
+import { userActions, useUser, type Trip, type TripEventSnap } from "@/lib/user/store";
+import { fitOf } from "@/lib/trip";
 import { ClusterMap } from "./cluster-map";
 
 export function ViewTracker({ id }: { id: string }) {
@@ -40,47 +41,54 @@ export function ShareButton({ title }: { title: string }) {
   );
 }
 
-export function AddToTrip({ eventId }: { eventId: string }) {
+/**
+ * Add to trip: each trip says whether the event fits it (near a city on the route, on a day
+ * spent there) or why not, and a new trip can be planned around the event.
+ */
+export function AddToTrip({ event, cityId, countryCode, day }: { event: TripEventSnap & { id: string }; cityId?: string; countryCode?: string; day: string }) {
   const user = useUser();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const inTrips = user.trips.filter((t) => t.eventIds.includes(eventId));
+  const inTrips = user.trips.filter((t) => t.eventIds.includes(event.id));
+  const plan = new URLSearchParams({ date: day, event: event.id });
+  if (cityId) plan.set("city", cityId);
+  else plan.set("place", `${event.lat.toFixed(4)},${event.lng.toFixed(4)},${encodeURIComponent(event.city)},${countryCode ?? ""}`);
+  const why = (t: Trip) => {
+    if (!t.stops?.length) return "No route yet";
+    const f = fitOf(t.stops, { lat: event.lat, lng: event.lng, day });
+    if (f.ok) return `Fits: ${f.stop.name}, ${new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}`;
+    return f.why === "before" ? "Before this trip" : f.why === "after" ? "After this trip" : f.why === "wrong-days" ? `Not in ${f.stop?.name} that day` : "Not on this route";
+  };
   return (
     <div className="relative">
       <button type="button" className="btn btn-secondary btn-sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Plus size={14} aria-hidden /> {inTrips.length ? `In ${inTrips.length} ${inTrips.length === 1 ? "trip" : "trips"}` : "Add to trip"}
       </button>
       {open && (
-        <div className="absolute z-30 mt-1.5 w-72 surface-float rounded-[var(--radius-m)] p-3 panel-in">
+        <div className="absolute z-30 mt-1.5 w-80 max-w-[calc(100vw-2rem)] surface-float rounded-[var(--radius-m)] p-3 panel-in">
           {user.trips.length > 0 && (
             <ul className="grid gap-1 mb-3">
               {user.trips.map((t) => {
-                const on = t.eventIds.includes(eventId);
+                const on = t.eventIds.includes(event.id);
+                const note = why(t);
+                const fits = note.startsWith("Fits");
                 return (
                   <li key={t.id}>
-                    <button type="button" className="w-full flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-text/5 text-sm" aria-pressed={on} onClick={() => userActions.toggleTripEvent(t.id, eventId)}>
-                      <span className="truncate">{t.name}</span>
-                      {on && <Check size={14} className="text-cyan" aria-hidden />}
+                    <button type="button" className="w-full flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-text/5 text-sm text-left" aria-pressed={on} onClick={() => userActions.setTripEvent(t.id, event, !on)}>
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold"><span aria-hidden>{t.emoji ?? "✈️"} </span>{t.name}</span>
+                        <span className={`block t-micro ${fits ? "text-ok" : "text-text-3"}`}>{note}</span>
+                      </span>
+                      {on ? <Check size={15} className="text-cyan shrink-0" aria-hidden /> : <Plus size={15} className="text-text-3 shrink-0" aria-hidden />}
                     </button>
                   </li>
                 );
               })}
             </ul>
           )}
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!name.trim()) return;
-              userActions.createTrip(name.trim(), undefined, undefined, [eventId]);
-              setName("");
-            }}
-          >
-            <label className="sr-only" htmlFor="new-trip">New trip name</label>
-            <input id="new-trip" className="field !h-8" placeholder="New trip name" value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn btn-primary btn-sm" disabled={!name.trim()}>Create</button>
-          </form>
-          <p className="t-micro text-text-3 mt-2">Trips are saved in this browser. <Link href="/my-world?tab=trips" className="underline">Open trip planner</Link></p>
+          <Link href={`/trips/new?${plan}`} className="btn btn-primary btn-sm w-full">
+            <Plane size={14} aria-hidden /> Plan a trip around this
+          </Link>
+          <p className="t-micro text-text-3 mt-2">Trips are kept in this browser. <Link href="/trips" className="underline">All your trips</Link></p>
         </div>
       )}
     </div>

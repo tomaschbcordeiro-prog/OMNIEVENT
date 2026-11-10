@@ -24,6 +24,8 @@ export interface FlyRequest {
   pitch?: number;
   bearing?: number;
   bbox?: [number, number, number, number];
+  /** Room to keep clear round a framed area (panels over the map); the home globe's when absent. */
+  padding?: { top: number; right: number; bottom: number; left: number };
 }
 
 export interface MapClick {
@@ -46,7 +48,7 @@ export interface EarthMapHandle {
    */
   spinTo(lat: number, lng: number, zoom: number, opts?: { ms?: number; offset?: [number, number] }): Promise<boolean>;
   /** Night Flight: a route's stops ([lng, lat]) and how many have been reached; null clears it. */
-  setFlight(route: { stops: [number, number][]; reached: number } | null): void;
+  setFlight(route: FlightRoute | null): void;
   /**
    * Night Flight: fly the great circle to a stop behind a glowing comet that draws the route,
    * pulling out mid-flight and tilting in on arrival, then turn slowly round the place.
@@ -57,6 +59,21 @@ export interface EarthMapHandle {
   viewRoute(points: [number, number][], zoom: number): void;
   /** Stop any camera move in progress, a flight leg included (it resolves false). */
   halt(): void;
+  /**
+   * An element pinned to a place on the globe (a trip's city or event icon), moving with it.
+   * Returns how to move or take it away.
+   */
+  pin(el: HTMLElement, at: [number, number], anchor?: "center" | "bottom", offset?: [number, number]): { move(at: [number, number], offset?: [number, number]): void; remove(): void } | null;
+  /** Where a place is on screen, in pixels (null before the globe is ready). */
+  project(at: [number, number]): { x: number; y: number } | null;
+}
+
+/** A route on the globe: Night Flight's stops, or a trip's line alone (its cities are drawn as icons). */
+export interface FlightRoute {
+  stops: [number, number][];
+  reached: number;
+  /** Just the line, without the stop dots. */
+  lineOnly?: boolean;
 }
 
 export interface EarthMapProps {
@@ -147,7 +164,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   const selectedNow = useRef("");
   const popFrame = useRef(0);
   const liveCtl = useRef<{ sync(): void; stop(): void } | null>(null);
-  const flight = useRef<{ stops: [number, number][]; reached: number } | null>(null);
+  const flight = useRef<FlightRoute | null>(null);
   /** Bumped by every flight leg and camera takeover: an older leg's frames stop at once. */
   const legGen = useRef(0);
 
@@ -219,7 +236,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       });
     },
     setFlight(route) {
-      flight.current = route ? { stops: route.stops.map((s) => [s[0], s[1]] as [number, number]), reached: route.reached } : null;
+      flight.current = route ? { ...route, stops: route.stops.map((s) => [s[0], s[1]] as [number, number]) } : null;
       drawFlight();
       drawLeg(null);
     },
@@ -298,6 +315,24 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       const o = { center: [lng, Math.max(-45, Math.min(45, lat))] as [number, number], zoom, pitch: 0, bearing: 0 };
       if (latest.current.reducedMotion) m.jumpTo(o);
       else m.flyTo({ ...o, curve: 1.4, speed: 1.1, maxDuration: 3200, essential: false });
+    },
+    pin(el, at, anchor = "center", offset = [0, 0]) {
+      const m = mapRef.current;
+      if (!m) return null;
+      const marker = new maplibregl.Marker({ element: el, anchor, offset }).setLngLat(at).addTo(m);
+      return {
+        move: (to, off) => {
+          marker.setLngLat(to);
+          if (off) marker.setOffset(off);
+        },
+        remove: () => void marker.remove(),
+      };
+    },
+    project(at) {
+      const m = mapRef.current;
+      if (!m) return null;
+      const p = m.project(at);
+      return { x: p.x, y: p.y };
     },
     getCamera() {
       const m = mapRef.current;
@@ -488,7 +523,6 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       });
       map.addLayer({ id: "flight-head-glow", type: "circle", source: "flight-live", filter: isPoint, paint: { "circle-radius": 24, "circle-color": "#FFC94D", "circle-blur": 1, "circle-opacity": 0.8, "circle-pitch-alignment": "viewport" } });
       map.addLayer({ id: "flight-head", type: "circle", source: "flight-live", filter: isPoint, paint: { "circle-radius": 5, "circle-color": "#FFFFFF", "circle-stroke-color": "#FFC94D", "circle-stroke-width": 2, "circle-pitch-alignment": "viewport" } });
-
       ready.current = true;
       applyAll();
       setEvents();
@@ -778,7 +812,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     const features: GeoJSON.Feature[] = [];
     if (f) {
       for (let i = 1; i < f.stops.length; i++) features.push({ type: "Feature", properties: { kind: i <= f.reached ? "trail" : "plan" }, geometry: { type: "LineString", coordinates: greatCircle(f.stops[i - 1], f.stops[i], 64) } });
-      f.stops.forEach((s, i) => features.push({ type: "Feature", properties: { kind: "stop", reached: i <= f.reached ? 1 : 0 }, geometry: { type: "Point", coordinates: s } }));
+      if (!f.lineOnly) f.stops.forEach((s, i) => features.push({ type: "Feature", properties: { kind: "stop", reached: i <= f.reached ? 1 : 0 }, geometry: { type: "Point", coordinates: s } }));
     }
     (map.getSource("flight") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features });
   }
@@ -963,7 +997,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     try {
       if (f.bbox && f.bbox.every(finite) && (f.bbox[2] - f.bbox[0] > 0.002 || f.bbox[3] - f.bbox[1] > 0.002)) {
         // The map's own padding already keeps clear of a side panel.
-        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: { top: 140, bottom: 80, left: 60, right: latest.current.padRight ? 40 : window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, duration: reduced ? 0 : 900, easing: easeOutCubic, ...extra });
+        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: f.padding ?? { top: 140, bottom: 80, left: 60, right: latest.current.padRight ? 40 : window.innerWidth > 1024 ? 440 : 60 }, maxZoom: finite(f.zoom) ? f.zoom : 17, duration: reduced ? 0 : 900, easing: easeOutCubic, ...extra });
         return;
       }
       if (!finite(f.lat) || !finite(f.lng)) return;

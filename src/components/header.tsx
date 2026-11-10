@@ -16,8 +16,9 @@ const NAV = [
   { href: "/events", key: "nav.events" },
   // Categories stay one tap away from Events, the home chips and the footer.
   { href: "/destinations", key: "nav.destinations" },
+  { href: "/trips", key: "nav.trips", fresh: true },
   { href: "/match", key: "nav.match" },
-  { href: "/mixtape", key: "nav.mixtape", fresh: true },
+  { href: "/mixtape", key: "nav.mixtape" },
   { href: "/community", key: "nav.community" },
   { href: "/clubs", key: "nav.clubs", premium: true },
   { href: "/studio", key: "nav.studio", studio: true },

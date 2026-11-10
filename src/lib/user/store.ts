@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import type { TripStop } from "../trip";
 
 /**
  * Personal data store — DEMO MODE implementation.
@@ -21,6 +22,22 @@ export interface Trip {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  /** The route: each city and the nights there (trips made before routes have none). */
+  stops?: TripStop[];
+  /** An emoji for the trip's pass. */
+  emoji?: string;
+  /** Kinds of events to suggest (category groups); empty for anything. */
+  interests?: string[];
+  /** What each event in the trip looked like when it was added, to show it on the globe after it's gone. */
+  snaps?: Record<string, TripEventSnap>;
+}
+
+/** A trip's event as kept with the trip: what a saved event keeps, plus where it is. */
+export interface TripEventSnap extends SavedSnap {
+  lat: number;
+  lng: number;
+  city: string;
+  groupSlug: string;
 }
 
 export interface Prefs {
@@ -207,10 +224,26 @@ export const userActions = {
   setOnboarded(v = true) {
     update((d) => ({ ...d, onboarded: v }));
   },
-  createTrip(name: string, start?: string, end?: string, eventIds: string[] = []): string {
+  createTrip(name: string, start?: string, end?: string, eventIds: string[] = [], extra: Partial<Pick<Trip, "stops" | "emoji" | "interests" | "snaps">> = {}): string {
     const id = uid();
-    update((d) => ({ ...d, trips: [{ id, name, start, end, eventIds, createdAt: now(), updatedAt: now() }, ...d.trips] }));
+    update((d) => ({ ...d, trips: [{ id, name, start, end, eventIds, ...extra, createdAt: now(), updatedAt: now() }, ...d.trips] }));
     return id;
+  },
+  /** Adds an event to a trip (keeping a copy of it), or takes it out. */
+  setTripEvent(tripId: string, event: TripEventSnap & { id: string }, on: boolean) {
+    const { id, ...snap } = event;
+    update((d) => ({
+      ...d,
+      trips: d.trips.map((t) => {
+        if (t.id !== tripId) return t;
+        const has = t.eventIds.includes(id);
+        if (on === has) return t;
+        const snaps = { ...(t.snaps ?? {}) };
+        if (on) snaps[id] = snap;
+        else delete snaps[id];
+        return { ...t, eventIds: on ? [...t.eventIds, id] : t.eventIds.filter((x) => x !== id), snaps, updatedAt: now() };
+      }),
+    }));
   },
   updateTrip(id: string, patch: Partial<Omit<Trip, "id" | "createdAt">>) {
     update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === id ? { ...t, ...patch, updatedAt: now() } : t)) }));

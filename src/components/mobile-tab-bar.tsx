@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Disc3, Heart, MapPinned, Menu, MessagesSquare, Search, Sparkles, Users, X } from "lucide-react";
+import { Bookmark, CalendarDays, Disc3, Heart, MapPinned, Menu, MessagesSquare, Plane, Search, Sparkles, Users, X } from "lucide-react";
 import { useUser } from "@/lib/user/store";
 import { SearchBox } from "./search-box";
 import { ThemeToggle } from "./theme-toggle";
@@ -21,7 +21,8 @@ function GlobeMark({ size = 30 }: { size?: number }) {
 }
 
 const MORE: { href: string; label: string; note: string; Icon: typeof Heart }[] = [
-  { href: "/destinations", label: "Destinations", note: "Cities and trips", Icon: MapPinned },
+  { href: "/trips", label: "Trips", note: "Plan it on the globe", Icon: Plane },
+  { href: "/destinations", label: "Destinations", note: "Cities to explore", Icon: MapPinned },
   { href: "/match", label: "Match", note: "Swipe your next plan", Icon: Heart },
   { href: "/mixtape", label: "Mixtape", note: "A weekend, planned", Icon: Disc3 },
   { href: "/community", label: "Community", note: "Reviews and tips", Icon: MessagesSquare },

@@ -1,25 +1,23 @@
 "use client";
 
-import { icsText } from "@/lib/ics";
-import { setRangeEdge } from "@/lib/date-range";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download, Share2,
-  ChevronLeft, ChevronRight, Hotel, Plane, X, Check, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users, CalendarPlus,
+  Bookmark, CalendarDays, Route, Heart, Bell, Settings, LayoutDashboard, TriangleAlert, Trash2, Download,
+  ChevronLeft, ChevronRight, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users, CalendarPlus,
 } from "lucide-react";
-import type { EventCard, Cluster } from "@/lib/types";
-import { useUser, userActions, type Trip } from "@/lib/user/store";
+import type { EventCard } from "@/lib/types";
+import { useUser, userActions } from "@/lib/user/store";
 import { GROUPS } from "@/lib/categories";
 import { CITIES } from "@/lib/destinations";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { LOCALES, LOCALE_NAMES } from "@/lib/i18n";
-import { formatEventDate, formatEventTime, localDateKey, tzAbbrev } from "@/lib/format";
+import { formatEventTime, localDateKey, tzAbbrev } from "@/lib/format";
 import { EventRow } from "../event-card";
 import { HowWasIt } from "@/components/how-was-it";
+import { TripsList } from "@/components/trips/trips-home";
 import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
-import { ClusterMap } from "../cluster-map";
 import { MyCommunity } from "../community/my-community";
 import { AccountPanel } from "../community/account-panel";
 import { MyEvents } from "../create/my-events";
@@ -108,7 +106,7 @@ export function MyWorldClient() {
         {tab === "saved" && <Saved cards={cards} missing={missing} loading={loading} />}
         {tab === "searches" && <SavedSearches />}
         {tab === "calendar" && <Calendar cards={cards} />}
-        {tab === "trips" && <Trips cards={cards} />}
+        {tab === "trips" && <Trips />}
         {tab === "events" && <MyEvents />}
         {tab === "following" && <Following />}
         {tab === "community" && (
@@ -411,223 +409,21 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
 
 // ------------------------------------------------------------------ Trips
 
-function icsFor(trip: Trip, cards: EventCard[]): string {
-  const stamp = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const esc = icsText;
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//Trip//EN", `X-WR-CALNAME:${esc(trip.name)}`];
-  for (const c of cards) {
-    lines.push("BEGIN:VEVENT", `UID:${c.id}-${trip.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART:${stamp(c.start)}`, `DTEND:${stamp(new Date(endOf(c)).toISOString())}`, `SUMMARY:${esc(c.title + (c.isDemo ? " (demo)" : ""))}`, `LOCATION:${esc(`${c.venueName}, ${c.city}`)}`, `URL:${window.location.origin}/events/${c.slug}`, "END:VEVENT");
-  }
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-}
-
-function Trips({ cards }: { cards: Map<string, EventCard> }) {
-  const user = useUser();
-  const [active, setActive] = useState<string | null>(user.trips[0]?.id ?? null);
-  const [name, setName] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const trip = user.trips.find((t) => t.id === active) ?? user.trips[0];
-
+/** Trips: the boarding passes, each opening its trip on the globe. */
+function Trips() {
   return (
     <section>
-      <h1 className="t-h1">Trip planner</h1>
-      <p className="t-small text-text-2 mt-1 measure">Group events across cities, spot clashes, and open each seller from one place. Trips are stored in this browser only.</p>
-
-      <form
-        className="mt-5 grid gap-2 sm:grid-cols-[1.5fr_1fr_1fr_auto] items-end rounded-[var(--radius-l)] border border-line p-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!name.trim()) return;
-          const id = userActions.createTrip(name.trim(), from || undefined, to || undefined);
-          setActive(id);
-          setName("");
-          setFrom("");
-          setTo("");
-        }}
-      >
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <label className="label" htmlFor="trip-name">New trip</label>
-          <input id="trip-name" className="field" placeholder="e.g. Iberia in spring" value={name} onChange={(e) => setName(e.target.value)} />
+          <h1 className="t-h1">Trips</h1>
+          <p className="t-small text-text-2 mt-1 measure">Cities, countries and dates, with the events you want on the way, on the globe.</p>
         </div>
-        <div>
-          <label className="label" htmlFor="trip-from">From</label>
-          <input id="trip-from" type="date" className="field" value={from} onChange={(e) => {
-            const r = setRangeEdge("from", e.target.value, { from, to });
-            setFrom(r.from ?? "");
-            setTo(r.to ?? "");
-          }} />
-        </div>
-        <div>
-          <label className="label" htmlFor="trip-to">To</label>
-          <input id="trip-to" type="date" className="field" min={from} value={to} onChange={(e) => {
-            const r = setRangeEdge("to", e.target.value, { from, to });
-            setFrom(r.from ?? "");
-            setTo(r.to ?? "");
-          }} />
-        </div>
-        <button className="btn btn-primary" disabled={!name.trim()}>Create trip</button>
-      </form>
-
-      {user.trips.length > 1 && (
-        <div className="mt-5 flex flex-wrap gap-1.5" role="tablist" aria-label="Your trips">
-          {user.trips.map((t) => (
-            <button key={t.id} role="tab" aria-selected={trip?.id === t.id} className="chip" data-active={trip?.id === t.id} onClick={() => setActive(t.id)}>
-              {t.name} <span className="text-text-3 tnum">{t.eventIds.length}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {trip ? <TripDetail key={trip.id} trip={trip} cards={cards} /> : (
-        <div className="mt-6"><EmptyState title="No trips yet" body="Create a trip above, then use “Add to trip” on any event page. You can also add saved events below once a trip exists." /></div>
-      )}
+        <Link href="/trips/new" className="btn btn-primary btn-sm press">Plan a trip</Link>
+      </div>
+      <TripsList />
     </section>
   );
 }
-
-function TripDetail({ trip, cards }: { trip: Trip; cards: Map<string, EventCard> }) {
-  const user = useUser();
-  const [copied, setCopied] = useState(false);
-  const events = trip.eventIds.map((id) => cards.get(id)).filter((c): c is EventCard => !!c).sort((a, b) => a.start.localeCompare(b.start));
-  const clash = conflicts(events);
-  const outside = events.filter((c) => c.eventType !== "daily_attraction" && ((trip.start && localDateKey(c.start, c.timeZone) < trip.start) || (trip.end && localDateKey(c.start, c.timeZone) > trip.end)));
-  const cities = [...new Map(events.map((c) => [c.city, c])).values()];
-  const addable = user.saved.map((s) => cards.get(s.id)).filter((c): c is EventCard => !!c && !trip.eventIds.includes(c.id));
-  const clusters: Cluster[] = events.map((c) => ({ id: c.id, lat: c.lat, lng: c.lng, count: 1, groups: { [c.groupSlug]: 1 }, dominant: c.groupSlug, label: c.title, sample: [c] }));
-  const center = events.length ? { lat: events.reduce((s, c) => s + c.lat, 0) / events.length, lng: events.reduce((s, c) => s + c.lng, 0) / events.length } : { lat: 30, lng: 0 };
-  const spread = events.length > 1 ? Math.max(...events.map((c) => Math.abs(c.lat - center.lat) + Math.abs(c.lng - center.lng))) : 0;
-
-  const download = () => {
-    const blob = new Blob([icsFor(trip, events)], { type: "text/calendar" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${trip.name.replace(/[^\w-]+/g, "-").toLowerCase() || "trip"}.ics`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-  const share = async () => {
-    const text = [`${trip.name}${trip.start ? ` (${trip.start} to ${trip.end ?? "?"})` : ""}`, ...events.map((c) => `${formatEventDate(c.start, c.timeZone)}: ${c.title}, ${c.venueName}, ${c.city} ${window.location.origin}/events/${c.slug}`)].join("\n");
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // clipboard unavailable
-    }
-  };
-
-  return (
-    <div className="mt-6 grid gap-6">
-      <div className="flex flex-wrap items-end gap-3 justify-between">
-        <div className="grid gap-2 sm:grid-cols-[1.5fr_1fr_1fr] items-end flex-1 min-w-[280px]">
-          <div>
-            <label className="label" htmlFor="tn">Trip name</label>
-            <input id="tn" className="field" value={trip.name} onChange={(e) => userActions.updateTrip(trip.id, { name: e.target.value })} />
-          </div>
-          <div>
-            <label className="label" htmlFor="ts">From</label>
-            <input id="ts" type="date" className="field" value={trip.start ?? ""} onChange={(e) => {
-              const r = setRangeEdge("from", e.target.value, { from: trip.start, to: trip.end });
-              userActions.updateTrip(trip.id, { start: r.from, end: r.to });
-            }} />
-          </div>
-          <div>
-            <label className="label" htmlFor="te">To</label>
-            <input id="te" type="date" className="field" min={trip.start} value={trip.end ?? ""} onChange={(e) => {
-              const r = setRangeEdge("to", e.target.value, { from: trip.start, to: trip.end });
-              userActions.updateTrip(trip.id, { start: r.from, end: r.to });
-            }} />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn btn-secondary btn-sm" onClick={download} disabled={!events.length}><Download size={14} aria-hidden /> Export .ics</button>
-          <button className="btn btn-secondary btn-sm" onClick={share} disabled={!events.length}>{copied ? <Check size={14} aria-hidden /> : <Share2 size={14} aria-hidden />}{copied ? "Copied" : "Copy itinerary"}</button>
-          <button className="btn btn-ghost btn-sm text-bad" onClick={() => confirm(`Delete “${trip.name}”?`) && userActions.deleteTrip(trip.id)}><Trash2 size={14} aria-hidden /> Delete</button>
-        </div>
-      </div>
-
-      {(clash.size > 0 || outside.length > 0) && (
-        <div className="grid gap-1.5">
-          {clash.size > 0 && <p className="flex items-center gap-2 t-small text-warn"><TriangleAlert size={15} aria-hidden /> {clash.size} events overlap. Times are local to each venue.</p>}
-          {outside.length > 0 && <p className="flex items-center gap-2 t-small text-warn"><TriangleAlert size={15} aria-hidden /> {outside.length} {outside.length === 1 ? "event falls" : "events fall"} outside your trip dates.</p>}
-        </div>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <div>
-          {events.length ? (
-            <ol className="relative border-l border-line ml-2">
-              {events.map((c) => (
-                <li key={c.id} className="pl-5 pb-5 relative">
-                  <span className={`absolute -left-[5px] top-2 h-2.5 w-2.5 rounded-full ${clash.has(c.id) ? "bg-warn" : "bg-cyan"}`} aria-hidden />
-                  <p className="t-micro text-text-3 tnum">{c.eventType === "daily_attraction" ? "Any day (open daily)" : `${formatEventDate(c.start, c.timeZone)}, ${formatEventTime(c.start, c.timeZone)} ${tzAbbrev(c.start, c.timeZone)}`}</p>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link href={`/events/${c.slug}`} className="font-semibold hover:text-cyan">{c.title}</Link>
-                      <p className="t-small text-text-2">{c.venueName}, {c.city}</p>
-                      {clash.has(c.id) && <p className="t-micro text-warn">Overlaps with another event in this trip</p>}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Link href={`/events/${c.slug}#tickets`} className="btn btn-secondary btn-sm">Tickets</Link>
-                      <button className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${c.title} from trip`} onClick={() => userActions.toggleTripEvent(trip.id, c.id)}><X size={14} aria-hidden /></button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <EmptyState title="This trip has no events yet" body="Add saved events below, or use “Add to trip” on any event page." />
-          )}
-
-          {addable.length > 0 && (
-            <div className="mt-4">
-              <h3 className="t-h3">Add from saved</h3>
-              <ul className="mt-2 grid gap-1">
-                {addable.slice(0, 8).map((c) => (
-                  <li key={c.id} className="flex items-center justify-between gap-2 t-small">
-                    <span className="truncate">{c.title} <span className="text-text-3">{c.city}, {formatEventDate(c.start, c.timeZone)}</span></span>
-                    <button className="btn btn-secondary btn-sm" onClick={() => userActions.toggleTripEvent(trip.id, c.id)}>Add</button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <section className="grid gap-4 content-start">
-          {events.length > 0 && (
-            <ClusterMap className="h-64" clusters={clusters} initial={{ ...center, zoom: spread > 30 ? 1 : spread > 8 ? 3.5 : spread > 1 ? 6 : 11 }} onClusterClick={(c) => c.sample[0] && window.location.assign(`/events/${c.sample[0].slug}`)} />
-          )}
-          {cities.length > 0 && (
-            <div className="rounded-[var(--radius-l)] border border-line p-4">
-              <h3 className="t-h3">Travel searches</h3>
-              <p className="t-micro text-text-3 mt-0.5">Opens other sites. Availability and prices aren&apos;t checked by OMNIEVENT.</p>
-              <ul className="mt-3 grid gap-2">
-                {cities.map((c) => (
-                  <li key={c.city} className="flex flex-wrap items-center justify-between gap-2 t-small">
-                    <span>{c.city}</span>
-                    <span className="flex gap-1.5">
-                      <a className="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(`${c.city}, ${c.country}`)}${trip.start ? `&checkin=${trip.start}` : ""}${trip.end ? `&checkout=${trip.end}` : ""}`}><Hotel size={13} aria-hidden /> Stays</a>
-                      <a className="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/travel/flights?q=${encodeURIComponent(`flights to ${c.city}${trip.start ? ` on ${trip.start}` : ""}`)}`}><Plane size={13} aria-hidden /> Flights</a>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div>
-            <label className="label" htmlFor="tnotes">Notes</label>
-            <textarea id="tnotes" className="field !h-24 py-2" value={trip.notes ?? ""} onChange={(e) => userActions.updateTrip(trip.id, { notes: e.target.value })} placeholder="Bookings, meeting points, reminders" />
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ Following, alerts, account
 
 function Following() {
   const user = useUser();

@@ -497,7 +497,7 @@ export default async function EventPage({ params }: { params: P }) {
                 <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
                   <SaveButton id={e.id} title={e.title} snap={snap} />
-                  <AddToTrip eventId={e.id} />
+                  <AddToTrip event={{ id: e.id, ...snap, lat: v.lat, lng: v.lng, city: v.city, groupSlug: group }} cityId={v.cityId} countryCode={v.countryCode} day={localDateKey(e.start, e.timeZone)} />
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />
                   {!inactive && !e.provenance.isDemo && <ShareToClub eventId={e.id} title={e.title} />}
