@@ -133,7 +133,7 @@ export function TripView({ id }: { id: string }) {
       lng: s.lng,
       anchor: "bottom",
       delay: loaded ? 0 : 200 + i * 140,
-      node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={sel === i} note={shortRange(s.from, s.to)} onClick={() => pick(sel === i ? null : i)} />,
+      node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={sel === i} small={sel === i && burst} note={shortRange(s.from, s.to)} onClick={() => pick(sel === i ? null : i)} />,
     }));
     const show = (e: TripEvent | EventCard, saved: boolean, j: number, color: string) => {
       out.push({

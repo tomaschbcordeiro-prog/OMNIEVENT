@@ -84,7 +84,7 @@ export function TripGlobe({
       ariaLabel={label}
       initial={{ lat: 35, lng: 5, zoom: 1.4, pitch: 0, bearing: 0 }}
       projection="globe"
-      base={dark ? "lights" : "satellite"}
+      base={dark ? "lights" : "map"}
       layers={LAYERS}
       clusters={NONE}
       flyTo={fly}
@@ -359,9 +359,9 @@ export function TripPass({ name, emoji, stops, start, end, events, compact = fal
  * A city on the trip's globe: a numbered pin in the stop's colour with its name, and a small
  * note (its nights) and the emojis of what's wanted there. Tapping it picks the city.
  */
-export function CityPin({ n, name, color, active, note, emojis, onClick }: { n: number; name: string; color: string; active?: boolean; note?: string; emojis?: string[]; onClick?: () => void }) {
+export function CityPin({ n, name, color, active, note, emojis, small, onClick }: { n: number; name: string; color: string; active?: boolean; note?: string; emojis?: string[]; /** Just the number (its events are out round it). */ small?: boolean; onClick?: () => void }) {
   return (
-    <button type="button" className="city-pin" data-active={active || undefined} style={{ "--ink": color } as React.CSSProperties} onClick={(e) => (e.stopPropagation(), onClick?.())} aria-label={`${n}: ${name}${note ? `, ${note.replace(/n$/, " nights")}` : ""}`} aria-pressed={active}>
+    <button type="button" className="city-pin" data-active={active || undefined} data-small={small || undefined} style={{ "--ink": color } as React.CSSProperties} onClick={(e) => (e.stopPropagation(), onClick?.())} aria-label={`${n}: ${name}${note ? `, ${note.replace(/n$/, " nights")}` : ""}`} aria-pressed={active}>
       <span className="city-pin-tag">
         <span className="city-pin-n">{n}</span>
         <span className="city-pin-name">{name}</span>

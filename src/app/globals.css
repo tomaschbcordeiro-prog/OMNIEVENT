@@ -5581,6 +5581,14 @@ mark.hit {
   color: #fff;
   box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ink) 80%, black), 0 0 0 3px #fff;
 }
+/* While a city's events are out round it, its pin is just its number. */
+.city-pin[data-small] .city-pin-name,
+.city-pin[data-small] .city-pin-note {
+  display: none;
+}
+.city-pin[data-small] .city-pin-tag {
+  padding-right: 0.22rem;
+}
 .city-pin-n {
   display: grid;
   place-items: center;
