@@ -43,21 +43,38 @@ export function ClusterMap({
   onClusterClick?: (c: Cluster) => void;
 }) {
   const router = useRouter();
-  // The map engine (1 MB) and its tiles load once the map is about to scroll into view.
+  // The map engine (1 MB) and its tiles load once the map is about to scroll into view, and
+  // only after the page has finished its first work: starting it while the page was still
+  // opening kept the browser busy for a second or more when the map sat near the top.
   const box = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
     const el = box.current;
     if (!el || near) return;
     if (typeof IntersectionObserver === "undefined") return setNear(true);
+    let idle = 0;
+    const start = () => {
+      const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+      idle = ric ? ric(() => setNear(true), { timeout: 1500 }) : window.setTimeout(() => setNear(true), 300);
+    };
     const io = new IntersectionObserver(
-      (entries) => entries.some((e) => e.isIntersecting) && setNear(true),
-      // Close enough that it is ready as it arrives, far enough that a phone opening an event
-      // page (map about one and a half screens down) doesn't fetch it straight away.
-      { rootMargin: "250px 0px" },
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        // Already in view as the page opens: wait for the page to settle first.
+        if (performance.now() < 2500) window.setTimeout(start, 2500 - performance.now());
+        else start();
+      },
+      // Just before it scrolls into view: a map below the first screen isn't fetched while the
+      // page opens (a phone opening an event page has it about one and a half screens down).
+      { rootMargin: "0px 0px 120px 0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      window.clearTimeout(idle);
+      (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idle);
+    };
   }, [near]);
   const [view, setView] = useState<ViewState>({
     ...initial,
