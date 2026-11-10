@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUp, CalendarDays, LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
+import { ArrowUp, ArrowUpDown, CalendarDays, LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
 import { rememberSearch } from "@/lib/search/session";
 import { hasWhereOrWhen } from "@/lib/search/summary";
 import type { EventCard, Paged, SearchFilters } from "@/lib/types";
@@ -119,7 +119,7 @@ export function EventsBrowser({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-line pb-3">
           <p className="t-small text-text-2 tnum mr-auto flex items-center gap-2" aria-live="polite">
             {pending && <Loader2 size={14} className="animate-spin" aria-hidden />}
             {result.total.toLocaleString()} {result.total === 1 ? "event" : "events"}
@@ -127,17 +127,21 @@ export function EventsBrowser({
           <Link href={`/?${filtersToParams({ ...filters, page: undefined, pageSize: undefined, sort: undefined })}`} className="btn btn-secondary btn-sm" aria-label="Show on map">
             <MapIcon size={14} aria-hidden /> <span className="max-sm:hidden">Show on map</span>
           </Link>
-          <button className="btn btn-secondary btn-sm lg:hidden" onClick={() => setDrawer(true)}>
-            <SlidersHorizontal size={14} aria-hidden /> Filters{n ? <span className="text-cyan tnum">{n}</span> : null}
+          {/* On phones the controls share one row: Filters and Sort as icons (named for screen readers). */}
+          <button className="btn btn-secondary btn-sm lg:hidden" onClick={() => setDrawer(true)} aria-label={n ? `Filters, ${n} on` : "Filters"}>
+            <SlidersHorizontal size={14} aria-hidden /> <span className="max-sm:hidden">Filters</span>{n ? <span className="text-cyan tnum">{n}</span> : null}
           </button>
           <label className="sr-only" htmlFor="sort">Sort by</label>
-          <select id="sort" className="field max-sm:!h-9 max-sm:!text-[14px] lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
-            <option value="date">Soonest first</option>
-            <option value="relevance">Best match</option>
-            <option value="price">Lowest price</option>
-            <option value="announced">Recently announced</option>
-            <option value="distance" disabled={!filters.near}>Nearest{filters.near ? "" : " (pick a location)"}</option>
-          </select>
+          <span className="sort-pick">
+            <ArrowUpDown size={15} aria-hidden className="sort-pick-icon" />
+            <select id="sort" className="field max-sm:!h-9 max-sm:!text-[14px] lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
+              <option value="date">Soonest first</option>
+              <option value="relevance">Best match</option>
+              <option value="price">Lowest price</option>
+              <option value="announced">Recently announced</option>
+              <option value="distance" disabled={!filters.near}>Nearest{filters.near ? "" : " (pick a location)"}</option>
+            </select>
+          </span>
           <div className="flex rounded-[var(--radius-s)] border border-line-strong p-0.5" role="radiogroup" aria-label="Layout">
             <button role="radio" aria-checked={layout === "list"} aria-label="List layout" className={`btn btn-sm btn-icon !h-6 ${layout === "list" ? "bg-text/[0.08]" : "btn-ghost"}`} onClick={() => setLayout("list")}>
               <List size={14} aria-hidden />

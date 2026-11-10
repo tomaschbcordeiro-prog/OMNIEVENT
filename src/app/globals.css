@@ -3145,10 +3145,14 @@ body.nf-on .maplibregl-ctrl-bottom-right {
 }
 .hero-img-fg {
   /* Centred over the frame and kept inside it from the first frame: as a grid item its
-     percentage limits didn't apply, so a tall picture first showed too big and then jumped. */
+     percentage limits didn't apply, so a tall picture first showed too big and then jumped.
+     Its corner is pinned to the frame's middle and the picture moved back by half its own
+     size (a translate), so when it arrives and takes its size nothing is laid out again:
+     centring with margins counted as the picture moving (a layout shift). */
   position: absolute;
-  inset: 0;
-  margin: auto;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
@@ -4697,5 +4701,248 @@ mark.hit {
 @media (prefers-reduced-motion: reduce) {
   .trail-pager {
     animation: none;
+  }
+}
+
+/* ---- Event pages: the event's own light, and its ticket ------------------------------------
+   The top of the page takes the colours of the event's picture (blurred far past recognition)
+   over a wash of its category's colour; with no picture, the category's colour alone. */
+.event-ambient {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 62rem;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 22% 16%, color-mix(in srgb, var(--ink) 15%, transparent), transparent 70%),
+    radial-gradient(45% 45% at 90% 2%, color-mix(in srgb, var(--ink) 10%, transparent), transparent 70%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent 92%);
+  animation: ambient-in 1100ms ease-out both;
+}
+.event-ambient img {
+  position: absolute;
+  left: -15%;
+  top: -22%;
+  width: 130%;
+  height: 92%;
+  object-fit: cover;
+  filter: blur(72px) saturate(1.7);
+  opacity: var(--ambient-strength, 0.3);
+}
+@keyframes ambient-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (max-width: 639px) {
+  .event-ambient {
+    height: 40rem;
+  }
+  .event-ambient img {
+    filter: blur(48px) saturate(1.6);
+  }
+}
+:root[data-theme="dark"] .event-ambient {
+  --ambient-strength: 0.5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .event-ambient {
+    --ambient-strength: 0.5;
+  }
+}
+
+/* The ticket box is a ticket: two notches and a perforation, and below them a stub with the
+   day, time and place. --ink is the event's category colour; --ink-text a darker (or, on the
+   dark page, lighter) version of it that reads as text. */
+.ticket-wrap {
+  --stub: 5.25rem;
+  --notch: 0.7rem;
+  --ink-text: color-mix(in oklab, var(--ink) 58%, var(--text));
+  filter: drop-shadow(0 0 0.6px rgb(13 27 51 / 0.4)) drop-shadow(0 18px 30px rgb(13 27 51 / 0.12));
+}
+:root[data-theme="dark"] .ticket-wrap {
+  filter: drop-shadow(0 0 0.6px rgb(255 255 255 / 0.28)) drop-shadow(0 18px 30px rgb(0 0 0 / 0.45));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket-wrap {
+    filter: drop-shadow(0 0 0.6px rgb(255 255 255 / 0.28)) drop-shadow(0 18px 30px rgb(0 0 0 / 0.45));
+  }
+}
+.ticket {
+  position: relative;
+  background: var(--panel);
+  border-radius: var(--radius-l);
+  --cut: radial-gradient(circle var(--notch) at 0 calc(100% - var(--stub)), #0000 97%, #000);
+  --cut-r: radial-gradient(circle var(--notch) at 100% calc(100% - var(--stub)), #0000 97%, #000);
+  -webkit-mask:
+    var(--cut) left / 51% 100% no-repeat,
+    var(--cut-r) right / 51% 100% no-repeat;
+  mask:
+    var(--cut) left / 51% 100% no-repeat,
+    var(--cut-r) right / 51% 100% no-repeat;
+}
+.ticket-stub {
+  position: relative;
+  height: var(--stub);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0 1.25rem;
+  border-radius: 0 0 var(--radius-l) var(--radius-l);
+  --stub-bg: color-mix(in srgb, var(--ink) 7%, var(--panel));
+  background:
+    radial-gradient(circle, var(--line-strong) 1.4px, transparent 1.9px) 0 0 / 10px 4px repeat-x,
+    var(--stub-bg);
+}
+.ticket-date {
+  display: grid;
+  justify-items: center;
+  min-width: 2.75rem;
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--ink-text);
+  line-height: 1;
+}
+.ticket-day {
+  font-size: 2.625rem;
+}
+.ticket-month {
+  font-size: 0.95rem;
+  margin-top: 0.1rem;
+}
+.ticket-day--word {
+  font-size: 1.75rem;
+  font-style: italic;
+}
+/* Saved: an ink stamp, slightly crooked, with the grain of a rubber stamp. */
+.ticket-stamp {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  translate: 0 -50%;
+  rotate: -9deg;
+  padding: 0.25rem 0.75rem 0.3rem;
+  border: 2px solid currentColor;
+  border-radius: 9px;
+  /* A second, thinner line just inside the first. */
+  box-shadow:
+    inset 0 0 0 2px var(--stub-bg),
+    inset 0 0 0 3.5px currentColor;
+  color: var(--ink-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.625rem;
+  line-height: 1;
+  opacity: 0.88;
+  pointer-events: none;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.55'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.55'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size: 120px 60px;
+  mask-size: 120px 60px;
+}
+/* The words on the stub stay clear of the stamp. */
+.ticket-stub:has(.ticket-stamp) {
+  padding-right: 7rem;
+}
+.ticket-stamp[data-fresh] {
+  animation: stamp-press 460ms cubic-bezier(0.2, 1.5, 0.35, 1) both;
+}
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+    scale: 1.9;
+    rotate: -20deg;
+  }
+  55% {
+    opacity: 0.95;
+    scale: 0.9;
+  }
+  100% {
+    opacity: 0.88;
+    scale: 1;
+    rotate: -9deg;
+  }
+}
+/* The stub gives a little at the press of the stamp. */
+.ticket-stub:has(.ticket-stamp[data-fresh]) {
+  animation: stub-thud 380ms ease-out 200ms;
+}
+@keyframes stub-thud {
+  30% {
+    translate: 0 1.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-ambient,
+  .ticket-stamp[data-fresh],
+  .ticket-stub:has(.ticket-stamp[data-fresh]) {
+    animation: none;
+  }
+}
+
+/* The sort menu: a full menu from tablets up; on phones an icon button that opens the same
+   menu (the menu itself is laid over the icon, so a tap opens the phone's own picker). */
+.sort-pick {
+  position: relative;
+  display: inline-flex;
+}
+.sort-pick-icon {
+  display: none;
+}
+@media (max-width: 639px) {
+  .sort-pick {
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-s);
+    background: var(--panel);
+    color: var(--text);
+  }
+  .sort-pick-icon {
+    display: block;
+  }
+  .sort-pick select {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    opacity: 0;
+  }
+  .sort-pick:has(select:focus-visible) {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+}
+
+/* The date on an event row: a small stub in the colour of the event's kind, perforated along
+   its edge, like the stub on the event's own ticket. */
+.date-stub {
+  position: relative;
+  padding: 0.45rem 0 0.5rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 9%, var(--panel));
+}
+.date-stub::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  right: -1px;
+  width: 2px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ink) 55%, var(--panel)) 0.9px, transparent 1.3px) 0 0 / 2px 5px repeat-y;
+}
+.date-stub-day {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.625rem;
+  line-height: 0.95;
+  color: color-mix(in oklab, var(--ink) 55%, var(--text));
+}
+/* Phones: the three layout buttons sit side by side in one control, so each can be a little
+   narrower and still easy to hit (the control keeps its full 44 px height). */
+@media (pointer: coarse) and (max-width: 639px) {
+  [role="radiogroup"][aria-label="Layout"] .btn-icon {
+    min-width: 2.25rem;
   }
 }

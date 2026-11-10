@@ -5,8 +5,9 @@ import { notFound } from "next/navigation";
 import { preconnect } from "react-dom";
 import { Clock, MapPin, Users, ShieldCheck, Accessibility, Navigation, Globe2, Hotel, Plane, TriangleAlert, Database, ExternalLink } from "lucide-react";
 import { ensureFresh, getEventView, loadingNow, refreshSource, searchEvents, waitFor } from "@/lib/store";
-import { formatEventDate, formatEventTime, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
-import { getCategory, groupOf } from "@/lib/categories";
+import { formatEventDate, formatEventTime, formatShortDate, tzAbbrev, relativeTime, localDateKey } from "@/lib/format";
+import { getCategory, groupOf, GROUP_HEX } from "@/lib/categories";
+import { thumb } from "@/lib/thumb";
 import { EventTile } from "@/components/event-card";
 import { CategoryIcon, DemoBadge, HeroImage, Price, SaveButton, StatusBadge, Notice } from "@/components/ui";
 import { AddToTrip, CalendarButton, LocationMap, ShareButton, TicketComparison, ViewTracker } from "@/components/event-detail-client";
@@ -24,6 +25,7 @@ import { DayForecast } from "@/components/weather";
 import { TileStrip } from "@/components/tile-strip";
 import { KeepExploring } from "@/components/keep-exploring";
 import { TrailPager } from "@/components/event-trail";
+import { TicketStamp } from "@/components/ticket";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -155,12 +157,22 @@ export default async function EventPage({ params }: { params: P }) {
   const ymd = (iso: string) => iso.slice(0, 10);
   const teams = e.people.filter((p) => p.role === "team_home" || p.role === "team_away" || p.role === "team");
   const inactive = e.status === "cancelled" || e.status === "completed";
+  // The page takes its light from the event: its picture's colours, else its category's.
+  const accent = GROUP_HEX[group] ?? GROUP_HEX.other;
+  // The small copy event lists show, so coming from a list it's already loaded (and it's too
+  // small to ever count as the page's main picture).
+  const ambient = e.imageUrl ? thumb(e.imageUrl, 64) : undefined;
+  const stub = formatShortDate(e.start, e.timeZone);
 
   return (
     <>
       <ViewTracker id={e.id} />
       {!e.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(e)).replace(/</g, "\\u003c") }} />}
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
+      <div className="event-ambient" aria-hidden style={{ "--ink": accent } as React.CSSProperties}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {ambient && <img src={ambient} alt="" decoding="async" referrerPolicy="no-referrer" />}
+      </div>
+      <main className="relative z-[1] mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <div className="trail-row mb-4">
           <nav aria-label="Breadcrumb" className="trail-crumbs t-small text-text-3 flex flex-wrap gap-1">
             <Link href="/events" className="inline-block py-1 hover:text-text">Events</Link>
@@ -452,7 +464,9 @@ export default async function EventPage({ params }: { params: P }) {
           </article>
 
           <section className="lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] self-start grid gap-4">
-            <div className="surface rounded-[var(--radius-l)] p-5">
+            <div className="ticket-wrap" style={{ "--ink": accent } as React.CSSProperties}>
+            <div className="ticket">
+            <div className="p-5">
               <p className="t-micro text-text-3">{e.isFree ? "Entry" : "Tickets"}</p>
               {!e.isFree && e.fromPrice?.amount == null ? (
                 // No price published: say where it is rather than that it's missing.
@@ -486,6 +500,27 @@ export default async function EventPage({ params }: { params: P }) {
                   {!inactive && !e.provenance.isDemo && <ShareToClub eventId={e.id} title={e.title} />}
                 </div>
               </div>
+            </div>
+            {/* The stub: when and where, as on a printed ticket. Saving stamps it. */}
+            <div className="ticket-stub">
+              {isDaily ? (
+                <p className="ticket-date ticket-day--word">Daily</p>
+              ) : (
+                <p className="ticket-date">
+                  <span className="ticket-day tnum">{stub.day}</span>
+                  <span className="ticket-month">{stub.month}</span>
+                </p>
+              )}
+              <div className="min-w-0">
+                <p className="t-small font-semibold">
+                  {isDaily ? "Open every day" : new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: e.timeZone }).format(new Date(e.start))}
+                  {!isDaily && !e.hoursUnknown && <span className="tnum">, {formatEventTime(e.start, e.timeZone)}</span>}
+                </p>
+                <p className="t-small text-text-2 truncate">{v.name}</p>
+              </div>
+              <TicketStamp id={e.id} />
+            </div>
+            </div>
             </div>
             {/* Where it comes from, in one quiet line. */}
             <p className="px-1 t-micro text-text-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">

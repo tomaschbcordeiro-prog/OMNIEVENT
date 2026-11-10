@@ -8,6 +8,7 @@ import type { EventCard as Card } from "@/lib/types";
 import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
 import { useUser } from "@/lib/user/store";
+import { GROUP_HEX } from "@/lib/categories";
 import { Marked } from "./marked";
 
 export { Marked };
@@ -19,13 +20,17 @@ function peopleLine(c: Card): string | undefined {
   return names.join(", ") + (c.people.length > 3 ? ` and ${c.people.length - 3} more` : "");
 }
 
-/** Date block: the event's local date, which is what ticket-holders need. */
+/**
+ * Date block: the event's local date, which is what ticket-holders need, on a little stub in
+ * the colour of its kind (the same stub as on the event's ticket).
+ */
 function DateBlock({ c }: { c: Card }) {
   const d = formatShortDate(c.start, c.timeZone);
+  const ink = { "--ink": GROUP_HEX[c.groupSlug] ?? GROUP_HEX.other } as React.CSSProperties;
   if (c.eventType === "daily_attraction")
     return (
-      <div className="w-12 shrink-0 text-center leading-none">
-        <div className="text-[11px] text-text-3">Open</div>
+      <div className="date-stub w-12 shrink-0 text-center leading-none" style={ink}>
+        <div className="text-[11px] text-text-2">Open</div>
         <div className="text-[13px] font-semibold mt-1">daily</div>
       </div>
     );
@@ -33,17 +38,17 @@ function DateBlock({ c }: { c: Card }) {
   if (c.ongoing && c.until) {
     const u = formatShortDate(c.until, c.timeZone);
     return (
-      <div className="w-12 shrink-0 text-center leading-none tnum" aria-hidden>
+      <div className="date-stub w-12 shrink-0 text-center leading-none tnum" style={ink} aria-hidden>
         <div className="text-[11px] text-ok font-semibold">Until</div>
-        <div className="text-xl font-semibold mt-0.5">{u.day}</div>
+        <div className="date-stub-day mt-0.5">{u.day}</div>
         <div className="text-[11px] text-text-2 mt-0.5">{u.month}</div>
       </div>
     );
   }
   return (
-    <div className="w-12 shrink-0 text-center leading-none tnum" aria-hidden>
-      <div className="text-[11px] text-text-3">{d.weekday}</div>
-      <div className="text-xl font-semibold mt-0.5">{d.day}</div>
+    <div className="date-stub w-12 shrink-0 text-center leading-none tnum" style={ink} aria-hidden>
+      <div className="text-[11px] text-text-2">{d.weekday}</div>
+      <div className="date-stub-day mt-0.5">{d.day}</div>
       <div className="text-[11px] text-text-2 mt-0.5">{d.month}</div>
     </div>
   );
