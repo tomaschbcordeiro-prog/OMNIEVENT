@@ -5125,19 +5125,29 @@ mark.hit {
   }
 }
 @media (max-width: 1023px) {
+  /* Phones: a sheet with three heights. Half shows the step and the globe; full is for typing
+     and long lists; folded down to a bar, the globe has the screen (dragging cities, tapping
+     places) and the step's main button stays in reach. */
   .planner-panel {
     left: 0;
     right: 0;
     bottom: 0;
-    height: 58%;
+    height: 52%;
     border-radius: 22px 22px 0 0;
     border-bottom: 0;
-    /* Clear of the raised globe in the tab bar below. */
-    padding-bottom: 18px;
-    transition: height 320ms cubic-bezier(0.2, 0.9, 0.25, 1);
+    padding-bottom: env(safe-area-inset-bottom);
+    interpolate-size: allow-keywords;
+    transition: height 340ms cubic-bezier(0.2, 0.9, 0.25, 1);
   }
-  .planner-panel[data-tall] {
-    height: 86%;
+  .planner-panel[data-snap="full"] {
+    height: calc(100% - 10px);
+  }
+  .planner-panel[data-snap="peek"] {
+    height: auto;
+  }
+  .planner-panel[data-snap="peek"] .planner-body,
+  .trip-panel[data-snap="peek"] .trip-actions {
+    display: none;
   }
   .planner-head {
     padding-top: 0.25rem;
@@ -5150,7 +5160,7 @@ mark.hit {
     font-size: 1.35rem;
   }
 }
-/* The sheet's handle (phones): a tap shows more of the plan, or more of the globe. */
+/* The sheet's handle (phones): drag it, or tap it, to show more of the plan or of the globe. */
 .sheet-grab {
   display: none;
 }
@@ -5158,9 +5168,11 @@ mark.hit {
   .sheet-grab {
     display: grid;
     place-items: center;
-    height: 1.4rem;
+    height: 1.75rem;
     width: 100%;
     flex-shrink: 0;
+    touch-action: none;
+    cursor: grab;
   }
   .sheet-grab span {
     width: 2.75rem;
@@ -5351,7 +5363,9 @@ mark.hit {
   display: flex;
   min-width: 0;
   flex-basis: 0;
-  background: var(--ink);
+  /* The city's colour, deep enough for white names on it; a bright edge of the colour itself. */
+  background: color-mix(in srgb, var(--ink) 66%, #000);
+  box-shadow: inset 0 3px 0 var(--ink);
   transition: flex-grow 220ms cubic-bezier(0.2, 0.9, 0.25, 1);
 }
 .nights-seg-body {
@@ -6492,4 +6506,187 @@ button.planner-stop-n {
 }
 .map-icon:has(.leg-plus-wrap) {
   z-index: 1;
+}
+
+
+/* ---- Trips on phones: the tool has the screen ---- */
+@media (max-width: 1023px) {
+  /* The site's bottom bar steps aside on a trip (its own close button leads back). */
+  :root:has(.trip-stage) {
+    --tabbar-h: 0px;
+  }
+  :root:has(.trip-stage) .tabbar {
+    display: none;
+  }
+  /* Notes come in at the top, clear of the sheet and its buttons. */
+  :root:has(.trip-stage) .toaster {
+    bottom: auto !important;
+    top: calc(var(--header-h) + 0.5rem);
+  }
+  .planner-body {
+    padding: 0.75rem 1rem 1rem;
+  }
+  .planner-q {
+    font-size: 1.25rem;
+    margin-bottom: 0.6rem;
+  }
+  .planner-foot {
+    padding: 0.6rem 1rem;
+  }
+  .trip-panel .planner-head {
+    padding: 0 1rem 0.6rem;
+  }
+  .trip-panel .trip-title {
+    font-size: 1.3rem;
+  }
+}
+/* The planner's head: its title and close button, then the steps (on phones, one row: the
+   steps, with only the current one named, and the close button). */
+.planner-head.is-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "title close" "steps steps";
+  align-items: center;
+  column-gap: 0.75rem;
+}
+.planner-title {
+  grid-area: title;
+}
+.planner-close {
+  grid-area: close;
+}
+.planner-head.is-steps .planner-steps {
+  grid-area: steps;
+}
+@media (max-width: 1023px) {
+  .planner-head.is-steps {
+    grid-template-areas: "steps close";
+    padding: 0 0.75rem 0.5rem 1rem;
+  }
+  .planner-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .planner-head.is-steps .planner-steps {
+    margin-top: 0;
+    gap: 0.15rem;
+  }
+  .planner-step:not([aria-current="step"]) .planner-step-label {
+    display: none;
+  }
+  .planner-step:not([aria-current="step"]) {
+    padding-right: 0.3rem;
+  }
+}
+/* What's been chosen so far, between Back and Next. */
+.planner-sum {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planner-foot > .btn {
+  flex-shrink: 0;
+}
+@media (max-width: 639px) {
+  .planner-sum {
+    text-align: left;
+  }
+}
+.planner-hint {
+  align-items: flex-start;
+}
+.planner-hint-ok {
+  flex-shrink: 0;
+  margin: -0.15rem -0.2rem -0.15rem 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 700;
+  color: var(--cyan);
+}
+.planner-hint-ok:hover {
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+}
+.planner-more {
+  margin-top: 0.85rem;
+}
+.planner-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 0.3rem 0;
+}
+.planner-more > summary::-webkit-details-marker {
+  display: none;
+}
+.planner-more[open] > summary svg {
+  rotate: 180deg;
+}
+/* A city's page, on a phone: the note's words on full lines, its buttons below. */
+.trip-callout > .min-w-0 {
+  flex: 1 1 14rem;
+}
+/* A trip waiting in your saved events. */
+.trip-idea {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 16px;
+  border: 1.5px dashed color-mix(in srgb, var(--sun) 55%, var(--line-strong));
+  background: color-mix(in srgb, var(--sun) 7%, var(--panel));
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 140ms ease;
+}
+.trip-idea:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+}
+.trip-idea-route {
+  flex-shrink: 0;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.trip-idea-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+@media (max-width: 479px) {
+  .trip-idea-route {
+    display: none;
+  }
+}
+.map-add[data-below] {
+  grid-template-areas: "dot" "card";
+}
+.map-add[data-below] .map-add-card {
+  grid-area: card;
+  transform-origin: 50% 0;
+}
+.map-add[data-below] .map-add-dot {
+  grid-area: dot;
 }

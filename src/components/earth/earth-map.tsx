@@ -63,7 +63,7 @@ export interface EarthMapHandle {
    * An element pinned to a place on the globe (a trip's city or event icon), moving with it.
    * Returns how to move or take it away.
    */
-  pin(el: HTMLElement, at: [number, number], anchor?: "center" | "bottom", offset?: [number, number], drag?: PinDrag): PinHandle | null;
+  pin(el: HTMLElement, at: [number, number], anchor?: "center" | "bottom" | "top", offset?: [number, number], drag?: PinDrag): PinHandle | null;
   /** Where a place is on screen, in pixels (null before the globe is ready). */
   project(at: [number, number]): { x: number; y: number } | null;
 }

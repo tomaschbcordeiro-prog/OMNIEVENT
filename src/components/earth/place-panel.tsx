@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, MapPin, Crosshair, ZoomIn, Undo2, Loader2, Copy, Check } from "lucide-react";
 import { formatCoords, zoomForKind } from "@/lib/map/view";
+import { PlaceTripLinks } from "../trips/trip-shortcuts";
 
 export interface SelectedPlace {
   lat: number;
@@ -138,6 +139,7 @@ export function PlacePanel({
           >
             <Crosshair size={14} aria-hidden /> Explore events here
           </button>
+          <PlaceTripLinks name={rev?.hierarchy.find((h) => ["city", "town", "village"].includes(h.kind))?.name ?? place.name ?? title} lat={place.lat} lng={place.lng} />
           <button className="btn btn-secondary btn-sm" onClick={onZoom}>
             <ZoomIn size={14} aria-hidden /> Zoom in
           </button>

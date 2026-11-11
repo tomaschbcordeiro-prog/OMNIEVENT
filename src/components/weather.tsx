@@ -135,7 +135,7 @@ export function WeatherWeek({ lat, lng, place }: { lat: number; lng: number; pla
   if (!wx || wx.days.length < 2) return null;
   return (
     <div className="mt-3 panel-in">
-      <ul className="wx-strip no-scrollbar" aria-label={`Weather in ${place}, the coming days`}>
+      <ul className="wx-strip no-scrollbar" tabIndex={0} aria-label={`Weather in ${place}, the coming days`}>
         {wx.days.slice(0, 7).map((w) => {
           const look = weatherLook(w.code);
           const day = new Date(`${w.date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });

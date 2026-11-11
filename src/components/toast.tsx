@@ -55,7 +55,7 @@ export function Toaster() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem)] z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-[calc(var(--tabbar-h)+1.5rem)]">
+    <div aria-live="polite" className="toaster pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem)] z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-[calc(var(--tabbar-h)+1.5rem)]">
       {list.map((t) => (
         <div key={t.id} role="status" className={`toast-in pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-[var(--radius-l)] px-4 py-3 shadow-[0_18px_40px_-16px_rgb(10_30_70_/_0.55)] ${t.celebrate ? "bg-gradient-to-r from-sun to-[#ffd55e] text-on-sun" : "bg-text text-on-ink"}`}>
           {t.emoji && <span className={`${t.celebrate ? "text-3xl pop" : "text-xl"}`} aria-hidden>{t.emoji}</span>}

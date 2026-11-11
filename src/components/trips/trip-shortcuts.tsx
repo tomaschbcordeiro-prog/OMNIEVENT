@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plane } from "lucide-react";
+import { Plane, Plus } from "lucide-react";
 import { useUser, type Trip } from "@/lib/user/store";
 import { haversineKm } from "@/lib/geo";
 import { placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
@@ -102,5 +102,27 @@ export function TripCallout({ name, lat, lng, cityId }: { name: string; lat: num
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * A place, into a trip: "Add Porto to Benelux 2027" (the planner opens with it on the route,
+ * where it fits best) when there's a trip it isn't on, and "Plan a trip" from here.
+ */
+export function PlaceTripLinks({ name, lat, lng, countryCode, cityId, plan = "Plan a trip here", className = "btn btn-secondary btn-sm min-w-0" }: { name: string; lat: number; lng: number; countryCode?: string; cityId?: string; plan?: string; className?: string }) {
+  const trip = useActiveTrip();
+  const there = trip?.stops?.some((s) => (cityId && s.cityId === cityId) || haversineKm(s.lat, s.lng, lat, lng) <= STOP_RADIUS_KM);
+  const at = `${lat.toFixed(4)},${lng.toFixed(4)},${encodeURIComponent(name)},${countryCode ?? ""},${cityId ?? ""}`;
+  return (
+    <>
+      {trip && !there && (
+        <Link href={`/trips/new?edit=${trip.id}&add=${at}`} className={className}>
+          <Plus size={14} aria-hidden className="shrink-0" /> <span className="truncate">Add to {trip.name}</span>
+        </Link>
+      )}
+      <Link href={`/trips/new?${cityId ? `city=${encodeURIComponent(cityId)}` : `place=${at}`}`} className={className}>
+        <Plane size={14} aria-hidden className="shrink-0" /> <span className="truncate">{plan}</span>
+      </Link>
+    </>
   );
 }

@@ -408,3 +408,45 @@ export function extendFor(stops: TripStop[], e: { lat: number; lng: number; day:
   }
   return null;
 }
+
+/**
+ * A route from events you want to go to: their cities in date order, from the day before the
+ * first to the day after the last, each stay long enough for its events (you move on the day
+ * of the next city's first one).
+ */
+export function routeFromEvents(evs: { day: string; place: Place }[]): { places: Place[]; start: string; nights: number[] } | null {
+  if (!evs.length) return null;
+  const sorted = [...evs].sort((a, b) => a.day.localeCompare(b.day));
+  const groups: { place: Place; first: string; last: string }[] = [];
+  for (const e of sorted) {
+    const g = groups[groups.length - 1];
+    if (g && haversineKm(g.place.lat, g.place.lng, e.place.lat, e.place.lng) <= STOP_RADIUS_KM) g.last = e.day;
+    else groups.push({ place: e.place, first: e.day, last: e.day });
+  }
+  const start = addDays(groups[0].first, -1);
+  const bounds = [start];
+  for (let i = 1; i < groups.length; i++) {
+    const b = groups[i].first > bounds[i - 1] ? groups[i].first : addDays(bounds[i - 1], 1);
+    bounds.push(b);
+  }
+  const end = addDays(groups[groups.length - 1].last, 1);
+  bounds.push(end > bounds[bounds.length - 1] ? end : addDays(bounds[bounds.length - 1], 1));
+  return { places: groups.map((g) => g.place), start, nights: groups.map((_, i) => nightsBetween(bounds[i], bounds[i + 1])) };
+}
+
+/**
+ * Saved events that could make a trip: runs of them close together in time (a few days apart
+ * at most, a couple of weeks in all) and within reach of each other. Two or more make an idea.
+ */
+export function ideaGroups<T extends { id: string; day: string; lat: number; lng: number }>(evs: T[], maxGap = 4, maxSpan = 16, maxKm = 2500): T[][] {
+  const sorted = [...evs].sort((a, b) => a.day.localeCompare(b.day));
+  const groups: T[][] = [];
+  for (const e of sorted) {
+    const g = groups[groups.length - 1];
+    const last = g?.[g.length - 1];
+    const fits = g && last && nightsBetween(last.day, e.day) <= maxGap && nightsBetween(g[0].day, e.day) <= maxSpan && haversineKm(g[0].lat, g[0].lng, e.lat, e.lng) <= maxKm;
+    if (fits) g.push(e);
+    else groups.push([e]);
+  }
+  return groups.filter((g) => g.length >= 2);
+}

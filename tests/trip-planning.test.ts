@@ -178,3 +178,35 @@ describe("the town at a point", () => {
     expect(townFromMapTiler([{ text: "Palm Close", place_type: ["road"] }, { text: "Liverpool", place_type: ["municipality"] }, { text: "United Kingdom", place_type: ["country"], properties: { country_code: "gb" } }])).toEqual({ name: "Liverpool", country: "United Kingdom", countryCode: "GB" });
   });
 });
+
+describe("a trip from saved events", () => {
+  it("visits their cities in date order, each stay covering its events", async () => {
+    const { routeFromEvents, withNights } = await import("@/lib/trip");
+    const porto = { name: "Porto", lat: 41.15, lng: -8.61 };
+    const lisbon = { name: "Lisbon", lat: 38.72, lng: -9.14 };
+    const evs = [
+      { day: "2027-03-12", place: porto },
+      { day: "2027-03-15", place: lisbon },
+      { day: "2027-03-13", place: { ...porto, lat: 41.16 } },
+      { day: "2027-03-17", place: lisbon },
+    ];
+    const r = routeFromEvents(evs)!;
+    expect(r.places.map((p) => p.name)).toEqual(["Porto", "Lisbon"]);
+    expect(r.start).toBe("2027-03-11");
+    expect(r.nights).toEqual([4, 3]);
+    const stops = withNights(r.places.map((p, i) => ({ ...p, id: `s${i}`, from: "", to: "" })), r.start, r.nights);
+    for (const e of evs) expect(stops.some((s) => s.name === e.place.name && e.day >= s.from && e.day <= s.to)).toBe(true);
+    expect(routeFromEvents([])).toBeNull();
+    expect(routeFromEvents([{ day: "2027-01-01", place: porto }])).toMatchObject({ start: "2026-12-31", nights: [2] });
+  });
+});
+
+describe("trip ideas from saved events", () => {
+  it("groups events close in time and place", async () => {
+    const { ideaGroups } = await import("@/lib/trip");
+    const e = (id: string, day: string, lat = 41, lng = -8) => ({ id, day, lat, lng });
+    const g = ideaGroups([e("a", "2027-03-12"), e("b", "2027-03-14", 38.7, -9.1), e("c", "2027-05-01"), e("d", "2027-05-02", 35.7, 139.7), e("x", "2027-03-13")]);
+    expect(g.map((x) => x.map((y) => y.id))).toEqual([["a", "x", "b"]]);
+    expect(ideaGroups([e("a", "2027-03-01"), e("b", "2027-03-09")])).toEqual([]);
+  });
+});

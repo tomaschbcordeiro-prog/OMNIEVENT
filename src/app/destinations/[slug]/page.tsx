@@ -1,4 +1,4 @@
-import { TripCallout } from "@/components/trips/trip-shortcuts";
+import { PlaceTripLinks, TripCallout } from "@/components/trips/trip-shortcuts";
 import { shareImage } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import { DateRangeFields } from "@/components/date-range";
@@ -118,11 +118,7 @@ export default async function DestinationPage({ params, searchParams }: { params
                   <span aria-hidden>📼</span> Plan a weekend here
                 </Link>
               )}
-              {d.kind === "city" && (
-                <Link className="btn btn-secondary btn-sm" href={`/trips/new?city=${d.id}`}>
-                  <span aria-hidden>✈️</span> Plan a trip with {d.name}
-                </Link>
-              )}
+              {d.kind === "city" && <PlaceTripLinks name={d.name} lat={d.lat} lng={d.lng} countryCode={d.countryCode} cityId={d.id} plan={`Plan a trip with ${d.name}`} />}
             </div>
             {d.kind === "city" && <TripCallout name={d.name} lat={d.lat} lng={d.lng} cityId={d.id} />}
 

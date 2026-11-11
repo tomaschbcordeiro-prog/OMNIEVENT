@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Hand, Loader2, Plane, Sparkles, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkles, Wand2, X } from "lucide-react";
 import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { userActions, useUser } from "@/lib/user/store";
-import { addDays, bestOrder, bestSlot, midpoint, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
 import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
-import { bboxOf, CityPin, dayLabel, longRange, MapIcons, routeOf, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, type MapIcon } from "./shared";
+import { bboxOf, CityPin, dayLabel, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, useSheet, type MapIcon } from "./shared";
+import { localDateKey } from "@/lib/format";
 import { toast } from "../toast";
 import { LegPlus, lookupTown, MapAddCard, PlaceSearch, placeOfTown, RouteList, type RouteStop } from "./route-edit";
 
@@ -53,8 +54,14 @@ export function TripPlanner() {
   const sp = useSearchParams();
   const user = useUser();
   const api = useRef<EarthMapHandle | null>(null);
-  const pad = usePanelPad();
-  const [step, setStep] = useState(0);
+  const sheet = useSheet("half");
+  const pad = usePanelPad(sheet.panel);
+  const [step, setStepState] = useState(0);
+  /** A new step gets the sheet back to half (a phone shows the step and the globe). */
+  const setStep = (v: number | ((s: number) => number)) => {
+    setStepState(v);
+    sheet.setSnap("half");
+  };
   const [stops, setStops] = useState<Stop[]>([]);
   const [start, setStart] = useState("");
   const [nights, setNights] = useState<number[]>([]);
@@ -65,11 +72,11 @@ export function TripPlanner() {
   const [fly, setFly] = useState<FlyRequest>();
   const [active, setActive] = useState<number | undefined>();
   const [ready, setReady] = useState(false);
-  const [tall, setTall] = useState(false);
   /** Created: the pass is stamped, then the trip opens. */
   const [stamped, setStamped] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [withEvent, setWithEvent] = useState<EventCard | null>(null);
+  /** Events the trip is planned around: they come with it. */
+  const [withEvents, setWithEvents] = useState<EventCard[]>([]);
   /** The gap in the route list a stop is being typed into (the index it will take). */
   const [inserting, setInserting] = useState<number | null>(null);
   /** The leg whose "+" on the globe is open to type a place. */
@@ -79,7 +86,15 @@ export function TripPlanner() {
   /** A leg's "+" being dragged across the map: where it is now. */
   const [legDrag, setLegDrag] = useState<{ i: number; lat: number; lng: number } | null>(null);
   /** A place tapped on the map, waiting to be added. */
-  const [tap, setTap] = useState<{ lat: number; lng: number; label?: string; town?: Town } | null>(null);
+  const [tap, setTap] = useState<{ lat: number; lng: number; label?: string; town?: Town; below?: boolean } | null>(null);
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    try {
+      setHint(!localStorage.getItem("omnievent:hint:route"));
+    } catch {
+      setHint(true);
+    }
+  }, []);
   const flyKey = useRef(0);
   const stopsNow = useRef(stops);
   stopsNow.current = stops;
@@ -108,9 +123,20 @@ export function TripPlanner() {
       setEmoji(t.emoji ?? "✈️");
       setInterests(t.interests ?? []);
       if (t.stops?.length) {
-        setStops(t.stops.map(keyed));
+        let list = t.stops.map(keyed);
+        let n = t.stops.map((s) => nightsBetween(s.from, s.to));
+        // A place sent from elsewhere on the site ("Add to this trip"): where it fits best.
+        const extra = sp.get("add")?.split(",");
+        if (extra && extra.length >= 3 && Number.isFinite(Number(extra[0])) && Number.isFinite(Number(extra[1]))) {
+          const p: Place = { name: decodeURIComponent(extra[2]).slice(0, 60), countryCode: extra[3]?.slice(0, 2) || undefined, lat: Number(extra[0]), lng: Number(extra[1]), cityId: extra[4] || undefined };
+          const at = bestSlot(list, p);
+          list = [...list.slice(0, at), keyed(p), ...list.slice(at)];
+          n = nightsWithStop(n, at);
+          toast({ title: `${p.name} added to the route`, body: "Move it or change the nights, then save.", emoji: "📍" });
+        }
+        setStops(list);
         setStart(t.stops[0].from);
-        setNights(t.stops.map((s) => nightsBetween(s.from, s.to)));
+        setNights(n);
       } else if (t.start) {
         setStart(t.start);
       }
@@ -132,11 +158,26 @@ export function TripPlanner() {
       setStart(addDays(date, -1));
       setNights(first.length ? splitNights(addDays(date, -1), addDays(date, Math.max(2, first.length * 2) - 1), first.length).map((r) => nightsBetween(r.from, r.to)) : []);
     }
-    const ev = sp.get("event");
-    if (ev)
-      fetch(`/api/events/batch?ids=${encodeURIComponent(ev)}`)
+    // Events to plan around: one (an event's "Plan a trip around this") or several (a trip idea
+    // from saved events, whose cities and dates then make the route).
+    const ids = [...new Set([sp.get("event"), ...(sp.get("events")?.split(",") ?? [])].filter((x): x is string => !!x))].slice(0, 20);
+    if (ids.length)
+      fetch(`/api/events/batch?ids=${encodeURIComponent(ids.join(","))}`)
         .then((r) => r.json())
-        .then((j: { items: EventCard[] }) => setWithEvent(j.items[0] ?? null))
+        .then((j: { items: EventCard[] }) => {
+          setWithEvents(j.items);
+          if (first.length || !sp.get("events") || !j.items.length) return;
+          const r = routeFromEvents(
+            j.items.map((c) => {
+              const city = c.cityId ? getDestination(c.cityId) : undefined;
+              return { day: localDateKey(c.start, c.timeZone), place: city ? { name: city.name, country: city.country, countryCode: city.countryCode, lat: city.lat, lng: city.lng, cityId: city.id } : { name: c.city, country: c.country, lat: c.lat, lng: c.lng } };
+            }),
+          );
+          if (!r) return;
+          setStops(r.places.slice(0, MAX_STOPS).map(keyed));
+          setStart(r.start);
+          setNights(r.nights.slice(0, MAX_STOPS));
+        })
         .catch(() => {});
     // Once, from the address.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -154,7 +195,7 @@ export function TripPlanner() {
       lng: s.lng,
       anchor: "bottom",
       node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={active === i} looking={s.looking} hint="Drag to move it" note={s.from && s.to ? `${nightsBetween(s.from, s.to)}n` : undefined} emojis={step >= 2 ? vibeEmojis : undefined} onClick={() => setActive((a) => (a === i ? undefined : i))} />,
-      drag: { onStart: () => (setActive(i), setTap(null)), onMove: (lat, lng) => follow(s.key, lat, lng), onEnd: (lat, lng) => void settle(s.key, lat, lng) },
+      drag: { onStart: () => (setActive(i), setTap(null), sheet.setSnap("peek")), onMove: (lat, lng) => follow(s.key, lat, lng), onEnd: (lat, lng) => void settle(s.key, lat, lng) },
     }));
     if (step === 0)
       stops.slice(1).forEach((b, j) => {
@@ -167,13 +208,13 @@ export function TripPlanner() {
           delay: 200,
           node: <LegPlus from={a.name} to={b.name} open={legOpen === j} below={legBelow} onOpen={() => openLeg(j)} onClose={() => setLegOpen(null)} onPick={(p) => ((onMap.current = true), insertAt(j + 1, p), setLegOpen(null))} />,
           // While it's open to type in, it stays put.
-          drag: legOpen === j ? undefined : { onStart: () => (setLegOpen(null), setTap(null)), onMove: (lat, lng) => setLegDrag({ i: j, lat, lng }), onEnd: (lat, lng) => void dropOnLeg(j, lat, lng) },
+          drag: legOpen === j ? undefined : { onStart: () => (setLegOpen(null), setTap(null), sheet.setSnap("peek")), onMove: (lat, lng) => setLegDrag({ i: j, lat, lng }), onEnd: (lat, lng) => void dropOnLeg(j, lat, lng) },
         });
       });
     if (tap && step === 0) {
       const slot = bestSlot(stops, tap);
       const where = !stops.length ? "" : slot === 0 ? `Before ${stops[0].name}` : slot >= stops.length ? `After ${stops[stops.length - 1].name}` : `Between ${stops[slot - 1].name} and ${stops[slot].name}`;
-      out.push({ key: `tap:${tap.lat}:${tap.lng}`, lat: tap.lat, lng: tap.lng, anchor: "bottom", node: <MapAddCard town={tap.town} label={tap.label} where={where} onClose={() => setTap(null)} onAdd={() => addTap(slot)} /> });
+      out.push({ key: `tap:${tap.lat}:${tap.lng}`, lat: tap.lat, lng: tap.lng, anchor: tap.below ? "top" : "bottom", node: <MapAddCard town={tap.town} label={tap.label} where={where} below={tap.below} onClose={() => setTap(null)} onAdd={() => addTap(slot)} /> });
     }
     return out;
     // Handlers read the latest plan when they run; the list covers what the icons show.
@@ -296,7 +337,7 @@ export function TripPlanner() {
     setTap(null);
     // On a phone, typing happens in the list (the keyboard would cover the globe anyway).
     if (!window.matchMedia("(min-width: 1024px)").matches) {
-      setTall(true);
+      sheet.setSnap("full");
       setInserting(i + 1);
       return;
     }
@@ -312,7 +353,11 @@ export function TripPlanner() {
     if (step !== 0) return;
     if (tap) return setTap(null);
     const label = c.feature && SETTLEMENTS.has(c.feature.kind) ? c.feature.name : undefined;
-    setTap({ lat: c.lat, lng: c.lng, label });
+    // Near the top of the screen, its card opens below the place instead of above.
+    const at = api.current?.project([c.lng, c.lat]);
+    setTap({ lat: c.lat, lng: c.lng, label, below: !!at && at.y < 240 });
+    // On a phone, the sheet folds so the place and its card can be seen.
+    sheet.setSnap("peek");
     void lookupTown(c.lat, c.lng).then((town) => setTap((t) => (t && t.lat === c.lat && t.lng === c.lng ? { ...t, town } : t)));
   };
   const addTap = (slot: number) => {
@@ -344,6 +389,23 @@ export function TripPlanner() {
   const canNext = step === 0 ? stops.length > 0 && !stops.some((s) => s.looking) : step === 1 ? !!start && !!end && nights.every((n) => n >= 0) : step === 3 ? !!name.trim() : true;
   const next = () => (step === 0 ? goWhen() : setStep((s) => Math.min(3, s + 1)));
 
+  const totalNights = nights.reduce((a, b) => a + b, 0);
+  const km = Math.round(routeKm(stops));
+  const summary =
+    step === 0
+      ? stops.length
+        ? `${stops.length} ${stops.length === 1 ? "city" : "cities"}${stops.length > 1 ? ` · ${km.toLocaleString("en-GB")} km` : ""}`
+        : "No cities yet"
+      : step === 1
+        ? start && end
+          ? `${totalNights} ${totalNights === 1 ? "night" : "nights"} · ${shortRange(start, end)}`
+          : "Pick your dates"
+        : step === 2
+          ? interests.length
+            ? `${interests.length} ${interests.length === 1 ? "thing" : "things"} you like`
+            : "A bit of everything"
+          : name || "Your trip";
+
   const create = async () => {
     const tripStops: TripStop[] = withNights(
       stops.map(({ key, ...p }) => {
@@ -356,10 +418,9 @@ export function TripPlanner() {
     let id = editing;
     if (id) userActions.updateTrip(id, { name: name.trim(), emoji, interests, stops: tripStops, start, end });
     else {
-      // The event the trip was planned around comes with it.
-      const first = withEvent ? tripSnapOf(withEvent) : null;
-      const snaps = first ? { [first.id]: { ...first, id: undefined } } : undefined;
-      id = userActions.createTrip(name.trim(), start, end, withEvent ? [withEvent.id] : [], { stops: tripStops, emoji, interests, snaps });
+      // The events the trip was planned around come with it.
+      const snaps = Object.fromEntries(withEvents.map((c) => [c.id, { ...tripSnapOf(c), id: undefined }]));
+      id = userActions.createTrip(name.trim(), start, end, withEvents.map((c) => c.id), { stops: tripStops, emoji, interests, snaps: withEvents.length ? snaps : undefined });
     }
     // The pass gets its stamp, then the trip opens.
     setStamped(true);
@@ -376,20 +437,28 @@ export function TripPlanner() {
     <div className="trip-stage">
       <TripGlobe api={api} route={route} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={tapMap} label="Globe showing the trip you're planning: its cities and the route between them. Drag a city to move it; tap the map to add a place." />
       <MapIcons api={api} ready={ready} icons={icons} />
-      <section className="planner-panel" aria-label="Plan a trip" data-tall={tall || undefined}>
-        <button type="button" className="sheet-grab" aria-label={tall ? "Show more of the globe" : "Show more of the planner"} aria-expanded={tall} onClick={() => setTall((t) => !t)}><span aria-hidden /></button>
-        <header className="planner-head">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="t-h2 font-display-tight">{editing ? "Edit your trip" : "Plan a trip"}</h1>
-            <Link href="/trips" className="btn btn-ghost btn-icon btn-sm" aria-label="Close the planner">
-              <X size={18} aria-hidden />
-            </Link>
-          </div>
+      <section
+        ref={sheet.panel}
+        className="planner-panel"
+        aria-label="Plan a trip"
+        data-snap={sheet.snap}
+        // Typing gets the whole sheet (the keyboard takes the rest of the screen).
+        onFocusCapture={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.matches("input:not([type=date]):not([type=checkbox]), textarea")) sheet.setSnap("full");
+        }}
+      >
+        <SheetGrab snap={sheet.snap} grab={sheet.grab} label="The planner" />
+        <header className="planner-head is-steps">
+          <h1 className="planner-title t-h2 font-display-tight">{editing ? "Edit your trip" : "Plan a trip"}</h1>
+          <Link href="/trips" className="planner-close btn btn-ghost btn-icon btn-sm" aria-label="Close the planner">
+            <X size={18} aria-hidden />
+          </Link>
           <ol className="planner-steps" aria-label="Steps">
             {STEPS.map((s, i) => (
               <li key={s}>
-                <button type="button" className="planner-step" aria-current={i === step ? "step" : undefined} data-done={i < step || undefined} disabled={i > step && !(i === 1 && stops.length) && !(i > 1 && end)} onClick={() => (i === 1 && step === 0 ? goWhen() : setStep(i))}>
-                  <span className="planner-step-n">{i < step ? <Check size={12} aria-hidden /> : i + 1}</span> {s}
+                <button type="button" className="planner-step" aria-current={i === step ? "step" : undefined} data-done={i < step || undefined} disabled={i > step && !(i === 1 && stops.length) && !(i > 1 && end)} onClick={() => (i === 1 && step === 0 ? goWhen() : setStep(i))} aria-label={`Step ${i + 1}: ${s}${i < step ? ", done" : ""}`}>
+                  <span className="planner-step-n" aria-hidden>{i < step ? <Check size={12} /> : i + 1}</span> <span className="planner-step-label" aria-hidden>{s}</span>
                 </button>
               </li>
             ))}
@@ -399,20 +468,22 @@ export function TripPlanner() {
         <div className="planner-body" key={step}>
           {step === 0 && (
             <>
-              <p className="planner-q">Where are you going?</p>
-              <PlaceSearch onPick={add} />
-              <div className="mt-4">
-                <p className="t-small text-text-2 mb-2">Or start from a route</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {REGIONS.map((r) => (
-                    <button key={r.id} type="button" className="chip press" onClick={() => void addRegion(r)}>
-                      <span aria-hidden>{r.emoji}</span> {r.name}
-                    </button>
-                  ))}
+              <p className="planner-q">{stops.length ? "Where else?" : "Where are you going?"}</p>
+              <PlaceSearch onPick={add} placeholder={stops.length ? "Add another city…" : undefined} />
+              {!stops.length && (
+                <div className="mt-4">
+                  <p className="t-small text-text-2 mb-2">Or start from a route</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {REGIONS.map((r) => (
+                      <button key={r.id} type="button" className="chip press" onClick={() => void addRegion(r)}>
+                        <span aria-hidden>{r.emoji}</span> {r.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               {stops.length > 0 && (
-                <div className="mt-5">
+                <div className="mt-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="t-small font-semibold">Your route, in order</p>
                     {stops.length > 2 && saved > 20 && (
@@ -423,10 +494,38 @@ export function TripPlanner() {
                   </div>
                   <RouteList stops={stops} onMove={moveTo} onRemove={remove} onRename={rename} onInsert={(i, p) => insertAt(i, p)} inserting={inserting} setInserting={setInserting} onHover={setActive} onPick={(i) => frame([stops[i]])} />
                   {stops.length > 1 && <p className="t-micro text-text-3 mt-2 tnum">{Math.round(routeKm(stops)).toLocaleString("en-GB")} km from first to last city</p>}
-                  <p className="planner-hint t-micro">
-                    <Hand size={13} aria-hidden className="shrink-0 mt-px" />
-                    <span>On the globe: drag a city to move it, tap <b>+</b> on the line to stop on the way (or drag it), or tap anywhere to add that place. Tap a name to call it what you like.</span>
-                  </p>
+                  {hint && (
+                    <div className="planner-hint t-micro">
+                      <Hand size={13} aria-hidden className="shrink-0 mt-px" />
+                      <span className="flex-1">On the globe: drag a city to move it, tap <b>+</b> on the line to stop on the way (or drag it), or tap anywhere to add that place. Tap a name to call it what you like.</span>
+                      <button
+                        type="button"
+                        className="planner-hint-ok"
+                        onClick={() => {
+                          setHint(false);
+                          try {
+                            localStorage.setItem("omnievent:hint:route", "1");
+                          } catch {
+                            // storage off
+                          }
+                        }}
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  )}
+                  <details className="planner-more">
+                    <summary>
+                      <span>Add a ready-made route</span> <ChevronDown size={14} aria-hidden />
+                    </summary>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {REGIONS.map((r) => (
+                        <button key={r.id} type="button" className="chip press" onClick={() => void addRegion(r)}>
+                          <span aria-hidden>{r.emoji}</span> {r.name}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
                 </div>
               )}
             </>
@@ -489,19 +588,20 @@ export function TripPlanner() {
                 ))}
               </div>
               <div className="mt-5 relative">
-                <TripPass name={name || "My trip"} emoji={emoji} stops={stops} start={start} end={end} events={withEvent ? 1 : 0} />
+                <TripPass name={name || "My trip"} emoji={emoji} stops={stops} start={start} end={end} events={withEvents.length} />
                 {stamped && <span className="pass-stamp" aria-hidden>Let&apos;s go!</span>}
               </div>
               {stamped && <p className="sr-only" role="status">Trip saved. Opening it…</p>}
-              {withEvent && <p className="t-small text-text-2 mt-3"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvent.title} comes with it.</p>}
+              {withEvents.length > 0 && <p className="t-small text-text-2 mt-3"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
             </>
           )}
         </div>
 
         <footer className="planner-foot">
           {step > 0 ? (
-            <button type="button" className="btn btn-ghost" onClick={() => setStep((s) => s - 1)}><ArrowLeft size={16} aria-hidden /> Back</button>
-          ) : <span />}
+            <button type="button" className="btn btn-ghost planner-back" onClick={() => setStep((s) => s - 1)} aria-label="Back"><ArrowLeft size={16} aria-hidden /> <span className="max-sm:hidden">Back</span></button>
+          ) : <span className="max-sm:hidden" />}
+          <p className="planner-sum" aria-live="polite">{summary}</p>
           {step < 3 ? (
             <button type="button" className="btn btn-primary press" disabled={!canNext} onClick={next}>
               {step === 0 ? (stops.length ? `Next: when` : "Add a city") : step === 1 ? "Next: what you like" : "Next: name it"} <ArrowRight size={16} aria-hidden />

@@ -14,7 +14,7 @@ import { formatEventTime, localDateKey } from "@/lib/format";
 import type { EarthMapHandle, FlyRequest } from "../earth/earth-map";
 import { Poster } from "../ui";
 import { toast } from "../toast";
-import { bboxOf, CityPin, dayLabel, fanOut, longRange, MapIcons, routeOf, shortRange, TripGlobe, tripSnapOf, usePanelPad, useTripEvents, type MapIcon, type TripEvent } from "./shared";
+import { bboxOf, CityPin, dayLabel, fanOut, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, tripSnapOf, usePanelPad, useSheet, useTripEvents, type MapIcon, type TripEvent } from "./shared";
 
 const GROUP_EMOJI: Record<string, string> = {
   music: "🎶", sports: "⚽", theatre: "🎭", comedy: "😂", festivals: "🎉", cinema: "🎬", conferences: "🎤", technology: "💻",
@@ -65,7 +65,8 @@ export function TripView({ id }: { id: string }) {
   const sp = useSearchParams();
   const trip = user.trips.find((t) => t.id === id);
   const api = useRef<EarthMapHandle | null>(null);
-  const pad = usePanelPad();
+  const sheet = useSheet("half");
+  const pad = usePanelPad(sheet.panel);
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
@@ -73,7 +74,6 @@ export function TripView({ id }: { id: string }) {
   const [burst, setBurst] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [fly, setFly] = useState<FlyRequest>();
-  const [tall, setTall] = useState(false);
   const flyKey = useRef(0);
   const { events } = useTripEvents(trip);
   const sugg = useSuggestions(trip);
@@ -112,6 +112,8 @@ export function TripView({ id }: { id: string }) {
     setOpen(null);
     setBurst(false);
     setSel(i);
+    // A phone shows the city's events on the globe and its days below, half and half.
+    sheet.setSnap("half");
     if (i === null) return frameAll();
     const s = stops[i];
     // The city and everything about to spring out of it, framed in the part of the globe the
@@ -208,14 +210,14 @@ export function TripView({ id }: { id: string }) {
       <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={() => setOpen(null)} label={`Globe with your trip ${trip.name}: tap a city to see its events.`} />
       <MapIcons api={api} ready={ready} icons={icons} />
 
-      <section className="planner-panel trip-panel" aria-label={trip.name} data-tall={tall || undefined}>
-        <button type="button" className="sheet-grab" aria-label={tall ? "Show more of the globe" : "Show more of the plan"} aria-expanded={tall} onClick={() => setTall((t) => !t)}><span aria-hidden /></button>
+      <section ref={sheet.panel} className="planner-panel trip-panel" aria-label={trip.name} data-snap={sheet.snap}>
+        <SheetGrab snap={sheet.snap} grab={sheet.grab} label="Your trip" />
         <header className="planner-head">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="trip-title"><span aria-hidden>{trip.emoji ?? "✈️"}</span> {trip.name}</h1>
               <p className="t-small text-text-2 mt-0.5">
-                {longRange(trip.start, trip.end)}{nights > 0 && `, ${nights} ${nights === 1 ? "night" : "nights"}`} {flags.length > 0 && <span aria-hidden className="ml-1">{flags.join(" ")}</span>}
+                {longRange(trip.start, trip.end)}{nights > 0 && `, ${nights} ${nights === 1 ? "night" : "nights"}`} {flags.length > 0 && <span aria-hidden className="ml-1 max-lg:hidden">{flags.join(" ")}</span>}
               </p>
             </div>
             <Link href="/trips" className="btn btn-ghost btn-icon btn-sm shrink-0" aria-label="All your trips"><X size={18} aria-hidden /></Link>

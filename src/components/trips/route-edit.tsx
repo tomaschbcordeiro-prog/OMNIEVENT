@@ -372,9 +372,9 @@ export function LegPlus({ from, to, open, below, onOpen, onClose, onPick }: { fr
 }
 
 /** A place tapped on the map: what it is, and where it would go on the route. */
-export function MapAddCard({ town, label, where, onAdd, onClose }: { town?: Town; label?: string; where: string; onAdd: () => void; onClose: () => void }) {
+export function MapAddCard({ town, label, where, below, onAdd, onClose }: { town?: Town; label?: string; where: string; below?: boolean; onAdd: () => void; onClose: () => void }) {
   return (
-    <div className="map-add" {...keep}>
+    <div className="map-add" data-below={below || undefined} {...keep}>
       <div className="map-add-card" role="dialog" aria-label="Add this place to your route">
         <div className="flex items-start gap-2">
           <span className="text-xl leading-none mt-0.5" aria-hidden>{town ? flagOf(town.countryCode) || "📍" : "📍"}</span>

@@ -19,21 +19,116 @@ const LAYERS = { ...DEFAULT_LAYERS, terrain: false, density: false, poi: false }
 
 export type Pad = { top: number; right: number; bottom: number; left: number };
 
-/** Room the panels take over the globe: a column on the left (desktop) or a sheet below (phones). */
-export function usePanelPad(): Pad {
+const PHONE = "(max-width: 1023px)";
+
+/**
+ * Room the panels take over the globe: a column on the left (desktop) or the sheet below
+ * (phones), measured as it is, so whatever the globe frames stays in the part left free.
+ */
+export function usePanelPad(panel?: RefObject<HTMLElement | null>): Pad {
   const [pad, setPad] = useState<Pad>({ top: 80, right: 60, bottom: 60, left: 60 });
   useEffect(() => {
     const on = () => {
-      const wide = window.innerWidth >= 1024;
-      // Phones: the sheet covers 58% of the stage (the screen less the header and tab bar).
-      const stage = window.innerHeight - 56 - 58;
-      setPad(wide ? { top: 110, right: 80, bottom: 80, left: Math.min(520, window.innerWidth * 0.42) + 40 } : { top: 44, right: 28, bottom: Math.round(stage * 0.58) + 16, left: 28 });
+      if (!window.matchMedia(PHONE).matches) return setPad({ top: 110, right: 80, bottom: 80, left: Math.min(520, window.innerWidth * 0.42) + 40 });
+      const sheet = panel?.current?.getBoundingClientRect().height ?? Math.round((window.innerHeight - 56) * 0.5);
+      setPad({ top: 44, right: 28, bottom: Math.round(sheet) + 16, left: 28 });
     };
     on();
     window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
+    const ro = panel?.current ? new ResizeObserver(on) : null;
+    if (panel?.current) ro?.observe(panel.current);
+    return () => {
+      window.removeEventListener("resize", on);
+      ro?.disconnect();
+    };
+  }, [panel]);
   return pad;
+}
+
+/** How much of the screen the sheet takes on a phone: a bar, half, or nearly all of it. */
+export type Snap = "peek" | "half" | "full";
+const ORDER: Snap[] = ["peek", "half", "full"];
+
+/**
+ * The sheet a trip's panel becomes on a phone. Drag its handle (or tap it) to show more of
+ * the plan or more of the globe; `setSnap` lets each action make room for itself (the globe
+ * while a city is dragged, the panel while something is typed). Computers ignore it.
+ */
+export function useSheet(initial: Snap = "half") {
+  const [snap, setSnapState] = useState<Snap>(initial);
+  const panel = useRef<HTMLElement | null>(null);
+  const drag = useRef<{ y0: number; h0: number; t0: number; moved: boolean } | null>(null);
+  const setSnap = (s: Snap) => {
+    if (typeof window !== "undefined" && window.matchMedia(PHONE).matches) setSnapState(s);
+  };
+  const heightOf = (s: Snap): number => {
+    const stage = panel.current?.parentElement?.clientHeight ?? window.innerHeight;
+    if (s === "full") return stage - 10;
+    if (s === "half") return stage * 0.52;
+    return 150;
+  };
+  const release = (dy: number, tap: boolean) => {
+    const el = panel.current;
+    const d = drag.current;
+    drag.current = null;
+    if (!el || !d) return;
+    el.style.height = "";
+    el.style.transition = "";
+    if (tap) return setSnapState((s) => (s === "full" ? "half" : s === "half" ? "full" : "half"));
+    const h = d.h0 - dy;
+    const v = dy / Math.max(1, performance.now() - d.t0);
+    // A flick goes one step in its direction; a slow drag settles at the nearest height.
+    let i = ORDER.reduce((best, s, j) => (Math.abs(heightOf(s) - h) < Math.abs(heightOf(ORDER[best]) - h) ? j : best), 0);
+    if (v > 0.6) i = Math.max(0, ORDER.indexOf(snapNow.current) - 1);
+    else if (v < -0.6) i = Math.min(2, ORDER.indexOf(snapNow.current) + 1);
+    setSnapState(ORDER[i]);
+  };
+  const snapNow = useRef(snap);
+  snapNow.current = snap;
+  const grab = {
+    onPointerDown: (e: React.PointerEvent) => {
+      if (!window.matchMedia(PHONE).matches || !panel.current) return;
+      drag.current = { y0: e.clientY, h0: panel.current.getBoundingClientRect().height, t0: performance.now(), moved: false };
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const d = drag.current;
+      const el = panel.current;
+      if (!d || !el) return;
+      const dy = e.clientY - d.y0;
+      if (!d.moved && Math.abs(dy) < 6) return;
+      d.moved = true;
+      el.style.transition = "none";
+      el.style.height = `${Math.max(heightOf("peek") - 30, Math.min(heightOf("full"), d.h0 - dy))}px`;
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      const d = drag.current;
+      if (d) release(e.clientY - d.y0, !d.moved);
+    },
+    onPointerCancel: () => release(0, false),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      const i = ORDER.indexOf(snapNow.current);
+      const to = e.key === "ArrowUp" ? i + 1 : e.key === "ArrowDown" ? i - 1 : -1;
+      if (to < 0 || to > 2) return;
+      e.preventDefault();
+      setSnapState(ORDER[to]);
+    },
+  };
+  return { snap, setSnap, panel, grab };
+}
+
+/** The sheet's handle: drag it, tap it, or use the arrow keys to show more or less. */
+export function SheetGrab({ snap, grab, label }: { snap: Snap; grab: ReturnType<typeof useSheet>["grab"]; label: string }) {
+  return (
+    <button
+      type="button"
+      className="sheet-grab"
+      aria-label={`${label}: ${snap === "full" ? "shown in full" : snap === "half" ? "half shown" : "folded down"}. Drag, tap, or use the arrow keys to show more or less.`}
+      {...grab}
+    >
+      <span aria-hidden />
+    </button>
+  );
 }
 
 /**
@@ -107,7 +202,7 @@ export interface MapIcon {
   lat: number;
   lng: number;
   node: ReactNode;
-  anchor?: "center" | "bottom";
+  anchor?: "center" | "bottom" | "top";
   /** It springs out from here (a city's pin) to its own place. */
   from?: { lat: number; lng: number };
   /** Milliseconds before it pops in (for a staggered entrance). */
