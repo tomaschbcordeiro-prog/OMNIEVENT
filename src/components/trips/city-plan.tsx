@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Landmark, Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, type Trip } from "@/lib/user/store";
-import { daysOf, flagOf, nightsBetween, placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
+import { addDays, daysOf, flagOf, nightsBetween, placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { isScheduled, isTravel, kindLabel, parsePlan, type PlanKind, type TripPlan } from "@/lib/trip-plans";
 import { planKindForPoi, POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
@@ -116,8 +116,11 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
     if (already) return toast({ title: `${name} is on the trip already`, emoji: "📍" });
     const kind: PlanKind = cls ? planKindForPoi(poiGroup(cls)) : "visit";
     announcePlan(id, from);
-    userActions.addPlan(trip.id, { id, kind: kind === "note" ? "visit" : kind, title: name.slice(0, 80), day: day ?? "", lat, lng, ...(cls ? { poi: cls } : {}), ...(o.kind === "place" && o.f.context ? { place: o.f.context.split(",")[0].slice(0, 80) } : {}), createdAt });
-    done(id, name, day ? dayName(day) : "");
+    // A hotel in the city is where you sleep there: all its nights, unless a day was picked.
+    const checkIn = day ?? stop.from;
+    const when = kind === "stay" ? { day: checkIn, endDay: checkIn < stop.to ? stop.to : addDays(checkIn, 1) } : { day: day ?? "" };
+    userActions.addPlan(trip.id, { id, kind: kind === "note" ? "visit" : kind, title: name.slice(0, 80), ...when, lat, lng, ...(cls ? { poi: cls } : {}), ...(o.kind === "place" && o.f.context ? { place: o.f.context.split(",")[0].slice(0, 80) } : {}), createdAt });
+    done(id, name, kind === "stay" ? `${dayName(when.day)} → ${dayName(when.endDay!)}` : day ? dayName(day) : "");
   };
 
   return (
