@@ -1,4 +1,5 @@
 import type { StyleSpecification, LayerSpecification, ExpressionSpecification, SkySpecification } from "maplibre-gl";
+import { POI_CLASSES, POI_SERVICES, POI_SKIP_SUBCLASSES, poiColorExpression } from "../pois";
 
 /**
  * Map data providers and the single OMNIEVENT map style.
@@ -50,6 +51,21 @@ type Meta = { base?: BaseStyle; group?: LayerKey };
 const L = (layer: LayerSpecification, meta: Meta): LayerSpecification => ({ ...layer, metadata: { omni: meta } }) as LayerSpecification;
 
 const name: ExpressionSpecification = ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
+
+/**
+ * Named places worth going to, more the closer you get (the most notable in each area first:
+ * the map's tiles rank them), a few services only up close; never bins, bollards or stops.
+ */
+const KNOWN_POI = Object.values(POI_CLASSES).flat();
+const POI_FILTER: ExpressionSpecification = [
+  "all",
+  ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+  ["has", "name"],
+  ["match", ["get", "class"], [...KNOWN_POI, ...POI_SERVICES], true, false],
+  ["!", ["match", ["coalesce", ["get", "subclass"], ""], POI_SKIP_SUBCLASSES, true, false]],
+  ["<=", ["coalesce", ["get", "rank"], 999], ["step", ["zoom"], 25, 15, 80, 16, 200, 17, 450, 18, 9999]],
+  ["any", [">=", ["zoom"], 17], ["match", ["get", "class"], KNOWN_POI, true, false]],
+];
 
 /** Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim. */
 export const DAY_SKY: SkySpecification = {
@@ -190,7 +206,11 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     L({ id: "label-waterway", type: "symbol", source: "omt", "source-layer": "waterway", minzoom: 12, layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 11, "symbol-placement": "line" }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
     L({ id: "label-road", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13, layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14], "symbol-placement": "line", "text-max-angle": 30 }, paint: { "text-color": "#3A4558", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "roads" }),
     L({ id: "label-housenumber", type: "symbol", source: "omt", "source-layer": "housenumber", minzoom: 17, layout: { "text-field": ["get", "housenumber"], "text-font": FONT, "text-size": 10 }, paint: { "text-color": "#6F7C90", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-poi", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 14, filter: ["<=", ["coalesce", ["get", "rank"], 99], ["step", ["zoom"], 2, 15, 5, 16, 10, 17, 22, 18, 99]], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-anchor": "top", "text-offset": [0, 0.4], "text-max-width": 8, "text-padding": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#5B4A7A", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.2 } }, { group: "poi" }),
+    // Places (restaurants, museums, monuments, theatres, parks, hotels…): a white badge ringed in
+    // the colour of their kind, with its icon and name; more of them appear the closer you get
+    // (the most notable first), services only when very close.
+    L({ id: "poi-dot", type: "circle", source: "omt", "source-layer": "poi", minzoom: 14, filter: POI_FILTER, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 8, 17, 10.5, 19, 12], "circle-color": "#FFFFFF", "circle-stroke-color": poiColorExpression() as ExpressionSpecification, "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 14, 1.6, 17, 2.2], "circle-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1], "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1] } }, { group: "poi" }),
+    L({ id: "poi-icon", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 14, filter: POI_FILTER, layout: { "icon-image": ["coalesce", ["image", ["concat", ["get", "subclass"], "_11"]], ["image", ["concat", ["get", "class"], "_11"]], ["image", "circle_11"]] as ExpressionSpecification, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.8, 17, 1, 19, 1.15], "icon-allow-overlap": true, "icon-ignore-placement": true, "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 14, 10.5, 18, 12.5], "text-anchor": "top", "text-offset": [0, 1.05], "text-max-width": 8, "text-padding": 6, "text-optional": true, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#3B3355", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.3, "icon-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1], "text-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1] } }, { group: "poi" }),
     L({ id: "label-place-minor", type: "symbol", source: "omt", "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood", "hamlet", "village", "isolated_dwelling"], true, false], layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 15, 13], "text-transform": "none", "text-max-width": 8 }, paint: { "text-color": "#4A5568", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } }, { group: "labels" }),
     L({ id: "label-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["match", ["get", "class"], ["city", "town"], true, false], layout: { "text-field": name, "text-font": ["step", ["zoom"], ["literal", FONT], 8, ["literal", FONT_BOLD]] as never, "text-size": ["interpolate", ["linear"], ["zoom"], 3, ["case", ["<=", ["coalesce", ["get", "rank"], 10], 3], 12, 10], 8, 14, 13, 18], "text-max-width": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#0D1B33", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "labels" }),
     L({ id: "label-state", type: "symbol", source: "omt", "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-letter-spacing": 0.08, "text-max-width": 7 }, paint: { "text-color": "#7A6A96", "text-halo-color": "rgba(255,255,255,0.85)", "text-halo-width": 1 } }, { group: "labels" }),
@@ -207,6 +227,8 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     version: 8,
     projection: { type: "globe" },
     glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    // Map icons for places (Maki, from OpenFreeMap).
+    sprite: "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
     sky: initial?.space ? SPACE_SKY : DAY_SKY,
     light: { anchor: "map", position: [1.4, 200, 40], intensity: 0.25, color: "#FFFFFF" },
     sources: {

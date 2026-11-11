@@ -479,7 +479,7 @@ export function DiscoverClient() {
       setSelection(null);
       setAutoRotate(false);
       if (c.feature) {
-        setPlace({ lat: c.lat, lng: c.lng, name: c.feature.name, kind: c.feature.kind, zoom: c.feature.zoom });
+        setPlace({ lat: c.lat, lng: c.lng, name: c.feature.name, kind: c.feature.kind, zoom: c.feature.zoom, poi: c.feature.poi });
         fly({ lat: c.lat, lng: c.lng, zoom: c.feature.zoom });
       } else {
         setPlace({ lat: c.lat, lng: c.lng });

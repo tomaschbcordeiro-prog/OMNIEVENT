@@ -15,7 +15,8 @@ const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthM
   loading: () => <div className="trip-globe-loading" aria-hidden />,
 });
 
-const LAYERS = { ...DEFAULT_LAYERS, terrain: false, density: false, poi: false };
+// Places (restaurants, museums…) show as you zoom in, to put on the trip.
+const LAYERS = { ...DEFAULT_LAYERS, terrain: false, density: false, poi: true };
 
 export type Pad = { top: number; right: number; bottom: number; left: number };
 

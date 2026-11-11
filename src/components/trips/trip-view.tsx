@@ -3,12 +3,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, MapPin, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
 import { daysOf, fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
 import { isTravel, kindLabel, planIcs } from "@/lib/trip-plans";
 import { KIND_ICON, TripAgenda } from "./agenda";
+import { PoiCard, type MapPlace } from "./place-to-trip";
+import type { MapClick } from "../earth/earth-map";
+import type { TripPlan } from "@/lib/trip-plans";
 import { spanOf } from "@/lib/trip-snap";
 import { rememberTrip } from "./trip-add";
 import { stopSearch } from "./trip-shortcuts";
@@ -77,6 +80,8 @@ export function TripView({ id }: { id: string }) {
   /** Event icons are out (after the glide to the city, so they spring from the pin). */
   const [burst, setBurst] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  /** A place tapped on the globe (a museum, a restaurant…), to put on the trip. */
+  const [poi, setPoi] = useState<(MapPlace & { below?: boolean }) | null>(null);
   const [fly, setFly] = useState<FlyRequest>();
   const flyKey = useRef(0);
   const { events } = useTripEvents(trip);
@@ -131,6 +136,36 @@ export function TripView({ id }: { id: string }) {
 
   // An event picked in the agenda: the globe goes to it and opens its card (a phone shows
   // half the globe for it).
+  // The globe: a place (from the map) tapped shows its card; anywhere else closes cards.
+  const tapGlobe = (c: MapClick) => {
+    setOpen(null);
+    if (c.feature?.poi && c.feature.name) {
+      const at = api.current?.project([c.lng, c.lat]);
+      setPoi({ name: c.feature.name, lat: c.lat, lng: c.lng, poi: c.feature.poi, below: !!at && at.y < 300 });
+      // On a phone, the sheet folds so the card can be seen.
+      sheet.setSnap("peek");
+    } else setPoi(null);
+  };
+  // A plan with a place: the globe goes there; its pin on the globe finds it in the agenda.
+  const showPlace = (p: TripPlan) => {
+    if (p.lat == null || p.lng == null) return;
+    setFly({ key: ++flyKey.current, lat: p.lat, lng: p.lng, zoom: 16.5, padding: pad });
+    sheet.setSnap("half");
+  };
+  const findPlan = (p: TripPlan) => {
+    if (sel !== null && !(p.day && stop && p.day >= stop.from && p.day <= stop.to)) setSel(null);
+    setView("agenda");
+    sheet.setSnap("half");
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`.trip-panel [data-plan="${p.id}"]`);
+      if (!el) return;
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.classList.remove("is-new");
+      void el.offsetWidth;
+      el.classList.add("is-new");
+      window.setTimeout(() => el.classList.remove("is-new"), 1700);
+    }, 120);
+  };
   const showEvent = (eid: string) => {
     const e = events.find((x) => x.id === eid) ?? (sugg[stop?.id ?? ""] ?? []).find((x) => x.id === eid);
     if (e?.lat) setFly({ key: ++flyKey.current, lat: e.lat, lng: e.lng, zoom: 14, padding: pad });
@@ -203,13 +238,20 @@ export function TripView({ id }: { id: string }) {
       const Icon = KIND_ICON[go.kind];
       out.push({ key: `stop-leg-${a.id}-${go.id}`, lat: m.lat, lng: m.lng, delay: 400, node: <span className="leg-mode" data-kind={go.kind} title={`${go.title}${go.time ? `, ${go.time}` : ""}`} aria-label={`${kindLabel(go.kind)} from ${a.name} to ${b.name}${go.time ? ` at ${go.time}` : ""}`} role="img"><Icon size={14} aria-hidden /></span> });
     });
+    // Your places on the trip (from the map), each a pin in the colour of what it is.
+    for (const p of trip.plans ?? []) {
+      if (p.lat == null || p.lng == null) continue;
+      const Icon = KIND_ICON[p.kind];
+      out.push({ key: `plan-${p.id}`, lat: p.lat, lng: p.lng, delay: 120, node: <button type="button" className="plan-pin" data-kind={p.kind} onClick={(e) => (e.stopPropagation(), findPlan(p))} aria-label={`${p.title}${p.day ? `, ${dayLabel(p.day)}` : ", a place to see"}. Find it in the agenda`} title={p.title}><Icon size={13} aria-hidden /></button> });
+    }
     // Events sharing a venue fan out round it (the city pins stay put).
     const cities = out.filter((ic) => ic.key.startsWith("stop-"));
     const project = (lat: number, lng: number) => api.current?.project([lng, lat]) ?? null;
-    return [...cities, ...fanOut(out.filter((ic) => !ic.key.startsWith("stop-")), ready ? project : undefined)];
+    const card: MapIcon[] = poi ? [{ key: `poi:${poi.lat}:${poi.lng}`, lat: poi.lat, lng: poi.lng, anchor: poi.below ? "top" : "bottom", node: <PoiCard place={poi} tripId={trip.id} below={poi.below} onClose={() => setPoi(null)} /> }] : [];
+    return [...cities, ...fanOut(out.filter((ic) => !ic.key.startsWith("stop-")), ready ? project : undefined), ...card];
     // pick/add/remove only read state that's listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip, stops, sel, stop, burst, placed, sugg, inTrip, open, loaded, ready]);
+  }, [trip, stops, sel, stop, burst, placed, sugg, inTrip, open, loaded, ready, poi]);
 
   if (!trip) {
     return (
@@ -230,7 +272,7 @@ export function TripView({ id }: { id: string }) {
 
   return (
     <div className="trip-stage">
-      <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={() => setOpen(null)} label={`Globe with your trip ${trip.name}: tap a city to see its events.`} />
+      <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={tapGlobe} label={`Globe with your trip ${trip.name}: tap a city to see its events; zoom in to see places (restaurants, museums…) and tap one to add it.`} />
       <MapIcons api={api} ready={ready} icons={icons} />
 
       <section
@@ -280,7 +322,7 @@ export function TripView({ id }: { id: string }) {
               <button type="button" role="tab" aria-selected={view === "cities"} className="seg-btn" onClick={() => setView("cities")}>Cities</button>
             </div>
           )}
-          {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} />}
+          {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
 
           {sel === null &&
             view === "cities" &&
@@ -312,7 +354,7 @@ export function TripView({ id }: { id: string }) {
             </p>
           )}
 
-          {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} stops={stops} dayEvents={dayEvents} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onOpen={showEvent} onPickStop={(i) => pick(i)} />}
+          {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} stops={stops} dayEvents={dayEvents} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onOpen={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
 
           {off.length > 0 && sel === null && (
             <section className="mt-5" aria-labelledby="off-h">
@@ -405,7 +447,7 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
 }
 
 /** One city of the trip: its days as an agenda (plans and events), and ideas for the free time. */
-function StopPlan({ trip, stop, index, stops, dayEvents, ideas, onAdd, onOpen, onPickStop }: { trip: Trip; stop: TripStop; index: number; stops: TripStop[]; dayEvents: { e: TripEvent; day: string }[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onOpen: (id: string) => void; onPickStop: (i: number) => void }) {
+function StopPlan({ trip, stop, index, stops, dayEvents, ideas, onAdd, onOpen, onPickStop, onShowPlace }: { trip: Trip; stop: TripStop; index: number; stops: TripStop[]; dayEvents: { e: TripEvent; day: string }[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onOpen: (id: string) => void; onPickStop: (i: number) => void; onShowPlace: (p: TripPlan) => void }) {
   const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
   const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: placeName(stop), from: stop.from, to: stop.to });
   if (trip.interests?.length) all.set("cat", trip.interests.join(","));
@@ -414,7 +456,11 @@ function StopPlan({ trip, stop, index, stops, dayEvents, ideas, onAdd, onOpen, o
       <p className="t-small text-text-2 mb-3">
         {dayLabel(stop.from)} → {dayLabel(stop.to)}, {nightsBetween(stop.from, stop.to)} {nightsBetween(stop.from, stop.to) === 1 ? "night" : "nights"}
       </p>
-      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} onOpenEvent={onOpen} onPickStop={onPickStop} />
+      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} near={stop} onOpenEvent={onOpen} onPickStop={onPickStop} onShowPlace={onShowPlace} />
+      <p className="trip-tip t-micro text-text-2">
+        <span className="trip-tip-icon" aria-hidden><MapPin size={12} /></span>
+        <span>Zoom into {placeName(stop)} on the globe to see its restaurants, museums, monuments and more; tap one to add it to the trip.</span>
+      </p>
       <h2 className="t-small font-semibold mt-5">Ideas for your days in {placeName(stop)}</h2>
       {ideas === null ? (
         <div className="mt-2 grid gap-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>

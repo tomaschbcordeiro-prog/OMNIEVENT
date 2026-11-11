@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { BedDouble, Briefcase, Bus, CarFront, ChevronDown, CornerDownLeft, NotebookPen, Plane, Plus, Sparkles, TrainFront, Trash2, UtensilsCrossed, X } from "lucide-react";
+import { BedDouble, Briefcase, Bus, CarFront, ChevronDown, CornerDownLeft, Landmark, MapPin, NotebookPen, Plane, Plus, Sparkles, TrainFront, Trash2, UtensilsCrossed, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
-import { addDays, daysOf, stopColor, type TripStop } from "@/lib/trip";
-import { durationOf, isTravel, kindLabel, nightsOf, parsePlan, PLAN_KINDS, planSortKey, type PlanKind, type TripPlan } from "@/lib/trip-plans";
+import { addDays, daysOf, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
+import { haversineKm } from "@/lib/geo";
+import { poiLabel } from "@/lib/pois";
+import { durationOf, isScheduled, isTravel, kindLabel, nightsOf, parsePlan, PLAN_KINDS, planSortKey, type PlanKind, type TripPlan } from "@/lib/trip-plans";
 import { formatEventTime } from "@/lib/format";
 import type { TripEvent } from "@/lib/trip-snap";
 import { Poster } from "../ui";
@@ -26,6 +28,7 @@ export const KIND_ICON: Record<PlanKind, LucideIcon> = {
   stay: BedDouble,
   meeting: Briefcase,
   meal: UtensilsCrossed,
+  visit: Landmark,
   activity: Sparkles,
   note: NotebookPen,
 };
@@ -52,7 +55,7 @@ interface Day {
 
 /** The trip's days, each with its cities and everything on it, in order. */
 function buildDays(trip: Trip, stops: TripStop[], events: { e: TripEvent; day: string }[], only?: string[]): Day[] {
-  const plans = trip.plans ?? [];
+  const plans = (trip.plans ?? []).filter(isScheduled);
   const range = stops.length ? daysOf(stops[0].from, stops[stops.length - 1].to) : trip.start && trip.end ? daysOf(trip.start, trip.end) : [];
   const all = [...new Set([...range, ...plans.map((p) => p.day), ...events.map((x) => x.day)])].sort();
   const want = only ? all.filter((d) => only.includes(d)) : all;
@@ -164,7 +167,8 @@ function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "createdAt">
   const Icon = KIND_ICON[p.kind];
   const length = durationOf(p);
   const route = isTravel(p.kind) && (p.from || p.to) ? `${p.from ?? "?"} → ${p.to ?? "?"}` : "";
-  const meta = [route, p.ref, length, p.place, !preview && p.notes ? p.notes.split("\n")[0] : ""].filter(Boolean).join(" · ");
+  const [cls, sub] = (p.poi ?? "").split("/");
+  const meta = [route, p.ref, length, p.poi ? poiLabel(cls, sub) : "", p.place, !preview && p.notes ? p.notes.split("\n")[0] : ""].filter(Boolean).join(" · ");
   const Tag = onEdit ? "button" : "div";
   return (
     <Tag type={onEdit ? "button" : undefined} className="ag-item" data-kind={p.kind} onClick={onEdit} aria-label={onEdit ? `${kindLabel(p.kind)}: ${p.title}${p.time ? ` at ${p.time}` : ""}. Edit` : undefined}>
@@ -197,6 +201,7 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
     <label className="ag-field">
       <span>{label}</span>
       <select value={value} onChange={(e) => onPick(e.target.value)}>
+        <option value="">No day yet</option>
         {opts.map((d) => (
           <option key={d} value={d}>{dayName(d)}</option>
         ))}
@@ -237,12 +242,12 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
           </label>
         </>
       )}
-      {daySelect(stay ? "Check in" : travel ? "Leaves" : "Day", draft.day, (v) => set({ day: v, endDay: stay && (draft.endDay ?? "") <= v ? addDays(v, 1) : draft.endDay }))}
+      {daySelect(stay ? "Check in" : travel ? "Leaves" : "Day", draft.day, (v) => set({ day: v, endDay: stay && v && (draft.endDay ?? "") <= v ? addDays(v, 1) : v ? draft.endDay : undefined }))}
       <label className="ag-field">
         <span>{stay ? "Check-in time" : travel ? "Departs" : "Starts"}</span>
         <input type="time" value={draft.time ?? ""} onChange={(e) => set({ time: e.target.value || undefined })} />
       </label>
-      {stay && daySelect("Check out", draft.endDay ?? addDays(draft.day, 1), (v) => set({ endDay: v > draft.day ? v : addDays(draft.day, 1) }))}
+      {stay && draft.day && daySelect("Check out", draft.endDay ?? addDays(draft.day, 1), (v) => set({ endDay: v > draft.day ? v : addDays(draft.day, 1) }))}
       <label className="ag-field">
         <span>{stay ? "Check-out time" : travel ? "Arrives" : "Ends"}</span>
         <input type="time" value={draft.endTime ?? ""} onChange={(e) => set({ endTime: e.target.value || undefined })} />
@@ -278,7 +283,7 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
  * The trip, day by day. `only` keeps to some days (a city's), `onPickStop` opens a city, and
  * events open on the globe.
  */
-export function TripAgenda({ trip, stops, events, only, onOpenEvent, onPickStop }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void }) {
+export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPickStop, onShowPlace }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; /** A city: its places to see. */ near?: TripStop; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void; /** A plan with a place on the map, shown there. */ onShowPlace?: (p: TripPlan) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const line = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -289,7 +294,23 @@ export function TripAgenda({ trip, stops, events, only, onOpenEvent, onPickStop 
   const [form, setForm] = useState<Draft | null>(null);
   /** A plan being changed, and the row its form opens in. */
   const [editing, setEditing] = useState<{ id: string; draft: Draft; at: string } | null>(null);
-  const sig = days.map((d) => d.rows.map((r) => r.key).join()).join("|");
+  // Places to see on no day yet (all of them; a city's own when it's a city's view).
+  const toSee = useMemo(
+    () => (trip.plans ?? []).filter((p) => !isScheduled(p) && (!near || (p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, near.lat, near.lng) <= STOP_RADIUS_KM))),
+    [trip.plans, near],
+  );
+  const nearDays = (p: TripPlan) => {
+    const s = p.lat != null && p.lng != null ? stops.find((x) => haversineKm(p.lat!, p.lng!, x.lat, x.lng) <= STOP_RADIUS_KM) : undefined;
+    return s ? daysOf(s.from, s.to) : tripDays;
+  };
+  const schedule = (p: TripPlan, day: string, from?: DOMRect) => {
+    if (!day) return;
+    flip.capture();
+    flip.born(p.id, from);
+    userActions.updatePlan(trip.id, p.id, { day, endDay: p.kind === "stay" ? addDays(day, 1) : p.endDay });
+    toast({ title: `${p.title}: ${dayName(day)}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, p.id, { day: "", endDay: undefined }) } });
+  };
+  const sig = toSee.map((p) => p.id).join() + "#" + days.map((d) => d.rows.map((r) => r.key).join()).join("|");
   const flip = useFlip(box, sig);
 
   const baseDay = onDay ?? (only?.[0] && tripDays.includes(only[0]) ? only[0] : tripDays.find((d) => d >= today()) ?? tripDays[0] ?? today());
@@ -403,6 +424,43 @@ export function TripAgenda({ trip, stops, events, only, onOpenEvent, onPickStop 
         )}
       </div>
 
+      {toSee.length > 0 && (
+        <section className="ag-tosee" aria-labelledby="ag-tosee-h">
+          <h3 id="ag-tosee-h" className="ag-tosee-h">
+            <MapPin size={14} aria-hidden /> {near ? `Places to see in ${near.name}` : "Places to see"} <span className="text-text-3 font-normal tnum">{toSee.length}</span>
+          </h3>
+          <ul className="ag-rows">
+            {toSee.map((p) => (
+              <li key={p.id} data-flip={`idea:${p.id}`} data-plan={p.id} className="ag-row ag-idea">
+                {editing?.at === `idea:${p.id}` ? (
+                  <PlanForm draft={editing.draft} days={tripDays} onChange={(d) => setEditing({ ...editing, draft: d })} onCancel={() => setEditing(null)} onDelete={() => void remove(p)} onSave={save} saveLabel="Save" />
+                ) : (
+                  <div className="ag-idea-row">
+                    <PlanRow p={p} onEdit={() => setEditing({ id: p.id, draft: p, at: `idea:${p.id}` })} />
+                    <span className="ag-idea-actions">
+                      {p.lat != null && onShowPlace && (
+                        <button type="button" className="ag-icon-btn" aria-label={`Show ${p.title} on the globe`} onClick={() => onShowPlace(p)}>
+                          <MapPin size={14} aria-hidden />
+                        </button>
+                      )}
+                      <label className="ag-pick">
+                        <span className="sr-only">Day for {p.title}</span>
+                        <select value="" onChange={(e) => schedule(p, e.target.value, (e.currentTarget.closest("li") as HTMLElement | null)?.getBoundingClientRect())}>
+                          <option value="">Pick a day</option>
+                          {nearDays(p).map((d) => (
+                            <option key={d} value={d}>{dayName(d)}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {!days.length && <p className="t-small text-text-2 mt-4">Add the route&apos;s dates to see the trip day by day.</p>}
       <ol className="ag-days">
         {days.map(({ day, stops: here, rows }) => (
@@ -434,7 +492,18 @@ export function TripAgenda({ trip, stops, events, only, onOpenEvent, onPickStop 
                   {(r.type === "plan" || r.type === "stay") && editing?.at === r.key ? (
                     <PlanForm draft={editing.draft} days={tripDays} onChange={(d) => setEditing({ ...editing, draft: d })} onCancel={() => setEditing(null)} onDelete={() => void remove(r.plan)} onSave={save} saveLabel="Save" />
                   ) : null}
-                  {r.type === "plan" && editing?.at !== r.key && <PlanRow p={r.plan} onEdit={() => setEditing({ id: r.plan.id, draft: r.plan, at: r.key })} />}
+                  {r.type === "plan" && editing?.at !== r.key && (
+                    <div className="ag-idea-row">
+                      <PlanRow p={r.plan} onEdit={() => setEditing({ id: r.plan.id, draft: r.plan, at: r.key })} />
+                      {r.plan.lat != null && onShowPlace && (
+                        <span className="ag-idea-actions">
+                          <button type="button" className="ag-icon-btn" aria-label={`Show ${r.plan.title} on the globe`} onClick={() => onShowPlace(r.plan)}>
+                            <MapPin size={14} aria-hidden />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {r.type === "stay" &&
                     editing?.at !== r.key && (
                       <button type="button" className="ag-stay-band" data-kind="stay" onClick={() => setEditing({ id: r.plan.id, draft: r.plan, at: r.key })} aria-label={`${r.plan.title}: ${r.out ? "check out" : `night ${r.night} of ${r.nights}`}. Edit`}>

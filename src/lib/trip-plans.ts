@@ -4,13 +4,13 @@
  * in field by field. Pure, so it can be tested; the trip keeps them in this browser.
  */
 
-export type PlanKind = "flight" | "train" | "bus" | "car" | "stay" | "meeting" | "meal" | "activity" | "note";
+export type PlanKind = "flight" | "train" | "bus" | "car" | "stay" | "meeting" | "meal" | "visit" | "activity" | "note";
 
 export interface TripPlan {
   id: string;
   kind: PlanKind;
   title: string;
-  /** YYYY-MM-DD, local to where it happens. */
+  /** YYYY-MM-DD, local to where it happens; empty for a place to see on no day yet. */
   day: string;
   /** HH:MM, local. */
   time?: string;
@@ -25,8 +25,16 @@ export interface TripPlan {
   /** A flight number, a booking reference. */
   ref?: string;
   notes?: string;
+  /** Where it is on the map (a place picked there: a museum, a restaurant…). */
+  lat?: number;
+  lng?: number;
+  /** The map's own kind for that place ("museum", "restaurant"), for its icon and colour. */
+  poi?: string;
   createdAt: string;
 }
+
+/** On a day of the trip (rather than a place to see some day). */
+export const isScheduled = (p: Pick<TripPlan, "day">) => !!p.day;
 
 export const PLAN_KINDS: { kind: PlanKind; label: string; travel?: boolean }[] = [
   { kind: "flight", label: "Flight", travel: true },
@@ -36,6 +44,7 @@ export const PLAN_KINDS: { kind: PlanKind; label: string; travel?: boolean }[] =
   { kind: "stay", label: "Stay" },
   { kind: "meeting", label: "Meeting" },
   { kind: "meal", label: "Meal" },
+  { kind: "visit", label: "Visit" },
   { kind: "activity", label: "Activity" },
   { kind: "note", label: "Note" },
 ];
@@ -50,8 +59,9 @@ const WORDS: [PlanKind, RegExp][] = [
   ["car", /\b(drive|driving|car|rental|taxi|uber|carro|road trip)\b/i],
   ["stay", /\b(hotel|hostel|airbnb|stay|staying|check[- ]?in|apartment|alojamento|estadia|guesthouse|b&b)\b/i],
   ["meeting", /\b(meeting|meet|call|reuni[aã]o|interview|appointment|consulta|visita ao|visit to)\b/i],
+  ["visit", /\b(visit|visita|museum|museu|monument|monumento|pal[aá]cio|palace|castle|castelo|cathedral|catedral|church|igreja|gallery|galeria|tower|torre|ruins|ru[ií]nas)\b/i],
   ["meal", /\b(dinner|lunch|breakfast|brunch|restaurant|jantar|almo[cç]o|pequeno[- ]almo[cç]o|drinks|coffee|caf[eé]|tapas)\b/i],
-  ["activity", /\b(tour|museum|museu|ticket|show|concert|hike|walk|class|workshop|spa|game|match)\b/i],
+  ["activity", /\b(tour|ticket|show|concert|hike|walk|class|workshop|spa|game|match)\b/i],
 ];
 // A word saying what it is, without anything else, is no title ("Flight" → the flight's own).
 const KIND_ONLY = /^(flight|voo|train|comboio|bus|autocarro|drive|car|hotel|stay|meeting|reuni[aã]o|dinner|jantar|lunch|almo[cç]o|breakfast|note)$/i;
@@ -245,6 +255,7 @@ export function planSortKey(p: Pick<TripPlan, "kind" | "time">): string {
 
 /** A plan as calendar (iCalendar) lines, at the local time where it happens. */
 export function planIcs(p: TripPlan, tripId: string, stamp: string): string[] {
+  if (!isScheduled(p)) return [];
   const esc = (s: string) => s.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
   const d = (s: string) => s.replace(/-/g, "");
   const t = (s: string) => s.replace(":", "") + "00";

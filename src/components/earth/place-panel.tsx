@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { X, MapPin, Crosshair, ZoomIn, Undo2, Loader2, Copy, Check } from "lucide-react";
 import { formatCoords, zoomForKind } from "@/lib/map/view";
 import { PlaceTripLinks } from "../trips/trip-shortcuts";
+import { PlaceToTrip } from "../trips/place-to-trip";
+import { POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
 
 export interface SelectedPlace {
   lat: number;
@@ -13,6 +15,8 @@ export interface SelectedPlace {
   context?: string;
   /** Zoom level that frames this place. */
   zoom?: number;
+  /** A place on the map (a restaurant, a museum…): its own kind there. */
+  poi?: { cls: string; sub?: string };
 }
 
 interface Reverse {
@@ -77,7 +81,13 @@ export function PlacePanel({
         <div className="flex items-start gap-3">
           <MapPin size={18} className="text-cyan mt-1 shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
-            {kind && <p className="t-micro text-text-3">{KIND_LABEL[kind] ?? kind.replace(/_/g, " ")}</p>}
+            {place.poi ? (
+              <p className="t-micro font-semibold flex items-center gap-1.5" style={{ color: POI_COLOR[poiGroup(place.poi.cls, place.poi.sub)] }}>
+                <span className="poi-swatch" aria-hidden /> <span className="text-text-2">{poiLabel(place.poi.cls, place.poi.sub)}</span>
+              </p>
+            ) : (
+              kind && <p className="t-micro text-text-3">{KIND_LABEL[kind] ?? kind.replace(/_/g, " ")}</p>
+            )}
             <h2 className="t-h2 break-words">{title}</h2>
             {(place.context || (rev && levels.length > 0)) && <p className="t-small text-text-2 mt-0.5">{place.context ?? levels.map((l) => l.name).join(", ")}</p>}
           </div>
@@ -129,9 +139,15 @@ export function PlacePanel({
           </div>
         )}
 
+        {place.poi && place.name && (
+          <div className="poi-trip">
+            <PlaceToTrip place={{ name: place.name, lat: place.lat, lng: place.lng, poi: place.poi }} />
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="btn btn-primary btn-sm col-span-2"
+            className={`btn ${place.poi ? "btn-secondary" : "btn-primary"} btn-sm col-span-2`}
             onClick={() => {
               const city = rev?.hierarchy.find((h) => ["city", "town", "village"].includes(h.kind))?.name;
               onExplore([place.name ?? rev?.hierarchy[0]?.name, city].filter((x, i, a) => x && a.indexOf(x) === i).join(", ") || undefined);
@@ -139,7 +155,13 @@ export function PlacePanel({
           >
             <Crosshair size={14} aria-hidden /> Explore events here
           </button>
-          <PlaceTripLinks name={rev?.hierarchy.find((h) => ["city", "town", "village"].includes(h.kind))?.name ?? place.name ?? title} lat={place.lat} lng={place.lng} />
+          {place.poi ? (
+            <a className="btn btn-secondary btn-sm" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name ?? ""} ${place.lat.toFixed(5)},${place.lng.toFixed(5)}`)}`} target="_blank" rel="noopener noreferrer">
+              Open in Maps
+            </a>
+          ) : (
+            <PlaceTripLinks name={rev?.hierarchy.find((h) => ["city", "town", "village"].includes(h.kind))?.name ?? place.name ?? title} lat={place.lat} lng={place.lng} />
+          )}
           <button className="btn btn-secondary btn-sm" onClick={onZoom}>
             <ZoomIn size={14} aria-hidden /> Zoom in
           </button>

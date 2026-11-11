@@ -10,7 +10,7 @@ const TOGGLES: { key: LayerKey; label: string; hint?: string }[] = [
   { key: "labels", label: "Place names" },
   { key: "roads", label: "Roads and streets" },
   { key: "borders", label: "Borders" },
-  { key: "poi", label: "Points of interest", hint: "From zoom 14" },
+  { key: "poi", label: "Places", hint: "Restaurants, museums, monuments, parks… from street level" },
   { key: "buildings", label: "3D buildings", hint: "From zoom 14, where mapped" },
   { key: "terrain", label: "3D terrain", hint: "Mountains and valleys in relief" },
   { key: "night", label: "Day and night", hint: "Live position of the sun" },

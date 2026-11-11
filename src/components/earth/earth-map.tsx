@@ -32,7 +32,7 @@ export interface MapClick {
   lat: number;
   lng: number;
   /** Present when the click hit a labelled map feature (country, city, street, building…). */
-  feature?: { name: string; kind: string; zoom: number };
+  feature?: { name: string; kind: string; zoom: number; /** A place's own kind on the map (restaurant, museum…). */ poi?: { cls: string; sub?: string } };
 }
 
 export interface EarthMapHandle {
@@ -134,7 +134,7 @@ export interface EarthMapProps {
   onFatal?: (reason: string) => void;
 }
 
-const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place-minor", "label-poi", "label-road", "buildings-3d"];
+const PLACE_LAYERS = ["label-country", "label-state", "label-city", "label-place-minor", "poi-icon", "poi-dot", "label-road", "buildings-3d"];
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const LIVE = "#FF3B5C";
@@ -156,7 +156,7 @@ const groupColor: ExpressionSpecification = ["match", ["get", "dominant"], ...Ob
 function placeKind(f: MapGeoJSONFeature): string {
   if (f.layer.id === "buildings-3d") return "building";
   if (f.layer.id === "label-road") return "street";
-  if (f.layer.id === "label-poi") return "poi";
+  if (f.layer.id === "poi-icon" || f.layer.id === "poi-dot") return "poi";
   const cls = String(f.properties?.class ?? "");
   return cls === "neighbourhood" || cls === "quarter" ? "neighbourhood" : cls || "place";
 }
@@ -617,7 +617,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         const kind = placeKind(f);
         const nm = String(f.properties?.["name:en"] ?? f.properties?.name ?? (kind === "building" ? "Building" : "Place"));
         const pt = f.geometry.type === "Point" ? (f.geometry.coordinates as [number, number]) : [e.lngLat.lng, e.lngLat.lat];
-        return latest.current.onMapClick?.({ lat: pt[1], lng: pt[0], feature: { name: nm, kind, zoom: Math.max(map.getZoom(), zoomForKind(kind)) } });
+        const poi = kind === "poi" ? { cls: String(f.properties?.class ?? ""), sub: f.properties?.subclass ? String(f.properties.subclass) : undefined } : undefined;
+        return latest.current.onMapClick?.({ lat: pt[1], lng: pt[0], feature: { name: nm, kind, zoom: Math.max(map.getZoom(), zoomForKind(kind)), poi } });
       }
       latest.current.onMapClick?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
