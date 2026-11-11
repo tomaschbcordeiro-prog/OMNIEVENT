@@ -3,13 +3,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, MapPin, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { daysOf, fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
 import { isTravel, kindLabel, planIcs } from "@/lib/trip-plans";
 import { KIND_ICON, TripAgenda } from "./agenda";
 import { PoiCard, type MapPlace } from "./place-to-trip";
+import { CityPlan, plansIn } from "./city-plan";
 import type { MapClick } from "../earth/earth-map";
 import type { TripPlan } from "@/lib/trip-plans";
 import { spanOf } from "@/lib/trip-snap";
@@ -337,7 +338,7 @@ export function TripView({ id }: { id: string }) {
                     <span className="block t-small text-text-2">{dayLabel(s.from)} → {dayLabel(s.to)}, {nightsBetween(s.from, s.to)} {nightsBetween(s.from, s.to) === 1 ? "night" : "nights"}</span>
                   </span>
                   <span className="stop-card-counts t-micro tnum">
-                    <span><b>{mine.length}</b> planned</span>
+                    <span><b>{mine.length + plansIn(trip, s).length}</b> planned</span>
                     <span className="text-text-3">{n == null ? "…" : n.filter((c) => !inTrip.has(c.id)).length} ideas</span>
                   </span>
                 </button>
@@ -354,7 +355,22 @@ export function TripView({ id }: { id: string }) {
             </p>
           )}
 
-          {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} stops={stops} dayEvents={dayEvents} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onOpen={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
+          {stop && sel !== null && (
+            <CityPlan
+              trip={trip}
+              stop={stop}
+              index={sel}
+              stops={stops}
+              dayEvents={dayEvents}
+              ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null}
+              eventsLink={stopEventsLink(stop, trip)}
+              onAdd={add}
+              onOpen={showEvent}
+              onPickStop={(i) => pick(i)}
+              onShowPlace={showPlace}
+              onShowAt={(lat, lng) => (setFly({ key: ++flyKey.current, lat, lng, zoom: 16.5, padding: pad }), sheet.setSnap("half"))}
+            />
+          )}
 
           {off.length > 0 && sel === null && (
             <section className="mt-5" aria-labelledby="off-h">
@@ -446,43 +462,11 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
   );
 }
 
-/** One city of the trip: its days as an agenda (plans and events), and ideas for the free time. */
-function StopPlan({ trip, stop, index, stops, dayEvents, ideas, onAdd, onOpen, onPickStop, onShowPlace }: { trip: Trip; stop: TripStop; index: number; stops: TripStop[]; dayEvents: { e: TripEvent; day: string }[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onOpen: (id: string) => void; onPickStop: (i: number) => void; onShowPlace: (p: TripPlan) => void }) {
-  const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
+/** Everything on in a city on the days spent there, on the events page. */
+function stopEventsLink(stop: TripStop, trip: Trip): string {
   const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: placeName(stop), from: stop.from, to: stop.to });
   if (trip.interests?.length) all.set("cat", trip.interests.join(","));
-  return (
-    <div style={{ "--ink": stopColor(index) } as React.CSSProperties}>
-      <p className="t-small text-text-2 mb-3">
-        {dayLabel(stop.from)} → {dayLabel(stop.to)}, {nightsBetween(stop.from, stop.to)} {nightsBetween(stop.from, stop.to) === 1 ? "night" : "nights"}
-      </p>
-      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} near={stop} onOpenEvent={onOpen} onPickStop={onPickStop} onShowPlace={onShowPlace} />
-      <p className="trip-tip t-micro text-text-2">
-        <span className="trip-tip-icon" aria-hidden><MapPin size={12} /></span>
-        <span>Zoom into {placeName(stop)} on the globe to see its restaurants, museums, monuments and more; tap one to add it to the trip.</span>
-      </p>
-      <h2 className="t-small font-semibold mt-5">Ideas for your days in {placeName(stop)}</h2>
-      {ideas === null ? (
-        <div className="mt-2 grid gap-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>
-      ) : ideas.length ? (
-        <ul className="mt-2 grid gap-1.5">
-          {ideas.slice(0, 12).map((c) => (
-            <li key={c.id} className="idea-row">
-              <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-11 w-11 shrink-0 rounded-[var(--radius-s)]" />
-              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onOpen(c.id)}>
-                <span className="block font-semibold truncate">{c.title}</span>
-                <span className="block t-micro text-text-3 truncate">{dayLabel(dayOf(c))}{c.hoursUnknown ? "" : `, ${formatEventTime(c.start, c.timeZone)}`}, {c.venueName}</span>
-              </button>
-              <button type="button" className="btn btn-secondary btn-icon btn-sm press" aria-label={`Add ${c.title} to the trip`} onClick={() => onAdd(c)}><Plus size={15} aria-hidden /></button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="t-small text-text-2 mt-2">Nothing listed there on those days yet{trip.interests?.length ? " for what you like" : ""}.</p>
-      )}
-      <Link href={`/events?${all}`} className="see-all t-small text-text-2 hover:text-text mt-3">Everything on in {placeName(stop)} those days →</Link>
-    </div>
-  );
+  return `/events?${all}`;
 }
 
 /** The trip into a calendar (.ics) or as text to paste anywhere. */

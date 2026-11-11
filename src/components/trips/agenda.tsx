@@ -162,8 +162,13 @@ function useFlip(box: RefObject<HTMLElement | null>, sig: string) {
   };
 }
 
+/** A plan about to be added from elsewhere: the agenda will have it glide in (from `from`). */
+export function announcePlan(id: string, from?: DOMRect | null) {
+  window.dispatchEvent(new CustomEvent("omni:plan-born", { detail: { id, from: from ?? undefined } }));
+}
+
 /** A plan as one row of the agenda (also the preview of what's being typed). */
-function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "createdAt">; onEdit?: () => void; preview?: boolean }) {
+export function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "createdAt">; onEdit?: () => void; preview?: boolean }) {
   const Icon = KIND_ICON[p.kind];
   const length = durationOf(p);
   const route = isTravel(p.kind) && (p.from || p.to) ? `${p.from ?? "?"} → ${p.to ?? "?"}` : "";
@@ -283,7 +288,7 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
  * The trip, day by day. `only` keeps to some days (a city's), `onPickStop` opens a city, and
  * events open on the globe.
  */
-export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPickStop, onShowPlace }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; /** A city: its places to see. */ near?: TripStop; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void; /** A plan with a place on the map, shown there. */ onShowPlace?: (p: TripPlan) => void }) {
+export function TripAgenda({ trip, stops, events, only, near, compose = true, onAddOnDay, onOpenEvent, onPickStop, onShowPlace }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; /** A city: its places to see. */ near?: TripStop; /** Its own line to type plans in (a city's page has its own). */ compose?: boolean; /** A day's "+", when something else does the adding. */ onAddOnDay?: (day: string) => void; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void; /** A plan with a place on the map, shown there. */ onShowPlace?: (p: TripPlan) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const line = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -312,6 +317,16 @@ export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPic
   };
   const sig = toSee.map((p) => p.id).join() + "#" + days.map((d) => d.rows.map((r) => r.key).join()).join("|");
   const flip = useFlip(box, sig);
+  // Plans added from elsewhere on the page (a city's search, its sights) glide in too.
+  useEffect(() => {
+    const on = (ev: Event) => {
+      const d = (ev as CustomEvent<{ id: string; from?: DOMRect }>).detail;
+      flip.capture();
+      flip.born(d.id, d.from);
+    };
+    window.addEventListener("omni:plan-born", on);
+    return () => window.removeEventListener("omni:plan-born", on);
+  }, [flip]);
 
   const baseDay = onDay ?? (only?.[0] && tripDays.includes(only[0]) ? only[0] : tripDays.find((d) => d >= today()) ?? tripDays[0] ?? today());
   const parsed = text.trim().length >= 2 ? parsePlan(text, { days: tripDays, defaultDay: baseDay }) : null;
@@ -348,6 +363,7 @@ export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPic
     setEditing(null);
   };
   const startOn = (day: string) => {
+    if (onAddOnDay) return onAddOnDay(day);
     setOnDay(day);
     setForm(null);
     line.current?.focus();
@@ -364,7 +380,7 @@ export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPic
 
   return (
     <div ref={box} className="ag">
-      <div className="ag-compose">
+      <div className="ag-compose" hidden={!compose && !form}>
         {form ? (
           <PlanForm draft={form} days={tripDays} onChange={setForm} onCancel={() => setForm(null)} saveLabel="Add to trip" onSave={() => (add(form, box.current?.querySelector(".ag-compose")?.getBoundingClientRect()), setForm(null))} />
         ) : (
@@ -464,7 +480,7 @@ export function TripAgenda({ trip, stops, events, only, near, onOpenEvent, onPic
       {!days.length && <p className="t-small text-text-2 mt-4">Add the route&apos;s dates to see the trip day by day.</p>}
       <ol className="ag-days">
         {days.map(({ day, stops: here, rows }) => (
-          <li key={day} className="ag-day" data-today={day === today() || undefined}>
+          <li key={day} className="ag-day" data-day={day} data-today={day === today() || undefined}>
             <div className="ag-day-head">
               <span className="ag-day-date">
                 <span className="ag-day-wd">{fmt(day, { weekday: "short" })}</span>

@@ -7587,3 +7587,368 @@ button.ag-item:hover {
     font-size: 0.75rem;
   }
 }
+
+/*
+ * A city of a trip, as one page: what's there, its days at a glance, one search to add
+ * anything, its best-known sights, then the plan day by day.
+ */
+.city {
+  animation: ag-in 220ms ease-out both;
+}
+.city-head {
+  padding-bottom: 0.85rem;
+}
+.city-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.city-sum {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.city-sum-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.9rem;
+  max-width: 14rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+  background: var(--panel-2);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.city-sum-chip b {
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.city-sum-chip:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--ink) 12%, var(--panel-2));
+}
+.city-sum-chip[data-warn] {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--amber) 14%, var(--panel));
+}
+/* The days there, each with a dot per thing planned. */
+.city-days {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.city-day {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  width: 3.4rem;
+  padding: 0.4rem 0 0.45rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  transition: border-color 140ms ease, transform 160ms ease;
+}
+.city-day:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+.city-day-wd {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.city-day-n {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.city-day-dots {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  align-items: center;
+}
+.city-day-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--k, var(--text-3));
+}
+.city-day-free {
+  font-size: 0.6rem;
+  line-height: 6px;
+  color: var(--text-3);
+}
+/* One search for anything to do there. */
+.city-add {
+  position: relative;
+  margin-bottom: 1.1rem;
+}
+.city-add-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 0.75rem 0 0.85rem;
+  border-radius: 14px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--panel);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.city-add-line:focus-within {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+.city-add-line input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  outline: none;
+  font-size: 0.9375rem;
+}
+.city-add-line input::placeholder {
+  color: var(--text-3);
+}
+.city-opts {
+  display: grid;
+  gap: 2px;
+  margin-top: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 14px 30px -18px rgb(4 10 30 / 0.45);
+  animation: ag-in 160ms ease-out both;
+}
+.city-opt {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 0.875rem;
+}
+.city-opt[data-hi] {
+  background: var(--panel-2);
+}
+.city-opt .ag-item {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.city-opt-img,
+.city-opt-dot {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9px;
+}
+.city-opt-img {
+  object-fit: cover;
+  background: var(--panel-2);
+}
+.city-opt-dot {
+  display: grid;
+  place-items: center;
+  color: var(--k);
+  background: color-mix(in srgb, var(--k) 12%, var(--panel));
+}
+.city-opt-tag {
+  flex-shrink: 0;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-2);
+  border: 1px solid var(--line-strong);
+}
+.city-h {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.city-h > svg {
+  color: var(--ink);
+}
+/* Its best-known sights, a card each. */
+.city-sights {
+  margin-bottom: 0.5rem;
+}
+.city-sights-rail {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0 -1rem;
+  padding: 0.15rem 1rem 0.4rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 1rem;
+  scrollbar-width: none;
+  outline-offset: -2px;
+}
+.city-sights-rail::-webkit-scrollbar {
+  display: none;
+}
+.sight-card {
+  flex: 0 0 11.5rem;
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: start;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.sight-card.skeleton {
+  height: 13.5rem;
+  border: 0;
+}
+.sight-card[data-on] {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent);
+}
+.sight-pic {
+  position: relative;
+  display: block;
+  height: 6.75rem;
+  background: color-mix(in srgb, var(--k) 12%, var(--panel-2));
+  overflow: hidden;
+}
+.sight-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sight-pic:hover img {
+  transform: scale(1.04);
+}
+.sight-pic-none {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--k);
+}
+.sight-kind {
+  position: absolute;
+  left: 0.4rem;
+  bottom: 0.4rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgb(8 14 30 / 0.72);
+  backdrop-filter: blur(4px);
+}
+.sight-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0.5rem 0.6rem 0.55rem;
+}
+.sight-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sight-about {
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--text-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sight-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+.sight-add {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 2rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--primary);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.sight-add:hover {
+  background: var(--primary-hover);
+}
+.sight-add.is-on {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 11%, var(--panel));
+  animation: ag-in 200ms ease-out both;
+}
+.sight-add.is-on:hover {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 9%, var(--panel));
+}
+.sight-more {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  color: var(--text-2);
+}
+.sight-more:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .city,
+  .city-opts,
+  .sight-add.is-on {
+    animation: none;
+  }
+  .city-day:hover,
+  .sight-pic:hover img {
+    transform: none;
+  }
+}
