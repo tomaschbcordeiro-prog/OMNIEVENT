@@ -45,3 +45,31 @@ describe("plans in the agenda and the calendar", () => {
     expect(stay).toContain("DTEND;VALUE=DATE:20261205");
   });
 });
+
+describe("places on the map", () => {
+  it("sorts them into kinds and names them", async () => {
+    const { poiGroup, poiLabel, planKindForPoi, classesOf } = await import("@/lib/pois");
+    expect(poiGroup("restaurant")).toBe("food");
+    expect(poiGroup("castle", "palace")).toBe("sights");
+    expect(poiGroup("pharmacy")).toBe("service");
+    expect(poiLabel("castle", "palace")).toBe("Palace");
+    expect(poiLabel("place_of_worship")).toBe("Place of worship");
+    expect(planKindForPoi(poiGroup("museum"))).toBe("visit");
+    expect(planKindForPoi(poiGroup("lodging"))).toBe("stay");
+    expect(classesOf(["food", "service"])).toContain("cafe");
+  });
+  it("a filter for some kinds of places", async () => {
+    const { poiFilter } = await import("@/lib/map/style");
+    const all = poiFilter() as unknown[];
+    const culture = poiFilter(["culture"]) as unknown[];
+    // Some kinds: one more condition, naming only theirs.
+    expect(culture.length).toBe(all.length + 1);
+    const last = JSON.stringify(culture[culture.length - 1]);
+    expect(last).toContain("museum");
+    expect(last).not.toContain("restaurant");
+    // Services: everything the kinds don't name.
+    expect(JSON.stringify((poiFilter(["service"]) as unknown[]).at(-1))).toMatch(/^\["!"/);
+    // Bins and bollards never.
+    expect(JSON.stringify(all)).toContain("waste_basket");
+  });
+});

@@ -1,5 +1,5 @@
 import type { StyleSpecification, LayerSpecification, ExpressionSpecification, SkySpecification } from "maplibre-gl";
-import { POI_CLASSES, POI_SERVICES, POI_SKIP_SUBCLASSES, poiColorExpression } from "../pois";
+import { classesOf, POI_CLASSES, POI_GROUPS, POI_JUNK, POI_SKIP_SUBCLASSES, poiColorExpression, type PoiGroup } from "../pois";
 
 /**
  * Map data providers and the single OMNIEVENT map style.
@@ -53,19 +53,30 @@ const L = (layer: LayerSpecification, meta: Meta): LayerSpecification => ({ ...l
 const name: ExpressionSpecification = ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
 
 /**
- * Named places worth going to, more the closer you get (the most notable in each area first:
- * the map's tiles rank them), a few services only up close; never bins, bollards or stops.
+ * Places on the map: everything named that's a place to go to (not bins, bollards, parking or
+ * stops), more of them the closer you get (the map's tiles rank the most notable in each area
+ * first), services only up close. `groups` keeps to some kinds (food, culture…).
  */
 const KNOWN_POI = Object.values(POI_CLASSES).flat();
-const POI_FILTER: ExpressionSpecification = [
-  "all",
-  ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
-  ["has", "name"],
-  ["match", ["get", "class"], [...KNOWN_POI, ...POI_SERVICES], true, false],
-  ["!", ["match", ["coalesce", ["get", "subclass"], ""], POI_SKIP_SUBCLASSES, true, false]],
-  ["<=", ["coalesce", ["get", "rank"], 999], ["step", ["zoom"], 25, 15, 80, 16, 200, 17, 450, 18, 9999]],
-  ["any", [">=", ["zoom"], 17], ["match", ["get", "class"], KNOWN_POI, true, false]],
-];
+export function poiFilter(groups?: PoiGroup[] | null): ExpressionSpecification {
+  const all: unknown[] = [
+    "all",
+    ["match", ["geometry-type"], ["Point", "MultiPoint"], true, false],
+    ["has", "name"],
+    ["!", ["match", ["coalesce", ["get", "class"], ""], POI_JUNK, true, false]],
+    ["!", ["match", ["coalesce", ["get", "subclass"], ""], POI_SKIP_SUBCLASSES, true, false]],
+    ["<=", ["coalesce", ["get", "rank"], 999], ["step", ["zoom"], 40, 15, 120, 16, 320, 17, 99999]],
+    ["any", [">=", ["zoom"], 16], ["match", ["get", "class"], KNOWN_POI, true, false]],
+  ];
+  if (groups?.length && groups.length < POI_GROUPS.length) {
+    const known = classesOf(groups);
+    const pick = known.length ? ["match", ["get", "class"], known, true, false] : false;
+    const other = ["!", ["match", ["get", "class"], KNOWN_POI, true, false]];
+    all.push(groups.includes("service") ? (pick ? ["any", pick, other] : other) : pick);
+  }
+  return all as ExpressionSpecification;
+}
+const POI_FILTER = poiFilter();
 
 /** Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim. */
 export const DAY_SKY: SkySpecification = {

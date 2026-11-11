@@ -22,6 +22,8 @@ export interface Place {
   /** [west, south, east, north] */
   bbox?: [number, number, number, number];
   countryCode?: string;
+  /** A place to go to (a museum, a restaurant…): its kind, as the map names it. */
+  poi?: { cls: string; sub?: string };
 }
 
 export interface ReversePlace {
@@ -68,6 +70,23 @@ const PHOTON_KIND: Record<string, string> = { house: "address", street: "street"
 
 type PhotonFeature = { geometry: { coordinates: [number, number] }; properties: Record<string, string | number | number[] | undefined> };
 
+// OpenStreetMap tags that make something a place to go to, and their names on the map.
+const POI_KEYS = new Set(["amenity", "tourism", "historic", "leisure", "shop", "man_made"]);
+const POI_BUILDINGS = new Set(["palace", "cathedral", "church", "castle", "museum", "stadium", "mosque", "synagogue", "temple"]);
+const OSM_TO_MAP: Record<string, string> = {
+  hotel: "lodging", hostel: "lodging", guest_house: "lodging", motel: "lodging", apartment: "lodging",
+  palace: "castle", fort: "castle", cathedral: "place_of_worship", church: "place_of_worship", chapel: "place_of_worship", mosque: "place_of_worship", synagogue: "place_of_worship", temple: "place_of_worship",
+  pub: "bar", nightclub: "bar", gallery: "art_gallery", theme_park: "amusement_park", nature_reserve: "park", swimming_pool: "swimming",
+  concert_hall: "music", events_venue: "music", city_gate: "monument",
+};
+/** A place to go to's kind (from its OpenStreetMap tags), or nothing for an address, a street, a town. */
+export function poiOfOsm(key: string, value: string): { cls: string; sub?: string } | undefined {
+  if (!value || value === "yes") return undefined;
+  if (!POI_KEYS.has(key) && !(key === "building" && POI_BUILDINGS.has(value))) return undefined;
+  if (key === "amenity" && /^(parking|bench|waste_basket|atm|vending_machine|bicycle_parking|recycling|fuel|charging_station|toilets|post_box|telephone|shelter|drinking_water)$/.test(value)) return undefined;
+  return { cls: OSM_TO_MAP[value] ?? (key === "shop" ? "shop" : value), sub: value };
+}
+
 function photonPlace(f: PhotonFeature): Place {
   const p = f.properties;
   const [lng, lat] = f.geometry.coordinates;
@@ -88,6 +107,7 @@ function photonPlace(f: PhotonFeature): Place {
     // Photon extent is [minLon, maxLat, maxLon, minLat]
     bbox: ext ? [ext[0], ext[3], ext[2], ext[1]] : undefined,
     countryCode: typeof p.countrycode === "string" ? p.countrycode : undefined,
+    poi: poiOfOsm(String(p.osm_key ?? ""), String(p.osm_value ?? "")),
   };
 }
 

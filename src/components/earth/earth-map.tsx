@@ -4,7 +4,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { maplibregl } from "@/lib/map/maplibre";
 import type { Map as MLMap, GeoJSONSource, MapGeoJSONFeature, ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, type BaseStyle, type LayerState } from "@/lib/map/style";
+import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, poiFilter, type BaseStyle, type LayerState } from "@/lib/map/style";
+import type { PoiGroup } from "@/lib/pois";
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
 import { geodesicCircle, circleBounds } from "@/lib/map/circle";
@@ -121,6 +122,8 @@ export interface EarthMapProps {
   onView?: (v: ViewState) => void;
   onClusterClick?: (c: Cluster) => void;
   onMapClick?: (c: MapClick) => void;
+  /** Kinds of places to show (food, culture…); all of them when empty or left out. */
+  poiGroups?: PoiGroup[] | null;
   onUserInteract?: () => void;
   /** Zoom and centre latitude whenever the camera settles, even while the planet turns. */
   onCamera?: (zoom: number, lat: number) => void;
@@ -547,6 +550,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       map.addLayer({ id: "flight-head", type: "circle", source: "flight-live", filter: isPoint, paint: { "circle-radius": 5, "circle-color": "#FFFFFF", "circle-stroke-color": "#FFC94D", "circle-stroke-width": 2, "circle-pitch-alignment": "viewport" } });
       ready.current = true;
       applyAll();
+      applyPoi();
       setEvents();
       applySelection();
       setArea();
@@ -747,6 +751,14 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- style application
+  /** Places of the kinds asked for. */
+  function applyPoi() {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const f = poiFilter(latest.current.poiGroups);
+    for (const id of ["poi-dot", "poi-icon"]) if (map.getLayer(id)) map.setFilter(id, f);
+  }
+
   function applyAll() {
     const map = mapRef.current;
     if (!map || !ready.current) return;
@@ -863,7 +875,8 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     map.easeTo({ center: [c.lng - 10, c.lat], duration: 5000, easing: (t) => t, essential: true });
   }
 
-  useEffect(applyAll, [props.base, props.layers, props.projection, props.space]);  
+  useEffect(applyAll, [props.base, props.layers, props.projection, props.space]);
+  useEffect(applyPoi, [props.poiGroups]);  
   useEffect(setEvents, [props.clusters]);  
 
   // Selection: badge + pulse on the chosen marker; the others step back a little.

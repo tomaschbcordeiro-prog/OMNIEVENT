@@ -24,6 +24,8 @@ import { TapLabel } from "../tap-label";
 import { TimeBar } from "../earth/time-bar";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { PlacePanel, type SelectedPlace } from "../earth/place-panel";
+import { PlacesBar } from "../earth/places-bar";
+import { POI_GROUPS, type PoiGroup } from "@/lib/pois";
 import { LayersPanel } from "../earth/layers-panel";
 import { ExplorePanel } from "../earth/explore-panel";
 import { GlobeSpin } from "../earth/globe-spin";
@@ -96,6 +98,8 @@ export function DiscoverClient() {
   const [showLegend, setShowLegend] = useState(false);
   const [base, setBase] = useState<BaseStyle>("map");
   const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
+  /** Kinds of places shown on the map (all when empty). */
+  const [poiGroups, setPoiGroups] = useState<PoiGroup[]>([]);
   const [space, setSpace] = useState(false);
   const [intro, setIntro] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
@@ -216,7 +220,9 @@ export function DiscoverClient() {
         baseChosen.current = true;
       } else if (isDarkNow()) setBase("lights");
       if (saved?.space === true) setSpace(true);
-      if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(narrow ? { terrain: false } : {}) });
+      // Places are on for everyone since they became part of the globe (v2), whatever was set before.
+      if (saved?.layers) setLayers({ ...DEFAULT_LAYERS, ...saved.layers, ...(saved.v >= 2 ? {} : { poi: true }), ...(narrow ? { terrain: false } : {}) });
+      if (Array.isArray(saved?.poiGroups)) setPoiGroups(saved.poiGroups.filter((g: unknown): g is PoiGroup => typeof g === "string" && (POI_GROUPS as string[]).includes(g)));
       else if (narrow) setLayers({ ...DEFAULT_LAYERS, terrain: false });
     } catch {
       // storage unavailable
@@ -242,11 +248,11 @@ export function DiscoverClient() {
   useEffect(() => {
     try {
       // A flight turns space view on for itself; the visitor's own choice is what's kept.
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ base: flightOn ? baseBefore.current : base, chosen: baseChosen.current, layers, space: flightOn ? spaceBefore.current : space }));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ v: 2, base: flightOn ? baseBefore.current : base, chosen: baseChosen.current, layers, poiGroups, space: flightOn ? spaceBefore.current : space }));
     } catch {
       // storage unavailable
     }
-  }, [base, layers, space, flightOn]);
+  }, [base, layers, poiGroups, space, flightOn]);
 
   // ---- keep URL shareable (debounced: Safari throws after 100 replaceState calls in 10 s) ----
   useEffect(() => {
@@ -493,8 +499,10 @@ export function DiscoverClient() {
       setSelection(null);
       // During a radius search, a searched place becomes the new centre; radius and times stay.
       if (filters.near || pickMode) return explore(g.lat, g.lng, [g.name, g.context.split(",").slice(-2).join(",").trim()].filter(Boolean).join(", "));
-      setPlace({ lat: g.lat, lng: g.lng, name: g.name, kind: g.kind, context: g.context, zoom: zoomForKind(g.kind) });
-      fly({ lat: g.lat, lng: g.lng, zoom: zoomForKind(g.kind), bbox: g.bbox });
+      // A place found by name (a museum, a restaurant…) can go into a trip like one tapped on the map.
+      const kind = g.poi ? "poi" : g.kind;
+      setPlace({ lat: g.lat, lng: g.lng, name: g.name, kind, context: g.context, zoom: zoomForKind(kind), poi: g.poi });
+      fly({ lat: g.lat, lng: g.lng, zoom: zoomForKind(kind), bbox: g.poi ? undefined : g.bbox });
     },
     [fly, filters.near, pickMode, explore],
   );
@@ -691,6 +699,7 @@ export function DiscoverClient() {
             projection={projection}
             base={base}
             layers={layers}
+            poiGroups={poiGroups}
             clusters={clusters}
             selectedClusterId={selectedId}
             selectedAt={selection ? (selection.kind === "cluster" ? selection.cluster : selection.card) : null}
@@ -879,6 +888,7 @@ export function DiscoverClient() {
             <span className="live-dot live-dot--on" aria-hidden /> Jump to something on right now <span aria-hidden>→</span>
           </button>
         )}
+        {mode !== "list" && layers.poi && !selection && <PlacesBar zoom={view.zoom} groups={poiGroups} onGroups={setPoiGroups} onZoomIn={() => fly({ lat: view.lat, lng: view.lng, zoom: 14.8 })} />}
         {mode !== "list" && (
           // Phones: the timeline and two round buttons share one row (spin, and the other tools).
           <div className="flex items-end gap-2 compact:w-full">

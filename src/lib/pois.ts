@@ -9,19 +9,30 @@ export type PoiGroup = "food" | "drink" | "culture" | "sights" | "nature" | "spo
 
 /** The map's place classes (OpenMapTiles), by kind. Anything else is a service. */
 export const POI_CLASSES: Record<Exclude<PoiGroup, "service">, string[]> = {
-  food: ["restaurant", "fast_food", "cafe", "bakery", "ice_cream", "food_court", "sushi"],
+  food: ["restaurant", "fast_food", "cafe", "bakery", "ice_cream", "food_court", "sushi", "confectionery", "deli", "pastry"],
   drink: ["bar", "beer", "pub", "nightclub", "biergarten", "alcohol_shop"],
-  culture: ["museum", "art_gallery", "theatre", "cinema", "music", "library", "arts_centre"],
-  sights: ["attraction", "monument", "castle", "memorial", "place_of_worship", "town_hall", "viewpoint", "lighthouse", "zoo", "aquarium", "amusement_park", "fountain", "religious_christian", "religious_jewish", "religious_muslim"],
+  culture: ["museum", "art_gallery", "theatre", "cinema", "music", "library", "arts_centre", "college", "university", "community_centre", "planetarium"],
+  sights: ["attraction", "monument", "castle", "memorial", "place_of_worship", "town_hall", "viewpoint", "lighthouse", "zoo", "aquarium", "amusement_park", "fountain", "religious_christian", "religious_jewish", "religious_muslim", "artwork", "ruins", "archaeological_site", "cemetery"],
   nature: ["park", "garden", "campsite", "picnic_site", "playground", "dog_park", "beach", "mountain", "volcano", "wetland"],
   sport: ["stadium", "pitch", "swimming", "golf", "soccer", "tennis", "basketball", "baseball", "american_football", "skiing", "sports_centre", "cricket"],
-  shop: ["shop", "grocery", "clothing_store", "gift", "florist", "furniture", "jewelry", "commercial", "butcher", "books"],
+  shop: ["shop", "grocery", "clothing_store", "gift", "florist", "furniture", "jewelry", "commercial", "butcher", "books", "marketplace", "mall", "department_store", "music_shop", "wine", "alcohol"],
   stay: ["lodging", "hotel", "hostel", "guest_house", "motel"],
-  transport: ["railway", "railway_metro", "railway_light", "airport", "ferry", "harbor", "aerialway"],
+  transport: ["railway", "railway_metro", "railway_light", "airport", "ferry", "ferry_terminal", "harbor", "aerialway", "bicycle_rental", "car_rental"],
 };
 
-/** Services worth seeing up close (a pharmacy, a hospital, tourist information…); the rest of the map's small things (bins, bollards, parking) stay off. */
-export const POI_SERVICES = ["pharmacy", "hospital", "information", "toilets", "post", "bank", "embassy", "police"];
+/**
+ * The map's small things that aren't places to go to (bins, bollards, parking, gates…): never
+ * shown. Everything else named is, the services (a pharmacy, a hospital…) only up close.
+ */
+export const POI_JUNK = ["waste_basket", "bollard", "gate", "recycling", "drinking_water", "bicycle_parking", "motorcycle_parking", "parking", "parking_space", "parking_entrance", "entrance", "atm", "bench", "vending", "vending_machine", "charging_station", "office", "telephone", "post_box", "shelter", "lift_gate", "fire_hydrant", "street_lamp", "toilets_disposal", "grit_bin", "car_wash", "fuel", "industry", "warehouse", "prison"];
+
+/** Every kind, in the order offered. */
+export const POI_GROUPS: PoiGroup[] = ["food", "drink", "culture", "sights", "nature", "sport", "shop", "stay", "transport", "service"];
+
+/** The map classes of some kinds (services are everything else, so they aren't listed). */
+export function classesOf(groups: PoiGroup[]): string[] {
+  return groups.flatMap((g) => (g === "service" ? [] : POI_CLASSES[g]));
+}
 
 /** Stops along a line are not places to go to. */
 export const POI_SKIP_SUBCLASSES = ["bus_stop", "tram_stop", "platform", "stop_position", "halt"];

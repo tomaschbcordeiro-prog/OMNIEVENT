@@ -31,6 +31,8 @@ export interface GeoPlace {
   lat: number;
   lng: number;
   bbox?: [number, number, number, number];
+  /** A place to go to (a museum, a restaurant…): its kind on the map. */
+  poi?: { cls: string; sub?: string };
 }
 
 export interface SearchBoxProps {
