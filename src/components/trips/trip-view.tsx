@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { daysOf, fitSpan, flagOf, nightsBetween, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { daysOf, fitSpan, flagOf, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
 import { spanOf } from "@/lib/trip-snap";
 import { rememberTrip } from "./trip-add";
 import { stopSearch } from "./trip-shortcuts";
@@ -249,7 +249,7 @@ export function TripView({ id }: { id: string }) {
                 <button key={s.id} type="button" className="stop-card press" style={{ "--ink": stopColor(i) } as React.CSSProperties} onClick={() => pick(i)}>
                   <span className="planner-stop-n" aria-hidden>{i + 1}</span>
                   <span className="min-w-0 flex-1 text-left">
-                    <span className="block font-semibold">{s.name} <span aria-hidden>{flagOf(s.countryCode)}</span></span>
+                    <span className="block font-semibold">{s.name} <span aria-hidden>{flagOf(s.countryCode)}</span>{s.place && <span className="t-micro font-normal text-text-3"> · {s.place}</span>}</span>
                     <span className="block t-small text-text-2">{dayLabel(s.from)} → {dayLabel(s.to)}, {nightsBetween(s.from, s.to)} {nightsBetween(s.from, s.to) === 1 ? "night" : "nights"}</span>
                   </span>
                   <span className="stop-card-counts t-micro tnum">
@@ -265,7 +265,7 @@ export function TripView({ id }: { id: string }) {
               <span className="trip-tip-icon" aria-hidden><Plane size={12} /></span>
               <span>
                 Add events from anywhere on OMNIEVENT: the plane button on any event puts it here, and on a computer you can drag events onto your trip.{" "}
-                <Link href={stopSearch(stops[0])} className="font-semibold text-cyan hover:underline">Browse {stops[0].name} →</Link>
+                <Link href={stopSearch(stops[0])} className="font-semibold text-cyan hover:underline">Browse {placeName(stops[0])} →</Link>
               </span>
             </p>
           )}
@@ -366,7 +366,7 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
 function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }: { trip: Trip; stop: TripStop; index: number; placed: Placed[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onRemove: (e: TripEvent) => void; onOpen: (id: string) => void }) {
   const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === stop.id);
   const days = daysOf(stop.from, stop.to);
-  const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: stop.name, from: stop.from, to: stop.to });
+  const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: placeName(stop), from: stop.from, to: stop.to });
   if (trip.interests?.length) all.set("cat", trip.interests.join(","));
   return (
     <div style={{ "--ink": stopColor(index) } as React.CSSProperties}>
@@ -398,7 +398,7 @@ function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }:
           );
         })}
       </ol>
-      <h2 className="t-small font-semibold mt-5">Ideas for your days in {stop.name}</h2>
+      <h2 className="t-small font-semibold mt-5">Ideas for your days in {placeName(stop)}</h2>
       {ideas === null ? (
         <div className="mt-2 grid gap-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>
       ) : ideas.length ? (
@@ -417,7 +417,7 @@ function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }:
       ) : (
         <p className="t-small text-text-2 mt-2">Nothing listed there on those days yet{trip.interests?.length ? " for what you like" : ""}.</p>
       )}
-      <Link href={`/events?${all}`} className="see-all t-small text-text-2 hover:text-text mt-3">Everything on in {stop.name} those days →</Link>
+      <Link href={`/events?${all}`} className="see-all t-small text-text-2 hover:text-text mt-3">Everything on in {placeName(stop)} those days →</Link>
     </div>
   );
 }
@@ -442,7 +442,7 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
     const text = [
       `${trip.emoji ?? "✈️"} ${trip.name}, ${longRange(trip.start, trip.end)}`,
       ...(trip.stops ?? []).flatMap((s) => [
-        `${s.name}: ${dayLabel(s.from)} to ${dayLabel(s.to)}`,
+        `${s.name}${s.place ? ` (${s.place})` : ""}: ${dayLabel(s.from)} to ${dayLabel(s.to)}`,
         ...events.map((e) => placeIn([s], e)).filter((p) => p.e.lat && p.fit.ok).map((p) => `  ${dayLabel(p.day)}: ${p.e.title} (${window.location.origin}/events/${p.e.slug})`),
       ]),
     ].join("\n");

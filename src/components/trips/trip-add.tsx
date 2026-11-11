@@ -76,7 +76,7 @@ function fitNote(fit: Fit | null, e: Timing): string {
 function stretchFor(trip: Trip, e: TripEvent) {
   if (!trip.stops?.length || runsFor(e)) return null;
   const near = trip.stops.find((s) => haversineKm(s.lat, s.lng, e.lat, e.lng) <= STOP_RADIUS_KM);
-  const place = near ? { name: near.name, country: near.country, countryCode: near.countryCode, lat: near.lat, lng: near.lng, cityId: near.cityId } : { name: e.city, countryCode: e.countryCode, lat: e.lat, lng: e.lng, cityId: e.cityId };
+  const place = near ? { name: near.name, place: near.place, country: near.country, countryCode: near.countryCode, lat: near.lat, lng: near.lng, cityId: near.cityId } : { name: e.city, countryCode: e.countryCode, lat: e.lat, lng: e.lng, cityId: e.cityId };
   return extendFor(trip.stops, { lat: e.lat, lng: e.lng, day: dayOf(e), place });
 }
 

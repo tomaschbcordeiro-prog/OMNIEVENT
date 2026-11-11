@@ -10,7 +10,10 @@ import { haversineKm } from "./geo";
 /** A city on the route, and the nights spent there: from the day of arrival to the day of leaving. */
 export interface TripStop {
   id: string;
+  /** What the stop is called on the trip: the place's name, or one of your own ("Visit João"). */
   name: string;
+  /** The place's own name, kept when the stop has been given another. */
+  place?: string;
   country?: string;
   countryCode?: string;
   lat: number;
@@ -22,6 +25,90 @@ export interface TripStop {
 }
 
 export type Place = Omit<TripStop, "id" | "from" | "to">;
+
+/** The place a stop is at, whatever it's been called ("Liverpool" for "Visit João"). */
+export const placeName = (s: { name: string; place?: string }) => s.place || s.name;
+
+/** A stop renamed: a name of your own keeps the place's; an empty one (or the place's) goes back to it. */
+export function renamed<T extends { name: string; place?: string }>(s: T, name: string): T {
+  const place = placeName(s);
+  const v = name.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (!v || v === place) return { ...s, name: place, place: undefined };
+  return { ...s, name: v, place };
+}
+
+/** A stop moved to another place: its own name stays; otherwise it takes the new place's. */
+export function relocated<T extends { name: string; place?: string }>(s: T, to: Omit<Place, "place">): T {
+  const own = s.place ? s.name : undefined;
+  return { ...s, lat: to.lat, lng: to.lng, country: to.country, countryCode: to.countryCode, cityId: to.cityId, name: own ?? to.name, place: own ? to.name : undefined };
+}
+
+/** Each leg of a route, in km. */
+export function legsKm(stops: { lat: number; lng: number }[]): number[] {
+  return stops.slice(1).map((s, i) => haversineKm(stops[i].lat, stops[i].lng, s.lat, s.lng));
+}
+
+/** Where a new place fits best in a route: the position that adds the least distance. */
+export function bestSlot(stops: { lat: number; lng: number }[], p: { lat: number; lng: number }): number {
+  if (!stops.length) return 0;
+  const d = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => haversineKm(a.lat, a.lng, b.lat, b.lng);
+  let best = stops.length;
+  let cost = d(stops[stops.length - 1], p);
+  if (d(p, stops[0]) < cost) {
+    best = 0;
+    cost = d(p, stops[0]);
+  }
+  for (let i = 0; i < stops.length - 1; i++) {
+    const c = d(stops[i], p) + d(p, stops[i + 1]) - d(stops[i], stops[i + 1]);
+    if (c < cost) {
+      best = i + 1;
+      cost = c;
+    }
+  }
+  return best;
+}
+
+/** The middle of a leg, on the great circle between its ends. */
+export function midpoint(a: { lat: number; lng: number }, b: { lat: number; lng: number }): { lat: number; lng: number } {
+  const r = Math.PI / 180;
+  const [la1, lo1, la2, lo2] = [a.lat * r, a.lng * r, b.lat * r, b.lng * r];
+  const bx = Math.cos(la2) * Math.cos(lo2 - lo1);
+  const by = Math.cos(la2) * Math.sin(lo2 - lo1);
+  const lat = Math.atan2(Math.sin(la1) + Math.sin(la2), Math.sqrt((Math.cos(la1) + bx) ** 2 + by ** 2));
+  const lng = lo1 + Math.atan2(by, Math.cos(la1) + bx);
+  return { lat: lat / r, lng: ((((lng / r) + 540) % 360) - 180) };
+}
+
+/**
+ * Nights after a stop is added at `i`: it gets one, taken from the longest stay when that has
+ * more than one (so the trip still ends on the same day), or added to the trip.
+ */
+export function nightsWithStop(nights: number[], i: number): number[] {
+  const out = [...nights];
+  let longest = -1;
+  out.forEach((n, j) => {
+    if (n > 1 && (longest < 0 || n > out[longest])) longest = j;
+  });
+  if (longest >= 0) out[longest] -= 1;
+  out.splice(i, 0, 1);
+  return out;
+}
+
+/** Nights after the stop at `i` goes: its nights go to the stop before it (or after, for the first). */
+export function nightsWithout(nights: number[], i: number): number[] {
+  const out = [...nights];
+  const [n] = out.splice(i, 1);
+  if (out.length) out[Math.max(0, i - 1)] += n ?? 0;
+  return out;
+}
+
+/** An item moved from one position to another in a list. */
+export function moved<T>(list: T[], from: number, to: number): T[] {
+  const out = [...list];
+  const [x] = out.splice(from, 1);
+  out.splice(Math.max(0, Math.min(out.length, to)), 0, x);
+  return out;
+}
 
 const DAY = 86_400_000;
 const ymd = (t: number) => new Date(t).toISOString().slice(0, 10);
@@ -199,14 +286,14 @@ const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * A name for a trip from where and when it goes: "Benelux 2027", "Japan, April 2027",
  * "Portugal & Spain 2027", "Tokyo, May 2027".
  */
-export function suggestName(stops: Pick<TripStop, "name" | "country" | "countryCode">[], start?: string): string {
+export function suggestName(stops: Pick<TripStop, "name" | "place" | "country" | "countryCode">[], start?: string): string {
   if (!stops.length) return "My trip";
   const when = start ? new Date(`${start}T12:00:00Z`) : null;
   const year = when ? String(when.getUTCFullYear()) : "";
   const month = when ? when.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
   const codes = [...new Set(stops.map((s) => s.countryCode?.toUpperCase()).filter((c): c is string => !!c))];
   const countries = [...new Map(stops.filter((s) => s.country).map((s) => [s.countryCode ?? s.country, s.country!])).values()];
-  if (stops.length === 1) return [stops[0].name, month].filter(Boolean).join(", ");
+  if (stops.length === 1) return [placeName(stops[0]), month].filter(Boolean).join(", ");
   if (codes.length === 1 && countries[0]) return [countries[0], month].filter(Boolean).join(", ");
   if (codes.length >= 2) {
     const group = GROUPS.find((g) => codes.length >= g.min && codes.every((c) => g.codes.includes(c)));
@@ -214,7 +301,7 @@ export function suggestName(stops: Pick<TripStop, "name" | "country" | "countryC
   }
   if (countries.length === 2) return [`${countries[0]} & ${countries[1]}`, year].filter(Boolean).join(" ");
   if (countries.length > 2) return [`${countries.length} countries`, month].filter(Boolean).join(", ");
-  return [`${stops[0].name} to ${stops[stops.length - 1].name}`, year].filter(Boolean).join(" ");
+  return [`${placeName(stops[0])} to ${placeName(stops[stops.length - 1])}`, year].filter(Boolean).join(" ");
 }
 
 /** Ready-made routes to start from, in a sensible order. */

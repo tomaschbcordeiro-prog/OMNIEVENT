@@ -3,17 +3,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Loader2, MapPin, Plane, Search, Sparkles, Wand2, X } from "lucide-react";
-import { CITIES, getDestination } from "@/lib/destinations";
+import { ArrowLeft, ArrowRight, Check, Hand, Loader2, Plane, Sparkles, Wand2, X } from "lucide-react";
+import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { userActions, useUser } from "@/lib/user/store";
-import { addDays, bestOrder, flagOf, moveBoundary, nightsBetween, REGIONS, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, bestSlot, midpoint, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
+import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
-import type { EarthMapHandle, FlyRequest } from "../earth/earth-map";
+import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { bboxOf, CityPin, dayLabel, longRange, MapIcons, routeOf, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, type MapIcon } from "./shared";
 import { toast } from "../toast";
+import { LegPlus, lookupTown, MapAddCard, PlaceSearch, placeOfTown, RouteList, type RouteStop } from "./route-edit";
 
-type Stop = Place & { key: string };
+type Stop = RouteStop;
 const STEPS = ["Where", "When", "Vibe", "Name"] as const;
 const EMOJIS = ["✈️", "🌍", "🚆", "🚗", "🎒", "🎉", "🌴", "🏔️", "🎭", "🎶"];
 const GROUP_EMOJI: Record<string, string> = {
@@ -27,10 +29,12 @@ const LENGTHS = [
   { label: "Two weeks", nights: 14 },
 ];
 const RADIUS_KM = 30;
+const MAX_STOPS = 10;
+/** Map labels that name a town (tapping one adds it by that name). */
+const SETTLEMENTS = new Set(["city", "town", "village", "hamlet", "suburb", "locality"]);
 let keySeq = 0;
 const keyed = (p: Place): Stop => ({ ...p, key: `k${Date.now().toString(36)}${keySeq++}` });
 const today = () => new Date().toISOString().slice(0, 10);
-const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Reorders smoothly where the browser can (each stop keeps its place on screen as it moves). */
 const smoothly = (fn: () => void) => {
@@ -66,7 +70,21 @@ export function TripPlanner() {
   const [stamped, setStamped] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [withEvent, setWithEvent] = useState<EventCard | null>(null);
+  /** The gap in the route list a stop is being typed into (the index it will take). */
+  const [inserting, setInserting] = useState<number | null>(null);
+  /** The leg whose "+" on the globe is open to type a place. */
+  const [legOpen, setLegOpen] = useState<number | null>(null);
+  /** Its card opens below the "+" when the "+" is near the top of the screen. */
+  const [legBelow, setLegBelow] = useState(false);
+  /** A leg's "+" being dragged across the map: where it is now. */
+  const [legDrag, setLegDrag] = useState<{ i: number; lat: number; lng: number } | null>(null);
+  /** A place tapped on the map, waiting to be added. */
+  const [tap, setTap] = useState<{ lat: number; lng: number; label?: string; town?: Town } | null>(null);
   const flyKey = useRef(0);
+  const stopsNow = useRef(stops);
+  stopsNow.current = stops;
+  /** The next change to the route was made on the globe (so the camera stays put). */
+  const onMap = useRef(false);
 
   const end = start && nights.length ? addDays(start, nights.reduce((a, b) => a + b, 0)) : "";
   const dated: (Stop & { from?: string; to?: string })[] = useMemo(() => (start && nights.length === stops.length ? withNights(stops.map((s) => ({ ...s, from: "", to: "" })), start, nights) : stops), [stops, start, nights]);
@@ -124,30 +142,54 @@ export function TripPlanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The globe follows the plan: the route redraws with each change, and each city is a pin
-  // that pops in when it's added (with its nights, and the kinds of things wanted, as they come).
-  const route = useMemo(() => routeOf(stops), [stops]);
+  // The globe follows the plan: the route redraws with each change (and bends live through a
+  // "+" being dragged), and each city is a pin that pops in when it's added and can be dragged
+  // somewhere else; in the middle of each leg, a "+" adds a stop on the way.
+  const route = useMemo(() => routeOf(legDrag ? [...stops.slice(0, legDrag.i + 1), legDrag, ...stops.slice(legDrag.i + 1)] : stops), [stops, legDrag]);
   const vibeEmojis = interests.slice(0, 3).map((g) => GROUP_EMOJI[g] ?? "✨");
-  const icons = useMemo<MapIcon[]>(
-    () =>
-      dated.map((s, i) => ({
-        key: s.key,
-        lat: s.lat,
-        lng: s.lng,
-        anchor: "bottom",
-        node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={active === i} note={s.from && s.to ? `${nightsBetween(s.from, s.to)}n` : undefined} emojis={step >= 2 ? vibeEmojis : undefined} onClick={() => setActive((a) => (a === i ? undefined : i))} />,
-      })),
-    // The emoji list is derived from interests.
+  const icons = useMemo<MapIcon[]>(() => {
+    const out: MapIcon[] = dated.map((s, i) => ({
+      key: s.key,
+      lat: s.lat,
+      lng: s.lng,
+      anchor: "bottom",
+      node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={active === i} looking={s.looking} hint="Drag to move it" note={s.from && s.to ? `${nightsBetween(s.from, s.to)}n` : undefined} emojis={step >= 2 ? vibeEmojis : undefined} onClick={() => setActive((a) => (a === i ? undefined : i))} />,
+      drag: { onStart: () => (setActive(i), setTap(null)), onMove: (lat, lng) => follow(s.key, lat, lng), onEnd: (lat, lng) => void settle(s.key, lat, lng) },
+    }));
+    if (step === 0)
+      stops.slice(1).forEach((b, j) => {
+        const a = stops[j];
+        const m = midpoint(a, b);
+        out.push({
+          key: `leg:${a.key}:${b.key}`,
+          lat: m.lat,
+          lng: m.lng,
+          delay: 200,
+          node: <LegPlus from={a.name} to={b.name} open={legOpen === j} below={legBelow} onOpen={() => openLeg(j)} onClose={() => setLegOpen(null)} onPick={(p) => ((onMap.current = true), insertAt(j + 1, p), setLegOpen(null))} />,
+          // While it's open to type in, it stays put.
+          drag: legOpen === j ? undefined : { onStart: () => (setLegOpen(null), setTap(null)), onMove: (lat, lng) => setLegDrag({ i: j, lat, lng }), onEnd: (lat, lng) => void dropOnLeg(j, lat, lng) },
+        });
+      });
+    if (tap && step === 0) {
+      const slot = bestSlot(stops, tap);
+      const where = !stops.length ? "" : slot === 0 ? `Before ${stops[0].name}` : slot >= stops.length ? `After ${stops[stops.length - 1].name}` : `Between ${stops[slot - 1].name} and ${stops[slot].name}`;
+      out.push({ key: `tap:${tap.lat}:${tap.lng}`, lat: tap.lat, lng: tap.lng, anchor: "bottom", node: <MapAddCard town={tap.town} label={tap.label} where={where} onClose={() => setTap(null)} onAdd={() => addTap(slot)} /> });
+    }
+    return out;
+    // Handlers read the latest plan when they run; the list covers what the icons show.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dated, active, step, interests],
-  );
+  }, [dated, stops, active, step, interests, legOpen, legBelow, tap]);
   const framed = useRef("");
   useEffect(() => {
     const sig = stops.map((s) => s.key).join();
-    if (sig && sig !== framed.current) {
-      framed.current = sig;
-      frame(stops);
+    if (!sig || sig === framed.current) return;
+    framed.current = sig;
+    // A stop added on the map itself keeps the globe still (it's where you're looking).
+    if (onMap.current) {
+      onMap.current = false;
+      return;
     }
+    frame(stops);
   }, [stops, frame]);
 
   // Nights follow the stops: a stop added or removed shares the trip's nights again.
@@ -165,30 +207,120 @@ export function TripPlanner() {
     if (!named) setName(suggestName(stops, start || undefined));
   }, [stops, start, named]);
 
-  const add = (p: Place) => {
-    if (stops.some((s) => Math.abs(s.lat - p.lat) < 0.05 && Math.abs(s.lng - p.lng) < 0.05)) return toast({ title: `${p.name} is already on your route`, emoji: "📍" });
-    if (stops.length >= 10) return toast({ title: "Ten cities is the most for one trip", body: "Plan the rest as another trip.", emoji: "🧭" });
-    setStops((s) => [...s, keyed(p)]);
+  const dated2 = nights.length === stops.length;
+  /** A stop added at a place in the route (the end, by default); its key, or null when it can't be. */
+  const insertAt = (i: number, p: Place, looking = false): string | null => {
+    const at = Math.max(0, Math.min(stops.length, i));
+    // The same city twice in a row makes no route (it can come back later: Lisbon, Porto, Lisbon).
+    const same = (s?: Stop) => !!s && Math.abs(s.lat - p.lat) < 0.05 && Math.abs(s.lng - p.lng) < 0.05;
+    if (!looking && (same(stops[at - 1]) || same(stops[at]))) {
+      onMap.current = false;
+      toast({ title: `${p.name} is already there`, emoji: "📍" });
+      return null;
+    }
+    if (stops.length >= MAX_STOPS) {
+      onMap.current = false;
+      toast({ title: "Ten cities is the most for one trip", body: "Plan the rest as another trip.", emoji: "🧭" });
+      return null;
+    }
+    const s = { ...keyed(p), looking: looking || undefined };
+    setStops((x) => [...x.slice(0, at), s, ...x.slice(at)]);
+    if (dated2) setNights((n) => nightsWithStop(n, at));
+    setInserting(null);
+    return s.key;
   };
+  const add = (p: Place) => insertAt(stops.length, p);
   const addRegion = async (r: (typeof REGIONS)[number]) => {
     // One city at a time, so each one lands on the globe.
+    let n = stops.length;
     for (const p of r.places) {
-      add(p);
+      if (n >= MAX_STOPS) break;
+      setStops((s) => (s.length >= MAX_STOPS ? s : [...s, keyed(p)]));
+      n++;
       await sleep(260);
     }
     if (!named) setEmoji(r.emoji);
   };
-  const remove = (key: string) => smoothly(() => setStops((s) => s.filter((x) => x.key !== key)));
-  const move = (i: number, d: -1 | 1) =>
-    smoothly(() =>
-      setStops((s) => {
-        const j = i + d;
-        if (j < 0 || j >= s.length) return s;
-        const out = [...s];
-        [out[i], out[j]] = [out[j], out[i]];
-        return out;
-      }),
-    );
+  const remove = (i: number) => {
+    const gone = stops[i];
+    const before = { stops, nights };
+    if (!gone) return;
+    smoothly(() => {
+      setStops((s) => s.filter((x) => x.key !== gone.key));
+      if (dated2) setNights((n) => nightsWithout(n, i));
+    });
+    setActive(undefined);
+    toast({ title: `${gone.name} taken off the route`, emoji: "🗺️", action: { label: "Undo", run: () => (setStops(before.stops), setNights(before.nights)) } });
+  };
+  const moveTo = (from: number, to: number) =>
+    smoothly(() => {
+      setStops((s) => moved(s, from, to));
+      if (dated2) setNights((n) => moved(n, from, to));
+    });
+  const rename = (i: number, v: string) => setStops((s) => s.map((x, j) => (j === i ? renamed(x, v) : x)));
+
+  // Dragging a city on the globe: the route follows the finger (once a frame), and where it's
+  // let go, the town there gives the stop its name (unless it has one of its own).
+  const live = useRef<{ key: string; lat: number; lng: number } | null>(null);
+  const frameReq = useRef(0);
+  const follow = (key: string, lat: number, lng: number) => {
+    live.current = { key, lat, lng };
+    if (frameReq.current) return;
+    frameReq.current = requestAnimationFrame(() => {
+      frameReq.current = 0;
+      const l = live.current;
+      if (l) setStops((s) => s.map((x) => (x.key === l.key ? { ...x, lat: l.lat, lng: l.lng } : x)));
+    });
+  };
+  const settle = async (key: string, lat: number, lng: number) => {
+    cancelAnimationFrame(frameReq.current);
+    frameReq.current = 0;
+    live.current = null;
+    const was = stopsNow.current.find((x) => x.key === key);
+    setStops((s) => s.map((x) => (x.key === key ? { ...x, lat, lng, looking: true } : x)));
+    const t = await lookupTown(lat, lng);
+    setStops((s) => s.map((x) => (x.key === key ? { ...relocated(x, placeOfTown(t)), looking: undefined } : x)));
+    if (was && placeOfTown(t).name !== (was.place || was.name))
+      toast({ title: `Moved to ${t.name}`, body: was.place ? `Still called ${was.name}` : undefined, emoji: "📍", action: { label: "Undo", run: () => setStops((s) => s.map((x) => (x.key === key ? was : x))) } });
+  };
+  // A leg's "+" let go somewhere: a stop there, named after the town it's in.
+  const dropOnLeg = async (i: number, lat: number, lng: number) => {
+    setLegDrag(null);
+    onMap.current = true;
+    const key = insertAt(i + 1, { name: "…", lat, lng }, true);
+    if (!key) return;
+    const t = await lookupTown(lat, lng);
+    setStops((s) => s.map((x) => (x.key === key ? { ...x, ...placeOfTown(t), looking: undefined } : x)));
+  };
+  const openLeg = (i: number) => {
+    setTap(null);
+    // On a phone, typing happens in the list (the keyboard would cover the globe anyway).
+    if (!window.matchMedia("(min-width: 1024px)").matches) {
+      setTall(true);
+      setInserting(i + 1);
+      return;
+    }
+    const m = midpoint(stops[i], stops[i + 1]);
+    const at = api.current?.project([m.lng, m.lat]);
+    setLegBelow(!!at && at.y < 330);
+    setLegOpen(i);
+  };
+  // A tap on the map (on the first step): the town there, ready to add where it fits best.
+  const tapMap = (c: MapClick) => {
+    setActive(undefined);
+    setLegOpen(null);
+    if (step !== 0) return;
+    if (tap) return setTap(null);
+    const label = c.feature && SETTLEMENTS.has(c.feature.kind) ? c.feature.name : undefined;
+    setTap({ lat: c.lat, lng: c.lng, label });
+    void lookupTown(c.lat, c.lng).then((town) => setTap((t) => (t && t.lat === c.lat && t.lng === c.lng ? { ...t, town } : t)));
+  };
+  const addTap = (slot: number) => {
+    if (!tap?.town) return;
+    onMap.current = true;
+    insertAt(slot, placeOfTown(tap.town, tap.label));
+    setTap(null);
+  };
   const saved = Math.round(routeKm(stops) - routeKm(bestOrder(stops)));
   const reorder = () => {
     smoothly(() => setStops((s) => bestOrder(s)));
@@ -209,11 +341,18 @@ export function TripPlanner() {
     setStep(1);
   };
 
-  const canNext = step === 0 ? stops.length > 0 : step === 1 ? !!start && !!end && nights.every((n) => n >= 0) : step === 3 ? !!name.trim() : true;
+  const canNext = step === 0 ? stops.length > 0 && !stops.some((s) => s.looking) : step === 1 ? !!start && !!end && nights.every((n) => n >= 0) : step === 3 ? !!name.trim() : true;
   const next = () => (step === 0 ? goWhen() : setStep((s) => Math.min(3, s + 1)));
 
   const create = async () => {
-    const tripStops: TripStop[] = withNights(stops.map(({ key, ...p }) => ({ ...p, id: key, from: "", to: "" })), start, nights);
+    const tripStops: TripStop[] = withNights(
+      stops.map(({ key, ...p }) => {
+        delete p.looking;
+        return { ...p, id: key, from: "", to: "" };
+      }),
+      start,
+      nights,
+    );
     let id = editing;
     if (id) userActions.updateTrip(id, { name: name.trim(), emoji, interests, stops: tripStops, start, end });
     else {
@@ -235,7 +374,7 @@ export function TripPlanner() {
 
   return (
     <div className="trip-stage">
-      <TripGlobe api={api} route={route} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={() => setActive(undefined)} label="Globe showing the trip you're planning: its cities and the route between them." />
+      <TripGlobe api={api} route={route} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={tapMap} label="Globe showing the trip you're planning: its cities and the route between them. Drag a city to move it; tap the map to add a place." />
       <MapIcons api={api} ready={ready} icons={icons} />
       <section className="planner-panel" aria-label="Plan a trip" data-tall={tall || undefined}>
         <button type="button" className="sheet-grab" aria-label={tall ? "Show more of the globe" : "Show more of the planner"} aria-expanded={tall} onClick={() => setTall((t) => !t)}><span aria-hidden /></button>
@@ -282,21 +421,12 @@ export function TripPlanner() {
                       </button>
                     )}
                   </div>
-                  <ol className="planner-stops">
-                    {stops.map((s, i) => (
-                      <li key={s.key} className="planner-stop" style={{ viewTransitionName: `stop-${s.key}`, "--ink": stopColor(i) } as React.CSSProperties} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(undefined)}>
-                        <span className="planner-stop-n" aria-hidden>{i + 1}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold truncate">{s.name}</span>
-                          <span className="block t-micro text-text-3 truncate">{[flagOf(s.countryCode), s.country].filter(Boolean).join(" ")}</span>
-                        </span>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Move ${s.name} earlier`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp size={15} aria-hidden /></button>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Move ${s.name} later`} disabled={i === stops.length - 1} onClick={() => move(i, 1)}><ArrowDown size={15} aria-hidden /></button>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${s.name}`} onClick={() => remove(s.key)}><X size={15} aria-hidden /></button>
-                      </li>
-                    ))}
-                  </ol>
+                  <RouteList stops={stops} onMove={moveTo} onRemove={remove} onRename={rename} onInsert={(i, p) => insertAt(i, p)} inserting={inserting} setInserting={setInserting} onHover={setActive} onPick={(i) => frame([stops[i]])} />
                   {stops.length > 1 && <p className="t-micro text-text-3 mt-2 tnum">{Math.round(routeKm(stops)).toLocaleString("en-GB")} km from first to last city</p>}
+                  <p className="planner-hint t-micro">
+                    <Hand size={13} aria-hidden className="shrink-0 mt-px" />
+                    <span>On the globe: drag a city to move it, tap <b>+</b> on the line to stop on the way (or drag it), or tap anywhere to add that place. Tap a name to call it what you like.</span>
+                  </p>
                 </div>
               )}
             </>
@@ -383,102 +513,6 @@ export function TripPlanner() {
           )}
         </footer>
       </section>
-    </div>
-  );
-}
-
-/** Any city on Earth: the site's own cities at once, the rest from the place search. */
-function PlaceSearch({ onPick }: { onPick: (p: Place) => void }) {
-  const [q, setQ] = useState("");
-  const [far, setFar] = useState<Place[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [hi, setHi] = useState(0);
-  const input = useRef<HTMLInputElement>(null);
-  const near = useMemo(() => {
-    const t = plain(q.trim());
-    if (t.length < 1) return [];
-    return CITIES.filter((c) => plain(c.name).startsWith(t) || c.aliases?.some((a) => plain(a).startsWith(t)))
-      .slice(0, 5)
-      .map((c): Place => ({ name: c.name, country: c.country, countryCode: c.countryCode, lat: c.lat, lng: c.lng, cityId: c.id }));
-  }, [q]);
-  useEffect(() => {
-    const t = q.trim();
-    setFar([]);
-    if (t.length < 3) return;
-    const ctrl = new AbortController();
-    const timer = window.setTimeout(() => {
-      setBusy(true);
-      fetch(`/api/geocode?q=${encodeURIComponent(t)}&limit=8&lang=en`, { signal: ctrl.signal })
-        .then((r) => (r.ok ? r.json() : { results: [] }))
-        .then((j: { results: { name: string; context?: string; kind: string; lat: number; lng: number; countryCode?: string }[] }) =>
-          setFar(
-            j.results
-              .filter((r) => ["city", "town", "village", "locality", "municipality", "place"].includes(r.kind))
-              .map((r): Place => ({ name: r.name, country: r.context?.split(",").pop()?.trim() || undefined, countryCode: r.countryCode, lat: r.lat, lng: r.lng })),
-          ),
-        )
-        .catch(() => {})
-        .finally(() => setBusy(false));
-    }, 300);
-    return () => {
-      window.clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [q]);
-  const list = [...near, ...far.filter((f) => !near.some((n) => Math.abs(n.lat - f.lat) < 0.2 && Math.abs(n.lng - f.lng) < 0.2))].slice(0, 7);
-  const pick = (p: Place) => {
-    onPick(p);
-    setQ("");
-    setHi(0);
-    input.current?.focus();
-  };
-  return (
-    <div className="relative">
-      <label className="sr-only" htmlFor="trip-place">Add a city</label>
-      <div className="planner-search">
-        <Search size={17} aria-hidden className="text-text-3" />
-        <input
-          ref={input}
-          id="trip-place"
-          className="flex-1 bg-transparent outline-none min-w-0"
-          placeholder="Add a city: Amsterdam, Kyoto, Marrakech…"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={list.length > 0}
-          aria-controls="trip-place-list"
-          aria-activedescendant={list[hi] ? `trip-place-${hi}` : undefined}
-          value={q}
-          onChange={(e) => (setQ(e.target.value), setHi(0))}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setHi((h) => Math.min(list.length - 1, h + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setHi((h) => Math.max(0, h - 1));
-            } else if (e.key === "Enter" && list[hi]) {
-              e.preventDefault();
-              pick(list[hi]);
-            } else if (e.key === "Escape") setQ("");
-          }}
-        />
-        {busy && <Loader2 size={15} className="animate-spin text-text-3" aria-hidden />}
-      </div>
-      {list.length > 0 && (
-        <ul id="trip-place-list" role="listbox" className="planner-results">
-          {list.map((p, i) => (
-            <li key={`${p.name}-${p.lat}`} id={`trip-place-${i}`} role="option" aria-selected={i === hi}>
-              <button type="button" className="planner-result" data-hi={i === hi || undefined} onMouseEnter={() => setHi(i)} onClick={() => pick(p)}>
-                <span className="text-lg" aria-hidden>{flagOf(p.countryCode) || <MapPin size={16} />}</span>
-                <span className="min-w-0">
-                  <span className="block font-semibold truncate">{p.name}</span>
-                  {p.country && <span className="block t-micro text-text-3 truncate">{p.country}</span>}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

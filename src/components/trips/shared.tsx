@@ -8,7 +8,7 @@ import type { Trip } from "@/lib/user/store";
 import { tripSnapOf, type TripEvent } from "@/lib/trip-snap";
 import { DEFAULT_LAYERS } from "@/lib/map/style";
 import { codeOf, flagOf, nightsBetween, stopColor, type TripStop } from "@/lib/trip";
-import type { EarthMapHandle, FlightRoute, FlyRequest } from "../earth/earth-map";
+import type { EarthMapHandle, FlightRoute, FlyRequest, MapClick, PinHandle } from "../earth/earth-map";
 
 const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthMap), {
   ssr: false,
@@ -54,8 +54,8 @@ export function TripGlobe({
   fly?: FlyRequest;
   pad: Pad;
   onReady?: () => void;
-  /** A tap on the globe away from any icon. */
-  onBackground?: () => void;
+  /** A tap on the globe away from any icon (where, and the place named there, if any). */
+  onBackground?: (at: MapClick) => void;
   label: string;
 }) {
   const [ready, setReady] = useState(false);
@@ -91,7 +91,7 @@ export function TripGlobe({
       flyTo={fly}
       framePadding={pad}
       reducedMotion={reduced}
-      onMapClick={() => onBackground?.()}
+      onMapClick={(c) => onBackground?.(c)}
       onReady={() => {
         setReady(true);
         onReady?.();
@@ -114,6 +114,8 @@ export interface MapIcon {
   delay?: number;
   /** Shifted on screen by this many pixels (icons sharing a place fan out round it). */
   offset?: [number, number];
+  /** It can be dragged to another place: told where it is as it goes, and where it's dropped. */
+  drag?: { onStart?(): void; onMove?(lat: number, lng: number): void; onEnd(lat: number, lng: number): void };
 }
 
 /**
@@ -160,7 +162,8 @@ export function fanOut<T extends { lat: number; lng: number }>(items: T[], proje
  * with the globe, and shrinks away when it goes.
  */
 export function MapIcons({ api, ready, icons }: { api: RefObject<EarthMapHandle | null>; ready: boolean; icons: MapIcon[] }) {
-  const pins = useRef(new Map<string, { el: HTMLDivElement; pin: { move(at: [number, number], offset?: [number, number]): void; remove(): void } }>());
+  type Rec = { el: HTMLDivElement; pin: PinHandle; ic: MapIcon; dragging: boolean; dropped: number };
+  const pins = useRef(new Map<string, Rec>());
   const [, setTick] = useState(0);
   useEffect(() => {
     const map = api.current;
@@ -172,7 +175,11 @@ export function MapIcons({ api, ready, icons }: { api: RefObject<EarthMapHandle 
       const at: [number, number] = [ic.lng, ic.lat];
       const have = pins.current.get(ic.key);
       if (have) {
-        have.pin.move(at, ic.offset ?? [0, 0]);
+        have.ic = ic;
+        have.pin.setDraggable(!!ic.drag);
+        have.el.classList.toggle("is-draggable", !!ic.drag);
+        // One being dragged is where the finger is, not where the plan last said.
+        if (!have.dragging) have.pin.move(at, ic.offset ?? [0, 0]);
         continue;
       }
       const el = document.createElement("div");
@@ -188,9 +195,37 @@ export function MapIcons({ api, ready, icons }: { api: RefObject<EarthMapHandle 
           el.classList.add("is-burst");
         }
       }
-      const pin = map.pin(el, at, ic.anchor, ic.offset);
+      const rec = { el, ic, dragging: false, dropped: 0 } as Rec;
+      const pin = map.pin(el, at, ic.anchor, ic.offset, {
+        onStart: () => {
+          rec.dragging = true;
+          el.classList.add("is-dragging");
+          rec.ic.drag?.onStart?.();
+        },
+        onMove: ([lng, lat]) => rec.ic.drag?.onMove?.(lat, lng),
+        onEnd: ([lng, lat]) => {
+          rec.dragging = false;
+          rec.dropped = Date.now();
+          el.classList.remove("is-dragging");
+          rec.ic.drag?.onEnd(lat, lng);
+        },
+      });
       if (!pin) continue;
-      pins.current.set(ic.key, { el, pin });
+      rec.pin = pin;
+      pin.setDraggable(!!ic.drag);
+      el.classList.toggle("is-draggable", !!ic.drag);
+      // Letting go after a drag is a drop, not a tap on what was dragged.
+      el.addEventListener(
+        "click",
+        (e) => {
+          if (Date.now() - rec.dropped < 400) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+      pins.current.set(ic.key, rec);
       added = true;
     }
     for (const [k, rec] of pins.current)
@@ -338,12 +373,12 @@ export function TripPass({ name, emoji, stops, start, end, events, compact = fal
  * A city on the trip's globe: a numbered pin in the stop's colour with its name, and a small
  * note (its nights) and the emojis of what's wanted there. Tapping it picks the city.
  */
-export function CityPin({ n, name, color, active, note, emojis, small, onClick }: { n: number; name: string; color: string; active?: boolean; note?: string; emojis?: string[]; /** Just the number (its events are out round it). */ small?: boolean; onClick?: () => void }) {
+export function CityPin({ n, name, color, active, note, emojis, small, looking, hint, onClick }: { n: number; name: string; color: string; active?: boolean; note?: string; emojis?: string[]; /** Just the number (its events are out round it). */ small?: boolean; /** Finding out where it's been dropped. */ looking?: boolean; /** Said to screen readers after the name ("drag to move it"). */ hint?: string; onClick?: () => void }) {
   return (
-    <button type="button" className="city-pin" data-active={active || undefined} data-small={small || undefined} style={{ "--ink": color } as React.CSSProperties} onClick={(e) => (e.stopPropagation(), onClick?.())} aria-label={`${n}: ${name}${note ? `, ${note.replace(/n$/, " nights")}` : ""}`} aria-pressed={active}>
+    <button type="button" className="city-pin" data-active={active || undefined} data-small={small || undefined} data-looking={looking || undefined} style={{ "--ink": color } as React.CSSProperties} onClick={(e) => (e.stopPropagation(), onClick?.())} aria-label={`${n}: ${looking ? "finding the place" : name}${note ? `, ${note.replace(/n$/, " nights")}` : ""}${hint ? `. ${hint}` : ""}`} aria-pressed={active}>
       <span className="city-pin-tag">
         <span className="city-pin-n">{n}</span>
-        <span className="city-pin-name">{name}</span>
+        <span className="city-pin-name">{looking ? "Finding…" : name}</span>
         {note && <span className="city-pin-note tnum">{note}</span>}
       </span>
       {emojis && emojis.length > 0 && (

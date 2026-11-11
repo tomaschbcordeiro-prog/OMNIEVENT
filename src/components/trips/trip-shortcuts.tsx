@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plane } from "lucide-react";
 import { useUser, type Trip } from "@/lib/user/store";
 import { haversineKm } from "@/lib/geo";
-import { STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
+import { placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { activeTripOf, rememberTrip } from "./trip-add";
 
 /*
@@ -22,7 +22,7 @@ function range(from: string, to: string): string {
 
 /** Everything on near a stop while you're there. */
 export function stopSearch(s: TripStop): string {
-  const p = new URLSearchParams({ lat: s.lat.toFixed(4), lng: s.lng.toFixed(4), radius: String(RADIUS_KM), pl: s.name, from: s.from, to: s.to });
+  const p = new URLSearchParams({ lat: s.lat.toFixed(4), lng: s.lng.toFixed(4), radius: String(RADIUS_KM), pl: placeName(s), from: s.from, to: s.to });
   return `/events?${p}`;
 }
 
@@ -54,7 +54,7 @@ export function TripStopsBar({ label, from }: { label?: string; from?: string })
       </Link>
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
         {trip.stops.map((s, i) => {
-          const on = label?.split(",")[0] === s.name && from === s.from;
+          const on = label?.split(",")[0] === placeName(s) && from === s.from;
           return (
             <Link key={s.id} href={stopSearch(s)} className="chip shrink-0" aria-current={on ? "page" : undefined} style={{ "--ink": stopColor(i) } as React.CSSProperties}>
               <span className="trip-stop-dot" aria-hidden />

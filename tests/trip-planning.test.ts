@@ -128,3 +128,53 @@ describe("an event's days, for a trip", () => {
     expect(f.ok && f.stop.name).toBe("Brussels");
   });
 });
+
+describe("editing a route", () => {
+  it("renames a stop and keeps the place's name", async () => {
+    const { renamed, relocated, placeName } = await import("@/lib/trip");
+    const liv = { name: "Liverpool", country: "United Kingdom", countryCode: "GB", lat: 53.41, lng: -2.98 };
+    const joao = renamed(liv, "  Visit   João ");
+    expect(joao).toMatchObject({ name: "Visit João", place: "Liverpool" });
+    expect(placeName(joao)).toBe("Liverpool");
+    expect(renamed(joao, "")).toMatchObject({ name: "Liverpool", place: undefined });
+    expect(renamed(joao, "Liverpool")).toMatchObject({ name: "Liverpool", place: undefined });
+    // Moved: its own name stays, the place changes; a plain stop takes the new place's name.
+    expect(relocated(joao, { name: "Manchester", country: "United Kingdom", countryCode: "GB", lat: 53.48, lng: -2.24 })).toMatchObject({ name: "Visit João", place: "Manchester", lat: 53.48 });
+    expect(relocated({ ...liv, cityId: "liverpool" }, { name: "Chester", lat: 53.19, lng: -2.89 })).toMatchObject({ name: "Chester", place: undefined, cityId: undefined });
+  });
+  it("finds the best place for a new stop, and the middle of a leg", async () => {
+    const { bestSlot, midpoint, legsKm } = await import("@/lib/trip");
+    const route = [{ lat: 51.507, lng: -0.128 }, { lat: 55.953, lng: -3.188 }, { lat: 53.35, lng: -6.26 }]; // London, Edinburgh, Dublin
+    expect(bestSlot(route, { lat: 54.97, lng: -1.61 })).toBe(1); // Newcastle: between London and Edinburgh
+    expect(bestSlot(route, { lat: 51.9, lng: -8.47 })).toBe(3); // Cork: after Dublin
+    expect(bestSlot([], { lat: 0, lng: 0 })).toBe(0);
+    const m = midpoint(route[0], route[1]);
+    expect(m.lat).toBeGreaterThan(53);
+    expect(m.lat).toBeLessThan(54);
+    expect(legsKm(route).map(Math.round)).toEqual([534, 350]);
+  });
+  it("shares nights when stops come and go, and moves stops", async () => {
+    const { nightsWithStop, nightsWithout, moved } = await import("@/lib/trip");
+    expect(nightsWithStop([3, 2, 2], 1)).toEqual([2, 1, 2, 2]);
+    expect(nightsWithStop([1, 1], 2)).toEqual([1, 1, 1]);
+    expect(nightsWithout([2, 1, 2, 2], 1)).toEqual([3, 2, 2]);
+    expect(nightsWithout([2, 3], 0)).toEqual([5]);
+    expect(moved(["a", "b", "c", "d"], 0, 2)).toEqual(["b", "c", "a", "d"]);
+    expect(moved(["a", "b", "c", "d"], 3, 0)).toEqual(["d", "a", "b", "c"]);
+  });
+});
+
+describe("the town at a point", () => {
+  it("an address takes the city it's in; a settlement is itself", async () => {
+    const { townFromPhoton, townFromMapTiler } = await import("@/lib/town");
+    expect(townFromPhoton({ type: "street", name: "Palm Close", city: "Liverpool", country: "United Kingdom", countrycode: "GB" })).toEqual({ name: "Liverpool", country: "United Kingdom", countryCode: "GB" });
+    expect(townFromPhoton({ osm_key: "place", osm_value: "town", type: "city", name: "Bootle", country: "United Kingdom", countrycode: "gb" })).toMatchObject({ name: "Bootle", countryCode: "GB" });
+    expect(townFromPhoton({})).toBeNull();
+    // A named field outside a village: the village.
+    expect(townFromPhoton({ osm_key: "place", osm_value: "locality", type: "locality", name: "Naburn Moor", city: "Naburn", county: "York", countrycode: "GB" })).toMatchObject({ name: "Naburn" });
+    const { plainCityName } = await import("@/lib/town");
+    expect(plainCityName("Belfast City", ["Belfast", "Purdysburn"])).toBe("Belfast");
+    expect(plainCityName("Mexico City", ["Coyoacán"])).toBe("Mexico City");
+    expect(townFromMapTiler([{ text: "Palm Close", place_type: ["road"] }, { text: "Liverpool", place_type: ["municipality"] }, { text: "United Kingdom", place_type: ["country"], properties: { country_code: "gb" } }])).toEqual({ name: "Liverpool", country: "United Kingdom", countryCode: "GB" });
+  });
+});

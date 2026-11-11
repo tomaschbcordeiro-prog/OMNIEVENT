@@ -1,5 +1,8 @@
 import "server-only";
 import { log } from "./log";
+import { CITIES } from "./destinations";
+import { haversineKm } from "./geo";
+import { plainCityName, townFromMapTiler, townFromPhoton, type Town } from "./town";
 
 /**
  * Geocoding (place search) and reverse geocoding, server-side only.
@@ -188,6 +191,59 @@ export async function reverseGeocode(lat: number, lng: number, lang?: string): P
     push("country", p.country);
   }
   const value: ReversePlace = { lat, lng, hierarchy, label: hierarchy.slice(0, 3).map((h) => h.name).join(", ") || "Unnamed location" };
+  store(key, value);
+  return value;
+}
+
+/** A city of the site's own counts as the town for points this close to it. */
+const CITY_KM = 20;
+
+/**
+ * The town or city at a point, for a trip's stop. Points in or round one of the site's cities
+ * take its name (near Liverpool → Liverpool), so its events come with it; anywhere else, the
+ * settlement the geocoder finds there; failing that, "Near" the closest city.
+ */
+export async function townAt(lat: number, lng: number): Promise<Town> {
+  const key = `t|${lat.toFixed(3)}|${lng.toFixed(3)}`;
+  const hit = cached<Town>(key);
+  if (hit) return hit;
+  let best: { c: (typeof CITIES)[number]; d: number } | undefined;
+  for (const c of CITIES) {
+    const d = haversineKm(lat, lng, c.lat, c.lng);
+    if (!best || d < best.d) best = { c, d };
+  }
+  let value: Town | undefined;
+  if (best && best.d <= CITY_KM) value = { name: best.c.name, country: best.c.country, countryCode: best.c.countryCode, cityId: best.c.id, lat, lng };
+  if (!value) {
+    try {
+      let found: ReturnType<typeof townFromPhoton> = null;
+      if (KEY) {
+        const u = new URL(`https://api.maptiler.com/geocoding/${lng},${lat}.json`);
+        u.searchParams.set("key", KEY);
+        u.searchParams.set("language", "en");
+        const j = (await getJson(u.toString())) as { features: Parameters<typeof townFromMapTiler>[0] };
+        found = townFromMapTiler(j.features ?? []);
+      } else {
+        const u = new URL("https://photon.komoot.io/reverse");
+        u.searchParams.set("lat", String(lat));
+        u.searchParams.set("lon", String(lng));
+        u.searchParams.set("lang", "en");
+        const j = (await getJson(u.toString())) as { features: PhotonFeature[] };
+        found = j.features[0] ? townFromPhoton(j.features[0].properties) : null;
+        if (found?.name.endsWith(" City")) {
+          const c = new URL(u);
+          c.searchParams.set("layer", "city");
+          c.searchParams.set("limit", "5");
+          const near = (await getJson(c.toString()).catch(() => ({ features: [] }))) as { features: PhotonFeature[] };
+          found = { ...found, name: plainCityName(found.name, near.features.map((f) => String(f.properties.name ?? ""))) };
+        }
+      }
+      if (found) value = { ...found, lat, lng };
+    } catch (err) {
+      geocodeError(err);
+    }
+  }
+  if (!value) value = best && best.d <= 120 ? { name: `Near ${best.c.name}`, country: best.c.country, countryCode: best.c.countryCode, lat, lng } : { name: "Pinned place", lat, lng };
   store(key, value);
   return value;
 }

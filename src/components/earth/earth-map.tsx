@@ -63,12 +63,24 @@ export interface EarthMapHandle {
    * An element pinned to a place on the globe (a trip's city or event icon), moving with it.
    * Returns how to move or take it away.
    */
-  pin(el: HTMLElement, at: [number, number], anchor?: "center" | "bottom", offset?: [number, number]): { move(at: [number, number], offset?: [number, number]): void; remove(): void } | null;
+  pin(el: HTMLElement, at: [number, number], anchor?: "center" | "bottom", offset?: [number, number], drag?: PinDrag): PinHandle | null;
   /** Where a place is on screen, in pixels (null before the globe is ready). */
   project(at: [number, number]): { x: number; y: number } | null;
 }
 
 /** A route on the globe: Night Flight's stops, or a trip's line alone (its cities are drawn as icons). */
+/** A pinned element that can be dragged to another place: told where it is as it goes. */
+export interface PinDrag {
+  onStart?(): void;
+  onMove?(at: [number, number]): void;
+  onEnd?(at: [number, number]): void;
+}
+export interface PinHandle {
+  move(at: [number, number], offset?: [number, number]): void;
+  setDraggable(on: boolean): void;
+  remove(): void;
+}
+
 export interface FlightRoute {
   stops: [number, number][];
   reached: number;
@@ -316,15 +328,25 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       if (latest.current.reducedMotion) m.jumpTo(o);
       else m.flyTo({ ...o, curve: 1.4, speed: 1.1, maxDuration: 3200, essential: false });
     },
-    pin(el, at, anchor = "center", offset = [0, 0]) {
+    pin(el, at, anchor = "center", offset = [0, 0], drag) {
       const m = mapRef.current;
       if (!m) return null;
-      const marker = new maplibregl.Marker({ element: el, anchor, offset }).setLngLat(at).addTo(m);
+      const marker = new maplibregl.Marker({ element: el, anchor, offset, draggable: !!drag }).setLngLat(at).addTo(m);
+      if (drag) {
+        const where = (): [number, number] => {
+          const p = marker.getLngLat().wrap();
+          return [p.lng, p.lat];
+        };
+        marker.on("dragstart", () => drag.onStart?.());
+        marker.on("drag", () => drag.onMove?.(where()));
+        marker.on("dragend", () => drag.onEnd?.(where()));
+      }
       return {
         move: (to, off) => {
           marker.setLngLat(to);
           if (off) marker.setOffset(off);
         },
+        setDraggable: (on) => void marker.setDraggable(on),
         remove: () => void marker.remove(),
       };
     },
