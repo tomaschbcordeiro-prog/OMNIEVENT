@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Plus, Sparkles } from "lucide-react";
 import type { EventCard } from "@/lib/types";
-import { useUser } from "@/lib/user/store";
+import { useUser, type Trip } from "@/lib/user/store";
+import { KIND_ICON } from "./agenda";
 import { codeOf, ideaGroups, REGIONS, routeFromEvents, type Place } from "@/lib/trip";
 import { getDestination } from "@/lib/destinations";
 import { localDateKey } from "@/lib/format";
@@ -86,6 +87,21 @@ export function TripsHome() {
   );
 }
 
+/** What's next on a trip of yours: the first of your plans still to come. */
+function NextPlan({ trip }: { trip: Trip }) {
+  const now = new Date().toISOString().slice(0, 10);
+  const next = [...(trip.plans ?? [])].filter((p) => p.day >= now).sort((a, b) => `${a.day}${a.time ?? "99"}`.localeCompare(`${b.day}${b.time ?? "99"}`))[0];
+  if (!next) return null;
+  const Icon = KIND_ICON[next.kind];
+  return (
+    <Link href={`/trips/${trip.id}`} className="trip-next" data-kind={next.kind}>
+      <Icon size={14} aria-hidden className="shrink-0" />
+      <span className="truncate"><b>Next:</b> {next.title}</span>
+      <span className="tnum shrink-0 text-text-3">{fmt(next.day, { weekday: "short", day: "numeric", month: "short" })}{next.time ? ` · ${next.time}` : ""}</span>
+    </Link>
+  );
+}
+
 /** The trips as passes (soonest first), or ready-made routes to start from. */
 export function TripsList() {
   const user = useUser();
@@ -120,6 +136,7 @@ export function TripsList() {
           <Link href={`/trips/${t.id}`} className="block press" aria-label={`Open ${t.name}`}>
             <TripPass name={t.name} emoji={t.emoji} stops={t.stops ?? []} start={t.start} end={t.end} events={t.eventIds.length} />
           </Link>
+          <NextPlan trip={t} />
         </li>
       ))}
     </ul>

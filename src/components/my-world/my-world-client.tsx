@@ -8,7 +8,10 @@ import {
   ChevronLeft, ChevronRight, Search as SearchIcon, Map as MapIcon, List as ListIcon, Users, CalendarPlus,
 } from "lucide-react";
 import type { EventCard } from "@/lib/types";
-import { useUser, userActions } from "@/lib/user/store";
+import type { TripPlan } from "@/lib/trip-plans";
+import { addDays, stopColor } from "@/lib/trip";
+import { KIND_ICON } from "@/components/trips/agenda";
+import { useUser, userActions, type Trip } from "@/lib/user/store";
 import { GROUPS } from "@/lib/categories";
 import { CITIES } from "@/lib/destinations";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
@@ -352,6 +355,15 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
     const k = localDateKey(c.start, c.timeZone);
     byDay.set(k, [...(byDay.get(k) ?? []), c]);
   }
+  // Trips on the calendar: the city each day is spent in, and your own plans (flights, stays…).
+  const tripDays = new Map<string, { trip: Trip; stop: string; color: string }>();
+  const plansByDay = new Map<string, { trip: Trip; plan: TripPlan }[]>();
+  for (const t of user.trips) {
+    (t.stops ?? []).forEach((st, i) => {
+      for (let d = st.from; d <= st.to; d = addDays(d, 1)) if (!tripDays.has(d) || d === st.from) tripDays.set(d, { trip: t, stop: st.name, color: stopColor(i) });
+    });
+    for (const pl of t.plans ?? []) if (pl.kind !== "stay") plansByDay.set(pl.day, [...(plansByDay.get(pl.day) ?? []), { trip: t, plan: pl }]);
+  }
   const first = new Date(month);
   const offset = (first.getDay() + 6) % 7; // Monday first
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -373,20 +385,38 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
           <button className="btn btn-secondary btn-icon btn-sm" aria-label="Next month" onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}><ChevronRight size={15} aria-hidden /></button>
         </div>
       </div>
-      <p className="t-small text-text-3 mt-1">Saved events on their local date at the venue. Ticket purchases aren&apos;t shown: no seller is connected to confirm them.</p>
+      <p className="t-small text-text-3 mt-1">Saved events on their local date at the venue, and your trips: each day&apos;s city and your own plans (flights, meetings…). Ticket purchases aren&apos;t shown: no seller is connected to confirm them.</p>
       {clash.size > 0 && (
         <p className="mt-3 flex items-center gap-2 t-small text-warn"><TriangleAlert size={15} aria-hidden /> {clash.size} saved events overlap in time.</p>
       )}
-      <div className="mt-4 grid grid-cols-7 gap-px rounded-[var(--radius-m)] overflow-hidden border border-line bg-line" role="grid" aria-label="Month calendar">
+      <div className="mt-4 grid grid-cols-7 gap-px rounded-[var(--radius-m)] overflow-hidden border border-line bg-line" role="group" aria-label="Month calendar">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div key={d} role="columnheader" className="bg-panel-2 px-2 py-1.5 t-micro text-text-3">{d}</div>
+          <div key={d} aria-hidden className="bg-panel-2 px-2 py-1.5 t-micro text-text-3">{d}</div>
         ))}
         {cells.map((d, i) => {
           const items = d ? byDay.get(key(d)) ?? [] : [];
+          const onTrip = d ? tripDays.get(key(d)) : undefined;
+          const plans = d ? [...(plansByDay.get(key(d)) ?? [])].sort((a, b) => (a.plan.time ?? "99").localeCompare(b.plan.time ?? "99")) : [];
           return (
-            <div key={i} role="gridcell" className={`min-h-20 sm:min-h-24 bg-bg-2 p-1.5 ${d ? "" : "opacity-40"}`}>
+            <div key={i} aria-label={d ? new Date(`${key(d)}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) : undefined} role={d ? "group" : undefined} className={`min-h-20 sm:min-h-24 bg-bg-2 p-1.5 ${d ? "" : "opacity-40"}`}>
               {d && <span className={`t-micro tnum ${key(d) === todayKey ? "inline-grid place-items-center h-5 w-5 rounded-full bg-cyan text-[#021018] font-semibold" : "text-text-3"}`}>{d}</span>}
+              {onTrip && (
+                <Link href={`/trips/${onTrip.trip.id}`} className="cal-trip" style={{ "--ink": onTrip.color } as React.CSSProperties} title={`${onTrip.trip.name}: ${onTrip.stop}`}>
+                  <span aria-hidden>{onTrip.trip.emoji ?? "✈️"}</span> <span className="truncate">{onTrip.stop}</span>
+                </Link>
+              )}
               <ul className="mt-1 grid gap-0.5">
+                {plans.slice(0, 2).map(({ trip, plan }) => {
+                  const Icon = KIND_ICON[plan.kind];
+                  return (
+                    <li key={plan.id}>
+                      <Link href={`/trips/${trip.id}`} className="cal-plan" data-kind={plan.kind} title={`${plan.title}${plan.time ? `, ${plan.time}` : ""} (${trip.name})`}>
+                        <Icon size={11} aria-hidden className="shrink-0" />
+                        {plan.time && <span className="tnum text-text-3">{plan.time}</span>} <span className="truncate">{plan.title}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
                 {items.slice(0, 3).map((c) => (
                   <li key={c.id}>
                     <Link href={`/events/${c.slug}`} className={`block truncate rounded px-1 py-0.5 text-[11px] leading-tight ${clash.has(c.id) ? "bg-warn/15 text-warn" : "bg-text/5 hover:bg-text/[0.08]"}`} title={`${c.title}, ${formatEventTime(c.start, c.timeZone)} ${tzAbbrev(c.start, c.timeZone)}`}>

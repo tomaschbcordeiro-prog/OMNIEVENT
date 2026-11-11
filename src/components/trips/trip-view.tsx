@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { daysOf, fitSpan, flagOf, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { daysOf, fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { isTravel, kindLabel, planIcs } from "@/lib/trip-plans";
+import { KIND_ICON, TripAgenda } from "./agenda";
 import { spanOf } from "@/lib/trip-snap";
 import { rememberTrip } from "./trip-add";
 import { stopSearch } from "./trip-shortcuts";
@@ -70,6 +72,8 @@ export function TripView({ id }: { id: string }) {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
+  /** The whole trip as an agenda, day by day, or as its cities. */
+  const [view, setView] = useState<"agenda" | "cities">("agenda");
   /** Event icons are out (after the glide to the city, so they spring from the pin). */
   const [burst, setBurst] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -88,6 +92,7 @@ export function TripView({ id }: { id: string }) {
   // Each of the trip's events, with the city (and day) it belongs to, or why it doesn't fit.
   const placed = useMemo(() => events.map((e) => placeIn(stops, e)), [events, stops]);
   const inTrip = useMemo(() => new Set(events.map((e) => e.id)), [events]);
+  const dayEvents = useMemo(() => placed.map((p) => ({ e: p.e, day: p.day })), [placed]);
 
   const frameAll = () => {
     const pts = stops.length ? stops : events;
@@ -124,6 +129,15 @@ export function TripView({ id }: { id: string }) {
     window.setTimeout(() => setBurst(true), 950);
   };
 
+  // An event picked in the agenda: the globe goes to it and opens its card (a phone shows
+  // half the globe for it).
+  const showEvent = (eid: string) => {
+    const e = events.find((x) => x.id === eid) ?? (sugg[stop?.id ?? ""] ?? []).find((x) => x.id === eid);
+    if (e?.lat) setFly({ key: ++flyKey.current, lat: e.lat, lng: e.lng, zoom: 14, padding: pad });
+    sheet.setSnap("half");
+    setBurst(true);
+    window.setTimeout(() => setOpen(eid), e?.lat ? 700 : 0);
+  };
   const add = (c: EventCard) => {
     if (!trip) return;
     userActions.setTripEvent(trip.id, tripSnapOf(c), true);
@@ -180,6 +194,15 @@ export function TripView({ id }: { id: string }) {
       // The whole trip: what's chosen, in each city's colour.
       placed.forEach((p, j) => show(p.e, true, j, p.fit.ok ? stopColor(stops.indexOf(p.fit.stop)) : "#6F819C"));
     }
+    // How you get from city to city, when it's planned: its mark in the middle of the leg.
+    stops.slice(1).forEach((b, j) => {
+      const a = stops[j];
+      const go = (trip.plans ?? []).find((pl) => isTravel(pl.kind) && pl.day === a.to);
+      if (!go) return;
+      const m = midpoint(a, b);
+      const Icon = KIND_ICON[go.kind];
+      out.push({ key: `stop-leg-${a.id}-${go.id}`, lat: m.lat, lng: m.lng, delay: 400, node: <span className="leg-mode" data-kind={go.kind} title={`${go.title}${go.time ? `, ${go.time}` : ""}`} aria-label={`${kindLabel(go.kind)} from ${a.name} to ${b.name}${go.time ? ` at ${go.time}` : ""}`} role="img"><Icon size={14} aria-hidden /></span> });
+    });
     // Events sharing a venue fan out round it (the city pins stay put).
     const cities = out.filter((ic) => ic.key.startsWith("stop-"));
     const project = (lat: number, lng: number) => api.current?.project([lng, lat]) ?? null;
@@ -210,7 +233,15 @@ export function TripView({ id }: { id: string }) {
       <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={() => setOpen(null)} label={`Globe with your trip ${trip.name}: tap a city to see its events.`} />
       <MapIcons api={api} ready={ready} icons={icons} />
 
-      <section ref={sheet.panel} className="planner-panel trip-panel" aria-label={trip.name} data-snap={sheet.snap}>
+      <section
+        ref={sheet.panel}
+        className="planner-panel trip-panel"
+        aria-label={trip.name}
+        data-snap={sheet.snap}
+        onFocusCapture={(e) => {
+          if ((e.target as HTMLElement).matches("input:not([type=time]), textarea")) sheet.setSnap("full");
+        }}
+      >
         <SheetGrab snap={sheet.snap} grab={sheet.grab} label="Your trip" />
         <header className="planner-head">
           <div className="flex items-start justify-between gap-3">
@@ -243,7 +274,16 @@ export function TripView({ id }: { id: string }) {
             </div>
           )}
 
+          {sel === null && (stops.length > 0 || (trip.plans?.length ?? 0) > 0) && (
+            <div className="seg" role="tablist" aria-label="Show the trip as">
+              <button type="button" role="tab" aria-selected={view === "agenda"} className="seg-btn" onClick={() => setView("agenda")}>Agenda</button>
+              <button type="button" role="tab" aria-selected={view === "cities"} className="seg-btn" onClick={() => setView("cities")}>Cities</button>
+            </div>
+          )}
+          {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} />}
+
           {sel === null &&
+            view === "cities" &&
             stops.map((s, i) => {
               const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === s.id);
               const n = sugg[s.id];
@@ -262,7 +302,7 @@ export function TripView({ id }: { id: string }) {
               );
             })}
 
-          {sel === null && stops.length > 0 && (
+          {sel === null && view === "cities" && stops.length > 0 && (
             <p className="trip-tip t-micro text-text-2">
               <span className="trip-tip-icon" aria-hidden><Plane size={12} /></span>
               <span>
@@ -272,7 +312,7 @@ export function TripView({ id }: { id: string }) {
             </p>
           )}
 
-          {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} placed={placed} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onRemove={remove} onOpen={(eid) => setOpen(eid)} />}
+          {stop && sel !== null && <StopPlan trip={trip} stop={stop} index={sel} stops={stops} dayEvents={dayEvents} ideas={(sugg[stop.id] ?? null)?.filter((c) => !inTrip.has(c.id)) ?? null} onAdd={add} onOpen={showEvent} onPickStop={(i) => pick(i)} />}
 
           {off.length > 0 && sel === null && (
             <section className="mt-5" aria-labelledby="off-h">
@@ -364,42 +404,17 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
   );
 }
 
-/** One city of the trip: its days, what's planned on each, and ideas for the free time. */
-function StopPlan({ trip, stop, index, placed, ideas, onAdd, onRemove, onOpen }: { trip: Trip; stop: TripStop; index: number; placed: Placed[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onRemove: (e: TripEvent) => void; onOpen: (id: string) => void }) {
-  const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === stop.id);
-  const days = daysOf(stop.from, stop.to);
+/** One city of the trip: its days as an agenda (plans and events), and ideas for the free time. */
+function StopPlan({ trip, stop, index, stops, dayEvents, ideas, onAdd, onOpen, onPickStop }: { trip: Trip; stop: TripStop; index: number; stops: TripStop[]; dayEvents: { e: TripEvent; day: string }[]; ideas: EventCard[] | null; onAdd: (c: EventCard) => void; onOpen: (id: string) => void; onPickStop: (i: number) => void }) {
+  const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
   const all = new URLSearchParams({ lat: stop.lat.toFixed(4), lng: stop.lng.toFixed(4), radius: String(RADIUS_KM), pl: placeName(stop), from: stop.from, to: stop.to });
   if (trip.interests?.length) all.set("cat", trip.interests.join(","));
   return (
     <div style={{ "--ink": stopColor(index) } as React.CSSProperties}>
-      <p className="t-small text-text-2">
+      <p className="t-small text-text-2 mb-3">
         {dayLabel(stop.from)} → {dayLabel(stop.to)}, {nightsBetween(stop.from, stop.to)} {nightsBetween(stop.from, stop.to) === 1 ? "night" : "nights"}
       </p>
-      <ol className="day-list">
-        {days.map((d) => {
-          const today = mine.filter((p) => p.day === d).map((p) => p.e);
-          return (
-            <li key={d} className="day-row">
-              <span className="day-label">{dayLabel(d)}</span>
-              {today.length ? (
-                <ul className="grid gap-1 flex-1 min-w-0">
-                  {today.map((e) => (
-                    <li key={e.id} className="day-event pop">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onOpen(e.id)}>
-                        <span className="block font-semibold truncate"><span aria-hidden>{GROUP_EMOJI[e.groupSlug] ?? "✨"} </span>{e.title}</span>
-                        <span className="block t-micro text-text-3 truncate">{e.hoursUnknown ? "" : `${formatEventTime(e.start, e.timeZone)}, `}{e.venueName}</span>
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Take ${e.title} out`} onClick={() => onRemove(e)}><X size={14} aria-hidden /></button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="t-small text-text-3 flex-1">Free</span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} onOpenEvent={onOpen} onPickStop={onPickStop} />
       <h2 className="t-small font-semibold mt-5">Ideas for your days in {placeName(stop)}</h2>
       {ideas === null ? (
         <div className="mt-2 grid gap-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>
@@ -432,6 +447,7 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
     const esc = (s: string) => s.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
     const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//Trip//EN", `X-WR-CALNAME:${esc(trip.name)}`];
     for (const s of trip.stops ?? []) lines.push("BEGIN:VEVENT", `UID:${trip.id}-${s.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART;VALUE=DATE:${s.from.replace(/-/g, "")}`, `DTEND;VALUE=DATE:${s.to.replace(/-/g, "")}`, `SUMMARY:${esc(`${trip.name}: ${s.name}`)}`, "END:VEVENT");
+    for (const pl of trip.plans ?? []) lines.push(...planIcs(pl, trip.id, stamp(new Date().toISOString())));
     for (const e of events) lines.push("BEGIN:VEVENT", `UID:${e.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART:${stamp(new Date(e.start).toISOString())}`, `SUMMARY:${esc(e.title)}`, `LOCATION:${esc(`${e.venueName}, ${e.city}`)}`, `URL:${window.location.origin}/events/${e.slug}`, "END:VEVENT");
     lines.push("END:VCALENDAR");
     const a = document.createElement("a");
@@ -447,6 +463,8 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
         `${s.name}${s.place ? ` (${s.place})` : ""}: ${dayLabel(s.from)} to ${dayLabel(s.to)}`,
         ...events.map((e) => placeIn([s], e)).filter((p) => p.e.lat && p.fit.ok).map((p) => `  ${dayLabel(p.day)}: ${p.e.title} (${window.location.origin}/events/${p.e.slug})`),
       ]),
+      ...((trip.plans ?? []).length ? ["", "Plans:"] : []),
+      ...[...(trip.plans ?? [])].sort((a, b) => `${a.day}${a.time ?? ""}`.localeCompare(`${b.day}${b.time ?? ""}`)).map((p) => `  ${dayLabel(p.day)}${p.time ? ` ${p.time}` : ""}: ${kindLabel(p.kind)}, ${p.title}${p.from || p.to ? ` (${[p.from, p.to].filter(Boolean).join(" → ")})` : ""}${p.ref ? `, ${p.ref}` : ""}${p.place ? `, ${p.place}` : ""}`),
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);

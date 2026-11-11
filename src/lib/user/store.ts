@@ -1,5 +1,6 @@
 "use client";
 
+import type { TripPlan } from "../trip-plans";
 import { useSyncExternalStore } from "react";
 import type { TripStop } from "../trip";
 
@@ -30,6 +31,8 @@ export interface Trip {
   interests?: string[];
   /** What each event in the trip looked like when it was added, to show it on the globe after it's gone. */
   snaps?: Record<string, TripEventSnap>;
+  /** Your own plans on the trip: flights, stays, meetings, meals… */
+  plans?: TripPlan[];
 }
 
 /** A trip's event as kept with the trip: what a saved event keeps, plus where it is. */
@@ -251,6 +254,16 @@ export const userActions = {
   },
   updateTrip(id: string, patch: Partial<Omit<Trip, "id" | "createdAt">>) {
     update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === id ? { ...t, ...patch, updatedAt: now() } : t)) }));
+  },
+  /** A plan of your own on a trip (a flight, a stay…); the same plan again puts it back (Undo). */
+  addPlan(tripId: string, plan: TripPlan) {
+    update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === tripId ? { ...t, plans: [...(t.plans ?? []).filter((p) => p.id !== plan.id), plan], updatedAt: now() } : t)) }));
+  },
+  updatePlan(tripId: string, planId: string, patch: Partial<Omit<TripPlan, "id" | "createdAt">>) {
+    update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === tripId ? { ...t, plans: (t.plans ?? []).map((p) => (p.id === planId ? { ...p, ...patch } : p)), updatedAt: now() } : t)) }));
+  },
+  removePlan(tripId: string, planId: string) {
+    update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === tripId ? { ...t, plans: (t.plans ?? []).filter((p) => p.id !== planId), updatedAt: now() } : t)) }));
   },
   deleteTrip(id: string) {
     update((d) => ({ ...d, trips: d.trips.filter((t) => t.id !== id) }));
