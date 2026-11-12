@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { BedDouble, Briefcase, Bus, CarFront, ChevronDown, CornerDownLeft, Landmark, MapPin, NotebookPen, Plane, Plus, Sparkles, TrainFront, Trash2, UtensilsCrossed, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { BedDouble, CalendarClock, ChevronDown, CornerDownLeft, GripVertical, MapPin, Plus, Trash2, X } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
 import { addDays, daysOf, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { poiLabel } from "@/lib/pois";
-import { durationOf, isScheduled, isTravel, kindLabel, nightsOf, parsePlan, PLAN_KINDS, planSortKey, type PlanKind, type TripPlan } from "@/lib/trip-plans";
+import { durationOf, isScheduled, isTravel, kindLabel, nightsOf, parsePlan, PLAN_KINDS, planSortKey, type TripPlan } from "@/lib/trip-plans";
 import { formatEventTime } from "@/lib/format";
 import type { TripEvent } from "@/lib/trip-snap";
 import { Poster } from "../ui";
 import { toast } from "../toast";
+import { KIND_ICON } from "./plan-icons";
+import { WhenPicker, type WhenValue } from "./when-picker";
 
 /*
  * A trip as an agenda: day by day, your own plans (the flight, the hotel, a meeting) with the
@@ -20,18 +21,10 @@ import { toast } from "../toast";
  * there and where you stay. New things glide from the line into their place.
  */
 
-export const KIND_ICON: Record<PlanKind, LucideIcon> = {
-  flight: Plane,
-  train: TrainFront,
-  bus: Bus,
-  car: CarFront,
-  stay: BedDouble,
-  meeting: Briefcase,
-  meal: UtensilsCrossed,
-  visit: Landmark,
-  activity: Sparkles,
-  note: NotebookPen,
-};
+export { KIND_ICON };
+
+/** What a place to see carries when it's dragged onto a day. */
+export const PLAN_DRAG = "application/x-omni-plan";
 
 const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { ...o, timeZone: "UTC" });
 const dayName = (d: string) => fmt(d, { weekday: "short", day: "numeric", month: "short" });
@@ -308,13 +301,36 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
     const s = p.lat != null && p.lng != null ? stops.find((x) => haversineKm(p.lat!, p.lng!, x.lat, x.lng) <= STOP_RADIUS_KM) : undefined;
     return s ? daysOf(s.from, s.to) : tripDays;
   };
-  const schedule = (p: TripPlan, day: string, from?: DOMRect) => {
-    if (!day) return;
+  const schedule = (p: TripPlan, w: Partial<WhenValue> & { day: string }, from?: DOMRect) => {
+    if (!w.day && !p.day) return setEditing(null);
     flip.capture();
     flip.born(p.id, from);
-    userActions.updatePlan(trip.id, p.id, { day, endDay: p.kind === "stay" ? addDays(day, 1) : p.endDay });
-    toast({ title: `${p.title}: ${dayName(day)}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, p.id, { day: "", endDay: undefined }) } });
+    setEditing(null);
+    const change = "time" in w ? { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes } : { day: w.day, endDay: p.kind === "stay" && w.day ? addDays(w.day, Math.max(1, nightsOf(p))) : p.endDay };
+    userActions.updatePlan(trip.id, p.id, change);
+    toast({ title: `${p.title}: ${w.day ? `${dayName(w.day)}${"time" in w && w.time ? `, ${w.time}` : p.time && !("time" in w) ? `, ${p.time}` : ""}` : "no day yet"}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, p.id, p) } });
   };
+  // Places to see dragged onto a day (with a mouse).
+  const [over, setOver] = useState<string | null>(null);
+  const dropOn = (day: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(PLAN_DRAG)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (over !== day) setOver(day);
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) setOver((o) => (o === day ? null : o));
+    },
+    onDrop: (e: React.DragEvent) => {
+      const id = e.dataTransfer.getData(PLAN_DRAG);
+      setOver(null);
+      const p = trip.plans?.find((x) => x.id === id);
+      if (!p) return;
+      e.preventDefault();
+      schedule(p, { day }, (e.currentTarget as HTMLElement).getBoundingClientRect());
+    },
+  });
   const sig = toSee.map((p) => p.id).join() + "#" + days.map((d) => d.rows.map((r) => r.key).join()).join("|");
   const flip = useFlip(box, sig);
   // Plans added from elsewhere on the page (a city's search, its sights) glide in too.
@@ -447,11 +463,39 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
           </h3>
           <ul className="ag-rows">
             {toSee.map((p) => (
-              <li key={p.id} data-flip={`idea:${p.id}`} data-plan={p.id} className="ag-row ag-idea">
+              <li
+                key={p.id}
+                data-flip={`idea:${p.id}`}
+                data-plan={p.id}
+                className="ag-row ag-idea"
+                draggable={editing?.at !== `when:${p.id}` && editing?.at !== `idea:${p.id}`}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(PLAN_DRAG, p.id);
+                  e.dataTransfer.setData("text/plain", p.title);
+                  e.dataTransfer.effectAllowed = "move";
+                  box.current?.setAttribute("data-dragging", "");
+                }}
+                onDragEnd={() => (box.current?.removeAttribute("data-dragging"), setOver(null))}
+              >
                 {editing?.at === `idea:${p.id}` ? (
                   <PlanForm draft={editing.draft} days={tripDays} onChange={(d) => setEditing({ ...editing, draft: d })} onCancel={() => setEditing(null)} onDelete={() => void remove(p)} onSave={save} saveLabel="Save" />
+                ) : editing?.at === `when:${p.id}` ? (
+                  <WhenPicker
+                    trip={trip}
+                    draft={{ title: p.title, kind: p.kind, lat: p.lat, lng: p.lng, poi: p.poi, about: [p.poi ? poiLabel(...(p.poi.split("/") as [string, string?])) : "", p.place].filter(Boolean).join(" · ") || undefined }}
+                    days={nearDays(p)}
+                    initial={p}
+                    events={events}
+                    verb="Save"
+                    skip={p.id}
+                    focusSave
+                    onCancel={() => setEditing(null)}
+                    onRemove={() => void remove(p)}
+                    onSave={(w, el) => schedule(p, { ...w, time: w.time }, el?.getBoundingClientRect())}
+                  />
                 ) : (
                   <div className="ag-idea-row">
+                    <span className="ag-grip" aria-hidden><GripVertical size={14} /></span>
                     <PlanRow p={p} onEdit={() => setEditing({ id: p.id, draft: p, at: `idea:${p.id}` })} />
                     <span className="ag-idea-actions">
                       {p.lat != null && onShowPlace && (
@@ -459,15 +503,9 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                           <MapPin size={14} aria-hidden />
                         </button>
                       )}
-                      <label className="ag-pick">
-                        <span className="sr-only">Day for {p.title}</span>
-                        <select value="" onChange={(e) => schedule(p, e.target.value, (e.currentTarget.closest("li") as HTMLElement | null)?.getBoundingClientRect())}>
-                          <option value="">Pick a day</option>
-                          {nearDays(p).map((d) => (
-                            <option key={d} value={d}>{dayName(d)}</option>
-                          ))}
-                        </select>
-                      </label>
+                      <button type="button" className="ag-when press" onClick={() => setEditing({ id: p.id, draft: p, at: `when:${p.id}` })} aria-label={`Pick a day and time for ${p.title}`}>
+                        <CalendarClock size={14} aria-hidden /> <span>When?</span>
+                      </button>
                     </span>
                   </div>
                 )}
@@ -480,7 +518,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
       {!days.length && <p className="t-small text-text-2 mt-4">Add the route&apos;s dates to see the trip day by day.</p>}
       <ol className="ag-days">
         {days.map(({ day, stops: here, rows }) => (
-          <li key={day} className="ag-day" data-day={day} data-today={day === today() || undefined}>
+          <li key={day} className="ag-day" data-day={day} data-today={day === today() || undefined} data-drop={over === day || undefined} {...dropOn(day)}>
             <div className="ag-day-head">
               <span className="ag-day-date">
                 <span className="ag-day-wd">{fmt(day, { weekday: "short" })}</span>

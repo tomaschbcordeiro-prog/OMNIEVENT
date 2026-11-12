@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Navigation, Plane, Plus, X } from "lucide-react";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { addDays, daysOf, STOP_RADIUS_KM } from "@/lib/trip";
+import { daysOf, STOP_RADIUS_KM } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
-import { kindLabel, type TripPlan } from "@/lib/trip-plans";
+import type { TripPlan } from "@/lib/trip-plans";
 import { planKindForPoi, POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
 import { activeTripOf, rememberTrip } from "./trip-add";
 import { toast } from "../toast";
+import { WhenPicker, type WhenValue } from "./when-picker";
 
 /*
  * A place from the map (a museum, a restaurant, a palace…) into a trip: on a day of the
@@ -49,9 +50,6 @@ export function PlaceToTrip({ place, tripId, onDone }: { place: MapPlace; /** Al
   const city = trip?.stops?.find((s) => haversineKm(s.lat, s.lng, place.lat, place.lng) <= STOP_RADIUS_KM);
   const days = city ? daysOf(city.from, city.to) : trip?.stops?.length ? daysOf(trip.stops[0].from, trip.stops[trip.stops.length - 1].to) : [];
   const [open, setOpen] = useState(false);
-  const [day, setDay] = useState("");
-  const [time, setTime] = useState("");
-  const [note, setNote] = useState("");
 
   const at = `${place.lat.toFixed(4)},${place.lng.toFixed(4)},${encodeURIComponent(place.name)}`;
   if (!trips.length || !trip)
@@ -60,7 +58,10 @@ export function PlaceToTrip({ place, tripId, onDone }: { place: MapPlace; /** Al
         <Plane size={14} aria-hidden /> Plan a trip here
       </Link>
     );
-  if (already)
+  const poi = place.poi ? (place.poi.sub && place.poi.sub !== place.poi.cls ? `${place.poi.cls}/${place.poi.sub}` : place.poi.cls) : undefined;
+  const draft = { title: place.name.slice(0, 80), kind: kind === "note" ? ("visit" as const) : kind, lat: place.lat, lng: place.lng, poi };
+
+  if (already && !open)
     return (
       <div className="ptt-done">
         <Check size={15} aria-hidden className="shrink-0" />
@@ -68,104 +69,74 @@ export function PlaceToTrip({ place, tripId, onDone }: { place: MapPlace; /** Al
           In <Link href={`/trips/${trip.id}`} className="font-semibold hover:underline">{trip.name}</Link>
           <span className="text-text-3">, {already.day ? `${fmt(already.day)}${already.time ? ` ${already.time}` : ""}` : "no day yet"}</span>
         </span>
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={() => {
-            userActions.removePlan(trip.id, already.id);
-            toast({ title: `Taken off ${trip.name}`, body: already.title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, already) } });
-          }}
-        >
-          Remove
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
+          Change
         </button>
       </div>
     );
 
-  const add = () => {
-    const plan: TripPlan = {
-      id: newId(),
-      kind,
-      title: place.name.slice(0, 80),
-      day,
-      ...(day && time ? { time } : {}),
-      ...(kind === "stay" && day ? { endDay: addDays(day, 1) } : {}),
-      ...(note.trim() ? { notes: note.trim().slice(0, 200) } : {}),
-      lat: place.lat,
-      lng: place.lng,
-      ...(place.poi ? { poi: place.poi.sub && place.poi.sub !== place.poi.cls ? `${place.poi.cls}/${place.poi.sub}` : place.poi.cls } : {}),
-      createdAt: new Date().toISOString(),
-    };
-    userActions.addPlan(trip.id, plan);
-    rememberTrip(trip.id);
+  const save = (w: WhenValue) => {
+    const when = w.day ? `${fmt(w.day)}${w.time ? ` ${w.time}` : ""}` : "a place to see";
+    if (already) {
+      userActions.updatePlan(trip.id, already.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes });
+      toast({ title: `${already.title}: ${when}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, already.id, already) } });
+    } else {
+      const plan: TripPlan = { id: newId(), ...draft, ...w, createdAt: new Date().toISOString() };
+      userActions.addPlan(trip.id, plan);
+      rememberTrip(trip.id);
+      toast({ title: `Added to ${trip.name}`, body: `${place.name}, ${when}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, plan.id) }, href: `/trips/${trip.id}`, linkLabel: "See trip" });
+    }
     try {
       navigator.vibrate?.(10);
     } catch {
       // no vibration here
     }
-    toast({ title: `Added to ${trip.name}`, body: `${place.name}${day ? `, ${fmt(day)}${time ? ` ${time}` : ""}` : ", a place to see"}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, plan.id) }, href: `/trips/${trip.id}`, linkLabel: "See trip" });
     setOpen(false);
-    setNote("");
-    setDay("");
-    setTime("");
     onDone?.();
   };
 
   if (!open)
     return (
-      <div className="flex gap-2">
-        <button type="button" className="btn btn-primary btn-sm flex-1 min-w-0 press" onClick={add}>
-          <Plus size={14} aria-hidden className="shrink-0" /> <span className="truncate">{tripId ? "Add to trip" : `Add to ${trip.name}`}</span>
-        </button>
-        <button type="button" className="btn btn-secondary btn-sm shrink-0" onClick={() => setOpen(true)} aria-label="Add with a day or a note">
-          Day, note…
-        </button>
-      </div>
+      <button type="button" className="btn btn-primary btn-sm w-full press" onClick={() => setOpen(true)}>
+        <Plus size={14} aria-hidden className="shrink-0" /> <span className="truncate">{tripId ? "Add to trip" : `Add to ${trip.name}`}</span>
+      </button>
     );
 
   return (
-    <form
-      className="ptt-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        add();
-      }}
-    >
-      {!tripId && trips.length > 1 && (
+    <div className="ptt-form">
+      {!tripId && trips.length > 1 && !already && (
         <label className="ag-field">
           <span>Trip</span>
-          <select value={trip.id} onChange={(e) => (setChosen(e.target.value), setDay(""))}>
+          <select value={trip.id} onChange={(e) => setChosen(e.target.value)}>
             {trips.map((t) => (
               <option key={t.id} value={t.id}>{t.emoji ?? "✈️"} {t.name}</option>
             ))}
           </select>
         </label>
       )}
-      <div>
-        <p className="ptt-label">When{city ? ` in ${city.name}` : ""}</p>
-        <div className="ptt-days" role="radiogroup" aria-label="Day">
-          <button type="button" role="radio" aria-checked={day === ""} className="ptt-day" onClick={() => setDay("")}>No day yet</button>
-          {days.map((d) => (
-            <button key={d} type="button" role="radio" aria-checked={day === d} className="ptt-day" onClick={() => setDay(d)}>{fmt(d)}</button>
-          ))}
-        </div>
-      </div>
-      {day && (
-        <label className="ag-field">
-          <span>Time (optional)</span>
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </label>
-      )}
-      <label className="ag-field">
-        <span>Note (optional)</span>
-        <textarea value={note} maxLength={200} rows={2} onChange={(e) => setNote(e.target.value)} placeholder={kind === "meal" ? "Book a table; try the fish" : "Free on the first Sunday; go early"} />
-      </label>
-      <div className="ag-form-actions">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Cancel</button>
-        <button type="submit" className="btn btn-primary btn-sm press">
-          <Plus size={14} aria-hidden /> Add {kindLabel(kind).toLowerCase() === "note" ? "" : kindLabel(kind).toLowerCase()} to trip
-        </button>
-      </div>
-    </form>
+      {city && <p className="ptt-label">In {city.name}</p>}
+      <WhenPicker
+        key={trip.id}
+        trip={trip}
+        draft={draft}
+        days={days}
+        initial={already}
+        verb={already ? "Save" : "Add"}
+        skip={already?.id}
+        head={false}
+        onCancel={() => setOpen(false)}
+        onRemove={
+          already
+            ? () => {
+                userActions.removePlan(trip.id, already.id);
+                setOpen(false);
+                toast({ title: `Taken off ${trip.name}`, body: already.title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, already) } });
+              }
+            : undefined
+        }
+        onSave={save}
+      />
+    </div>
   );
 }
 

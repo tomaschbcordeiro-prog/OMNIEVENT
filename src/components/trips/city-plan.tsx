@@ -5,16 +5,18 @@ import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Landmark, Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, type Trip } from "@/lib/user/store";
-import { addDays, daysOf, flagOf, nightsBetween, placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
+import { daysOf, flagOf, nightsBetween, placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
-import { isScheduled, isTravel, kindLabel, parsePlan, type PlanKind, type TripPlan } from "@/lib/trip-plans";
+import { isScheduled, isTravel, kindLabel, parsePlan, splitWhen, type PlanKind, type TripPlan } from "@/lib/trip-plans";
 import { planKindForPoi, POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
 import type { Sight } from "@/lib/sights";
 import { formatEventTime, localDateKey } from "@/lib/format";
 import type { TripEvent } from "@/lib/trip-snap";
 import { Poster } from "../ui";
 import { toast } from "../toast";
-import { announcePlan, KIND_ICON, TripAgenda } from "./agenda";
+import { announcePlan, PLAN_DRAG, TripAgenda } from "./agenda";
+import { KIND_ICON } from "./plan-icons";
+import { WhenPicker, type PlaceDraft, type WhenValue } from "./when-picker";
 
 /*
  * A city of a trip, as one page of everything you're going to do there: what's planned day
@@ -53,15 +55,70 @@ function useSights(stop: TripStop) {
 /** The same place on the trip already. */
 const planFor = (trip: Trip, lat: number, lng: number, name: string) => trip.plans?.find((p) => p.lat != null && p.lng != null && ((Math.abs(p.lat - lat) < 0.0008 && Math.abs(p.lng - lng) < 0.0008) || (p.title === name && haversineKm(p.lat, p.lng, lat, lng) < 1)));
 
+/** A place being put on the trip: what it is, and when, as far as it's known. */
+export interface Picking {
+  draft: PlaceDraft;
+  initial?: Partial<WhenValue>;
+  /** Its street or area, kept with it. */
+  place?: string;
+  /** On the trip already: this changes it. */
+  existing?: TripPlan;
+  /** Chosen with the keyboard: Enter again adds it. */
+  focusSave?: boolean;
+}
+
+const kindFor = (cls?: string, sub?: string): PlanKind => {
+  const k = cls ? planKindForPoi(poiGroup(cls, sub)) : "visit";
+  return k === "note" ? "visit" : k;
+};
+const sightDraft = (s: Sight): PlaceDraft => ({ title: s.name, kind: kindFor(s.cls), lat: s.lat, lng: s.lng, poi: s.cls, about: s.about, image: s.image });
+const foundDraft = (f: Found): PlaceDraft => ({
+  title: f.name,
+  kind: kindFor(f.poi?.cls, f.poi?.sub),
+  lat: f.lat,
+  lng: f.lng,
+  ...(f.poi ? { poi: f.poi.sub && f.poi.sub !== f.poi.cls ? `${f.poi.cls}/${f.poi.sub}` : f.poi.cls } : {}),
+  about: [f.poi ? poiLabel(f.poi.cls, f.poi.sub) : "", f.context?.split(",").slice(0, 2).join(",")].filter(Boolean).join(" · "),
+});
+/** Picking a place that's on the trip already opens it, to change when. */
+const pickingFor = (trip: Trip, draft: PlaceDraft, initial?: Partial<WhenValue>, place?: string, focusSave?: boolean): Picking => {
+  const existing = draft.lat != null && draft.lng != null ? planFor(trip, draft.lat, draft.lng, draft.title) : undefined;
+  return existing ? { draft: { ...draft, kind: existing.kind }, existing, initial: existing, focusSave } : { draft, initial, place, focusSave };
+};
+
 /** One search for anything to do in the city: its sights, any place there, or a plan of your own. */
-function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: TripStop; sights: Sight[]; day: string | null; onDay: (d: string | null) => void; input: React.RefObject<HTMLInputElement | null> }) {
+function CityAdd({
+  trip,
+  stop,
+  sights,
+  day,
+  onDay,
+  input,
+  events,
+  picking,
+  onPick,
+  onSave,
+}: {
+  trip: Trip;
+  stop: TripStop;
+  sights: Sight[];
+  day: string | null;
+  onDay: (d: string | null) => void;
+  input: React.RefObject<HTMLInputElement | null>;
+  events: { e: TripEvent; day: string }[];
+  picking: Picking | null;
+  onPick: (p: Picking | null) => void;
+  onSave: (p: Picking, w: WhenValue, el: HTMLElement | null) => void;
+}) {
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Found[]>([]);
   const [busy, setBusy] = useState(false);
   const [hi, setHi] = useState(0);
   const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
+  // "Café Nicola wed 10:00": search for the café, keep the day and the time for it.
+  const said = useMemo(() => splitWhen(q, { days, defaultDay: day ?? stop.from }), [q, days, day, stop.from]);
   useEffect(() => {
-    const t = q.trim();
+    const t = said.query;
     setFound([]);
     if (t.length < 3) return;
     const ctrl = new AbortController();
@@ -80,9 +137,9 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
       window.clearTimeout(timer);
       ctrl.abort();
     };
-  }, [q, stop.lat, stop.lng]);
+  }, [said.query, stop.lat, stop.lng]);
 
-  const t = plain(q.trim());
+  const t = plain(said.query);
   const mine = t.length >= 2 ? sights.filter((s) => plain(s.name).includes(t)).slice(0, 3) : [];
   const places = found.filter((f) => !mine.some((s) => haversineKm(s.lat, s.lng, f.lat, f.lng) < 0.15));
   const plan = q.trim().length >= 2 ? parsePlan(q, { days, defaultDay: day ?? stop.from }) : null;
@@ -93,34 +150,19 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
     ...(plan ? [{ key: "plan", kind: "plan", p: plan } as Option] : []),
   ];
 
-  const done = (id: string, title: string, when: string) => {
-    toast({ title: `Added to ${placeName(stop)}`, body: `${title}${when ? `, ${when}` : ", a place to see"}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
-    setQ("");
-    setHi(0);
-    onDay(null);
-  };
-  const choose = (o: Option, el: Element | null) => {
-    const from = el?.getBoundingClientRect();
-    const id = newId();
-    const createdAt = new Date().toISOString();
+  const choose = (o: Option, el: Element | null, keyboard = false) => {
     if (o.kind === "plan") {
-      announcePlan(id, from);
-      userActions.addPlan(trip.id, { ...o.p, id, createdAt });
-      return done(id, o.p.title, `${dayName(o.p.day)}${o.p.time ? ` ${o.p.time}` : ""}`);
+      const id = newId();
+      announcePlan(id, el?.getBoundingClientRect());
+      userActions.addPlan(trip.id, { ...o.p, id, createdAt: new Date().toISOString() });
+      toast({ title: `Added to ${placeName(stop)}`, body: `${o.p.title}, ${dayName(o.p.day)}${o.p.time ? ` ${o.p.time}` : ""}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
+      setQ("");
+      setHi(0);
+      onDay(null);
+      return;
     }
-    const name = o.kind === "sight" ? o.s.name : o.f.name;
-    const lat = o.kind === "sight" ? o.s.lat : o.f.lat;
-    const lng = o.kind === "sight" ? o.s.lng : o.f.lng;
-    const cls = o.kind === "sight" ? o.s.cls : o.f.poi?.cls;
-    const already = planFor(trip, lat, lng, name);
-    if (already) return toast({ title: `${name} is on the trip already`, emoji: "📍" });
-    const kind: PlanKind = cls ? planKindForPoi(poiGroup(cls)) : "visit";
-    announcePlan(id, from);
-    // A hotel in the city is where you sleep there: all its nights, unless a day was picked.
-    const checkIn = day ?? stop.from;
-    const when = kind === "stay" ? { day: checkIn, endDay: checkIn < stop.to ? stop.to : addDays(checkIn, 1) } : { day: day ?? "" };
-    userActions.addPlan(trip.id, { id, kind: kind === "note" ? "visit" : kind, title: name.slice(0, 80), ...when, lat, lng, ...(cls ? { poi: cls } : {}), ...(o.kind === "place" && o.f.context ? { place: o.f.context.split(",")[0].slice(0, 80) } : {}), createdAt });
-    done(id, name, kind === "stay" ? `${dayName(when.day)} → ${dayName(when.endDay!)}` : day ? dayName(day) : "");
+    const initial = { ...(said.day || day ? { day: said.day ?? day ?? undefined } : {}), ...(said.time ? { time: said.time } : {}), ...(said.endTime ? { endTime: said.endTime } : {}) };
+    onPick(o.kind === "sight" ? pickingFor(trip, sightDraft(o.s), initial, undefined, keyboard) : pickingFor(trip, foundDraft(o.f), initial, o.f.context?.split(",")[0].slice(0, 80), keyboard));
   };
 
   return (
@@ -136,7 +178,7 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
         <input
           ref={input}
           value={q}
-          onChange={(e) => (setQ(e.target.value), setHi(0))}
+          onChange={(e) => (setQ(e.target.value), setHi(0), picking && onPick(null))}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
@@ -146,16 +188,17 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
               setHi((h) => Math.max(0, h - 1));
             } else if (e.key === "Enter" && options[hi]) {
               e.preventDefault();
-              choose(options[hi], document.getElementById(`city-opt-${hi}`));
+              choose(options[hi], document.getElementById(`city-opt-${hi}`), true);
             } else if (e.key === "Escape") {
               setQ("");
               onDay(null);
+              onPick(null);
             }
           }}
           placeholder={`Add to ${placeName(stop)}: a sight, a restaurant, “dinner 20:30”…`}
           aria-label={`Add something to do in ${placeName(stop)}: a sight, a place, or a plan of your own`}
           role="combobox"
-          aria-expanded={options.length > 0}
+          aria-expanded={options.length > 0 && !picking}
           aria-controls="city-opts"
           aria-activedescendant={options[hi] ? `city-opt-${hi}` : undefined}
           autoComplete="off"
@@ -163,7 +206,36 @@ function CityAdd({ trip, stop, sights, day, onDay, input }: { trip: Trip; stop: 
         />
         {busy && <Loader2 size={15} className="animate-spin text-text-3 shrink-0" aria-hidden />}
       </div>
-      {options.length > 0 && (
+      {picking && (
+        <WhenPicker
+          key={`${picking.draft.title}|${picking.draft.lat}`}
+          trip={trip}
+          draft={picking.draft}
+          days={days}
+          initial={picking.initial}
+          events={events}
+          verb={picking.existing ? "Save" : "Add"}
+          skip={picking.existing?.id}
+          focusSave={picking.focusSave}
+          onCancel={() => onPick(null)}
+          onRemove={
+            picking.existing
+              ? () => {
+                  const gone = picking.existing!;
+                  userActions.removePlan(trip.id, gone.id);
+                  onPick(null);
+                  toast({ title: `${gone.title} taken off`, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, gone) } });
+                }
+              : undefined
+          }
+          onSave={(w, el) => {
+            onSave(picking, w, el);
+            setQ("");
+            setHi(0);
+          }}
+        />
+      )}
+      {options.length > 0 && !picking && (
         <ul id="city-opts" role="listbox" className="city-opts" aria-label="Add to the trip">
           {options.map((o, i) => (
             // The options of a combobox: chosen from the line (arrows, Enter) or tapped, never focused.
@@ -211,7 +283,7 @@ function PlanOption({ p }: { p: Omit<TripPlan, "id" | "createdAt"> }) {
 }
 
 /** The city's best-known sights, as cards with their picture: add one in a tap. */
-function Sights({ trip, stop, sights, onShowAt }: { trip: Trip; stop: TripStop; sights: Sight[] | null; onShowAt: (lat: number, lng: number) => void }) {
+function Sights({ trip, stop, sights, onShowAt, onPick, day }: { trip: Trip; stop: TripStop; sights: Sight[] | null; onShowAt: (lat: number, lng: number) => void; onPick: (p: Picking) => void; day: string | null }) {
   const rail = useRef<HTMLUListElement>(null);
   const [edge, setEdge] = useState({ start: true, end: false });
   const onScroll = () => {
@@ -219,18 +291,6 @@ function Sights({ trip, stop, sights, onShowAt }: { trip: Trip; stop: TripStop; 
     if (r) setEdge({ start: r.scrollLeft < 8, end: r.scrollLeft + r.clientWidth >= r.scrollWidth - 8 });
   };
   if (sights && !sights.length) return null;
-  const add = (s: Sight, el: Element | null) => {
-    const id = newId();
-    const kind = planKindForPoi(poiGroup(s.cls));
-    announcePlan(id, el?.getBoundingClientRect());
-    userActions.addPlan(trip.id, { id, kind: kind === "note" ? "visit" : kind, title: s.name.slice(0, 80), day: "", lat: s.lat, lng: s.lng, poi: s.cls, createdAt: new Date().toISOString() });
-    try {
-      navigator.vibrate?.(8);
-    } catch {
-      // no vibration here
-    }
-    toast({ title: `${s.name}: a place to see`, body: "Pick a day for it below, whenever you like.", emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
-  };
   return (
     <section className="city-sights" aria-labelledby="city-sights-h">
       <div className="flex items-center justify-between gap-2">
@@ -260,23 +320,14 @@ function Sights({ trip, stop, sights, onShowAt }: { trip: Trip; stop: TripStop; 
                     <p className="sight-name">{s.name}</p>
                     {s.about && <p className="sight-about">{s.about}</p>}
                     <div className="sight-actions">
-                      {on ? (
-                        <button
-                          type="button"
-                          className="sight-add is-on"
-                          onClick={() => {
-                            userActions.removePlan(trip.id, on.id);
-                            toast({ title: `${on.title} taken off`, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, on) } });
-                          }}
-                          aria-label={`${s.name} is on the trip${on.day ? `, ${dayName(on.day)}` : ""}. Take it off`}
-                        >
-                          <Check size={14} aria-hidden /> {on.day ? dayName(on.day) : "Added"}
-                        </button>
-                      ) : (
-                        <button type="button" className="sight-add press" onClick={(e) => add(s, e.currentTarget.closest(".sight-card"))}>
-                          <Plus size={14} aria-hidden /> Add
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className={`sight-add press ${on ? "is-on" : ""}`}
+                        onClick={() => onPick(pickingFor(trip, sightDraft(s), day ? { day } : undefined))}
+                        aria-label={on ? `${s.name} is on the trip${on.day ? `, ${dayName(on.day)}${on.time ? ` ${on.time}` : ""}` : ""}. Change when` : `Add ${s.name}`}
+                      >
+                        {on ? <Check size={14} aria-hidden /> : <Plus size={14} aria-hidden />} {on ? (on.day ? `${fmt(on.day, { weekday: "short", day: "numeric" })}${on.time ? ` ${on.time}` : ""}` : "Added") : "Add"}
+                      </button>
                       <a href={s.url} target="_blank" rel="noopener noreferrer" className="sight-more" aria-label={`About ${s.name} (Wikipedia)`}>
                         <ExternalLink size={13} aria-hidden />
                       </a>
@@ -333,6 +384,8 @@ export function CityPlan({
   const sights = useSights(stop);
   const input = useRef<HTMLInputElement>(null);
   const [onDay, setOnDay] = useState<string | null>(null);
+  const [picking, setPicking] = useState<Picking | null>(null);
+  const [over, setOver] = useState<string | null>(null);
   const near = (p: TripPlan) => p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, stop.lat, stop.lng) <= STOP_RADIUS_KM;
   const mine = plansIn(trip, stop);
   const events = dayEvents.filter((x) => days.includes(x.day));
@@ -341,6 +394,29 @@ export function CityPlan({
   const onDays = (trip.plans ?? []).filter((p) => isScheduled(p) && days.includes(p.day) && (p.lat == null || near(p)));
   const perDay = (d: string) => [...onDays.filter((p) => p.day === d).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? "")).map((p) => p.kind as string), ...events.filter((x) => x.day === d).map(() => "event")];
   const scrollTo = (sel: string) => document.querySelector<HTMLElement>(`.trip-panel ${sel}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  const save = (p: Picking, w: WhenValue, el: HTMLElement | null) => {
+    const from = el?.getBoundingClientRect();
+    const when = dayName(w.day || stop.from);
+    const said = w.day ? `${p.draft.kind === "stay" && w.endDay ? `${when} → ${dayName(w.endDay)}` : when}${w.time ? `, ${w.time}` : ""}` : "a place to see";
+    if (p.existing) {
+      const before = p.existing;
+      announcePlan(before.id, from);
+      userActions.updatePlan(trip.id, before.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes });
+      toast({ title: `${before.title}: ${said}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, before.id, before) } });
+    } else {
+      const id = newId();
+      announcePlan(id, from);
+      userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), createdAt: new Date().toISOString() });
+      toast({ title: `Added to ${placeName(stop)}`, body: `${p.draft.title}, ${said}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
+    }
+    try {
+      navigator.vibrate?.(8);
+    } catch {
+      // no vibration here
+    }
+    setPicking(null);
+    setOnDay(null);
+  };
   const addOn = (d: string) => {
     setOnDay(d);
     input.current?.focus();
@@ -368,7 +444,28 @@ export function CityPlan({
             const k = perDay(d);
             return (
               <li key={d}>
-                <button type="button" className="city-day" onClick={() => scrollTo(`.ag-day[data-day="${d}"]`)} aria-label={`${dayName(d)}: ${k.length ? `${k.length} planned` : "free"}`}>
+                <button
+                  type="button"
+                  className="city-day"
+                  data-drop={over === d || undefined}
+                  onClick={() => scrollTo(`.ag-day[data-day="${d}"]`)}
+                  aria-label={`${dayName(d)}: ${k.length ? `${k.length} planned` : "free"}`}
+                  onDragOver={(e) => {
+                    if (!e.dataTransfer.types.includes(PLAN_DRAG)) return;
+                    e.preventDefault();
+                    setOver(d);
+                  }}
+                  onDragLeave={() => setOver((o) => (o === d ? null : o))}
+                  onDrop={(e) => {
+                    setOver(null);
+                    const p = trip.plans?.find((x) => x.id === e.dataTransfer.getData(PLAN_DRAG));
+                    if (!p) return;
+                    e.preventDefault();
+                    announcePlan(p.id, e.currentTarget.getBoundingClientRect());
+                    userActions.updatePlan(trip.id, p.id, { day: d });
+                    toast({ title: `${p.title}: ${dayName(d)}${p.time ? `, ${p.time}` : ""}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, p.id, p) } });
+                  }}
+                >
                   <span className="city-day-wd">{fmt(d, { weekday: "short" })}</span>
                   <span className="city-day-n tnum">{fmt(d, { day: "numeric" })}</span>
                   <span className="city-day-dots" aria-hidden>
@@ -381,9 +478,9 @@ export function CityPlan({
         </ol>
       </div>
 
-      <CityAdd trip={trip} stop={stop} sights={sights ?? []} day={onDay} onDay={setOnDay} input={input} />
+      <CityAdd trip={trip} stop={stop} sights={sights ?? []} day={onDay} onDay={setOnDay} input={input} events={dayEvents} picking={picking} onPick={setPicking} onSave={save} />
 
-      <Sights trip={trip} stop={stop} sights={sights} onShowAt={onShowAt} />
+      <Sights trip={trip} stop={stop} sights={sights} onShowAt={onShowAt} onPick={setPicking} day={onDay} />
 
       <h3 className="city-h mt-5"><MapPin size={14} aria-hidden /> Your plan in {placeName(stop)}</h3>
       <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} near={stop} compose={false} onAddOnDay={addOn} onOpenEvent={onOpen} onPickStop={onPickStop} onShowPlace={onShowPlace} />

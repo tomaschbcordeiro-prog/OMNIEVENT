@@ -7952,3 +7952,443 @@ button.ag-item:hover {
     transform: none;
   }
 }
+
+/*
+ * When a place goes in a trip: the day, a time that suits it, how long, a note, and the day
+ * as it would be.
+ */
+.wp {
+  --k: var(--cyan);
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 16px 36px -22px rgb(4 10 30 / 0.5);
+  animation: wp-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ptt-form .wp,
+.ag-idea .wp {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+.ag-idea .wp {
+  padding: 0.6rem 0.25rem 0.4rem;
+}
+@keyframes wp-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+.wp-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.wp-pic {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--panel-2);
+}
+.wp-pic-icon {
+  display: grid;
+  place-items: center;
+  color: var(--k);
+  background: color-mix(in srgb, var(--k) 13%, var(--panel));
+}
+.wp-title {
+  font-weight: 700;
+  line-height: 1.25;
+}
+.wp-about {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-sec {
+  min-width: 0;
+}
+.wp-in {
+  animation: ag-in 200ms ease-out both;
+}
+.wp-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+}
+.wp-days {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 2px 3px;
+  margin: -2px;
+}
+.wp-days::-webkit-scrollbar {
+  display: none;
+}
+.wp-day {
+  flex-shrink: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.05rem;
+  min-width: 3.1rem;
+  height: 3.6rem;
+  padding: 0 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--text);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.wp-day:hover {
+  border-color: var(--text-3);
+}
+.wp-day:active {
+  transform: scale(0.96);
+}
+.wp-day[aria-checked="true"] {
+  color: var(--on-ink);
+  background: var(--text);
+  border-color: var(--text);
+}
+.wp-day-none {
+  min-width: 3.6rem;
+  border-style: dashed;
+}
+.wp-day-wd {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+.wp-day-n {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.wp-day-none .wp-day-n {
+  font-size: 0.75rem;
+}
+.wp-day-dots {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 6px;
+}
+.wp-day-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.wp-day-dots em {
+  font-style: normal;
+  font-size: 0.58rem;
+  line-height: 6px;
+  opacity: 0.7;
+}
+.wp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.wp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 2.1rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-2);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.wp-chip:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+.wp-chip:active {
+  transform: scale(0.96);
+}
+.wp-chip[aria-checked="true"] {
+  color: var(--on-ink);
+  background: var(--text);
+  border-color: var(--text);
+}
+.wp-chip-t {
+  font-weight: 500;
+  color: var(--text-3);
+}
+.wp-chip[aria-checked="true"] .wp-chip-t {
+  color: inherit;
+}
+.wp-chip-sm {
+  height: 1.8rem;
+  padding: 0 0.6rem;
+  font-size: 0.72rem;
+}
+.wp-for {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-right: 0.1rem;
+}
+.wp-own {
+  display: block;
+  margin-top: 0.45rem;
+  animation: ag-in 180ms ease-out both;
+}
+.wp-own input {
+  height: 2.4rem;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--cyan);
+  background: var(--panel);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 14%, transparent);
+}
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.wp-row .wp-label {
+  margin: 0;
+}
+.wp-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+}
+.wp-stepper button {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  color: var(--text-2);
+}
+.wp-stepper button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.wp-stepper button:disabled {
+  opacity: 0.35;
+}
+.wp-stepper span {
+  min-width: 1.4rem;
+  text-align: center;
+  font-weight: 700;
+}
+/* The day as it would be. */
+.wp-preview {
+  display: grid;
+  gap: 1px;
+  padding: 0.35rem;
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+.wp-preview li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+.wp-preview li.is-new {
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: 0 0 0 1.5px var(--k), 0 6px 14px -10px var(--k);
+  animation: wp-slot 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes wp-slot {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.wp-preview li[data-clash] {
+  color: var(--warn);
+}
+.wp-pt {
+  flex-shrink: 0;
+  width: 5.4rem;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+.wp-preview li.is-new .wp-pt {
+  color: var(--text-2);
+}
+.wp-pi {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  color: var(--k, var(--text-3));
+  background: color-mix(in srgb, var(--k, var(--text-3)) 13%, var(--panel));
+}
+.wp-pi-ev {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--text-3);
+}
+.wp-clash {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--warn);
+  animation: ag-in 200ms ease-out both;
+}
+.wp-add-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.wp-add-note:hover {
+  color: var(--text);
+}
+.wp textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+}
+.wp textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+.wp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+.wp-remove {
+  margin-right: auto;
+  color: var(--bad);
+}
+.wp-save {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Places to see: "When?", and dragged onto a day. */
+.ag-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 2rem;
+  padding: 0 0.65rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, var(--panel));
+  transition: background-color 140ms ease;
+}
+.ag-when:hover {
+  background: color-mix(in srgb, var(--cyan) 17%, var(--panel));
+}
+.ag-grip {
+  display: none;
+  flex-shrink: 0;
+  margin-right: -0.2rem;
+  color: var(--text-3);
+  cursor: grab;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ag-grip {
+    display: grid;
+  }
+  .ag-idea[draggable="true"] {
+    cursor: grab;
+  }
+}
+.ag-idea[draggable="true"]:active {
+  cursor: grabbing;
+}
+[data-dragging] .ag-day {
+  outline: 1.5px dashed transparent;
+  outline-offset: 2px;
+  border-radius: 14px;
+  transition: outline-color 140ms ease, background-color 140ms ease;
+}
+[data-dragging] .ag-day,
+.trip-panel:has([data-dragging]) .city-day {
+  outline: 1.5px dashed var(--line-strong);
+}
+.ag-day[data-drop],
+.city-day[data-drop] {
+  outline: 2px solid var(--cyan) !important;
+  background: color-mix(in srgb, var(--cyan) 7%, transparent);
+}
+.poi-card {
+  max-height: min(72vh, 34rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wp,
+  .wp-in,
+  .wp-own,
+  .wp-clash,
+  .wp-preview li.is-new {
+    animation: none;
+  }
+}

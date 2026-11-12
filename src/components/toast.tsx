@@ -61,7 +61,7 @@ export function Toaster() {
           {t.emoji && <span className={`${t.celebrate ? "text-3xl pop" : "text-xl"}`} aria-hidden>{t.emoji}</span>}
           <div className="min-w-0 flex-1">
             <p className="font-semibold leading-tight">{t.title}</p>
-            {t.body && <p className={`t-small leading-snug ${t.celebrate ? "text-text/80" : "text-white/75"}`}>{t.body}</p>}
+            {t.body && <p className={`t-small leading-snug ${t.celebrate ? "text-text/80" : "text-on-ink/80"}`}>{t.body}</p>}
           </div>
           {t.action && (
             <button type="button" className="toast-act shrink-0 t-small font-semibold underline-offset-2 hover:underline" onClick={() => (t.action!.run(), dismiss(t.id))}>

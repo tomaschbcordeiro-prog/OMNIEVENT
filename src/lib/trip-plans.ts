@@ -108,24 +108,13 @@ export interface ParseContext {
   defaultDay: string;
 }
 
-/**
- * A plan from a line of text. Picks out what it is, the day (or days), times, a journey's
- * ends, a flight number and where it is; what's left is its title.
- */
-export function parsePlan(text: string, ctx: ParseContext): Omit<TripPlan, "id" | "createdAt"> {
-  let rest = ` ${text.replace(/\s+/g, " ").trim()} `;
+/** The times and the day said in a line of text, and what's left of it. */
+function takeWhen(text: string, ctx: ParseContext): { rest: string; times: string[]; day?: string; endDay?: string } {
+  let rest = text;
   const cut = (re: RegExp) => {
     rest = rest.replace(re, " ");
   };
   const around = ctx.days[0] ?? ctx.defaultDay;
-
-  // A flight number (TP1350, BA 432, U2 8123).
-  let ref: string | undefined;
-  const fl = rest.match(/\s([A-Z]{2}|[A-Z]\d|\d[A-Z])\s?(\d{1,4})(?=[\s,.]|$)/);
-  if (fl) {
-    ref = `${fl[1]} ${fl[2]}`;
-    cut(new RegExp(`\\s${fl[1]}\\s?${fl[2]}(?=[\\s,.]|$)`));
-  }
 
   // Times: "9:40", "21h30", "15h", "8am", and a range "9:40-12:15".
   const times: string[] = [];
@@ -174,6 +163,47 @@ export function parsePlan(text: string, ctx: ParseContext): Omit<TripPlan, "id" 
   for (const [re, d, end] of found) {
     if (take(d, end) && re) cut(re);
   }
+  return { rest, times, day, endDay };
+
+}
+
+/**
+ * A place and when, from what's typed in a search ("Café Nicola wed 10:00"): the words to
+ * search for, and the day and times it said, if any.
+ */
+export function splitWhen(text: string, ctx: ParseContext): { query: string; day?: string; time?: string; endTime?: string } {
+  const w = takeWhen(` ${text.replace(/\s+/g, " ").trim()} `, ctx);
+  const query = w.rest
+    .replace(/\s+/g, " ")
+    .replace(/(?:\s(?:on|at|for|from|em|no|na|para|às|as|de|dia|@))+\s*$/i, "")
+    .replace(/^[\s,.;:–—-]+|[\s,.;:–—-]+$/g, "")
+    // "Dinner at Ramiro", "coffee at A Brasileira": the place is what's after "at".
+    .replace(/^(?:(?:dinner|lunch|breakfast|brunch|coffee|drinks?|visit|jantar|almo[cç]o|pequeno[- ]almo[cç]o|caf[eé]|copos?)\s+(?:at|@|no|na|em|ao|à)\s+)(?=\S)/iu, "")
+    .trim();
+  return { query, ...(w.day ? { day: w.day } : {}), ...(w.times[0] ? { time: w.times[0] } : {}), ...(w.times[1] ? { endTime: w.times[1] } : {}) };
+}
+
+/**
+ * A plan from a line of text. Picks out what it is, the day (or days), times, a journey's
+ * ends, a flight number and where it is; what's left is its title.
+ */
+export function parsePlan(text: string, ctx: ParseContext): Omit<TripPlan, "id" | "createdAt"> {
+  let rest = ` ${text.replace(/\s+/g, " ").trim()} `;
+  const cut = (re: RegExp) => {
+    rest = rest.replace(re, " ");
+  };
+
+  // A flight number (TP1350, BA 432, U2 8123).
+  let ref: string | undefined;
+  const fl = rest.match(/\s([A-Z]{2}|[A-Z]\d|\d[A-Z])\s?(\d{1,4})(?=[\s,.]|$)/);
+  if (fl) {
+    ref = `${fl[1]} ${fl[2]}`;
+    cut(new RegExp(`\\s${fl[1]}\\s?${fl[2]}(?=[\\s,.]|$)`));
+  }
+
+  const w = takeWhen(rest, ctx);
+  rest = w.rest;
+  const { times, day, endDay } = w;
 
   // What it is: said in words, or a flight number.
   let kind: PlanKind = WORDS.find(([, re]) => re.test(rest))?.[0] ?? (ref ? "flight" : "activity");

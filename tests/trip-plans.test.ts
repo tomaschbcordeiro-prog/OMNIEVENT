@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { durationOf, nightsOf, parsePlan, planIcs, planSortKey } from "@/lib/trip-plans";
+import { durationOf, nightsOf, parsePlan, planIcs, planSortKey, splitWhen } from "@/lib/trip-plans";
 
 const days = ["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04", "2026-12-05"];
 const ctx = { days, defaultDay: "2026-12-01" };
@@ -71,5 +71,24 @@ describe("places on the map", () => {
     expect(JSON.stringify((poiFilter(["service"]) as unknown[]).at(-1))).toMatch(/^\["!"/);
     // Bins and bollards never.
     expect(JSON.stringify(all)).toContain("waste_basket");
+  });
+});
+
+describe("a place and when, from a search", () => {
+  const days = ["2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"];
+  const ctx = { days, defaultDay: days[0] };
+  it("keeps the place's words, and takes the day and times out", () => {
+    expect(splitWhen("Café Nicola wed 10:00", ctx)).toEqual({ query: "Café Nicola", day: "2026-12-02", time: "10:00" });
+    expect(splitWhen("Time Out Market on 3 Dec 13h-14h30", ctx)).toEqual({ query: "Time Out Market", day: "2026-12-03", time: "13:00", endTime: "14:30" });
+    expect(splitWhen("A Brasileira às 16h", ctx)).toEqual({ query: "A Brasileira", time: "16:00" });
+    expect(splitWhen("pasteis de belem at 9am", ctx)).toEqual({ query: "pasteis de belem", time: "09:00" });
+  });
+  it("searches for the place in 'dinner at …'", () => {
+    expect(splitWhen("Dinner at Ramiro 20:30", ctx)).toEqual({ query: "Ramiro", time: "20:30" });
+    expect(splitWhen("jantar no Ramiro", ctx).query).toBe("Ramiro");
+  });
+  it("leaves a plain name alone", () => {
+    expect(splitWhen("Gulbenkian", ctx)).toEqual({ query: "Gulbenkian" });
+    expect(splitWhen("Museu Nacional do Azulejo", ctx)).toEqual({ query: "Museu Nacional do Azulejo" });
   });
 });
