@@ -8494,6 +8494,9 @@ body:has(.trip-stage[data-show]) .tabbar {
 }
 
 .show {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
   --glass: rgb(9 13 26 / 0.86);
   --line-g: rgb(255 255 255 / 0.14);
   position: fixed;
@@ -8515,6 +8518,7 @@ body:has(.trip-stage[data-show]) .tabbar {
   position: absolute;
   inset: 0;
   pointer-events: none !important;
+  transition: opacity 260ms ease;
   background:
     linear-gradient(to bottom, rgb(4 8 20 / 0.72) 0%, rgb(4 8 20 / 0) 22%),
     linear-gradient(to top, rgb(4 8 20 / 0.7) 0%, rgb(4 8 20 / 0) 26%);
@@ -8603,8 +8607,8 @@ body:has(.trip-stage[data-show]) .tabbar {
   left: 0;
   width: var(--from);
   border-radius: 99px;
-  background: var(--c, #fff);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--c, #fff) 70%, transparent);
+  background: #fff;
+  box-shadow: 0 0 8px rgb(255 255 255 / 0.45);
 }
 .show-bar-fill[data-running] {
   animation: show-fill var(--dur) linear forwards;
@@ -8614,28 +8618,85 @@ body:has(.trip-stage[data-show]) .tabbar {
     width: var(--from);
   }
   to {
-    width: var(--to);
+    width: 100%;
   }
 }
 .show-topline {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 0.35rem;
+  margin-top: 0.3rem;
+}
+/* Every city as a story ring: the one playing in its colour, the ones seen faded. */
+.show-rings {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 3px;
+}
+.show-rings::-webkit-scrollbar {
+  display: none;
+}
+.show-ring {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 2px;
+  border-radius: 999px;
+  background: conic-gradient(from 210deg, var(--c), #ffd55e, var(--c));
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+.show-ring > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  background: color-mix(in srgb, var(--c) 55%, #0b1020);
+  box-shadow: inset 0 0 0 2px #0b1020;
+}
+.show-ring[data-seen] {
+  background: rgb(255 255 255 / 0.32);
+}
+.show-ring[data-seen] > span {
+  background: rgb(11 16 32 / 0.85);
+  color: rgb(255 255 255 / 0.85);
+}
+.show-ring[aria-current] {
+  transform: scale(1.12);
+}
+.show-ring:not([aria-current]):hover {
+  transform: scale(1.06);
+}
+.show-titles {
+  min-width: 0;
+  flex: 1;
 }
 .show-trip {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .show-where {
-  margin-left: auto;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1.25;
   color: rgb(255 255 255 / 0.85);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .show-where span {
   font-weight: 400;
@@ -9096,6 +9157,7 @@ body:has(.trip-stage[data-show]) .tabbar {
 
 /* Every part, to go to. */
 .show-list {
+  touch-action: auto;
   position: absolute;
   right: 1rem;
   bottom: calc(env(safe-area-inset-bottom) + 5.25rem);
@@ -9203,4 +9265,259 @@ body:has(.trip-stage[data-show]) .tabbar {
     animation: none;
     left: 50%;
   }
+}
+
+/* Show v2: the city's colour in the light, the way back, holding to see the map. */
+.show::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 0% 100%, color-mix(in srgb, var(--ink) 30%, transparent), transparent 70%);
+  opacity: 0.8;
+  transition: background 600ms ease;
+}
+.show[data-dir="back"] .show-card {
+  animation-name: show-card-back;
+}
+@keyframes show-card-back {
+  from {
+    opacity: 0;
+    transform: translateX(-18px) scale(0.985);
+    filter: blur(6px);
+  }
+}
+.show-top,
+.show-stage,
+.show-controls,
+.show-hint,
+.show::before {
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+.show[data-peek] .show-top,
+.show[data-peek] .show-stage,
+.show[data-peek] .show-controls,
+.show[data-peek] .show-hint,
+.show[data-peek] .show-shade,
+.show[data-peek]::before {
+  opacity: 0;
+}
+.show[data-peek] .show-stage {
+  transform: translateY(12px);
+}
+.show-stage {
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+/* The card's own buttons: change it, add to it. */
+.show-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+.show-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.05rem;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+.show-act:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.show-act:active {
+  transform: scale(0.96);
+}
+.show-act-main {
+  color: #0b1630;
+  background: #fff;
+  border-color: #fff;
+}
+.show-act-main:hover {
+  background: #e8eefc;
+}
+.show-act-q {
+  margin-right: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.85);
+}
+.show-daylist li > button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.15rem 0.3rem;
+  margin: -0.15rem -0.3rem;
+  border-radius: 8px;
+  text-align: left;
+}
+.show-daylist li > button:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.show-chips li > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.show-chips li:has(button:hover) {
+  background: rgb(255 255 255 / 0.2);
+}
+/* The day's things as dots, this one big. */
+.show-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+}
+.show-dots button {
+  display: block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--k, #fff) 65%, #fff);
+  opacity: 0.5;
+  transition: width 220ms ease, opacity 160ms ease;
+}
+.show-dots button:hover {
+  opacity: 0.85;
+}
+.show-dots button[aria-current] {
+  width: 1.6rem;
+  opacity: 1;
+}
+/* What's next, on a computer: a tap away. */
+.show-next {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  color: #fff;
+  background: rgb(9 13 26 / 0.62);
+  border: 1px solid var(--line-g);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: show-line-in 500ms 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: background-color 140ms ease;
+}
+.show-next:hover {
+  background: rgb(9 13 26 / 0.85);
+}
+.show-next-k {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.75);
+}
+.show-next > :last-child {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+  .show-stage {
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+/* Changing something as it plays: the site's own card, in its theme. */
+.show-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(4 8 20 / 0.35);
+  animation: show-in 200ms ease-out both;
+}
+.show-stage:has(.show-sheet) {
+  z-index: 2;
+}
+.show-sheet {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: auto;
+  width: 100%;
+  max-height: min(72vh, 40rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+  border-radius: 22px;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 30px 60px -24px rgb(0 0 0 / 0.75);
+  animation: show-card-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.show-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.show-sheet-h {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.show-sheet .city-add {
+  margin-bottom: 0;
+}
+.show-sheet .wp {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+@media (max-width: 1023px) {
+  .show-stage:has(.show-sheet) {
+    bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .show-next,
+  .show-sheet,
+  .show-scrim {
+    animation: none;
+  }
+}
+@media (max-width: 1023px) {
+  .show-next {
+    display: none;
+  }
+  .show-card {
+    max-height: 60vh;
+  }
+  .show-pic {
+    height: 6rem;
+  }
+  .show-item-body {
+    padding: 0.95rem 1.15rem 1.1rem;
+  }
+  .show-card-actions {
+    margin-top: 0.8rem;
+  }
+}
+/* A sheet's buttons stay in reach while it scrolls. */
+.show-sheet .wp-actions {
+  position: sticky;
+  bottom: -1rem;
+  margin: 0 -1rem -1rem;
+  padding: 0.7rem 1rem 1rem;
+  background: linear-gradient(to bottom, transparent, var(--bg-2) 30%);
 }

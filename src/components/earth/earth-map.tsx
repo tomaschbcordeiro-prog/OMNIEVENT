@@ -61,6 +61,8 @@ export interface EarthMapHandle {
    * tilts in, then turns slowly. Resolves true on arrival, false when it's taken over.
    */
   glideTo(to: [number, number], opts?: { zoom?: number; pitch?: number; bearing?: number; ms?: number; orbitMs?: number }): Promise<boolean>;
+  /** A day's way between places, dotted, in a colour; null clears it. */
+  setPath(points: [number, number][] | null, color?: string): void;
   /** The room panels or cards take on screen: the camera's centre is the rest. */
   padTo(padding: { top: number; right: number; bottom: number; left: number }): void;
   /** Pull back to see a whole route at once. */
@@ -340,6 +342,11 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         });
       });
     },
+    setPath(points, color) {
+      const m = mapRef.current;
+      if (!m || !ready.current) return;
+      (m.getSource("day-path") as GeoJSONSource | undefined)?.setData(points && points.length > 1 ? { type: "FeatureCollection", features: [{ type: "Feature", properties: color ? { color } : {}, geometry: { type: "LineString", coordinates: points } }] } : EMPTY);
+    },
     padTo(padding) {
       const m = mapRef.current;
       if (!m) return;
@@ -561,9 +568,13 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       // and the leg in flight, fading in behind a comet head.
       map.addSource("flight", { type: "geojson", data: EMPTY });
       map.addSource("flight-live", { type: "geojson", data: EMPTY, lineMetrics: true });
+      // A day's way round a city (a trip played as a show): dotted, in the city's colour.
+      map.addSource("day-path", { type: "geojson", data: EMPTY });
       const round = { "line-cap": "round", "line-join": "round" } as const;
       const isLine: ExpressionSpecification = ["==", ["geometry-type"], "LineString"];
       const isPoint: ExpressionSpecification = ["==", ["geometry-type"], "Point"];
+      map.addLayer({ id: "day-path-glow", type: "line", source: "day-path", layout: round, paint: { "line-color": ["coalesce", ["get", "color"], "#FFB800"], "line-width": 9, "line-blur": 7, "line-opacity": 0.32 } });
+      map.addLayer({ id: "day-path", type: "line", source: "day-path", layout: round, paint: { "line-color": ["coalesce", ["get", "color"], "#FFB800"], "line-width": 3.2, "line-opacity": 0.95, "line-dasharray": [0.01, 2] } });
       map.addLayer({ id: "flight-plan", type: "line", source: "flight", filter: ["==", ["get", "kind"], "plan"], layout: round, paint: { "line-color": "#FFD978", "line-width": 1.8, "line-opacity": 0.8, "line-dasharray": [1.2, 2.2] } });
       map.addLayer({ id: "flight-trail-glow", type: "line", source: "flight", filter: ["==", ["get", "kind"], "trail"], layout: round, paint: { "line-color": "#FFB800", "line-width": 9, "line-blur": 7, "line-opacity": 0.5 } });
       map.addLayer({ id: "flight-trail", type: "line", source: "flight", filter: ["==", ["get", "kind"], "trail"], layout: round, paint: { "line-color": "#FFD978", "line-width": 2.4 } });

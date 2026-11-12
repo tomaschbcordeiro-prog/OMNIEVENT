@@ -301,7 +301,6 @@ export function TripView({ id }: { id: string }) {
             window.setTimeout(() => (sel === null ? frameAll() : pick(sel)), 60);
             window.setTimeout(() => document.querySelector<HTMLElement>(".view-trip")?.focus({ preventScroll: true }), 80);
           }}
-          onOpenEvent={showEvent}
         />
       )}
 

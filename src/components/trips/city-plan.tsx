@@ -98,6 +98,7 @@ function CityAdd({
   picking,
   onPick,
   onSave,
+  onAdded,
 }: {
   trip: Trip;
   stop: TripStop;
@@ -109,6 +110,8 @@ function CityAdd({
   picking: Picking | null;
   onPick: (p: Picking | null) => void;
   onSave: (p: Picking, w: WhenValue, el: HTMLElement | null) => void;
+  /** A plan of one's own went in (it needs no "when"). */
+  onAdded?: () => void;
 }) {
   const [q, setQ] = useState("");
   const [found, setFound] = useState<Found[]>([]);
@@ -159,6 +162,7 @@ function CityAdd({
       setQ("");
       setHi(0);
       onDay(null);
+      onAdded?.();
       return;
     }
     const initial = { ...(said.day || day ? { day: said.day ?? day ?? undefined } : {}), ...(said.time ? { time: said.time } : {}), ...(said.endTime ? { endTime: said.endTime } : {}) };
@@ -342,6 +346,59 @@ function Sights({ trip, stop, sights, onShowAt, onPick, day }: { trip: Trip; sto
   );
 }
 
+/** A place picked (and when) into the trip, or a change to one on it already. */
+export function addPicked(trip: Trip, stop: TripStop, p: Picking, w: WhenValue, el: HTMLElement | null) {
+  const from = el?.getBoundingClientRect();
+  const when = dayName(w.day || stop.from);
+  const said = w.day ? `${p.draft.kind === "stay" && w.endDay ? `${when} → ${dayName(w.endDay)}` : when}${w.time ? `, ${w.time}` : ""}` : "a place to see";
+  if (p.existing) {
+    const before = p.existing;
+    announcePlan(before.id, from);
+    userActions.updatePlan(trip.id, before.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes });
+    toast({ title: `${before.title}: ${said}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, before.id, before) } });
+  } else {
+    const id = newId();
+    announcePlan(id, from);
+    userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), ...(p.draft.image?.startsWith("https://") ? { image: p.draft.image } : {}), createdAt: new Date().toISOString() });
+    toast({ title: `Added to ${placeName(stop)}`, body: `${p.draft.title}, ${said}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
+  }
+  try {
+    navigator.vibrate?.(8);
+  } catch {
+    // no vibration here
+  }
+}
+
+/** The city's one search on its own (a sight, a place, a plan of your own), set to a day: for adding from elsewhere (a trip's show). */
+export function QuickAdd({ trip, stop, day, events, onDone }: { trip: Trip; stop: TripStop; day: string | null; events: { e: TripEvent; day: string }[]; onDone?: () => void }) {
+  const sights = useSights(stop);
+  const input = useRef<HTMLInputElement>(null);
+  const [onDay, setOnDay] = useState<string | null>(day);
+  const [picking, setPicking] = useState<Picking | null>(null);
+  useEffect(() => {
+    input.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <CityAdd
+      trip={trip}
+      stop={stop}
+      sights={sights ?? []}
+      day={onDay}
+      onDay={setOnDay}
+      input={input}
+      events={events}
+      picking={picking}
+      onPick={setPicking}
+      onSave={(p, w, el) => {
+        addPicked(trip, stop, p, w, el);
+        setPicking(null);
+        onDone?.();
+      }}
+      onAdded={onDone}
+    />
+  );
+}
+
 /** The plans of a city: on its days (but the journeys), or places to see round it. */
 export function plansIn(trip: Trip, stop: TripStop): TripPlan[] {
   const days = daysOf(stop.from, stop.to);
@@ -395,25 +452,7 @@ export function CityPlan({
   const perDay = (d: string) => [...onDays.filter((p) => p.day === d).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? "")).map((p) => p.kind as string), ...events.filter((x) => x.day === d).map(() => "event")];
   const scrollTo = (sel: string) => document.querySelector<HTMLElement>(`.trip-panel ${sel}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
   const save = (p: Picking, w: WhenValue, el: HTMLElement | null) => {
-    const from = el?.getBoundingClientRect();
-    const when = dayName(w.day || stop.from);
-    const said = w.day ? `${p.draft.kind === "stay" && w.endDay ? `${when} → ${dayName(w.endDay)}` : when}${w.time ? `, ${w.time}` : ""}` : "a place to see";
-    if (p.existing) {
-      const before = p.existing;
-      announcePlan(before.id, from);
-      userActions.updatePlan(trip.id, before.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes });
-      toast({ title: `${before.title}: ${said}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, before.id, before) } });
-    } else {
-      const id = newId();
-      announcePlan(id, from);
-      userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), ...(p.draft.image?.startsWith("https://") ? { image: p.draft.image } : {}), createdAt: new Date().toISOString() });
-      toast({ title: `Added to ${placeName(stop)}`, body: `${p.draft.title}, ${said}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
-    }
-    try {
-      navigator.vibrate?.(8);
-    } catch {
-      // no vibration here
-    }
+    addPicked(trip, stop, p, w, el);
     setPicking(null);
     setOnDay(null);
   };

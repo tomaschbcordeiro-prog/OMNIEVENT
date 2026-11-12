@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sightsFromWikipedia, type WikiPage } from "@/lib/sights";
+import { photoFor, sightsFromWikipedia, type WikiPage } from "@/lib/sights";
 
 // Round central Lisbon, as Wikipedia answered.
 const page = (pageid: number, title: string, description: string, length: number, img = true): WikiPage => ({ pageid, title, description, length, coordinates: [{ lat: 38.71 + pageid / 1e4, lon: -9.14 }], thumbnail: img ? { source: `https://upload.wikimedia.org/${pageid}.jpg` } : undefined });
@@ -37,5 +37,29 @@ describe("a city's sights", () => {
     expect(by["Santa Justa Lift"].image).toContain("upload.wikimedia.org");
     expect(by["Santa Justa Lift"].url).toBe("https://en.wikipedia.org/?curid=8");
     expect(sightsFromWikipedia(pages, 3)).toHaveLength(3);
+  });
+});
+
+describe("a place's picture", () => {
+  const pages = [
+    { pageid: 1, title: "Jerónimos Monastery", thumbnail: { source: "https://upload.wikimedia.org/a.jpg" } },
+    { pageid: 2, title: "Belém Tower", thumbnail: { source: "https://upload.wikimedia.org/b.jpg" } },
+    { pageid: 3, title: "Rua de Belém" },
+    { pageid: 4, title: "Pastéis de Belém", thumbnail: { source: "https://upload.wikimedia.org/c.jpg" } },
+  ];
+  it("finds the page that is about it", () => {
+    expect(photoFor(pages, "Mosteiro dos Jerónimos")?.title).toBe("Jerónimos Monastery");
+    expect(photoFor(pages, "Torre de Belém")?.title).toBe("Belém Tower");
+    expect(photoFor(pages, "Pasteis de Belem")?.image).toBe("https://upload.wikimedia.org/c.jpg");
+  });
+  it("finds nothing for a place with no page", () => {
+    expect(photoFor(pages, "Café Nicola")).toBeNull();
+    expect(photoFor(pages, "Ramiro")).toBeNull();
+  });
+});
+
+describe("a place's picture, careful with short names", () => {
+  it("doesn't take a one-word name for a longer page", () => {
+    expect(photoFor([{ pageid: 2, title: "Belém Tower", thumbnail: { source: "https://upload.wikimedia.org/b.jpg" } }], "Café Belém")).toBeNull();
   });
 });

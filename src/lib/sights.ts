@@ -68,3 +68,32 @@ export function sightsFromWikipedia(pages: WikiPage[], limit = 24): Sight[] {
   }
   return out;
 }
+
+const tokens = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\(.*?\)/g, " ")
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2 && !/^(the|and|of|de|da|do|dos|das|del|la|le|el|des|di|von|der|und|rua|cafe|restaurante|restaurant)$/.test(w));
+
+/**
+ * A place's picture: the Wikipedia page near it whose title is its name (most of the words in
+ * one are in the other). Nothing when no page there is about it.
+ */
+export function photoFor(pages: WikiPage[], name: string): { image: string; title: string; url: string } | null {
+  const want = tokens(name);
+  if (!want.length) return null;
+  let best: { p: WikiPage; score: number } | null = null;
+  for (const p of pages) {
+    if (!p.thumbnail?.source) continue;
+    const have = tokens(p.title);
+    // A one-word name is only a page of that one word ("Café Belém" isn't Belém Tower).
+    if (!have.length || (want.length === 1 && have.length !== 1)) continue;
+    const shared = want.filter((w) => have.includes(w)).length;
+    const score = shared / Math.max(want.length, have.length);
+    if (shared && score >= 0.5 && (!best || score > best.score)) best = { p, score };
+  }
+  return best ? { image: best.p.thumbnail!.source, title: best.p.title, url: `https://en.wikipedia.org/?curid=${best.p.pageid}` } : null;
+}
