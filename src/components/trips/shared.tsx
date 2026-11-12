@@ -17,6 +17,8 @@ const EarthMap = dynamic(() => import("../earth/earth-map").then((m) => m.EarthM
 
 // Places (restaurants, museums…) show as you zoom in, to put on the trip.
 const LAYERS = { ...DEFAULT_LAYERS, terrain: false, density: false, poi: true };
+/** While a trip plays as a show: no place icons, so its own places stand out. */
+const QUIET = { ...LAYERS, poi: false };
 
 export type Pad = { top: number; right: number; bottom: number; left: number };
 
@@ -144,6 +146,7 @@ export function TripGlobe({
   onReady,
   onBackground,
   label,
+  quiet,
 }: {
   api: RefObject<EarthMapHandle | null>;
   route: FlightRoute | null;
@@ -153,6 +156,8 @@ export function TripGlobe({
   /** A tap on the globe away from any icon (where, and the place named there, if any). */
   onBackground?: (at: MapClick) => void;
   label: string;
+  /** Only the trip on it (no place icons). */
+  quiet?: boolean;
 }) {
   const [ready, setReady] = useState(false);
   const [dark, setDark] = useState(false);
@@ -182,7 +187,7 @@ export function TripGlobe({
       initial={{ lat: 35, lng: 5, zoom: 1.4, pitch: 0, bearing: 0 }}
       projection="globe"
       base={dark ? "lights" : "map"}
-      layers={LAYERS}
+      layers={quiet ? QUIET : LAYERS}
       clusters={NONE}
       flyTo={fly}
       framePadding={pad}

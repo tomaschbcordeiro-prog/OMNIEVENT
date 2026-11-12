@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Play, Plus, Sparkles } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { useUser, type Trip } from "@/lib/user/store";
 import { KIND_ICON } from "./agenda";
@@ -136,6 +136,11 @@ export function TripsList() {
           <Link href={`/trips/${t.id}`} className="block press" aria-label={`Open ${t.name}`}>
             <TripPass name={t.name} emoji={t.emoji} stops={t.stops ?? []} start={t.start} end={t.end} events={t.eventIds.length} />
           </Link>
+          {(t.stops?.length ?? 0) > 0 && (
+            <Link href={`/trips/${t.id}?show=1`} className="trip-pass-view press" aria-label={`View ${t.name} as a film`}>
+              <span aria-hidden><Play size={10} fill="currentColor" /></span> View trip
+            </Link>
+          )}
           <NextPlan trip={t} />
         </li>
       ))}

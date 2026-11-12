@@ -55,7 +55,14 @@ export interface EarthMapHandle {
    * pulling out mid-flight and tilting in on arrival, then turn slowly round the place.
    * Resolves true on arrival, false when someone grabs the map first.
    */
-  flyLeg(from: [number, number] | null, to: [number, number], opts?: { zoom?: number; pitch?: number; orbitMs?: number }): Promise<boolean>;
+  flyLeg(from: [number, number] | null, to: [number, number], opts?: { zoom?: number; pitch?: number; orbitMs?: number; ms?: number }): Promise<boolean>;
+  /**
+   * A short, smooth move within a place (a city to one of its streets): the camera glides and
+   * tilts in, then turns slowly. Resolves true on arrival, false when it's taken over.
+   */
+  glideTo(to: [number, number], opts?: { zoom?: number; pitch?: number; bearing?: number; ms?: number; orbitMs?: number }): Promise<boolean>;
+  /** The room panels or cards take on screen: the camera's centre is the rest. */
+  padTo(padding: { top: number; right: number; bottom: number; left: number }): void;
   /** Pull back to see a whole route at once. */
   viewRoute(points: [number, number][], zoom: number): void;
   /** Stop any camera move in progress, a flight leg included (it resolves false). */
@@ -255,7 +262,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       drawFlight();
       drawLeg(null);
     },
-    flyLeg(from, to, { zoom = 11.5, pitch = 52, orbitMs = 9000 } = {}) {
+    flyLeg(from, to, { zoom = 11.5, pitch = 52, orbitMs = 9000, ms: msWanted } = {}) {
       const m = mapRef.current;
       if (!m) return Promise.resolve(false);
       const gen = ++legGen.current;
@@ -280,7 +287,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         const b0 = m.getBearing();
         // Out far enough to see the way: the whole planet for an ocean, a region for a hop.
         const zMid = Math.min(zoom, Math.max(1.3, Math.min(6, 11.9 - 2.57 * Math.log10(Math.max(km, 50)))));
-        const ms = Math.max(2600, Math.min(6400, 2300 + km * 0.36));
+        const ms = msWanted ?? Math.max(2600, Math.min(6400, 2300 + km * 0.36));
         const cruisePitch = 18;
         const arriveBearing = -16;
         const t0 = performance.now();
@@ -309,6 +316,35 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         };
         requestAnimationFrame(frame);
       });
+    },
+    glideTo(to, { zoom = 15.5, pitch = 55, bearing, ms = 2400, orbitMs = 0 } = {}) {
+      const m = mapRef.current;
+      if (!m) return Promise.resolve(false);
+      const gen = ++legGen.current;
+      spinning.current = false;
+      m.stop();
+      if (latest.current.reducedMotion) {
+        m.jumpTo({ center: to, zoom, pitch: 0, bearing: 0 });
+        return Promise.resolve(true);
+      }
+      return new Promise<boolean>((resolve) => {
+        tour.current = true;
+        tourStop.current = false;
+        m.flyTo({ center: to, zoom, pitch, bearing: bearing ?? m.getBearing() + 22, duration: ms, curve: 1.3, easing: easeInOutCubic, essential: true });
+        m.once("moveend", () => {
+          if (gen !== legGen.current || mapRef.current !== m) return resolve(false);
+          tour.current = false;
+          if (tourStop.current) return resolve(false);
+          resolve(true);
+          if (orbitMs > 0) m.easeTo({ bearing: m.getBearing() + 18, zoom: m.getZoom() + 0.3, duration: orbitMs, easing: (t) => t, essential: false });
+        });
+      });
+    },
+    padTo(padding) {
+      const m = mapRef.current;
+      if (!m) return;
+      // At once: the move that follows starts from it (an easing would be cut short by it).
+      m.setPadding(padding);
     },
     halt() {
       legGen.current++;

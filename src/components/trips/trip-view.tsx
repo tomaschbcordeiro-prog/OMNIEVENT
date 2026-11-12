@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Play, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
 import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
@@ -11,6 +11,7 @@ import { isTravel, kindLabel, planIcs } from "@/lib/trip-plans";
 import { KIND_ICON, TripAgenda } from "./agenda";
 import { PoiCard, type MapPlace } from "./place-to-trip";
 import { CityPlan, plansIn } from "./city-plan";
+import { TripShow } from "./trip-show";
 import type { MapClick } from "../earth/earth-map";
 import type { TripPlan } from "@/lib/trip-plans";
 import { spanOf } from "@/lib/trip-snap";
@@ -20,7 +21,7 @@ import { formatEventTime, localDateKey } from "@/lib/format";
 import type { EarthMapHandle, FlyRequest } from "../earth/earth-map";
 import { Poster } from "../ui";
 import { toast } from "../toast";
-import { bboxOf, CityPin, dayLabel, fanOut, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, tripSnapOf, usePanelPad, useSheet, useTripEvents, type MapIcon, type TripEvent } from "./shared";
+import { bboxOf, CityPin, dayLabel, fanOut, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, tripSnapOf, usePanelPad, useSheet, useTripEvents, type MapIcon, type Pad, type TripEvent } from "./shared";
 
 const GROUP_EMOJI: Record<string, string> = {
   music: "🎶", sports: "⚽", theatre: "🎭", comedy: "😂", festivals: "🎉", cinema: "🎬", conferences: "🎤", technology: "💻",
@@ -84,6 +85,14 @@ export function TripView({ id }: { id: string }) {
   /** A place tapped on the globe (a museum, a restaurant…), to put on the trip. */
   const [poi, setPoi] = useState<(MapPlace & { below?: boolean }) | null>(null);
   const [fly, setFly] = useState<FlyRequest>();
+  /** The trip playing as a show (from a city, or from the start). */
+  const [showing, setShowing] = useState<{ at?: string; pad: Pad } | null>(null);
+  const play = (at?: string) => {
+    setOpen(null);
+    setPoi(null);
+    const phone = window.matchMedia("(max-width: 1023px)").matches;
+    setShowing({ at, pad: phone ? { top: 84, right: 0, bottom: Math.round(window.innerHeight * 0.46), left: 0 } : { top: 96, right: 48, bottom: 110, left: Math.min(500, Math.round(window.innerWidth * 0.36)) } });
+  };
   const flyKey = useRef(0);
   const { events } = useTripEvents(trip);
   const sugg = useSuggestions(trip);
@@ -111,6 +120,10 @@ export function TripView({ id }: { id: string }) {
     if (!ready || framed.current || !trip) return;
     framed.current = true;
     frameAll();
+    if (sp.get("show")) {
+      play(sp.get("city") ?? undefined);
+      router.replace(`/trips/${trip.id}`, { scroll: false });
+    }
     if (sp.get("hello")) {
       toast({ title: "Your trip is ready", body: "Tap a city to see what's on while you're there.", emoji: trip.emoji ?? "✈️" });
       router.replace(`/trips/${trip.id}`, { scroll: false });
@@ -272,9 +285,25 @@ export function TripView({ id }: { id: string }) {
   const off = placed.filter((p) => !p.fit.ok);
 
   return (
-    <div className="trip-stage">
-      <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={pad} onReady={() => setReady(true)} onBackground={tapGlobe} label={`Globe with your trip ${trip.name}: tap a city to see its events; zoom in to see places (restaurants, museums…) and tap one to add it.`} />
+    <div className="trip-stage" data-show={showing ? "" : undefined}>
+      <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={showing?.pad ?? pad} quiet={!!showing} onReady={() => setReady(true)} onBackground={tapGlobe} label={`Globe with your trip ${trip.name}: tap a city to see its events; zoom in to see places (restaurants, museums…) and tap one to add it.`} />
       <MapIcons api={api} ready={ready} icons={icons} />
+      {showing && ready && (
+        <TripShow
+          trip={trip}
+          stops={stops}
+          events={dayEvents}
+          api={api}
+          pad={showing.pad}
+          startAt={showing.at}
+          onClose={() => {
+            setShowing(null);
+            window.setTimeout(() => (sel === null ? frameAll() : pick(sel)), 60);
+            window.setTimeout(() => document.querySelector<HTMLElement>(".view-trip")?.focus({ preventScroll: true }), 80);
+          }}
+          onOpenEvent={showEvent}
+        />
+      )}
 
       <section
         ref={sheet.panel}
@@ -296,6 +325,13 @@ export function TripView({ id }: { id: string }) {
             </div>
             <Link href="/trips" className="btn btn-ghost btn-icon btn-sm shrink-0" aria-label="All your trips"><X size={18} aria-hidden /></Link>
           </div>
+          {stops.length > 0 && (
+            <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready}>
+              <span className="view-trip-play" aria-hidden><Play size={13} fill="currentColor" /></span>
+              <span>{stop ? `View ${stop.name}` : "View trip"}</span>
+              <span className="view-trip-sub">as a film, on the globe</span>
+            </button>
+          )}
           <div className="trip-chips" role="tablist" aria-label="Cities on this trip">
             <button type="button" role="tab" aria-selected={sel === null} className="trip-chip" onClick={() => pick(null)}>
               <Globe2 size={14} aria-hidden /> Whole trip

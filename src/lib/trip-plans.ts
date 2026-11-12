@@ -30,6 +30,8 @@ export interface TripPlan {
   lng?: number;
   /** The map's own kind for that place ("museum", "restaurant"), for its icon and colour. */
   poi?: string;
+  /** A picture of the place (a sight's, from Wikipedia). */
+  image?: string;
   createdAt: string;
 }
 

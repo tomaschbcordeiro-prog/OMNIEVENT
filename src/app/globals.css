@@ -8392,3 +8392,815 @@ button.ag-item:hover {
     animation: none;
   }
 }
+
+/*
+ * View trip: the trip as a film over the globe. Dark glass chrome in both themes (it sits on
+ * the map like titles on a picture), a bar per part of the trip at the top, the scene's card,
+ * and the controls at the bottom.
+ */
+.view-trip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin-top: 0.7rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(115deg, #0b1630 0%, #13285a 55%, #1d3f8f 100%);
+  box-shadow: 0 10px 24px -14px rgb(11 22 48 / 0.9), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+.view-trip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -14px rgb(11 22 48 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.16);
+}
+.view-trip:disabled {
+  opacity: 0.6;
+}
+.view-trip-play {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  color: #0b1630;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.14);
+}
+.view-trip:hover .view-trip-play {
+  animation: view-pulse 1.4s ease-out infinite;
+}
+@keyframes view-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgb(255 255 255 / 0);
+  }
+}
+.view-trip-sub {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.78);
+}
+.trip-pass-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(115deg, #0b1630, #1d3f8f);
+}
+.trip-pass-view > span {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  color: #0b1630;
+  background: #fff;
+}
+
+/* While it plays, the trip's panel steps aside. */
+.trip-stage[data-show] .planner-panel,
+.trip-stage[data-show] ~ .trip-dock,
+body:has(.trip-stage[data-show]) .trip-dock {
+  visibility: hidden;
+  opacity: 0;
+}
+body:has(.show) {
+  overflow: hidden;
+}
+/* The globe fills the screen for it, under the show; the site's bars step aside. */
+.trip-stage[data-show] {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  height: 100dvh;
+  min-height: 0;
+}
+body:has(.trip-stage[data-show]) .site-header,
+body:has(.trip-stage[data-show]) .tabbar {
+  visibility: hidden;
+}
+
+.show {
+  --glass: rgb(9 13 26 / 0.86);
+  --line-g: rgb(255 255 255 / 0.14);
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  color: #fff;
+  pointer-events: none;
+  animation: show-in 420ms ease-out both;
+}
+@keyframes show-in {
+  from {
+    opacity: 0;
+  }
+}
+.show > * {
+  pointer-events: auto;
+}
+.show-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none !important;
+  background:
+    linear-gradient(to bottom, rgb(4 8 20 / 0.72) 0%, rgb(4 8 20 / 0) 22%),
+    linear-gradient(to top, rgb(4 8 20 / 0.7) 0%, rgb(4 8 20 / 0) 26%);
+}
+@media (min-width: 1024px) {
+  .show-shade {
+    background:
+      linear-gradient(to bottom, rgb(4 8 20 / 0.66) 0%, rgb(4 8 20 / 0) 18%),
+      linear-gradient(to right, rgb(4 8 20 / 0.62) 0%, rgb(4 8 20 / 0.18) 34%, rgb(4 8 20 / 0) 52%),
+      linear-gradient(to top, rgb(4 8 20 / 0.55) 0%, rgb(4 8 20 / 0) 18%);
+  }
+}
+/* Tap left to go back, right for the next part; hold to pause. */
+.show-tap {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.show-tap-hint {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: -1.375rem;
+  border-radius: 999px;
+  background: rgb(9 13 26 / 0.5);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.show-tap-prev {
+  left: 1rem;
+}
+.show-tap-next {
+  right: 1rem;
+}
+@media (hover: hover) {
+  .show-tap:hover .show-tap-hint {
+    opacity: 0.85;
+  }
+}
+@media (min-width: 1024px) {
+  .show-tap-prev {
+    left: calc(min(500px, 36vw) + 1rem);
+  }
+}
+
+.show-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem 0;
+}
+.show-bars {
+  display: flex;
+  gap: 4px;
+}
+.show-bar {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 10px;
+  height: 18px;
+  padding: 7px 0;
+  background: none;
+  cursor: pointer;
+}
+.show-bar::before {
+  content: "";
+  position: absolute;
+  inset: 7px 0;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 0.26);
+}
+.show-bar:hover::before {
+  background: rgb(255 255 255 / 0.4);
+}
+.show-bar-fill {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: var(--from);
+  border-radius: 99px;
+  background: var(--c, #fff);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c, #fff) 70%, transparent);
+}
+.show-bar-fill[data-running] {
+  animation: show-fill var(--dur) linear forwards;
+}
+@keyframes show-fill {
+  from {
+    width: var(--from);
+  }
+  to {
+    width: var(--to);
+  }
+}
+.show-topline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+.show-trip {
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.show-where {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.85);
+  white-space: nowrap;
+}
+.show-where span {
+  font-weight: 400;
+  color: rgb(255 255 255 / 0.75);
+}
+.show-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  color: #fff;
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+.show-icon:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+}
+.show-icon:disabled {
+  opacity: 0.35;
+}
+.show :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* The scene. */
+.show-stage {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(env(safe-area-inset-bottom) + 5.25rem);
+  pointer-events: none !important;
+}
+.show-stage > * {
+  pointer-events: auto;
+}
+@media (min-width: 1024px) {
+  .show-stage {
+    left: 2.5rem;
+    right: auto;
+    top: 6.5rem;
+    bottom: 6.5rem;
+    width: min(26rem, 32vw);
+    display: flex;
+    align-items: center;
+  }
+}
+.show-card {
+  width: 100%;
+  max-height: 46vh;
+  overflow: hidden;
+  padding: 1.25rem 1.3rem 1.3rem;
+  border-radius: 22px;
+  background: var(--glass);
+  border: 1px solid var(--line-g);
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.8);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  animation: show-card-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 1024px) {
+  .show-card {
+    max-height: none;
+    padding: 1.6rem 1.6rem 1.7rem;
+  }
+}
+@keyframes show-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    filter: blur(6px);
+  }
+}
+/* Its lines come in one after another. */
+.s-in {
+  animation: show-line-in 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(120ms + var(--i, 0) * 90ms);
+}
+@keyframes show-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+}
+.show-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.78);
+}
+.show-title {
+  margin-top: 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 7vw, 3.1rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.show-title-sm {
+  font-size: clamp(1.5rem, 5.2vw, 2.15rem);
+  line-height: 1.08;
+}
+.show-sub {
+  margin-top: 0.55rem;
+  font-size: 0.92rem;
+  color: rgb(255 255 255 / 0.85);
+}
+.show-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  font-size: 0.9rem;
+  color: rgb(255 255 255 / 0.88);
+}
+.show-line b {
+  color: #fff;
+}
+.show-facts {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.85);
+}
+.show-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
+  background: var(--c, var(--ink));
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85);
+}
+.show-n-plain {
+  background: rgb(255 255 255 / 0.18);
+  box-shadow: none;
+}
+.show-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.9rem;
+  font-weight: 600;
+}
+.show-route li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.show-route li + li::before {
+  content: "→";
+  margin-right: 0.5rem;
+  color: rgb(255 255 255 / 0.6);
+}
+/* A journey, boarding-pass style: the icon crosses as the globe flies. */
+.show-pass {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+.show-pass b {
+  display: block;
+  font-size: clamp(1.9rem, 7vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.show-pass span:not(.show-pass-line):not(.show-pass-mover) {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: rgb(255 255 255 / 0.85);
+}
+.show-pass em {
+  display: block;
+  margin-top: 0.15rem;
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.show-pass-line {
+  position: relative;
+  height: 2px;
+  background: repeating-linear-gradient(to right, rgb(255 255 255 / 0.6) 0 6px, transparent 6px 12px);
+}
+.show-pass-mover {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem;
+  border-radius: 999px;
+  color: #0b1630;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgb(255 255 255 / 0.16);
+  animation: show-cross var(--dur) cubic-bezier(0.45, 0, 0.25, 1) both;
+}
+@keyframes show-cross {
+  from {
+    left: 0;
+  }
+  to {
+    left: 100%;
+  }
+}
+/* A day: what's in it, in order. */
+.show-daylist {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.9rem;
+}
+.show-daylist li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+.show-daylist-t {
+  flex-shrink: 0;
+  width: 4.2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgb(255 255 255 / 0.85);
+}
+.show-daylist-i,
+.show-kind {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  color: #fff;
+  background: color-mix(in srgb, var(--k, #6aa5ff) 70%, #0b1630);
+}
+.show-more {
+  font-size: 0.8rem;
+  color: rgb(255 255 255 / 0.75);
+}
+/* One thing: its picture, when, what, where and why. */
+.show-item {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.show-pic {
+  position: relative;
+  height: 9.5rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+@media (max-width: 1023px) {
+  .show-pic {
+    height: 6.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .show-pic {
+    height: 13rem;
+  }
+}
+.show-pic img,
+.show-pic > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.show-pic img {
+  animation: show-kenburns calc(var(--dur) + 1200ms) linear both;
+}
+.show-pic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--glass), transparent 55%);
+}
+@keyframes show-kenburns {
+  from {
+    transform: scale(1.12) translate(1.5%, 1%);
+  }
+  to {
+    transform: scale(1) translate(0, 0);
+  }
+}
+.show-item-body {
+  padding: 1.1rem 1.3rem 1.3rem;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .show-item-body {
+    padding: 1.2rem 1.6rem 1.6rem;
+  }
+}
+.show-time {
+  margin-top: 0.45rem;
+  font-size: clamp(1.7rem, 6vw, 2.3rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--k, #fff) 30%, #fff);
+}
+.show-time span {
+  font-weight: 600;
+  font-size: 0.6em;
+  color: rgb(255 255 255 / 0.8);
+}
+.show-note {
+  margin-top: 0.6rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  color: rgb(255 255 255 / 0.92);
+}
+.show-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffd55e;
+}
+.show-link:hover {
+  text-decoration: underline;
+}
+.show-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+.show-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.16);
+}
+/* The trip in numbers. */
+.show-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem 0.5rem;
+  margin-top: 1.1rem;
+}
+.show-numbers dt {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  line-height: 1;
+}
+.show-numbers dd {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.8);
+}
+.show-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+.show-actions .btn-secondary {
+  color: #fff;
+  background: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.28);
+}
+
+/* The controls, like a player's. */
+.show-controls {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--line-g);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+  box-shadow: 0 16px 40px -20px rgb(0 0 0 / 0.8);
+}
+.show-play {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  color: #0b1630;
+  background: #fff;
+  transition: transform 140ms ease;
+}
+.show-play:active {
+  transform: scale(0.94);
+}
+.show-sep {
+  width: 1px;
+  height: 1.5rem;
+  margin: 0 0.2rem;
+  background: rgb(255 255 255 / 0.2);
+}
+.show-speed {
+  min-width: 2.75rem;
+  height: 2.5rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+}
+.show-speed:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+.show-count {
+  padding: 0 0.6rem 0 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.75);
+}
+.show-hint {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.6rem;
+  font-size: 0.72rem;
+  color: rgb(255 255 255 / 0.75);
+  pointer-events: none !important;
+}
+/* Paused: the picture holds, the button says so. */
+.show[data-paused] .show-pic img,
+.show[data-paused] .show-pass-mover {
+  animation-play-state: paused;
+}
+
+/* Every part, to go to. */
+.show-list {
+  position: absolute;
+  right: 1rem;
+  bottom: calc(env(safe-area-inset-bottom) + 5.25rem);
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(60vh, 32rem);
+  overflow-y: auto;
+  padding: 0.75rem;
+  border-radius: 18px;
+  background: rgb(9 13 26 / 0.92);
+  border: 1px solid var(--line-g);
+  box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.9);
+  animation: show-card-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.show-list-h {
+  padding-left: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.8);
+}
+.show-list-ch {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: left;
+}
+.show-list-ch:hover,
+.show-list-days button:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+.show-list-ch[aria-current],
+.show-list-days button[aria-current] {
+  background: rgb(255 255 255 / 0.16);
+}
+.show-list-sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.75);
+}
+.show-list-days {
+  display: grid;
+  margin: 0 0 0.3rem 2.1rem;
+}
+.show-list-days button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  text-align: left;
+}
+.show-list-days button span {
+  color: rgb(255 255 255 / 0.72);
+}
+/* The place on the globe, ringed. */
+.show-spot {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--k, #ffb800);
+  box-shadow: 0 0 0 3px #fff, 0 6px 16px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+.show-spot::before,
+.show-spot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 2px solid var(--k, #ffb800);
+  animation: show-ring 2.2s ease-out infinite;
+}
+.show-spot::after {
+  animation-delay: 1.1s;
+}
+@keyframes show-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(4.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .show,
+  .show-card,
+  .s-in,
+  .show-pic img,
+  .show-spot::before,
+  .show-spot::after,
+  .show-list {
+    animation: none;
+  }
+  .show-pass-mover {
+    animation: none;
+    left: 50%;
+  }
+}

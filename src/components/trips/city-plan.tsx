@@ -406,7 +406,7 @@ export function CityPlan({
     } else {
       const id = newId();
       announcePlan(id, from);
-      userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), createdAt: new Date().toISOString() });
+      userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), ...(p.draft.image?.startsWith("https://") ? { image: p.draft.image } : {}), createdAt: new Date().toISOString() });
       toast({ title: `Added to ${placeName(stop)}`, body: `${p.draft.title}, ${said}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
     }
     try {
