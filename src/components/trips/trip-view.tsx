@@ -12,6 +12,8 @@ import { KIND_ICON, TripAgenda } from "./agenda";
 import { PoiCard, type MapPlace } from "./place-to-trip";
 import { CityPlan, plansIn } from "./city-plan";
 import { TripShow } from "./trip-show";
+import { AddSheet } from "./add-sheet";
+import { ADD_EVENT, openAdd, type AddRequest } from "./add-bus";
 import type { MapClick } from "../earth/earth-map";
 import type { TripPlan } from "@/lib/trip-plans";
 import { spanOf } from "@/lib/trip-snap";
@@ -87,6 +89,32 @@ export function TripView({ id }: { id: string }) {
   const [fly, setFly] = useState<FlyRequest>();
   /** The trip playing as a show (from a city, or from the start). */
   const [showing, setShowing] = useState<{ at?: string; pad: Pad } | null>(null);
+  // The trip's one Add sheet, asked for from anywhere on the page.
+  const [adding, setAdding] = useState<{ req: AddRequest; n: number } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setAdding((a) => ({ req: (e as CustomEvent<AddRequest>).detail ?? {}, n: (a?.n ?? 0) + 1 }));
+    window.addEventListener(ADD_EVENT, on);
+    return () => window.removeEventListener(ADD_EVENT, on);
+  }, []);
+  // "A" adds, from anywhere on the page.
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if (e.key !== "a" || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest?.("input, textarea, select, [contenteditable]") || document.querySelector(".addx, .show")) return;
+      e.preventDefault();
+      openAdd({});
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
+  // What went in: shown in its place in the agenda.
+  const reveal = (id: string) => {
+    if (document.querySelector(".show")) return;
+    sheet.setSnap("half");
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`.trip-panel [data-plan="${id}"]`);
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 160);
+  };
   const play = (at?: string) => {
     setOpen(null);
     setPoi(null);
@@ -288,6 +316,9 @@ export function TripView({ id }: { id: string }) {
     <div className="trip-stage" data-show={showing ? "" : undefined}>
       <TripGlobe api={api} route={routeOf(stops)} fly={fly} pad={showing?.pad ?? pad} quiet={!!showing} onReady={() => setReady(true)} onBackground={tapGlobe} label={`Globe with your trip ${trip.name}: tap a city to see its events; zoom in to see places (restaurants, museums…) and tap one to add it.`} />
       <MapIcons api={api} ready={ready} icons={icons} />
+      {adding && (
+        <AddSheet key={adding.n} trip={trip} stops={stops} events={dayEvents} req={adding.req} near={stop} onClose={() => setAdding(null)} onDone={reveal} />
+      )}
       {showing && ready && (
         <TripShow
           trip={trip}
@@ -325,11 +356,16 @@ export function TripView({ id }: { id: string }) {
             <Link href="/trips" className="btn btn-ghost btn-icon btn-sm shrink-0" aria-label="All your trips"><X size={18} aria-hidden /></Link>
           </div>
           {stops.length > 0 && (
-            <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready}>
-              <span className="view-trip-play" aria-hidden><Play size={13} fill="currentColor" /></span>
-              <span>{stop ? `View ${stop.name}` : "View trip"}</span>
-              <span className="view-trip-sub">as a film, on the globe</span>
-            </button>
+            <div className="trip-head-actions">
+              <button type="button" className="trip-add press" onClick={() => openAdd({ stopId: stop?.id })}>
+                <span className="trip-add-plus" aria-hidden><Plus size={16} strokeWidth={2.75} /></span>
+                <span>{stop ? `Add to ${stop.name}` : "Add to trip"}</span>
+              </button>
+              <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
+                <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
+                <span>View</span>
+              </button>
+            </div>
           )}
           <div className="trip-chips" role="tablist" aria-label="Cities on this trip">
             <button type="button" role="tab" aria-selected={sel === null} className="trip-chip" onClick={() => pick(null)}>

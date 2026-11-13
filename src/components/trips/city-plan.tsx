@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, ExternalLink, Landmark, Loader2, MapPin, Plus, Search, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ExternalLink, Landmark, MapPin, Plus } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, type Trip } from "@/lib/user/store";
 import { daysOf, flagOf, nightsBetween, placeName, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
-import { isScheduled, isTravel, kindLabel, parsePlan, splitWhen, type PlanKind, type TripPlan } from "@/lib/trip-plans";
-import { planKindForPoi, POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
+import { isScheduled, isTravel, type PlanKind, type TripPlan } from "@/lib/trip-plans";
+import { POI_COLOR, poiGroup, poiLabel } from "@/lib/pois";
 import type { Sight } from "@/lib/sights";
 import { formatEventTime, localDateKey } from "@/lib/format";
 import type { TripEvent } from "@/lib/trip-snap";
 import { Poster } from "../ui";
 import { toast } from "../toast";
 import { announcePlan, PLAN_DRAG, TripAgenda } from "./agenda";
-import { KIND_ICON } from "./plan-icons";
-import { WhenPicker, type PlaceDraft, type WhenValue } from "./when-picker";
+import { pickingFor, planFor, sightDraft, useSights, type Picking } from "./add-sheet";
+import { openAdd } from "./add-bus";
+import { AddBar } from "./add-bar";
 
 /*
  * A city of a trip, as one page of everything you're going to do there: what's planned day
@@ -26,266 +27,6 @@ import { WhenPicker, type PlaceDraft, type WhenValue } from "./when-picker";
 
 const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { ...o, timeZone: "UTC" });
 const dayName = (d: string) => fmt(d, { weekday: "short", day: "numeric", month: "short" });
-const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 12) : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`);
-
-interface Found {
-  name: string;
-  context?: string;
-  lat: number;
-  lng: number;
-  poi?: { cls: string; sub?: string };
-}
-
-/** A city's best-known sights (from Wikipedia), once per city. */
-function useSights(stop: TripStop) {
-  const [sights, setSights] = useState<Sight[] | null>(null);
-  useEffect(() => {
-    const ctrl = new AbortController();
-    setSights(null);
-    fetch(`/api/places/top?lat=${stop.lat.toFixed(3)}&lng=${stop.lng.toFixed(3)}`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : { sights: [] }))
-      .then((j: { sights: Sight[] }) => setSights(j.sights))
-      .catch(() => setSights((s) => s ?? []));
-    return () => ctrl.abort();
-  }, [stop.lat, stop.lng]);
-  return sights;
-}
-
-/** The same place on the trip already. */
-const planFor = (trip: Trip, lat: number, lng: number, name: string) => trip.plans?.find((p) => p.lat != null && p.lng != null && ((Math.abs(p.lat - lat) < 0.0008 && Math.abs(p.lng - lng) < 0.0008) || (p.title === name && haversineKm(p.lat, p.lng, lat, lng) < 1)));
-
-/** A place being put on the trip: what it is, and when, as far as it's known. */
-export interface Picking {
-  draft: PlaceDraft;
-  initial?: Partial<WhenValue>;
-  /** Its street or area, kept with it. */
-  place?: string;
-  /** On the trip already: this changes it. */
-  existing?: TripPlan;
-  /** Chosen with the keyboard: Enter again adds it. */
-  focusSave?: boolean;
-}
-
-const kindFor = (cls?: string, sub?: string): PlanKind => {
-  const k = cls ? planKindForPoi(poiGroup(cls, sub)) : "visit";
-  return k === "note" ? "visit" : k;
-};
-const sightDraft = (s: Sight): PlaceDraft => ({ title: s.name, kind: kindFor(s.cls), lat: s.lat, lng: s.lng, poi: s.cls, about: s.about, image: s.image });
-const foundDraft = (f: Found): PlaceDraft => ({
-  title: f.name,
-  kind: kindFor(f.poi?.cls, f.poi?.sub),
-  lat: f.lat,
-  lng: f.lng,
-  ...(f.poi ? { poi: f.poi.sub && f.poi.sub !== f.poi.cls ? `${f.poi.cls}/${f.poi.sub}` : f.poi.cls } : {}),
-  about: [f.poi ? poiLabel(f.poi.cls, f.poi.sub) : "", f.context?.split(",").slice(0, 2).join(",")].filter(Boolean).join(" · "),
-});
-/** Picking a place that's on the trip already opens it, to change when. */
-const pickingFor = (trip: Trip, draft: PlaceDraft, initial?: Partial<WhenValue>, place?: string, focusSave?: boolean): Picking => {
-  const existing = draft.lat != null && draft.lng != null ? planFor(trip, draft.lat, draft.lng, draft.title) : undefined;
-  return existing ? { draft: { ...draft, kind: existing.kind }, existing, initial: existing, focusSave } : { draft, initial, place, focusSave };
-};
-
-/** One search for anything to do in the city: its sights, any place there, or a plan of your own. */
-function CityAdd({
-  trip,
-  stop,
-  sights,
-  day,
-  onDay,
-  input,
-  events,
-  picking,
-  onPick,
-  onSave,
-  onAdded,
-}: {
-  trip: Trip;
-  stop: TripStop;
-  sights: Sight[];
-  day: string | null;
-  onDay: (d: string | null) => void;
-  input: React.RefObject<HTMLInputElement | null>;
-  events: { e: TripEvent; day: string }[];
-  picking: Picking | null;
-  onPick: (p: Picking | null) => void;
-  onSave: (p: Picking, w: WhenValue, el: HTMLElement | null) => void;
-  /** A plan of one's own went in (it needs no "when"). */
-  onAdded?: () => void;
-}) {
-  const [q, setQ] = useState("");
-  const [found, setFound] = useState<Found[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [hi, setHi] = useState(0);
-  const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
-  // "Café Nicola wed 10:00": search for the café, keep the day and the time for it.
-  const said = useMemo(() => splitWhen(q, { days, defaultDay: day ?? stop.from }), [q, days, day, stop.from]);
-  useEffect(() => {
-    const t = said.query;
-    setFound([]);
-    if (t.length < 3) return;
-    const ctrl = new AbortController();
-    const timer = window.setTimeout(() => {
-      setBusy(true);
-      fetch(`/api/geocode?q=${encodeURIComponent(t)}&lat=${stop.lat.toFixed(4)}&lng=${stop.lng.toFixed(4)}&limit=8&lang=en`, { signal: ctrl.signal })
-        .then((r) => (r.ok ? r.json() : { results: [] }))
-        .then((j: { results: Found[] }) => {
-          const seen = new Set<string>();
-          setFound(j.results.filter((r) => haversineKm(r.lat, r.lng, stop.lat, stop.lng) <= 40 && !seen.has(`${r.name}|${r.context}`) && seen.add(`${r.name}|${r.context}`)).slice(0, 5));
-        })
-        .catch(() => {})
-        .finally(() => setBusy(false));
-    }, 280);
-    return () => {
-      window.clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [said.query, stop.lat, stop.lng]);
-
-  const t = plain(said.query);
-  const mine = t.length >= 2 ? sights.filter((s) => plain(s.name).includes(t)).slice(0, 3) : [];
-  const places = found.filter((f) => !mine.some((s) => haversineKm(s.lat, s.lng, f.lat, f.lng) < 0.15));
-  const plan = q.trim().length >= 2 ? parsePlan(q, { days, defaultDay: day ?? stop.from }) : null;
-  type Option = { key: string; kind: "sight"; s: Sight } | { key: string; kind: "place"; f: Found } | { key: string; kind: "plan"; p: NonNullable<typeof plan> };
-  const options: Option[] = [
-    ...mine.map((s): Option => ({ key: `s${s.id}`, kind: "sight", s })),
-    ...places.map((f, i): Option => ({ key: `f${i}${f.name}`, kind: "place", f })),
-    ...(plan ? [{ key: "plan", kind: "plan", p: plan } as Option] : []),
-  ];
-
-  const choose = (o: Option, el: Element | null, keyboard = false) => {
-    if (o.kind === "plan") {
-      const id = newId();
-      announcePlan(id, el?.getBoundingClientRect());
-      userActions.addPlan(trip.id, { ...o.p, id, createdAt: new Date().toISOString() });
-      toast({ title: `Added to ${placeName(stop)}`, body: `${o.p.title}, ${dayName(o.p.day)}${o.p.time ? ` ${o.p.time}` : ""}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
-      setQ("");
-      setHi(0);
-      onDay(null);
-      onAdded?.();
-      return;
-    }
-    const initial = { ...(said.day || day ? { day: said.day ?? day ?? undefined } : {}), ...(said.time ? { time: said.time } : {}), ...(said.endTime ? { endTime: said.endTime } : {}) };
-    onPick(o.kind === "sight" ? pickingFor(trip, sightDraft(o.s), initial, undefined, keyboard) : pickingFor(trip, foundDraft(o.f), initial, o.f.context?.split(",")[0].slice(0, 80), keyboard));
-  };
-
-  return (
-    <div className="city-add">
-      <div className="city-add-line">
-        <Search size={16} aria-hidden className="shrink-0 text-text-3" />
-        {day && (
-          <span className="ag-on">
-            {dayName(day)}
-            <button type="button" aria-label="Any day" onClick={() => onDay(null)}><X size={12} aria-hidden /></button>
-          </span>
-        )}
-        <input
-          ref={input}
-          value={q}
-          onChange={(e) => (setQ(e.target.value), setHi(0), picking && onPick(null))}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setHi((h) => Math.min(options.length - 1, h + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setHi((h) => Math.max(0, h - 1));
-            } else if (e.key === "Enter" && options[hi]) {
-              e.preventDefault();
-              choose(options[hi], document.getElementById(`city-opt-${hi}`), true);
-            } else if (e.key === "Escape") {
-              setQ("");
-              onDay(null);
-              onPick(null);
-            }
-          }}
-          placeholder={`Add to ${placeName(stop)}: a sight, a restaurant, “dinner 20:30”…`}
-          aria-label={`Add something to do in ${placeName(stop)}: a sight, a place, or a plan of your own`}
-          role="combobox"
-          aria-expanded={options.length > 0 && !picking}
-          aria-controls="city-opts"
-          aria-activedescendant={options[hi] ? `city-opt-${hi}` : undefined}
-          autoComplete="off"
-          enterKeyHint="done"
-        />
-        {busy && <Loader2 size={15} className="animate-spin text-text-3 shrink-0" aria-hidden />}
-      </div>
-      {picking && (
-        <WhenPicker
-          key={`${picking.draft.title}|${picking.draft.lat}`}
-          trip={trip}
-          draft={picking.draft}
-          days={days}
-          initial={picking.initial}
-          events={events}
-          verb={picking.existing ? "Save" : "Add"}
-          skip={picking.existing?.id}
-          focusSave={picking.focusSave}
-          onCancel={() => onPick(null)}
-          onRemove={
-            picking.existing
-              ? () => {
-                  const gone = picking.existing!;
-                  userActions.removePlan(trip.id, gone.id);
-                  onPick(null);
-                  toast({ title: `${gone.title} taken off`, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, gone) } });
-                }
-              : undefined
-          }
-          onSave={(w, el) => {
-            onSave(picking, w, el);
-            setQ("");
-            setHi(0);
-          }}
-        />
-      )}
-      {options.length > 0 && !picking && (
-        <ul id="city-opts" role="listbox" className="city-opts" aria-label="Add to the trip">
-          {options.map((o, i) => (
-            // The options of a combobox: chosen from the line (arrows, Enter) or tapped, never focused.
-            <li key={o.key} id={`city-opt-${i}`} role="option" aria-selected={i === hi} className="city-opt" data-hi={i === hi || undefined} onMouseDown={(e) => e.preventDefault()} onMouseMove={() => i !== hi && setHi(i)} onClick={(e) => choose(o, e.currentTarget)}>
-                {o.kind === "plan" ? (
-                  <PlanOption p={o.p} />
-                ) : (
-                  <>
-                    {o.kind === "sight" && o.s.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={o.s.image} alt="" className="city-opt-img" loading="lazy" />
-                    ) : (
-                      <span className="city-opt-dot" style={{ "--k": POI_COLOR[poiGroup(o.kind === "sight" ? o.s.cls : o.f.poi?.cls)] } as React.CSSProperties} aria-hidden>
-                        <MapPin size={14} />
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold truncate">{o.kind === "sight" ? o.s.name : o.f.name}</span>
-                      <span className="block t-micro text-text-3 truncate">{o.kind === "sight" ? o.s.about : [o.f.poi ? poiLabel(o.f.poi.cls, o.f.poi.sub) : "", o.f.context].filter(Boolean).join(" · ")}</span>
-                    </span>
-                    <Plus size={16} aria-hidden className="shrink-0 text-cyan" />
-                  </>
-                )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/** A plan of one's own, as it was understood: what, when, where. */
-function PlanOption({ p }: { p: Omit<TripPlan, "id" | "createdAt"> }) {
-  const Icon = KIND_ICON[p.kind];
-  return (
-    <>
-      <span className="city-opt-dot" data-kind={p.kind} aria-hidden><Icon size={15} /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold truncate">{p.title}</span>
-        <span className="block t-micro text-text-3 truncate">{[kindLabel(p.kind), `${dayName(p.day)}${p.time ? ` ${p.time}` : ""}`, p.place].filter(Boolean).join(" · ")}</span>
-      </span>
-      <span className="city-opt-tag">Your plan</span>
-    </>
-  );
-}
-
 /** The city's best-known sights, as cards with their picture: add one in a tap. */
 function Sights({ trip, stop, sights, onShowAt, onPick, day }: { trip: Trip; stop: TripStop; sights: Sight[] | null; onShowAt: (lat: number, lng: number) => void; onPick: (p: Picking) => void; day: string | null }) {
   const rail = useRef<HTMLUListElement>(null);
@@ -346,59 +87,6 @@ function Sights({ trip, stop, sights, onShowAt, onPick, day }: { trip: Trip; sto
   );
 }
 
-/** A place picked (and when) into the trip, or a change to one on it already. */
-export function addPicked(trip: Trip, stop: TripStop, p: Picking, w: WhenValue, el: HTMLElement | null) {
-  const from = el?.getBoundingClientRect();
-  const when = dayName(w.day || stop.from);
-  const said = w.day ? `${p.draft.kind === "stay" && w.endDay ? `${when} → ${dayName(w.endDay)}` : when}${w.time ? `, ${w.time}` : ""}` : "a place to see";
-  if (p.existing) {
-    const before = p.existing;
-    announcePlan(before.id, from);
-    userActions.updatePlan(trip.id, before.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes });
-    toast({ title: `${before.title}: ${said}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, before.id, before) } });
-  } else {
-    const id = newId();
-    announcePlan(id, from);
-    userActions.addPlan(trip.id, { id, kind: p.draft.kind, title: p.draft.title.slice(0, 80), ...w, lat: p.draft.lat, lng: p.draft.lng, ...(p.draft.poi ? { poi: p.draft.poi } : {}), ...(p.place ? { place: p.place } : {}), ...(p.draft.image?.startsWith("https://") ? { image: p.draft.image } : {}), createdAt: new Date().toISOString() });
-    toast({ title: `Added to ${placeName(stop)}`, body: `${p.draft.title}, ${said}`, emoji: "📍", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
-  }
-  try {
-    navigator.vibrate?.(8);
-  } catch {
-    // no vibration here
-  }
-}
-
-/** The city's one search on its own (a sight, a place, a plan of your own), set to a day: for adding from elsewhere (a trip's show). */
-export function QuickAdd({ trip, stop, day, events, onDone }: { trip: Trip; stop: TripStop; day: string | null; events: { e: TripEvent; day: string }[]; onDone?: () => void }) {
-  const sights = useSights(stop);
-  const input = useRef<HTMLInputElement>(null);
-  const [onDay, setOnDay] = useState<string | null>(day);
-  const [picking, setPicking] = useState<Picking | null>(null);
-  useEffect(() => {
-    input.current?.focus({ preventScroll: true });
-  }, []);
-  return (
-    <CityAdd
-      trip={trip}
-      stop={stop}
-      sights={sights ?? []}
-      day={onDay}
-      onDay={setOnDay}
-      input={input}
-      events={events}
-      picking={picking}
-      onPick={setPicking}
-      onSave={(p, w, el) => {
-        addPicked(trip, stop, p, w, el);
-        setPicking(null);
-        onDone?.();
-      }}
-      onAdded={onDone}
-    />
-  );
-}
-
 /** The plans of a city: on its days (but the journeys), or places to see round it. */
 export function plansIn(trip: Trip, stop: TripStop): TripPlan[] {
   const days = daysOf(stop.from, stop.to);
@@ -439,9 +127,6 @@ export function CityPlan({
 }) {
   const days = useMemo(() => daysOf(stop.from, stop.to), [stop.from, stop.to]);
   const sights = useSights(stop);
-  const input = useRef<HTMLInputElement>(null);
-  const [onDay, setOnDay] = useState<string | null>(null);
-  const [picking, setPicking] = useState<Picking | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const near = (p: TripPlan) => p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, stop.lat, stop.lng) <= STOP_RADIUS_KM;
   const mine = plansIn(trip, stop);
@@ -451,17 +136,6 @@ export function CityPlan({
   const onDays = (trip.plans ?? []).filter((p) => isScheduled(p) && days.includes(p.day) && (p.lat == null || near(p)));
   const perDay = (d: string) => [...onDays.filter((p) => p.day === d).sort((a, b) => (a.time ?? "").localeCompare(b.time ?? "")).map((p) => p.kind as string), ...events.filter((x) => x.day === d).map(() => "event")];
   const scrollTo = (sel: string) => document.querySelector<HTMLElement>(`.trip-panel ${sel}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
-  const save = (p: Picking, w: WhenValue, el: HTMLElement | null) => {
-    addPicked(trip, stop, p, w, el);
-    setPicking(null);
-    setOnDay(null);
-  };
-  const addOn = (d: string) => {
-    setOnDay(d);
-    input.current?.focus();
-    input.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  };
-
   return (
     <div className="city" style={{ "--ink": stopColor(index) } as React.CSSProperties}>
       <div className="city-head">
@@ -517,12 +191,12 @@ export function CityPlan({
         </ol>
       </div>
 
-      <CityAdd trip={trip} stop={stop} sights={sights ?? []} day={onDay} onDay={setOnDay} input={input} events={dayEvents} picking={picking} onPick={setPicking} onSave={save} />
+      <AddBar title={`Add to ${placeName(stop)}`} sub="A place, food, your hotel, a flight, a plan of your own" stopId={stop.id} />
 
-      <Sights trip={trip} stop={stop} sights={sights} onShowAt={onShowAt} onPick={setPicking} day={onDay} />
+      <Sights trip={trip} stop={stop} sights={sights} onShowAt={onShowAt} onPick={(p) => openAdd({ stopId: stop.id, picking: p })} day={null} />
 
       <h3 className="city-h mt-5"><MapPin size={14} aria-hidden /> Your plan in {placeName(stop)}</h3>
-      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} near={stop} compose={false} onAddOnDay={addOn} onOpenEvent={onOpen} onPickStop={onPickStop} onShowPlace={onShowPlace} />
+      <TripAgenda trip={trip} stops={stops} events={dayEvents} only={days} near={stop} compose={false} onAddOnDay={(d) => openAdd({ stopId: stop.id, day: d })} onOpenEvent={onOpen} onPickStop={onPickStop} onShowPlace={onShowPlace} />
 
       <h3 className="city-h mt-5">Events on while you&apos;re there</h3>
       {ideas === null ? (

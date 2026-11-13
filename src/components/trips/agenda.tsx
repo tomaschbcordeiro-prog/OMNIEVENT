@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { BedDouble, CalendarClock, ChevronDown, CornerDownLeft, GripVertical, MapPin, Plus, Trash2, X } from "lucide-react";
+import { BedDouble, CalendarClock, GripVertical, MapPin, Plus, Trash2 } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
 import { addDays, daysOf, STOP_RADIUS_KM, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { poiLabel } from "@/lib/pois";
-import { durationOf, isScheduled, isTravel, kindLabel, nightsOf, parsePlan, PLAN_KINDS, planSortKey, type TripPlan } from "@/lib/trip-plans";
+import { durationOf, isScheduled, isTravel, kindLabel, nightsOf, PLAN_KINDS, planSortKey, type PlanKind, type TripPlan } from "@/lib/trip-plans";
 import { formatEventTime } from "@/lib/format";
 import type { TripEvent } from "@/lib/trip-snap";
 import { Poster } from "../ui";
 import { toast } from "../toast";
 import { KIND_ICON } from "./plan-icons";
-import { WhenPicker, type WhenValue } from "./when-picker";
+import { type WhenValue } from "./when-picker";
+import { openAdd } from "./add-bus";
+import { AddBar } from "./add-bar";
 
 /*
  * A trip as an agenda: day by day, your own plans (the flight, the hotel, a meeting) with the
@@ -29,7 +31,6 @@ export const PLAN_DRAG = "application/x-omni-plan";
 const fmt = (d: string, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { ...o, timeZone: "UTC" });
 const dayName = (d: string) => fmt(d, { weekday: "short", day: "numeric", month: "short" });
 const today = () => new Date().toISOString().slice(0, 10);
-const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 12) : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`);
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 
@@ -187,10 +188,10 @@ export function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "crea
 }
 
 /** What's needed to make a plan: from what's typed, from a suggestion, or an existing plan. */
-type Draft = Omit<TripPlan, "id" | "createdAt">;
+export type Draft = Omit<TripPlan, "id" | "createdAt">;
 
 /** Every field of a plan, for when a line isn't enough (or to change one). */
-function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel }: { draft: Draft; days: string[]; onChange: (d: Draft) => void; onSave: () => void; onCancel: () => void; onDelete?: () => void; saveLabel: string }) {
+export function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel, kinds }: { draft: Draft; days: string[]; onChange: (d: Draft) => void; onSave: () => void; onCancel: () => void; onDelete?: () => void; saveLabel: string; /** The kinds it can be switched to (all when not said; none hides the choice). */ kinds?: PlanKind[] }) {
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
   const opts = [...new Set([addDays(days[0] ?? today(), -1), ...days, addDays(days[days.length - 1] ?? today(), 1), draft.day, draft.endDay].filter((x): x is string => !!x))].sort();
   const travel = isTravel(draft.kind);
@@ -214,8 +215,8 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
         if (draft.title.trim()) onSave();
       }}
     >
-      <div className="ag-kinds" role="radiogroup" aria-label="What it is">
-        {PLAN_KINDS.map(({ kind, label }) => {
+      <div className="ag-kinds" role="radiogroup" aria-label="What it is" hidden={kinds?.length === 0}>
+        {PLAN_KINDS.filter(({ kind }) => !kinds || kinds.includes(kind)).map(({ kind, label }) => {
           const Icon = KIND_ICON[kind];
           return (
             <button key={kind} type="button" role="radio" aria-checked={draft.kind === kind} className="ag-kind" data-kind={kind} onClick={() => set({ kind, endDay: kind === "stay" ? draft.endDay ?? addDays(draft.day, 1) : draft.endDay })}>
@@ -232,11 +233,11 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
         <>
           <label className="ag-field">
             <span>From</span>
-            <input value={draft.from ?? ""} maxLength={60} onChange={(e) => set({ from: e.target.value || undefined })} placeholder="Lisbon" />
+            <input value={draft.from ?? ""} maxLength={60} onChange={(e) => set({ from: e.target.value || undefined })} placeholder="Where from" />
           </label>
           <label className="ag-field">
             <span>To</span>
-            <input value={draft.to ?? ""} maxLength={60} onChange={(e) => set({ to: e.target.value || undefined })} placeholder="London" />
+            <input value={draft.to ?? ""} maxLength={60} onChange={(e) => set({ to: e.target.value || undefined })} placeholder="Where to" />
           </label>
         </>
       )}
@@ -283,29 +284,16 @@ function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel
  */
 export function TripAgenda({ trip, stops, events, only, near, compose = true, onAddOnDay, onOpenEvent, onPickStop, onShowPlace }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; /** A city: its places to see. */ near?: TripStop; /** Its own line to type plans in (a city's page has its own). */ compose?: boolean; /** A day's "+", when something else does the adding. */ onAddOnDay?: (day: string) => void; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void; /** A plan with a place on the map, shown there. */ onShowPlace?: (p: TripPlan) => void }) {
   const box = useRef<HTMLDivElement>(null);
-  const line = useRef<HTMLInputElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
   const days = useMemo(() => buildDays(trip, stops, events, only), [trip, stops, events, only]);
-  const tripDays = useMemo(() => (stops.length ? daysOf(stops[0].from, stops[stops.length - 1].to) : days.map((d) => d.day)), [stops, days]);
-  const [text, setText] = useState("");
-  const [onDay, setOnDay] = useState<string | null>(null);
-  const [form, setForm] = useState<Draft | null>(null);
-  /** A plan being changed, and the row its form opens in. */
-  const [editing, setEditing] = useState<{ id: string; draft: Draft; at: string } | null>(null);
   // Places to see on no day yet (all of them; a city's own when it's a city's view).
   const toSee = useMemo(
     () => (trip.plans ?? []).filter((p) => !isScheduled(p) && (!near || (p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, near.lat, near.lng) <= STOP_RADIUS_KM))),
     [trip.plans, near],
   );
-  const nearDays = (p: TripPlan) => {
-    const s = p.lat != null && p.lng != null ? stops.find((x) => haversineKm(p.lat!, p.lng!, x.lat, x.lng) <= STOP_RADIUS_KM) : undefined;
-    return s ? daysOf(s.from, s.to) : tripDays;
-  };
   const schedule = (p: TripPlan, w: Partial<WhenValue> & { day: string }, from?: DOMRect) => {
-    if (!w.day && !p.day) return setEditing(null);
+    if (!w.day && !p.day) return;
     flip.capture();
     flip.born(p.id, from);
-    setEditing(null);
     const change = "time" in w ? { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes } : { day: w.day, endDay: p.kind === "stay" && w.day ? addDays(w.day, Math.max(1, nightsOf(p))) : p.endDay };
     userActions.updatePlan(trip.id, p.id, change);
     toast({ title: `${p.title}: ${w.day ? `${dayName(w.day)}${"time" in w && w.time ? `, ${w.time}` : p.time && !("time" in w) ? `, ${p.time}` : ""}` : "no day yet"}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, p.id, p) } });
@@ -344,117 +332,12 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
     return () => window.removeEventListener("omni:plan-born", on);
   }, [flip]);
 
-  const baseDay = onDay ?? (only?.[0] && tripDays.includes(only[0]) ? only[0] : tripDays.find((d) => d >= today()) ?? tripDays[0] ?? today());
-  const parsed = text.trim().length >= 2 ? parsePlan(text, { days: tripDays, defaultDay: baseDay }) : null;
-
-  const add = (d: Draft, from?: DOMRect | null) => {
-    const plan: TripPlan = { ...d, title: d.title.trim(), id: newId(), createdAt: new Date().toISOString() };
-    flip.capture();
-    flip.born(plan.id, from ?? undefined);
-    userActions.addPlan(trip.id, plan);
-    try {
-      navigator.vibrate?.(8);
-    } catch {
-      // no vibration here
-    }
-    toast({ title: `${kindLabel(plan.kind)} added`, body: `${plan.title}, ${dayName(plan.day)}${plan.time ? ` ${plan.time}` : ""}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.removePlan(trip.id, plan.id) } });
-  };
-  const submitLine = () => {
-    if (!parsed) return;
-    add(parsed, previewRef.current?.getBoundingClientRect());
-    setText("");
-    setOnDay(null);
-  };
-  const remove = async (p: TripPlan) => {
-    setEditing(null);
-    await flip.leave(p.id);
-    flip.capture();
-    userActions.removePlan(trip.id, p.id);
-    toast({ title: `${kindLabel(p.kind)} deleted`, body: p.title, emoji: "🗑️", action: { label: "Undo", run: () => (flip.capture(), flip.born(p.id), userActions.addPlan(trip.id, p)) } });
-  };
-  const save = () => {
-    if (!editing) return;
-    flip.capture();
-    userActions.updatePlan(trip.id, editing.id, editing.draft);
-    setEditing(null);
-  };
-  const startOn = (day: string) => {
-    if (onAddOnDay) return onAddOnDay(day);
-    setOnDay(day);
-    setForm(null);
-    line.current?.focus();
-  };
-  // A suggestion opens the form, filled in.
-  const suggest = (d: Draft) => {
-    setForm(d);
-    setText("");
-    window.requestAnimationFrame(() => box.current?.querySelector<HTMLElement>(".ag-compose")?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
-  };
-  useEffect(() => {
-    if (form) box.current?.querySelector<HTMLInputElement>(".ag-compose .ag-form input")?.focus();
-  }, [form]);
+  // A day's "+": the Add sheet, for that day (or whatever the page does with it).
+  const startOn = (day: string) => (onAddOnDay ? onAddOnDay(day) : openAdd({ day }));
 
   return (
     <div ref={box} className="ag">
-      <div className="ag-compose" hidden={!compose && !form}>
-        {form ? (
-          <PlanForm draft={form} days={tripDays} onChange={setForm} onCancel={() => setForm(null)} saveLabel="Add to trip" onSave={() => (add(form, box.current?.querySelector(".ag-compose")?.getBoundingClientRect()), setForm(null))} />
-        ) : (
-          <>
-            <div className="ag-line">
-              <Plus size={16} aria-hidden className="ag-line-plus" />
-              {onDay && (
-                <span className="ag-on">
-                  {dayName(onDay)}
-                  <button type="button" aria-label="Any day" onClick={() => setOnDay(null)}><X size={12} aria-hidden /></button>
-                </span>
-              )}
-              <input
-                ref={line}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitLine();
-                  } else if (e.key === "Escape") {
-                    setText("");
-                    setOnDay(null);
-                  }
-                }}
-                placeholder={onDay ? "Flight, hotel, meeting, dinner…" : "Add a flight, hotel, meeting… “Flight TP1350 Lisbon to London 2 Dec 9:40”"}
-                aria-label="Add something to your trip: type it as you'd say it"
-                aria-describedby={parsed ? "ag-preview" : undefined}
-                enterKeyHint="done"
-              />
-              {parsed && (
-                <button type="button" className="ag-line-go press" onClick={submitLine} aria-label="Add it">
-                  <CornerDownLeft size={15} aria-hidden />
-                </button>
-              )}
-            </div>
-            {parsed ? (
-              <div className="ag-preview" id="ag-preview" ref={previewRef} aria-live="polite">
-                <PlanRow p={parsed} preview />
-                <button type="button" className="ag-more" onClick={() => (setForm(parsed), setText(""))}>
-                  Details <ChevronDown size={13} aria-hidden />
-                </button>
-              </div>
-            ) : (
-              <div className="ag-chips" aria-label="Or pick what to add">
-                {PLAN_KINDS.filter((k) => k.kind !== "note" && k.kind !== "bus").map(({ kind, label }) => {
-                  const Icon = KIND_ICON[kind];
-                  return (
-                    <button key={kind} type="button" className="ag-chip" data-kind={kind} onClick={() => setForm({ kind, title: "", day: baseDay, endDay: kind === "stay" ? addDays(baseDay, 1) : undefined })}>
-                      <Icon size={13} aria-hidden /> {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {compose && <AddBar title="Add to your trip" sub="A place, food, your hotel, a flight, a meeting, a plan of your own" />}
 
       {toSee.length > 0 && (
         <section className="ag-tosee" aria-labelledby="ag-tosee-h">
@@ -468,7 +351,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 data-flip={`idea:${p.id}`}
                 data-plan={p.id}
                 className="ag-row ag-idea"
-                draggable={editing?.at !== `when:${p.id}` && editing?.at !== `idea:${p.id}`}
+                draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData(PLAN_DRAG, p.id);
                   e.dataTransfer.setData("text/plain", p.title);
@@ -477,33 +360,17 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 }}
                 onDragEnd={() => (box.current?.removeAttribute("data-dragging"), setOver(null))}
               >
-                {editing?.at === `idea:${p.id}` ? (
-                  <PlanForm draft={editing.draft} days={tripDays} onChange={(d) => setEditing({ ...editing, draft: d })} onCancel={() => setEditing(null)} onDelete={() => void remove(p)} onSave={save} saveLabel="Save" />
-                ) : editing?.at === `when:${p.id}` ? (
-                  <WhenPicker
-                    trip={trip}
-                    draft={{ title: p.title, kind: p.kind, lat: p.lat, lng: p.lng, poi: p.poi, about: [p.poi ? poiLabel(...(p.poi.split("/") as [string, string?])) : "", p.place].filter(Boolean).join(" · ") || undefined }}
-                    days={nearDays(p)}
-                    initial={p}
-                    events={events}
-                    verb="Save"
-                    skip={p.id}
-                    focusSave
-                    onCancel={() => setEditing(null)}
-                    onRemove={() => void remove(p)}
-                    onSave={(w, el) => schedule(p, { ...w, time: w.time }, el?.getBoundingClientRect())}
-                  />
-                ) : (
+                {(
                   <div className="ag-idea-row">
                     <span className="ag-grip" aria-hidden><GripVertical size={14} /></span>
-                    <PlanRow p={p} onEdit={() => setEditing({ id: p.id, draft: p, at: `idea:${p.id}` })} />
+                    <PlanRow p={p} onEdit={() => openAdd({ edit: p })} />
                     <span className="ag-idea-actions">
                       {p.lat != null && onShowPlace && (
                         <button type="button" className="ag-icon-btn" aria-label={`Show ${p.title} on the globe`} onClick={() => onShowPlace(p)}>
                           <MapPin size={14} aria-hidden />
                         </button>
                       )}
-                      <button type="button" className="ag-when press" onClick={() => setEditing({ id: p.id, draft: p, at: `when:${p.id}` })} aria-label={`Pick a day and time for ${p.title}`}>
+                      <button type="button" className="ag-when press" onClick={() => openAdd({ edit: p })} aria-label={`Pick a day and time for ${p.title}`}>
                         <CalendarClock size={14} aria-hidden /> <span>When?</span>
                       </button>
                     </span>
@@ -537,18 +404,15 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 {day === today() && <span className="ag-today">Today</span>}
               </span>
               <button type="button" className="ag-day-add" aria-label={`Add something on ${dayName(day)}`} onClick={() => startOn(day)}>
-                <Plus size={15} aria-hidden />
+                <Plus size={14} strokeWidth={2.5} aria-hidden /> <span>Add</span>
               </button>
             </div>
             <ul className="ag-rows">
               {rows.map((r) => (
                 <li key={r.key} data-flip={r.key} data-plan={"plan" in r ? r.plan.id : undefined} className={`ag-row ag-${r.type}`}>
-                  {(r.type === "plan" || r.type === "stay") && editing?.at === r.key ? (
-                    <PlanForm draft={editing.draft} days={tripDays} onChange={(d) => setEditing({ ...editing, draft: d })} onCancel={() => setEditing(null)} onDelete={() => void remove(r.plan)} onSave={save} saveLabel="Save" />
-                  ) : null}
-                  {r.type === "plan" && editing?.at !== r.key && (
+                  {r.type === "plan" && (
                     <div className="ag-idea-row">
-                      <PlanRow p={r.plan} onEdit={() => setEditing({ id: r.plan.id, draft: r.plan, at: r.key })} />
+                      <PlanRow p={r.plan} onEdit={() => openAdd({ edit: r.plan })} />
                       {r.plan.lat != null && onShowPlace && (
                         <span className="ag-idea-actions">
                           <button type="button" className="ag-icon-btn" aria-label={`Show ${r.plan.title} on the globe`} onClick={() => onShowPlace(r.plan)}>
@@ -558,9 +422,8 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                       )}
                     </div>
                   )}
-                  {r.type === "stay" &&
-                    editing?.at !== r.key && (
-                      <button type="button" className="ag-stay-band" data-kind="stay" onClick={() => setEditing({ id: r.plan.id, draft: r.plan, at: r.key })} aria-label={`${r.plan.title}: ${r.out ? "check out" : `night ${r.night} of ${r.nights}`}. Edit`}>
+                  {r.type === "stay" && (
+                      <button type="button" className="ag-stay-band" data-kind="stay" onClick={() => openAdd({ edit: r.plan })} aria-label={`${r.plan.title}: ${r.out ? "check out" : `night ${r.night} of ${r.nights}`}. Edit`}>
                         <BedDouble size={14} aria-hidden />
                         <span className="min-w-0 flex-1 truncate">
                           <b>{r.out ? "Check out" : r.night === 1 ? "Check in" : "Staying"}</b> · {r.plan.title}
@@ -589,7 +452,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                           const Icon = KIND_ICON[k];
                           const where = r.to?.name ?? "home";
                           return (
-                            <button key={k} type="button" className="ag-chip" data-kind={k} onClick={() => suggest({ kind: k, title: r.to ? `${kindLabel(k)} to ${r.to.name}` : `${kindLabel(k)} home`, day, from: r.from?.name, to: r.to?.name })} aria-label={`Add a ${kindLabel(k).toLowerCase()} ${r.to ? "to" : ""} ${where}`.replace("  ", " ")}>
+                            <button key={k} type="button" className="ag-chip" data-kind={k} onClick={() => openAdd({ draft: { kind: k, title: r.to ? `${kindLabel(k)} to ${r.to.name}` : `${kindLabel(k)} home`, day, from: r.from?.name, to: r.to?.name } })} aria-label={`Add a ${kindLabel(k).toLowerCase()} ${r.to ? "to" : ""} ${where}`.replace("  ", " ")}>
                               <Icon size={13} aria-hidden /> <span className="max-sm:sr-only">{kindLabel(k)}</span>
                             </button>
                           );
@@ -598,7 +461,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                     </div>
                   )}
                   {r.type === "bed" && (
-                    <button type="button" className="ag-suggest ag-suggest-bed" onClick={() => suggest({ kind: "stay", title: "", day: r.stop.from, endDay: r.stop.to })}>
+                    <button type="button" className="ag-suggest ag-suggest-bed" onClick={() => openAdd({ stopId: r.stop.id, day: r.stop.from, kind: "stay" })}>
                       <BedDouble size={14} aria-hidden /> Where are you staying in {r.stop.name}? <span className="ag-suggest-add">Add</span>
                     </button>
                   )}
@@ -606,7 +469,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
               ))}
               {!rows.length && (
                 <li className="ag-row ag-free" data-flip={`free:${day}`}>
-                  <button type="button" onClick={() => startOn(day)}>Free day · add something</button>
+                  <button type="button" onClick={() => startOn(day)}><Plus size={14} aria-hidden /> Free day: add something</button>
                 </li>
               )}
             </ul>

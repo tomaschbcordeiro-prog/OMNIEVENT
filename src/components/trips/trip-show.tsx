@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { BedDouble, Check, ChevronLeft, ChevronRight, Flag, ListOrdered, MapPin, Pause, Pencil, Play, Plus, RotateCcw, Share2, SkipBack, SkipForward, Sparkles, Trash2, X } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
-import { daysOf, flagOf, nightsBetween, stopColor, type TripStop } from "@/lib/trip";
+import { flagOf, nightsBetween, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { kindLabel, type PlanKind, type TripPlan } from "@/lib/trip-plans";
 import { poiLabel } from "@/lib/pois";
@@ -15,8 +15,7 @@ import type { EarthMapHandle } from "../earth/earth-map";
 import { Poster } from "../ui";
 import { toast } from "../toast";
 import { KIND_ICON } from "./plan-icons";
-import { WhenPicker } from "./when-picker";
-import { QuickAdd } from "./city-plan";
+import { openAdd, type AddKind } from "./add-bus";
 
 /*
  * View trip: the trip as stories on the globe. It flies in, lands in each city, walks through
@@ -97,8 +96,6 @@ function planText(trip: Trip, scenes: Scene[]): string {
   return out.join("\n");
 }
 
-/** Something being changed as the show plays. */
-type Edit = { kind: "when"; plan: TripPlan; days: string[] } | { kind: "add"; stop: TripStop; day: string | null; title: string };
 
 export function TripShow({
   trip,
@@ -134,7 +131,6 @@ export function TripShow({
     }
   });
   const [list, setList] = useState(false);
-  const [edit, setEdit] = useState<Edit | null>(null);
   const [peek, setPeek] = useState(false);
   const [dir, setDir] = useState<1 | -1>(1);
   const [photos, setPhotos] = useState<Record<string, string | null>>({});
@@ -348,44 +344,33 @@ export function TripShow({
     arm((c.left * was) / nextSpeed, (c.total * was) / nextSpeed, live.current.playing);
   };
 
-  // Changing something holds the show; done, it goes on.
+  // Changing or adding something holds the show (the trip's Add sheet opens over it).
   const wasPlaying = useRef(false);
-  const openEdit = (e: Edit | null) => {
-    if (e) {
-      if (!edit && !list) wasPlaying.current = live.current.playing;
-      setPlay(false);
-      setList(false);
-    } else {
-      if (wasPlaying.current) setPlay(true);
-      window.setTimeout(() => playBtn.current?.focus({ preventScroll: true }), 30);
-    }
-    setEdit(e);
+  const change = (r: Parameters<typeof openAdd>[0]) => {
+    setPlay(false);
+    setList(false);
+    openAdd(r);
   };
   const openList = (open: boolean) => {
     if (open) {
-      if (!edit) wasPlaying.current = live.current.playing;
+      wasPlaying.current = live.current.playing;
       setPlay(false);
-      setEdit(null);
     } else if (wasPlaying.current) setPlay(true);
     setList(open);
   };
 
   // ---- changes, from the cards
-  const stopDays = (s: TripStop) => daysOf(s.from, s.to);
-  const tripDays = stops.length ? daysOf(stops[0].from, stops[stops.length - 1].to) : [];
-  const editPlan = (p: TripPlan) => {
-    const s = stops.find((x) => p.day && p.day >= x.from && p.day <= x.to) ?? stops.find((x) => p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, x.lat, x.lng) < 40);
-    openEdit({ kind: "when", plan: p, days: p.kind === "stay" || !s ? tripDays : stopDays(s) });
-  };
+  const editPlan = (p: TripPlan) => change({ edit: p });
+  const addTo = (stop: TripStop, day: string | null, kind?: AddKind) => change({ stopId: stop.id, day, kind });
   const editHere = () => {
     if (!sc) return;
     if (sc.type === "item" && sc.item.plan) editPlan(sc.item.plan);
     else if (sc.type === "leg" && sc.plan) editPlan(sc.plan);
-    else if (sc.type === "day") openEdit({ kind: "add", stop: sc.stop, day: sc.day, title: `Add to ${short(sc.day)} in ${sc.stop.name}` });
+    else if (sc.type === "day") addTo(sc.stop, sc.day);
     else if (sc.type === "city") {
       if (sc.stay) editPlan(sc.stay);
-      else openEdit({ kind: "add", stop: sc.stop, day: sc.stop.from, title: `Where do you sleep in ${sc.stop.name}?` });
-    }
+      else addTo(sc.stop, sc.stop.from, "stay");
+    } else if (sc.type === "wish") addTo(sc.stop, null);
   };
   const addTravel = (k: PlanKind, from: TripStop, to: TripStop) => {
     const id = newId();
@@ -415,12 +400,13 @@ export function TripShow({
     const t = e.target as HTMLElement;
     if (e.key === "Escape") {
       e.preventDefault();
-      if (edit) openEdit(null);
-      else if (list) openList(false);
+      // The Add sheet over the show closes first (it handles its own Escape).
+      if (document.querySelector(".addx")) return;
+      if (list) openList(false);
       else onClose();
       return;
     }
-    if (edit || list || t.closest?.("input, textarea, select")) return;
+    if (list || document.querySelector(".addx") || t.closest?.("input, textarea, select")) return;
     if (e.key === " " || e.key === "k") {
       if (t.closest?.("button, a") && e.key === " ") return;
       e.preventDefault();
@@ -477,7 +463,7 @@ export function TripShow({
   // Anywhere but a button, a field or a panel: the map, the card's words, the picture.
   const free = (t: EventTarget | null) => !(t as HTMLElement | null)?.closest?.("button, a, input, textarea, select, label, .show-sheet, .show-list, .show-controls, .show-top, .show-scrim, .show-next");
   const onDown = (e: React.PointerEvent) => {
-    if (e.button !== 0 || !free(e.target) || edit || list) return;
+    if (e.button !== 0 || !free(e.target) || list) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     const was = live.current.playing;
     touch.current = {
@@ -620,43 +606,7 @@ export function TripShow({
       </div>
 
       <div ref={stage} className="show-stage">
-        {edit ? (
-          <section className="show-sheet" aria-label={edit.kind === "add" ? edit.title : `Change ${edit.plan.title}`}>
-            <div className="show-sheet-head">
-              <p className="show-sheet-h">{edit.kind === "add" ? edit.title : `Change ${edit.plan.title}`}</p>
-              <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Done" onClick={() => openEdit(null)}><X size={16} aria-hidden /></button>
-            </div>
-            {edit.kind === "add" ? (
-              <QuickAdd trip={trip} stop={edit.stop} day={edit.day} events={events} onDone={() => openEdit(null)} />
-            ) : (
-              <WhenPicker
-                key={edit.plan.id}
-                trip={trip}
-                draft={{ title: edit.plan.title, kind: edit.plan.kind, lat: edit.plan.lat, lng: edit.plan.lng, poi: edit.plan.poi, image: edit.plan.image, about: edit.plan.place ?? (edit.plan.poi ? poiLabel(...(edit.plan.poi.split("/") as [string, string?])) : undefined) }}
-                days={edit.days}
-                initial={edit.plan}
-                events={events}
-                verb="Save"
-                skip={edit.plan.id}
-                focusSave
-                head={false}
-                onCancel={() => openEdit(null)}
-                onRemove={() => {
-                  const gone = edit.plan;
-                  userActions.removePlan(trip.id, gone.id);
-                  toast({ title: `${gone.title} taken off`, emoji: "🗑️", action: { label: "Undo", run: () => userActions.addPlan(trip.id, gone) } });
-                  openEdit(null);
-                }}
-                onSave={(w) => {
-                  const before = edit.plan;
-                  userActions.updatePlan(trip.id, before.id, { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay ?? (before.kind === "stay" ? before.endDay : undefined), notes: w.notes });
-                  toast({ title: `${before.title}: ${w.day ? `${short(w.day)}${w.time ? `, ${w.time}` : ""}` : "no day yet"}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, before.id, before) } });
-                  openEdit(null);
-                }}
-              />
-            )}
-          </section>
-        ) : (
+        {(
           <>
             <SceneCard
               key={`${sc.key}-${epoch}`}
@@ -675,7 +625,7 @@ export function TripShow({
               onClose={onClose}
               onShare={() => void share()}
               onEditPlan={editPlan}
-              onAddTo={(stop, day, title) => openEdit({ kind: "add", stop, day, title })}
+              onAddTo={addTo}
               onTravel={addTravel}
               onRemoveEvent={removeEvent}
             />
@@ -700,7 +650,7 @@ export function TripShow({
         <span className="show-count tnum max-sm:hidden" aria-hidden>{at + 1}/{scenes.length}</span>
       </div>
 
-      {(list || edit) && <div className="show-scrim" onClick={() => (edit ? openEdit(null) : openList(false))} aria-hidden />}
+      {list && <div className="show-scrim" onClick={() => openList(false)} aria-hidden />}
       {list && (
         <div className="show-list" role="dialog" aria-label="Go to a part of the trip">
           <div className="flex items-center justify-between">
@@ -792,7 +742,7 @@ function SceneCard({
   onClose: () => void;
   onShare: () => void;
   onEditPlan: (p: TripPlan) => void;
-  onAddTo: (stop: TripStop, day: string | null, title: string) => void;
+  onAddTo: (stop: TripStop, day: string | null, kind?: AddKind) => void;
   onTravel: (k: PlanKind, from: TripStop, to: TripStop) => void;
   onRemoveEvent: (e: TripEvent) => void;
 }) {
@@ -888,9 +838,9 @@ function SceneCard({
             {sc.stay ? (
               <button type="button" className="show-act" onClick={() => onEditPlan(sc.stay!)}><BedDouble size={13} aria-hidden /> Change the nights</button>
             ) : (
-              <button type="button" className="show-act show-act-main" onClick={() => onAddTo(sc.stop, sc.stop.from, `Where do you sleep in ${sc.stop.name}?`)}><Plus size={13} aria-hidden /> Where you sleep</button>
+              <button type="button" className="show-act show-act-main" onClick={() => onAddTo(sc.stop, sc.stop.from, "stay")}><Plus size={13} aria-hidden /> Where you sleep</button>
             )}
-            <button type="button" className="show-act" onClick={() => onAddTo(sc.stop, null, `Add to ${sc.stop.name}`)}><Plus size={13} aria-hidden /> Something to do</button>
+            <button type="button" className="show-act" onClick={() => onAddTo(sc.stop, null)}><Plus size={13} aria-hidden /> Something to do</button>
           </div>
         </article>
       );
@@ -917,7 +867,7 @@ function SceneCard({
             <p className="show-sub s-in" style={i(2)}>A free day in {sc.stop.name}. Wander, or fill it.</p>
           )}
           <div className="show-card-actions s-in" style={i(9)}>
-            <button type="button" className="show-act show-act-main" onClick={() => onAddTo(sc.stop, sc.day, `Add to ${short(sc.day)} in ${sc.stop.name}`)}><Plus size={13} aria-hidden /> Add to this day</button>
+            <button type="button" className="show-act show-act-main" onClick={() => onAddTo(sc.stop, sc.day)}><Plus size={13} aria-hidden /> Add to this day</button>
           </div>
         </article>
       );
