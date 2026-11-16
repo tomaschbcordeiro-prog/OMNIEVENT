@@ -11,6 +11,7 @@ import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, 
 import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
+import { parseRouteParam } from "@/lib/travel/route-param";
 import { bboxOf, CityPin, dayLabel, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, useSheet, type MapIcon } from "./shared";
 import { localDateKey } from "@/lib/format";
 import { toast } from "../toast";
@@ -151,6 +152,20 @@ export function TripPlanner() {
       first.push(keyed({ name: decodeURIComponent(place[2]).slice(0, 60), countryCode: place[3]?.slice(0, 2), lat: Number(place[0]), lng: Number(place[1]) }));
     const region = REGIONS.find((r) => r.id === sp.get("region"));
     if (region) region.places.forEach((p) => first.push(keyed(p)));
+    // A whole route (a trip idea, or a trip someone shared): its stops, nights and name.
+    const route = sp.get("route") ? parseRouteParam(sp.get("route")!) : [];
+    if (route.length && !first.length) {
+      route.forEach((p) => first.push(keyed({ name: p.name, countryCode: p.countryCode, lat: p.lat, lng: p.lng, cityId: p.cityId })));
+      setStart(addDays(today(), 21));
+      setNights(route.map((p) => Math.max(1, p.nights)));
+      const nm = sp.get("name")?.trim();
+      if (nm) {
+        setName(nm.slice(0, 80));
+        setNamed(true);
+      }
+      const em = sp.get("emoji");
+      if (em && [...em].length <= 4 && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(em)) setEmoji(em);
+    }
     if (first.length) setStops(first);
     const date = sp.get("date");
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -479,6 +494,7 @@ export function TripPlanner() {
                         <span aria-hidden>{r.emoji}</span> {r.name}
                       </button>
                     ))}
+                    <Link href="/trips/ideas" className="chip chip-link press font-semibold">✨ Endless ideas <ArrowRight size={13} aria-hidden /></Link>
                   </div>
                 </div>
               )}
@@ -524,6 +540,7 @@ export function TripPlanner() {
                           <span aria-hidden>{r.emoji}</span> {r.name}
                         </button>
                       ))}
+                      <Link href="/trips/ideas" className="chip chip-link press font-semibold">✨ More ideas <ArrowRight size={13} aria-hidden /></Link>
                     </div>
                   </details>
                 </div>

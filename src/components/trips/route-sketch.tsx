@@ -33,10 +33,35 @@ export function RouteSketch({ stops, className = "" }: { stops: Pick<TripStop, "
     return `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${(mx - dy * bend).toFixed(1)} ${(my + dx * bend).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
   });
   const many = stops.length > 5;
-  // Names above the dots, or beside them when the route runs north–south.
-  const tall = y1 - y0 > x1 - x0;
-  const label = (p: { x: number; y: number }) =>
-    !tall ? { x: p.x, y: p.y - 9, anchor: "middle" as const } : p.x <= W / 2 + 6 ? { x: p.x + 9, y: p.y + 3, anchor: "start" as const } : { x: p.x - 9, y: p.y + 3, anchor: "end" as const };
+  // Each name where it fits: above its dot, beside it, or below, never over another name or dot.
+  type Spot = { x: number; y: number; anchor: "start" | "middle" | "end" };
+  const LW = 17;
+  const LH = 8;
+  const boxOf = (l: Spot) => {
+    const left = l.anchor === "start" ? l.x : l.anchor === "end" ? l.x - LW : l.x - LW / 2;
+    return { l: left, r: left + LW, t: l.y - LH + 1, b: l.y + 1 };
+  };
+  const hits = (a: ReturnType<typeof boxOf>, b: ReturnType<typeof boxOf>) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  const placed: ReturnType<typeof boxOf>[] = [];
+  const dots = pts.map((p) => ({ l: p.x - 5, r: p.x + 5, t: p.y - 5, b: p.y + 5 }));
+  const labels: (Spot | null)[] = many
+    ? pts.map(() => null)
+    : pts.map((p) => {
+        const options: Spot[] = [
+          { x: p.x, y: p.y - 9, anchor: "middle" },
+          { x: p.x + 9, y: p.y + 3, anchor: "start" },
+          { x: p.x - 9, y: p.y + 3, anchor: "end" },
+          { x: p.x, y: p.y + 15, anchor: "middle" },
+        ];
+        const fits = (o: Spot) => {
+          const b = boxOf(o);
+          return b.l >= 0 && b.r <= W && b.t >= 0 && b.b <= H && !placed.some((x) => hits(x, b)) && !dots.some((d) => hits(d, b));
+        };
+        const pick = options.find(fits);
+        if (!pick) return null;
+        placed.push(boxOf(pick));
+        return pick;
+      });
   return (
     <svg className={`route-sketch ${className}`} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Route: ${stops.map((s) => s.name).join(" to ")}`}>
       {arcs.map((d, i) => (
@@ -46,8 +71,8 @@ export function RouteSketch({ stops, className = "" }: { stops: Pick<TripStop, "
         <g key={i} className="route-sketch-stop" style={{ "--i": i } as React.CSSProperties}>
           {i === 0 && <circle cx={p.x} cy={p.y} r="9" className="route-sketch-pulse" style={{ fill: stopColor(0) }} />}
           <circle cx={p.x} cy={p.y} r={many ? 4 : 5.5} style={{ fill: stopColor(i) }} className="route-sketch-dot" />
-          {!many && (
-            <text {...(({ anchor, ...xy }) => ({ ...xy, textAnchor: anchor }))(label(p))} className="route-sketch-code">
+          {labels[i] && (
+            <text x={labels[i]!.x} y={labels[i]!.y} textAnchor={labels[i]!.anchor} className="route-sketch-code">
               {codeOf(stops[i].name)}
             </text>
           )}

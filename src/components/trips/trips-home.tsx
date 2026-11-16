@@ -94,9 +94,25 @@ export function TripsHome() {
           <TripsList />
         </div>
         <aside className="trips-side" aria-label="Plan another trip">
+          <Link href="/trips/ideas" className="trips-side-link press" data-kind="ideas">
+            <span className="trips-side-icon" aria-hidden>✨</span>
+            <span className="min-w-0">
+              <span className="block font-semibold">Trip ideas</span>
+              <span className="block t-micro text-text-2">Endless routes: coasts, mountains, wine, islands…</span>
+            </span>
+            <ArrowRight size={16} aria-hidden className="ml-auto shrink-0" />
+          </Link>
+          <Link href="/trips/shared" className="trips-side-link press mt-2 mb-5" data-kind="shared">
+            <span className="trips-side-icon" aria-hidden>🧳</span>
+            <span className="min-w-0">
+              <span className="block font-semibold">From travellers</span>
+              <span className="block t-micro text-text-2">Trips people shared. Share yours too.</span>
+            </span>
+            <ArrowRight size={16} aria-hidden className="ml-auto shrink-0" />
+          </Link>
           {any && (
             <>
-              <p className="t-small font-semibold">Plan another, from a route</p>
+              <p className="t-small font-semibold">Or start from a region</p>
               <ul className="mt-3 mb-5 flex flex-wrap gap-2">
                 {REGIONS.map((r) => (
                   <li key={r.id}>
@@ -235,7 +251,7 @@ export function TripsList() {
       <TripIdeas />
       <div className="trips-empty mt-8">
         <p className="t-h2">Where to next?</p>
-        <p className="t-body text-text-2 mt-1">Start from a route and change it as you like.</p>
+        <p className="t-body text-text-2 mt-1">Start from a route and change it as you like, or browse <Link href="/trips/ideas" className="font-semibold underline">endless trip ideas</Link>.</p>
         <ul className="mt-4 flex flex-wrap gap-2">
           {REGIONS.map((r) => (
             <li key={r.id}>

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Play, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Play, Plus, Share2, Trash2, TriangleAlert, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
 import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
@@ -13,6 +13,7 @@ import { PoiCard, type MapPlace } from "./place-to-trip";
 import { CityPlan, plansIn } from "./city-plan";
 import { TripShow } from "./trip-show";
 import { AddSheet } from "./add-sheet";
+import { ShareTripDialog } from "./shared-trips";
 import { ADD_EVENT, openAdd, type AddRequest } from "./add-bus";
 import type { MapClick } from "../earth/earth-map";
 import type { TripPlan } from "@/lib/trip-plans";
@@ -91,6 +92,8 @@ export function TripView({ id }: { id: string }) {
   const [showing, setShowing] = useState<{ at?: string; pad: Pad } | null>(null);
   // The trip's one Add sheet, asked for from anywhere on the page.
   const [adding, setAdding] = useState<{ req: AddRequest; n: number } | null>(null);
+  /** The Share dialog is open. */
+  const [sharing, setSharing] = useState(false);
   useEffect(() => {
     const on = (e: Event) => setAdding((a) => ({ req: (e as CustomEvent<AddRequest>).detail ?? {}, n: (a?.n ?? 0) + 1 }));
     window.addEventListener(ADD_EVENT, on);
@@ -335,6 +338,7 @@ export function TripView({ id }: { id: string }) {
       {adding && (
         <AddSheet key={adding.n} trip={trip} stops={stops} events={dayEvents} req={adding.req} near={stop} onClose={() => setAdding(null)} onDone={reveal} />
       )}
+      {sharing && <ShareTripDialog trip={trip} onClose={() => setSharing(false)} />}
       {showing && ready && (
         <TripShow
           trip={trip}
@@ -380,6 +384,10 @@ export function TripView({ id }: { id: string }) {
               <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
                 <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
                 <span>View</span>
+              </button>
+              <button type="button" className="trip-share press" onClick={() => setSharing(true)} aria-label={trip.sharedId ? "Shared with travellers: change or take down" : "Share this trip with travellers"} data-shared={trip.sharedId ? "" : undefined}>
+                <Share2 size={16} aria-hidden />
+                <span className="max-sm:sr-only">{trip.sharedId ? "Shared" : "Share"}</span>
               </button>
             </div>
           )}

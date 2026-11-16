@@ -33,6 +33,8 @@ export interface Trip {
   snaps?: Record<string, TripEventSnap>;
   /** Your own plans on the trip: flights, stays, meetings, meals… */
   plans?: TripPlan[];
+  /** Its id among the trips shared with everyone, once shared. */
+  sharedId?: string;
 }
 
 /** A trip's event as kept with the trip: what a saved event keeps, plus where it is. */

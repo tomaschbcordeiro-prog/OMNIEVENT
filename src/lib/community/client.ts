@@ -190,6 +190,15 @@ export async function clubsPost<T>(body: Record<string, unknown>): Promise<T> {
   return parse<T>(await fetch("/api/clubs", { method: "POST", headers: headers(false), body: JSON.stringify(body) }));
 }
 
+/** Shared trips: the same key and error handling, on /api/shared-trips. */
+export async function sharedTripsGet<T>(query = ""): Promise<T> {
+  return parse<T>(await fetch(`/api/shared-trips${query ? `?${query}` : ""}`, { headers: headers(false), cache: "no-store" }));
+}
+
+export async function sharedTripsPost<T>(body: Record<string, unknown>): Promise<T> {
+  return parse<T>(await fetch("/api/shared-trips", { method: "POST", headers: headers(false), body: JSON.stringify(body) }));
+}
+
 /** Short relative time: "now", "5m", "3h", "2d", then a date. */
 export function ago(iso: string): string {
   const s = (Date.now() - Date.parse(iso)) / 1000;
