@@ -8,8 +8,8 @@ import type { TripEvent } from "@/lib/trip-snap";
 import { TripButton } from "./trips/trip-add";
 
 /**
- * Phones: a bar fixed to the bottom of an event page once the visitor scrolls, so tickets,
- * saving and the conversation are always one tap away.
+ * Phones: a bar fixed to the bottom of an event page, so tickets, saving and the trip are
+ * always one tap away (however far down the page is read).
  */
 export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, officialUrl, inactive, snap, tripEvent }: {
   id: string;
@@ -22,12 +22,11 @@ export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, offici
   officialUrl?: string;
   inactive?: boolean;
 }) {
+  // In from the start (slid up once the page is in): tickets are the main way on.
   const [shown, setShown] = useState(false);
   useEffect(() => {
-    const on = () => setShown(window.scrollY > 320);
-    on();
-    window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
+    const t = window.setTimeout(() => setShown(true), 350);
+    return () => window.clearTimeout(t);
   }, []);
   const primary = !isFree && hasOffers ? { href: "#tickets", label: "Tickets", external: false } : officialUrl ? { href: officialUrl, label: isFree ? "Details" : "Tickets", external: true } : null;
   return (

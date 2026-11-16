@@ -1,3 +1,4 @@
+import { isDull } from "../quality";
 import "server-only";
 import { createHash } from "node:crypto";
 import type { EventCard } from "../types";
@@ -61,7 +62,7 @@ export function pickRounds(day: string, cards: EventCard[]): DuelRound[] {
   });
   const real = ok.filter((c) => !c.isDemo);
   const pool = (real.length >= ROUNDS * 2 ? real : ok)
-    .map((c) => ({ c, r: rank(day, c.id) + (c.imageUrl ? 0 : 2 ** 33) + (LIVELY.has(c.groupSlug) ? 0 : 2 ** 32) }))
+    .map((c) => ({ c, r: rank(day, c.id) + (isDull(c) ? 2 ** 34 : 0) + (c.imageUrl ? 0 : 2 ** 33) + (LIVELY.has(c.groupSlug) ? 0 : 2 ** 32) }))
     .sort((x, y) => x.r - y.r)
     .map((x) => x.c);
   const rounds: DuelRound[] = [];

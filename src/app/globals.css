@@ -912,13 +912,13 @@ select.field {
     background: linear-gradient(90deg, transparent, var(--cyan), var(--sun), transparent);
     animation: progress 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
-  /* Phones: event actions pinned to the bottom, sliding up once the page is scrolled. */
+  /* Phones: event actions pinned to the bottom, sliding up as the page opens. */
   .action-bar {
     position: fixed;
     inset: auto 0 0 0;
     z-index: 35;
     padding-bottom: env(safe-area-inset-bottom);
-    background: color-mix(in srgb, var(--color-panel) 92%, transparent);
+    background: color-mix(in srgb, var(--color-panel) 98%, transparent);
     backdrop-filter: blur(14px);
     border-top: 1px solid var(--color-line);
     box-shadow: 0 -10px 30px -20px rgb(10 50 120 / 0.5);
@@ -3538,8 +3538,7 @@ a[data-pending] {
 .search-cmdk {
   flex-shrink: 0;
   color: var(--color-text-3);
-  opacity: 0.85;
-  transition: opacity 150ms, color 150ms;
+  transition: color 150ms;
 }
 .search-cmdk:hover {
   opacity: 1;
@@ -3990,7 +3989,8 @@ mark.hit {
   position: fixed;
   z-index: 60;
   left: 50%;
-  bottom: calc(16px + max(var(--tabbar-h), env(safe-area-inset-bottom)));
+  /* At the top, under the header: out of the way of the list and the bottom bar. */
+  top: calc(var(--header-h) + 10px);
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -10081,5 +10081,22 @@ body:has(.addx) {
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+}
+
+/* Phones: a lighter "still loading" line, and a headline that leaves room for the list. */
+@media (max-width: 639px) {
+  .still-loading {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .events-title {
+    font-size: 2rem;
+  }
+}
+@media (max-width: 1023px) {
+  /* Room under the page for the event's ticket bar. */
+  body:has(.action-bar) main {
+    padding-bottom: 4.5rem;
   }
 }

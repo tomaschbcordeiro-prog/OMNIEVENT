@@ -36,7 +36,7 @@ export function StillLoading({ partial, count }: { partial: boolean; count: numb
     <div className="still-loading panel-in" role="status">
       <Loader2 size={15} className="animate-spin shrink-0" aria-hidden />
       <span>
-        Loading events from around the world… <span className="tnum">{count.toLocaleString("en-GB")}</span> so far. This page updates by itself.
+        Still loading events: <span className="tnum">{count.toLocaleString("en-GB")}</span> so far<span className="max-sm:hidden">. This page updates by itself</span>
       </span>
     </div>
   );

@@ -72,8 +72,11 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
           <div className="on-sky">
             <h1 className="t-display text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind <em>every pin</em> on the map</h1>
             <p className="t-body text-white/95 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
-            {/* Numbers only once there's something to count. */}
-            {(!home || Object.values(home.stats).some((n) => n > 0)) && (
+            {/* Numbers once there's something to count; until then an invitation in the same room
+                (nothing below moves when the numbers arrive). */}
+            {home && !Object.values(home.stats).some((n) => n > 0) ? (
+              <p className="mt-6 min-h-[8.5rem] sm:min-h-[4.4rem] flex items-center t-body font-semibold text-white">Be one of the first: say what you&apos;re going to, and find who else is.</p>
+            ) : (
             <dl className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl">
               {([
                 ["Members", home?.stats.members],

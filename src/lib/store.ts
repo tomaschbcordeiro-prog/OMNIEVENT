@@ -1,3 +1,4 @@
+import { isDull } from "./quality";
 import { inPrerender, outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
@@ -182,9 +183,10 @@ const SNAPSHOT_REFRESH_MS = Number(process.env.SNAPSHOT_REFRESH_HOURS ?? 3) * 36
 /** How long the first requests a server answers may wait for its data. */
 // A new server answers within a few seconds with what it has; the rest keeps loading (the
 // index is rebuilt in slices, so the server stays responsive). On Vercel the shared copies
-// take ten to fifteen seconds in all: the first visitors wait six, see most of the catalogue,
-// and the page completes itself when the rest is in (see StillLoading).
-const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? (process.env.VERCEL === "1" ? 6000 : 4000));
+// take ten to fifteen seconds in all: the first visitors wait three and a half (a skeleton of
+// the page shows meanwhile), see the larger part of the catalogue, and the page completes
+// itself when the rest is in (see StillLoading).
+const FIRST_LOAD_WAIT = Number(process.env.FIRST_LOAD_WAIT_MS ?? (process.env.VERCEL === "1" ? 3500 : 3000));
 
 const SYNC_SLOTS = Number(process.env.SYNC_CONCURRENCY ?? 8);
 const HEAVY_SLOTS = 2;
@@ -1576,10 +1578,19 @@ export function soonestByCategories(f: SearchFilters, lists: string[][], n: numb
   const late = (c: EventCard) => Number(c.eventType === "daily_attraction" || !!c.ongoing || !!c.hoursUnknown);
   const at = (c: EventCard) => (c.ongoing ? windowStart : startMsOf(c));
   return found.map((list) => {
-    const keyed = list.map((c, i) => ({ c, u: late(c), t: at(c), i }));
-    keyed.sort((a, b) => a.u - b.u || a.t - b.t || a.i - b.i);
+    const keyed = list.map((c, i) => ({ c, u: late(c), t: at(c), d: dullOf(c), i }));
+    keyed.sort((a, b) => a.u - b.u || Math.floor(a.t / DAY_MS) - Math.floor(b.t / DAY_MS) || a.d - b.d || a.t - b.t || a.i - b.i);
     return keyed.slice(0, n).map((k) => k.c);
   });
+}
+
+const DAY_MS = 86_400_000;
+/** 1 for a listing few go out for (worked out once per card). */
+const dullCache = new WeakMap<object, number>();
+function dullOf(c: EventCard): number {
+  let d = dullCache.get(c);
+  if (d === undefined) dullCache.set(c, (d = isDull(c) ? 1 : 0));
+  return d;
 }
 
 function catSetsFor(f: SearchFilters) {
@@ -1645,6 +1656,7 @@ function runSearch(f: SearchFilters): SearchResult {
   // Matches in two parallel lists (cards and their scores): no object per match.
   const found: EventCard[] = [];
   const score: number[] = [];
+  const dull: number[] = [];
   const groups: Record<string, number> = {};
   const cities: Record<string, number> = {};
   const now = Date.now();
@@ -1655,6 +1667,7 @@ function runSearch(f: SearchFilters): SearchResult {
     const shown = present(c, f, now);
     found.push(f.near ? { ...shown, distanceKm: haversineKm(c.lat, c.lng, f.near.lat, f.near.lng) } : shown);
     score.push(s);
+    dull.push(dullOf(c));
     groups[c.groupSlug] = (groups[c.groupSlug] ?? 0) + 1;
     if (c.cityId) cities[c.cityId] = (cities[c.cityId] ?? 0) + 1;
   }
@@ -1684,8 +1697,10 @@ function runSearch(f: SearchFilters): SearchResult {
       case "price": return P[a] - P[b] || T[a] - T[b];
       case "distance": return (found[a].distanceKm ?? Infinity) - (found[b].distanceKm ?? Infinity);
       case "announced": return A[a] < A[b] ? 1 : A[a] > A[b] ? -1 : 0;
-      case "relevance": return score[b] - score[a] || T[a] - T[b];
-      default: return U[a] - U[b] || T[a] - T[b];
+      case "relevance": return score[b] - score[a] || dull[a] - dull[b] || T[a] - T[b];
+      // Day by day; in each day the listings few go out for (information sessions, school
+      // visits…) after the rest.
+      default: return U[a] - U[b] || Math.floor(T[a] / DAY_MS) - Math.floor(T[b] / DAY_MS) || dull[a] - dull[b] || T[a] - T[b];
     }
   };
   const pageSize = Math.min(100, Math.max(1, f.pageSize ?? 24));

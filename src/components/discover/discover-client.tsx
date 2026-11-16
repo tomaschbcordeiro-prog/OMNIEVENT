@@ -876,7 +876,7 @@ export function DiscoverClient() {
       )}
 
       {/* ---------- Bottom-left: view switch and map controls ---------- */}
-      <div ref={bottomBox} className={`absolute z-20 left-4 sm:left-6 compact:left-3 compact:right-3 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8 compact:bottom-3"} ${flightOn ? "hidden" : ""}`}>
+      <div ref={bottomBox} className={`absolute z-20 left-4 sm:left-6 compact:left-3 compact:right-3 flex flex-col gap-2 items-start ${near && !selection ? "bottom-[13.5rem] lg:bottom-8" : "bottom-8 compact:bottom-8"} ${flightOn ? "hidden" : ""}`}>
         {showLayers && mode !== "list" && (
           <LayersPanel base={base} layers={layers} onBase={(b) => {
             baseChosen.current = true;

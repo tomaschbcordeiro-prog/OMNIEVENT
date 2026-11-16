@@ -80,7 +80,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
-              <h1 className="t-display">
+              <h1 className="t-display events-title">
                 {asked || filters.q ? (
                   <>Results for <em>“{asked ?? filters.q}”</em></>
                 ) : filters.near ? (

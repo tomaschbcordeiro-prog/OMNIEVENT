@@ -80,7 +80,7 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
     }
   }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
   // A picture that can't be loaded: the event's poster in the same frame, so nothing below moves.
-  if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full" />;
+  if (broken) return <Poster title={title} hue={hue} categorySlug={categorySlug} size="lg" className="aspect-[16/10] sm:aspect-[21/9] max-h-[460px] w-full" />;
   function measure(img: HTMLImageElement) {
     const b = box.current?.getBoundingClientRect();
     if (!b?.width || !img.naturalWidth) return;
@@ -90,7 +90,7 @@ export function HeroImage({ src: original, title, hue, categorySlug }: { src: st
     setGrow(Math.min(fits, 1.35) / Math.min(fits, 1));
   }
   return (
-    <div ref={box} className="hero-img hero-zoomable aspect-[4/3] sm:aspect-[21/9] max-h-[460px] w-full" onClick={() => setOpen(true)}>
+    <div ref={box} className="hero-img hero-zoomable aspect-[16/10] sm:aspect-[21/9] max-h-[460px] w-full" onClick={() => setOpen(true)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={backdrop} alt="" aria-hidden className="hero-img-bg" referrerPolicy="no-referrer" decoding="async" />
       <button type="button" className="hero-expand" aria-label={`See the picture of ${title} larger`} onClick={(e) => (e.stopPropagation(), setOpen(true))}>
