@@ -10100,3 +10100,310 @@ body:has(.addx) {
     padding-bottom: 4.5rem;
   }
 }
+
+/* The trips page: the trips, and beside them (below on phones) a way to plan another. */
+.trips-layout {
+  display: grid;
+  gap: 2.5rem;
+}
+@media (min-width: 1024px) {
+  .trips-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+  .trips-side {
+    position: sticky;
+    top: calc(var(--header-h) + 1.5rem);
+    margin-top: 2rem;
+  }
+}
+.trips-side {
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--radius-l);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.trip-cards {
+  display: grid;
+  gap: 2rem;
+}
+.trip-cards.is-past {
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.trip-card {
+  animation: stop-in 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.trip-cards.is-past .trip-card {
+  opacity: 0.88;
+}
+/* The pass with the route drawn small beside its details. */
+.trip-pass-main[data-aside] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1rem;
+  align-items: start;
+}
+.trip-pass-main[data-aside] > :not(.trip-pass-aside) {
+  grid-column: 1;
+}
+.trip-pass-aside {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+  width: clamp(120px, 20vw, 200px);
+}
+.is-compact .trip-pass-aside {
+  width: 96px;
+}
+.trip-pass-aside.is-stub {
+  display: none;
+}
+/* Phones: the route sits in the stub, beside the nights. */
+@media (max-width: 639px) {
+  .trip-pass-aside.is-main {
+    display: none;
+  }
+  .trip-pass-stub:has(.is-stub) {
+    position: relative;
+    padding-right: 7.75rem;
+  }
+  .trip-pass-aside.is-stub {
+    display: block;
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    translate: 0 -50%;
+    width: 6.6rem;
+  }
+}
+.is-compact .trip-pass-name {
+  font-size: 1.3rem;
+}
+.trip-pass-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.trip-pass-tag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+.trip-card[data-phase="now"] .trip-pass-tag-dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
+  animation: tag-live 1.8s ease-out infinite;
+}
+.trip-card[data-phase="past"] .trip-pass-tag-dot {
+  background: var(--text-3);
+}
+.trip-card[data-phase="undated"] .trip-pass-tag-dot {
+  background: var(--warn);
+}
+@keyframes tag-live {
+  to {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+.route-sketch {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  border-radius: 14px;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-3) 40%, transparent) 0.8px, transparent 1.3px);
+  background-size: 8px 8px;
+}
+.route-sketch-arc {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.75;
+  animation: sketch-draw 700ms cubic-bezier(0.5, 0, 0.3, 1) forwards;
+  animation-delay: calc(240ms + var(--i, 0) * 260ms);
+}
+@keyframes sketch-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.route-sketch-stop {
+  animation: icon-pop 380ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  animation-delay: calc(140ms + var(--i, 0) * 260ms);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.route-sketch-dot {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.route-sketch-pulse {
+  opacity: 0.22;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sketch-pulse 2.4s ease-out infinite;
+}
+@keyframes sketch-pulse {
+  from {
+    scale: 0.6;
+    opacity: 0.35;
+  }
+  to {
+    scale: 1.5;
+    opacity: 0;
+  }
+}
+.route-sketch-code {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: var(--text-2);
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+/* How ready a trip is: beds, journeys, days, and the one thing to add next. */
+.trip-ready {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.85rem 0.25rem 0;
+}
+@media (min-width: 640px) {
+  .trip-ready {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 15.5rem);
+    align-items: center;
+    gap: 1.25rem;
+  }
+}
+.trip-meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.trip-meter {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+.trip-meter-top {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.trip-meter-top .font-semibold {
+  color: var(--text);
+}
+.trip-meter[data-done] svg {
+  color: var(--ok);
+}
+.trip-meter-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.trip-meter-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transform-origin: left;
+  animation: meter-in 700ms cubic-bezier(0.3, 0, 0.2, 1) 300ms both;
+}
+.trip-meter[data-done] .trip-meter-bar > span {
+  background: var(--ok);
+}
+@keyframes meter-in {
+  from {
+    scale: 0 1;
+  }
+}
+.trip-ready-next {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 50%, var(--line));
+  background: color-mix(in srgb, var(--primary) 6%, var(--panel));
+  font-size: 0.875rem;
+  color: var(--text);
+  transition: border-color 150ms, background-color 150ms;
+}
+.trip-ready-next:hover {
+  border-style: solid;
+  background: color-mix(in srgb, var(--primary) 10%, var(--panel));
+}
+.trip-ready-next > svg {
+  color: var(--primary);
+}
+.trip-ready-next-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--primary);
+}
+.trip-ready-next[data-kind="stay"] .trip-ready-next-icon {
+  background: #7b4dff;
+}
+.trip-ready-next[data-kind="journey"] .trip-ready-next-icon {
+  background: #0f9f73;
+}
+.trip-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0.25rem 0;
+}
+.trip-card-actions .trip-pass-view {
+  margin-top: 0;
+}
+.trip-card-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  transition: border-color 150ms;
+}
+.trip-card-add:hover {
+  border-color: var(--primary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip-card,
+  .route-sketch-stop,
+  .route-sketch-pulse,
+  .trip-meter-bar > span,
+  .trip-card[data-phase="now"] .trip-pass-tag-dot {
+    animation: none;
+  }
+  .route-sketch-arc {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

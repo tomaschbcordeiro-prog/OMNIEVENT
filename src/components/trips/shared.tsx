@@ -431,13 +431,15 @@ export function cardOf(e: TripEvent): EventCard {
  * A trip as a boarding pass: its name, its route in three-letter codes, its dates; the stub
  * with the nights, cities and events.
  */
-export function TripPass({ name, emoji, stops, start, end, events, compact = false }: { name: string; emoji?: string; stops: Pick<TripStop, "name" | "countryCode">[]; start?: string; end?: string; events: number; compact?: boolean }) {
+export function TripPass({ name, emoji, stops, start, end, events, compact = false, tag, aside }: { name: string; emoji?: string; stops: Pick<TripStop, "name" | "countryCode">[]; start?: string; end?: string; events: number; compact?: boolean; /** A word over the name ("In 20 days"). */ tag?: React.ReactNode; /** Beside the details (the route drawn small). */ aside?: React.ReactNode }) {
   const flags = [...new Set(stops.map((s) => flagOf(s.countryCode)).filter(Boolean))];
   const nights = start && end ? nightsBetween(start, end) : 0;
   return (
     <div className={`trip-pass ticket-wrap ${compact ? "is-compact" : ""}`} style={{ "--ink": stopColor(0) } as React.CSSProperties}>
       <div className="ticket">
-        <div className="trip-pass-main">
+        <div className="trip-pass-main" data-aside={aside ? "" : undefined}>
+          {aside && <div className="trip-pass-aside is-main">{aside}</div>}
+          {tag && <p className="trip-pass-tag">{tag}</p>}
           <p className="trip-pass-name">
             <span aria-hidden>{emoji ?? "✈️"}</span> {name}
           </p>
@@ -464,6 +466,8 @@ export function TripPass({ name, emoji, stops, start, end, events, compact = fal
           <p className="t-small text-text-2">
             {stops.length} {stops.length === 1 ? "city" : "cities"}, {events} {events === 1 ? "event" : "events"}
           </p>
+          {/* On phones the route goes in the stub, where there's room. */}
+          {aside && <div className="trip-pass-aside is-stub" aria-hidden>{aside}</div>}
         </div>
       </div>
     </div>

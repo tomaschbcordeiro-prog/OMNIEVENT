@@ -125,6 +125,22 @@ export function TripView({ id }: { id: string }) {
   const { events } = useTripEvents(trip);
   const sugg = useSuggestions(trip);
   const stops = useMemo(() => trip?.stops ?? [], [trip?.stops]);
+  // Sent here to add something (from the trips page's "Add next"): the Add sheet opens on it.
+  const asked = useRef(false);
+  useEffect(() => {
+    const a = sp.get("add");
+    if (!trip || !a || asked.current) return;
+    asked.current = true;
+    const stop = stops.find((s) => s.id === sp.get("stop"));
+    const leg = Number(sp.get("leg"));
+    const [from, to] = [stops[leg - 1], stops[leg]];
+    if ((a === "train" || a === "flight") && from && to) openAdd({ draft: { kind: a, title: `${kindLabel(a)} to ${to.name}`, day: from.to, from: from.name, to: to.name } });
+    else if (a === "stay") openAdd({ stopId: stop?.id, day: stop?.from, kind: "stay" });
+    else openAdd({ stopId: stop?.id, day: sp.get("day") || undefined });
+    router.replace(`/trips/${trip.id}`, { scroll: false });
+    // Once, when the trip is there.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id]);
   const stop = sel === null ? undefined : stops[sel];
   useEffect(() => setLoaded(true), []);
   // The trip open here is the one events go to from the rest of the site.
