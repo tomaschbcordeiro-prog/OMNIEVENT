@@ -10999,6 +10999,9 @@ section + .ideas-grid {
   body:has(.still-loading) main {
     padding-top: 1.5rem;
   }
+  body:has(.still-loading) {
+    --strip-h: 1.6rem;
+  }
 }
 /* The next saved event, at the top of the events list. */
 .up-next {
@@ -11075,5 +11078,75 @@ section + .ideas-grid {
   .up-next-actions .btn {
     width: 2.25rem;
     padding: 0;
+  }
+}
+/* Day headings in event lists, held under the header while their events scroll by. */
+.day-head {
+  position: sticky;
+  top: calc(var(--header-h) + var(--strip-h, 0px));
+  z-index: 4;
+  margin: 0 -0.5rem;
+  padding: 0.55rem 0.5rem 0.4rem;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.day-head h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.day-head-date {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+}
+/* The home page before the map's engine loads: a planet in the globe's place. */
+.globe-placeholder {
+  --d: min(62vmin, 34rem);
+  position: absolute;
+  z-index: 0;
+  left: calc(50% - var(--shift, 0px));
+  top: calc(var(--room-top, 0px) + (100% - var(--room-top, 0px) - var(--room-bottom, 0px)) / 2);
+  width: var(--d);
+  height: var(--d);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.55), transparent 32%),
+    radial-gradient(circle at 60% 62%, rgb(80 170 110 / 0.35), transparent 22%),
+    radial-gradient(circle at 38% 58%, rgb(214 190 120 / 0.3), transparent 18%),
+    radial-gradient(circle at 50% 50%, #5ea8f2 0%, #2c6fd8 62%, #1b4fae 100%);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.25) inset,
+    0 30px 80px -20px rgb(10 30 90 / 0.55),
+    0 0 120px 20px rgb(120 180 255 / 0.25);
+  animation: globe-wait 2.4s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.space .globe-placeholder {
+  background:
+    radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.18), transparent 32%),
+    radial-gradient(circle at 50% 50%, #1d2b4a 0%, #0d1530 70%, #070b1c 100%);
+}
+@keyframes globe-wait {
+  from {
+    opacity: 0.75;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .globe-placeholder {
+    animation: none;
   }
 }

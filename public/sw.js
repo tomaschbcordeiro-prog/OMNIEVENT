@@ -4,7 +4,7 @@
  * styles, fonts, icons, the globe's pictures) come from the phone once fetched, so coming back
  * is instant. Nothing is stored that isn't needed, and old copies are cleared on each update.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const DATA = `data-${VERSION}`;
@@ -92,8 +92,8 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // The globe's map tiles and fonts (MapTiler): kept, they don't change.
-  if (url.hostname === "api.maptiler.com" && /\/(tiles|fonts)\//.test(url.pathname)) {
+  // The globe's map tiles, heights and fonts: kept, each address never changes.
+  if ((url.hostname === "tiles.openfreemap.org" && !url.pathname.endsWith(".json")) || (url.hostname === "s3.amazonaws.com" && url.pathname.startsWith("/elevation-tiles")) || (url.hostname === "api.maptiler.com" && /\/(tiles|fonts)\//.test(url.pathname))) {
     e.respondWith(cacheFirst(req, TILES, 600));
     return;
   }

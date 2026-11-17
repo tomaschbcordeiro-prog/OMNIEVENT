@@ -14,6 +14,27 @@ import { EmptyState, ShapeGlyph } from "./ui";
 import { FilterForm, ActiveFilters } from "./discover/filters";
 import { QuickWhen } from "./quick-when";
 import { CalendarView } from "./calendar-view";
+import { localDateKey } from "@/lib/format";
+
+/** An event's day where it happens (an exhibition already open counts from today). */
+const dayOf = (c: EventCard) => localDateKey(c.start, c.timeZone);
+
+const addDay = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+/** "Today", "Tomorrow", "Sat 22 Nov" (with the year when it isn't this one); "On now" for runs already open. */
+function DayHead({ day, today }: { day: string; today: string | null }) {
+  const date = new Date(`${day}T12:00:00Z`);
+  const plain = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC", ...(today && day.slice(0, 4) !== today.slice(0, 4) ? { year: "numeric" } : {}) });
+  const label = !today ? plain : day < today ? "On now" : day === today ? "Today" : day === addDay(today, 1) ? "Tomorrow" : plain;
+  return (
+    <li className="day-head" role="presentation">
+      <h3>
+        {label}
+        {today && label !== plain && label !== "On now" && <span className="day-head-date">{plain}</span>}
+      </h3>
+    </li>
+  );
+}
 
 /**
  * Filter state lives in the URL. Every change navigates, the server re-renders
@@ -63,6 +84,11 @@ export function EventsBrowser({
   const more = useMoreEvents(result, query ?? filters);
   useListKeys();
   const items = more.items;
+  // In date order, a heading for each day ("Today", "Tomorrow", "Sat 22 Nov"), kept in view
+  // while its events scroll by. "Today" is known only in the browser (the server's day may differ).
+  const byDay = (filters.sort ?? (filters.q ? "relevance" : "date")) === "date";
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => setToday(new Date().toLocaleDateString("en-CA")), []);
   // The words searched for, marked in the titles that match.
   const terms = useMemo(() => (filters.q ?? "").split(/[\s,.;:!?"“”()]+/).filter((w) => w.length >= 3 && !STOP.has(w.toLowerCase())), [filters.q]);
   const [drawer, setDrawer] = useState(false);
@@ -184,9 +210,13 @@ export function EventsBrowser({
             />
           ) : layout === "list" ? (
             <ul className="divide-y divide-line" data-event-list onClickCapture={more.remember}>
-              {items.map((c) => (
-                <EventRow key={c.id} c={c} terms={terms} />
-              ))}
+              {byDay
+                ? items.map((c, i) => {
+                    const d = dayOf(c);
+                    const head = i === 0 || d !== dayOf(items[i - 1]);
+                    return head ? [<DayHead key={`d-${d}`} day={d} today={today} />, <EventRow key={c.id} c={c} terms={terms} />] : <EventRow key={c.id} c={c} terms={terms} />;
+                  })
+                : items.map((c) => <EventRow key={c.id} c={c} terms={terms} />)}
             </ul>
           ) : (
             <ul className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" data-event-list onClickCapture={more.remember}>

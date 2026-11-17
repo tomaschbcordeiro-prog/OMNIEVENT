@@ -61,6 +61,17 @@ function DateBlock({ c }: { c: Card }) {
 // Event links don't load ahead just for being on screen (a list would ask for every event);
 // the whole page loads when the pointer rests on one or a finger touches it (IntentPrefetch).
 /**
+ * An event's page fetched ahead as the pointer comes over it (or a finger lands on it), so it
+ * opens at once when tapped. Lists don't prefetch every row: only the ones about to be opened.
+ */
+const warmed = new Set<string>();
+function warm(router: ReturnType<typeof useRouter>, slug: string) {
+  if (warmed.has(slug) || warmed.size > 200) return;
+  warmed.add(slug);
+  router.prefetch(`/events/${slug}`);
+}
+
+/**
  * Phones: an event row swiped to the left saves it (or takes it out of saved), as in mail and
  * to-do apps. A swipe never opens the event; an ordinary tap still does.
  */
@@ -81,11 +92,13 @@ function useSwipeToSave(c: Card, saved: boolean) {
     ref,
     onTouchStart: (e: React.TouchEvent) => {
       const t = e.touches[0];
+      if (!t) return;
       st.current = { x: t.clientX, y: t.clientY, dx: 0, axis: "", swiped: false };
     },
     onTouchMove: (e: React.TouchEvent) => {
       const s = st.current;
       const t = e.touches[0];
+      if (!t) return;
       const dx = t.clientX - s.x;
       const dy = t.clientY - s.y;
       if (!s.axis) {
@@ -191,7 +204,7 @@ export function EventRow({
           {body}
         </button>
       ) : (
-        <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)}>
+        <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-1 min-w-0 items-center gap-3 sm:gap-4" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)} onPointerEnter={() => warm(router, c.slug)} onTouchStart={() => warm(router, c.slug)}>
           {body}
         </Link>
       )}
@@ -209,7 +222,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
   const people = peopleLine(c);
   return (
     <li className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
-      <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)}>
+      <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)} onPointerEnter={() => warm(router, c.slug)} onTouchStart={() => warm(router, c.slug)}>
         <div className="relative overflow-hidden">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />
           <div className="absolute left-2 bottom-2 flex gap-1.5">

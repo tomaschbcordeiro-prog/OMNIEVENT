@@ -686,6 +686,8 @@ export function DiscoverClient() {
       {loading && mode !== "list" && <div className="map-progress z-50" aria-hidden />}
       {/* ---------- Stage: one map engine, two projections ---------- */}
       {/* Behind the planet: a glow of light and a soft shadow below, so it floats. */}
+      {/* Before the map's engine has loaded: a planet where the globe will be, so the page never looks empty. */}
+      {mode === "globe" && !mapReady && webgl !== false && !mapFailure && <div className="globe-placeholder" style={{ "--shift": `${padRight / 2}px`, "--room-top": `${phoneRoom.top}px`, "--room-bottom": `${phoneRoom.bottom}px` } as React.CSSProperties} aria-hidden />}
       {mode === "globe" && mapReady && cam && !flightOn && <GlobeAura zoom={cam.zoom} lat={cam.lat} space={space || base === "lights"} shift={padRight} room={phoneRoom} />}
       {mode === "globe" && mapReady && cam && hint && !selection && !place && !spinOpen && !flightOn && <GlobeHint zoom={cam.zoom} lat={cam.lat} shift={padRight} room={phoneRoom} />}
       <div className="absolute inset-0" aria-hidden={mode === "list"}>
