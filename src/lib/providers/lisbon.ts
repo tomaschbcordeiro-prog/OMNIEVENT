@@ -6,6 +6,7 @@ import type { ProviderAdapter, ProviderBatch, SyncContext } from "./types";
 import { fetchJson, hueOf, nearestCityId, parseLocal, plainText, sleep } from "./common";
 import KNOWN_VENUES from "./data/lisbon-venues.json";
 import SNAPSHOT from "./data/lisbon-events.json";
+import { CONTACT_URL } from "../site";
 
 /**
  * Agenda Cultural de Lisboa (agendalx.pt), the City of Lisbon's cultural agenda.
@@ -24,7 +25,7 @@ import SNAPSHOT from "./data/lisbon-events.json";
 const BASE = "https://www.agendalx.pt/wp-json/agendalx/v1/events";
 const TZ = "Europe/Lisbon";
 // Identifies us as the agenda asks. (Their firewall rejects some user-agent wordings with HTTP 520.)
-const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
+const UA = `Mundivi/1.0 (+${CONTACT_URL})`;
 const LISBON = { lat: 38.7223, lng: -9.1393 };
 
 type Term = { id?: number; slug?: string; name?: string };

@@ -4,6 +4,7 @@ import { groupOf } from "../categories";
 import type { OmniEvent, TicketOffer, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
 import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, parseLocal, plainText } from "./common";
+import { CONTACT_URL } from "../site";
 
 /**
  * Brazil's state culture departments publish their cultural agendas on Mapas Culturais, an
@@ -19,7 +20,7 @@ import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, parseLocal, plainT
  */
 
 const DAYS = 90;
-const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
+const UA = `Mundivi/1.0 (+${CONTACT_URL})`;
 
 export interface MapaSource {
   id: string;

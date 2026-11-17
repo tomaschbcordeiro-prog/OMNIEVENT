@@ -3,6 +3,7 @@ import { log } from "./log";
 import { CITIES } from "./destinations";
 import { haversineKm } from "./geo";
 import { plainCityName, townFromMapTiler, townFromPhoton, type Town } from "./town";
+import { CONTACT_URL } from "./site";
 
 /**
  * Geocoding (place search) and reverse geocoding, server-side only.
@@ -38,7 +39,7 @@ export interface ReversePlace {
 // (allowed HTTP origins), so MapTiler refuses it from the server; using it here would break search.
 const KEY = process.env.MAPTILER_KEY || "";
 export const GEOCODER = KEY ? "MapTiler Geocoding" : "Photon (OpenStreetMap)";
-const UA = "Mundivi/1.0 (event discovery; https://omnievent.vercel.app)";
+const UA = `Mundivi/1.0 (event discovery; ${CONTACT_URL})`;
 
 const cache = new Map<string, { at: number; value: unknown }>();
 const TTL = 24 * 3600 * 1000;

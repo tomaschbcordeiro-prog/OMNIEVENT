@@ -3,6 +3,7 @@ import { groupOf } from "../categories";
 import type { OmniEvent, Venue } from "../types";
 import type { ProviderAdapter, ProviderBatch } from "./types";
 import { fetchJson, hueOf, keyOf, nearestCityId, plainText, zonedDay } from "./common";
+import { CONTACT_URL } from "../site";
 
 /**
  * Ville de Montréal open data, "Événements publics": activities in libraries, cultural
@@ -131,7 +132,7 @@ export const montrealProvider: ProviderAdapter = {
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     // The portal refuses requests without a browser-like user agent.
-    const json = (await fetchJson("montreal", API, ctx, { revalidate: 0, timeoutMs: 90000, headers: { "User-Agent": "Mozilla/5.0 (compatible; Mundivi/1.0; +https://omnievent.vercel.app)" } })) as { features?: { properties?: MtlProps }[] };
+    const json = (await fetchJson("montreal", API, ctx, { revalidate: 0, timeoutMs: 90000, headers: { "User-Agent": `Mozilla/5.0 (compatible; Mundivi/1.0; +${CONTACT_URL})` } })) as { features?: { properties?: MtlProps }[] };
     const batch = normalizeMontreal((json.features ?? []).map((f) => f.properties ?? {}), syncedAt);
     return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true, finishedAt: new Date().toISOString() } };
   },

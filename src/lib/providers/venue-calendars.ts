@@ -5,6 +5,7 @@ import type { ProviderAdapter, ProviderBatch } from "./types";
 import { fetchJson, hueOf, keyOf, nearestCityId, plainText, sleep } from "./common";
 import KNOWN_VENUES from "./data/lisbon-venues.json";
 import SNAPSHOT from "./data/venue-calendars.json";
+import { CONTACT_URL } from "../site";
 
 /**
  * Venue calendars published with The Events Calendar's public REST API
@@ -18,7 +19,7 @@ import SNAPSHOT from "./data/venue-calendars.json";
  *   `node scripts/fetch-venue-calendars.mjs` is used for any source the live API can't reach.
  */
 
-const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
+const UA = `Mundivi/1.0 (+${CONTACT_URL})`;
 const TZ = "Europe/Lisbon";
 
 interface Source {

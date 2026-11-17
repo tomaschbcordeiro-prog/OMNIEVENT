@@ -3,6 +3,7 @@ import { z } from "zod";
 import { handler, ok, validationError, rateLimit, clientKey, apiError } from "@/lib/api";
 import { sightsFromWikipedia, type Sight, type WikiPage } from "@/lib/sights";
 import { log } from "@/lib/log";
+import { CONTACT_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ const schema = z.object({
   lng: z.coerce.number().min(-180).max(180),
 });
 
-const UA = "Mundivi/1.0 (event discovery; https://omnievent.vercel.app)";
+const UA = `Mundivi/1.0 (event discovery; ${CONTACT_URL})`;
 const cache = new Map<string, { at: number; sights: Sight[] }>();
 const DAY = 86_400_000;
 

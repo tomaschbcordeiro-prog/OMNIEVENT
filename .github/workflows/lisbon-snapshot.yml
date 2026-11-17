@@ -22,7 +22,7 @@ jobs:
       - run: node scripts/fetch-lisbon.mjs
       - name: Commit if changed
         run: |
-          git config user.name "omnievent-bot"
-          git config user.email "omnievent-bot@users.noreply.github.com"
+          git config user.name "mundivi-bot"
+          git config user.email "mundivi-bot@users.noreply.github.com"
           git add src/lib/providers/data/lisbon-events.json
           git diff --cached --quiet || (git commit -m "Update Lisbon agenda snapshot" && git push)
