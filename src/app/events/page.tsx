@@ -1,4 +1,5 @@
 import { TripStopsBar } from "@/components/trips/trip-shortcuts";
+import { UpNext } from "@/components/up-next";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { catalogueComplete, dataSummary, ensureFresh, searchEvents } from "@/lib/store";
@@ -77,6 +78,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
   return (
     <>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-5 sm:pt-8">
+        <UpNext />
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
@@ -104,7 +106,7 @@ export default async function EventsPage({ searchParams }: { searchParams: SP })
             )}
           </div>
         </div>
-        <div className="grid gap-2 mb-4">
+        <div className="grid gap-2 mb-4 empty:hidden">
           {!parsed.ok && <Notice>Some filters in this link were invalid and have been ignored.</Notice>}
           {notice && NOTICES[notice] && <Notice>{NOTICES[notice]}</Notice>}
           {interp && interp.ambiguities.length > 0 && (

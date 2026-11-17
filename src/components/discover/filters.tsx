@@ -272,7 +272,7 @@ function NearPlace({ f, set }: { f: SearchFilters; set: (p: Partial<SearchFilter
 }
 
 /** Removable chips summarising active filters. */
-export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f: SearchFilters) => void }) {
+export function ActiveFilters({ f, onChange, hide = [] }: { f: SearchFilters; onChange: (f: SearchFilters) => void; /** Filters said elsewhere on the page (the city in the title), not repeated as chips. */ hide?: string[] }) {
   const chips: { k: string; label: string; clear: Partial<SearchFilters> }[] = [];
   if (f.q) chips.push({ k: "q", label: `“${f.q}”`, clear: { q: undefined } });
   f.categories?.forEach((c) => chips.push({ k: `c-${c}`, label: getCategory(c)?.name ?? c.replace(/-/g, " "), clear: { categories: f.categories!.filter((x) => x !== c) } }));
@@ -281,7 +281,7 @@ export function ActiveFilters({ f, onChange }: { f: SearchFilters; onChange: (f:
   f.places?.forEach((p) => chips.push({ k: `pl-${p}`, label: getDestination(p)?.name ?? p, clear: { places: f.places!.filter((x) => x !== p).length ? f.places!.filter((x) => x !== p) : undefined } }));
   f.anyOf?.forEach((w) => chips.push({ k: `any-${w}`, label: GROUPS.find((g) => g.slug === w)?.name ?? `“${w}”`, clear: { anyOf: f.anyOf!.filter((x) => x !== w).length ? f.anyOf!.filter((x) => x !== w) : undefined } }));
   if (f.from || f.to) chips.push({ k: "date", label: f.from === f.to ? day(f.from) : `${day(f.from)} to ${day(f.to)}`, clear: { from: undefined, to: undefined } });
-  if (f.city) chips.push({ k: "city", label: getDestination(f.city)?.name ?? f.city, clear: { city: undefined } });
+  if (f.city && !hide.includes("city")) chips.push({ k: "city", label: getDestination(f.city)?.name ?? f.city, clear: { city: undefined } });
   if (f.country) chips.push({ k: "country", label: COUNTRIES.find((c) => c.countryCode === f.country)?.name ?? f.country, clear: { country: undefined } });
   if (f.continent) chips.push({ k: "continent", label: getDestination(f.continent)?.name ?? f.continent, clear: { continent: undefined } });
   if (f.near) chips.push({ k: "near", label: `${f.nearLabel ? `${f.nearLabel.split(",")[0]}, ` : ""}within ${formatKm(f.near.radiusKm)}`, clear: { near: undefined, nearLabel: undefined } });

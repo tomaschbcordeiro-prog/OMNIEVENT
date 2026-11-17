@@ -11000,3 +11000,80 @@ section + .ideas-grid {
     padding-top: 1.5rem;
   }
 }
+/* The next saved event, at the top of the events list. */
+.up-next {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 2.25rem 0.65rem 0.65rem;
+  border-radius: var(--radius-l);
+  border: 1px solid color-mix(in srgb, var(--cyan) 30%, var(--line));
+  background: linear-gradient(110deg, color-mix(in srgb, var(--cyan) 10%, var(--panel)), var(--panel) 70%);
+  box-shadow: 0 8px 24px -16px rgb(10 40 100 / 0.4);
+}
+.up-next-pic {
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: none;
+  border-radius: 12px;
+}
+.up-next-when {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.up-next-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--cyan);
+}
+.up-next-dot[data-live] {
+  background: var(--live);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 60%, transparent);
+  animation: tag-live 1.8s ease-out infinite;
+}
+.up-next-title {
+  display: block;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.up-next-title:hover {
+  text-decoration: underline;
+}
+.up-next-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex: none;
+}
+.up-next-x {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  color: var(--text-3);
+}
+.up-next-x:hover {
+  color: var(--text);
+  background: var(--bg-2);
+}
+@media (max-width: 639px) {
+  .up-next-actions .btn {
+    width: 2.25rem;
+    padding: 0;
+  }
+}

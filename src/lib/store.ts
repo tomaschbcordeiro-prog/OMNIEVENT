@@ -1,4 +1,5 @@
 import { isDull } from "./quality";
+import { tidyTitle } from "./title";
 import { inPrerender, outsideRender } from "./outside-render";
 import "server-only";
 import { after } from "next/server";
@@ -1019,11 +1020,18 @@ function cardPeople(e: OmniEvent, participants: Map<string, Participant>): Event
 }
 
 function toCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<string, Participant>, offers: TicketOffer[]): EventCard {
+  const card = buildCard(e, venues, participants, offers);
+  // How dull it is, from the title as it was typed (capitals count), before it's tidied for show.
+  if (card.title !== e.title) dullCache.set(card, isDull({ ...card, title: e.title }) ? 1 : 0);
+  return card;
+}
+
+function buildCard(e: OmniEvent, venues: Map<string, Venue>, participants: Map<string, Participant>, offers: TicketOffer[]): EventCard {
   const v = venues.get(e.venueId)!;
   return {
     id: e.id,
     slug: e.slug,
-    title: e.title,
+    title: tidyTitle(e.title),
     categorySlug: e.categorySlug,
     groupSlug: e.groupSlug,
     start: e.start,
@@ -2233,7 +2241,7 @@ export function getEventView(slugOrId: string): EventView | undefined {
       return p ? { ...p, role: ep.role } : null;
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
-  return { ...e, venue, offers, people, fromPrice: state.cards.get(e.id)?.fromPrice };
+  return { ...e, title: tidyTitle(e.title), venue, offers, people, fromPrice: state.cards.get(e.id)?.fromPrice };
 }
 
 export function getCard(id: string): EventCard | undefined {

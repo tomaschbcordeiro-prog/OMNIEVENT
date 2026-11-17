@@ -155,8 +155,8 @@ export function EventsBrowser({
           </div>
         </div>
 
-        <div className="py-3">
-          <ActiveFilters f={filters} onChange={go} />
+        <div className="py-3 empty:hidden">
+          <ActiveFilters f={filters} onChange={go} hide={implicitCity && filters.city === implicitCity ? ["city"] : []} />
         </div>
 
         <div className={pending ? "opacity-60 transition-opacity" : ""}>
