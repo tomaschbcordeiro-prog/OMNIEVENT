@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: P }): Promise<Metad
   const { club } = page;
   return {
     title: `${club.emoji} ${club.name}`,
-    description: `${club.tagline} · ${club.members} ${club.members === 1 ? "member" : "members"} on OMNIEVENT Clubs.`,
+    description: `${club.tagline} · ${club.members} ${club.members === 1 ? "member" : "members"} on Mundivi Clubs.`,
     alternates: { canonical: `/clubs/${club.slug}` },
     robots: club.privacy === "request" ? { index: false, follow: true } : undefined,
   };

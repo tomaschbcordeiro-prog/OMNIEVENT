@@ -18,7 +18,7 @@ import SNAPSHOT from "./data/venue-calendars.json";
  *   `node scripts/fetch-venue-calendars.mjs` is used for any source the live API can't reach.
  */
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const TZ = "Europe/Lisbon";
 
 interface Source {

@@ -20,7 +20,7 @@ import GEOCODED from "./data/bol-venues.json";
  */
 
 const BASE = "https://www.bol.pt";
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 
 /** BOL's top-level categories and where they sit in ours. */
 export const BOL_CATEGORIES: Record<number, string> = { 1: "theatre", 2: "music", 3: "family", 4: "sports", 5: "other" };

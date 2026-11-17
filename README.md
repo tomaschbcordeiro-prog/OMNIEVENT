@@ -1,4 +1,4 @@
-# OMNIEVENT
+# Mundivi
 
 Discover events anywhere on Earth on an interactive 3D globe: concerts, sport, theatre, festivals, conferences, exhibitions, attractions and more. Compare ticket options and go straight to the official seller.
 

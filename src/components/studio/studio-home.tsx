@@ -46,7 +46,7 @@ interface Row {
   hue: number;
 }
 
-/** OMNIEVENT Studio: where organisers make and manage their events. */
+/** Mundivi Studio: where organisers make and manage their events. */
 export function StudioHome() {
   const router = useRouter();
   const { profile, loaded } = useMe();
@@ -68,7 +68,7 @@ export function StudioHome() {
       <section className="studio-stage studio-hero">
         <div className="mx-auto max-w-[1300px] px-4 sm:px-6 pt-10 pb-14 sm:pt-14 sm:pb-20 grid gap-10 lg:grid-cols-[1fr_1.05fr] items-center">
           <div className="relative z-10">
-            <p className="studio-mark t-small">OMNIEVENT Studio</p>
+            <p className="studio-mark t-small">Mundivi Studio</p>
             <h1 className="t-display mt-3 text-white text-balance">
               Make it happen.
               <br />

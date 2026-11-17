@@ -141,7 +141,7 @@ export const zaragozaProvider: ProviderAdapter = {
     const syncedAt = new Date().toISOString();
     const rows: ZgzEvent[] = [];
     for (let start = 0; start < 20000; start += 500) {
-      const json = (await fetchJson("zaragoza", `${API}?rows=500&start=${start}&srsname=wgs84`, ctx, { revalidate: 0, timeoutMs: 60000, headers: { "User-Agent": "OMNIEVENT/1.0 (+https://omnievent.vercel.app)" } })) as { totalCount?: number; result?: ZgzEvent[] };
+      const json = (await fetchJson("zaragoza", `${API}?rows=500&start=${start}&srsname=wgs84`, ctx, { revalidate: 0, timeoutMs: 60000, headers: { "User-Agent": "Mundivi/1.0 (+https://omnievent.vercel.app)" } })) as { totalCount?: number; result?: ZgzEvent[] };
       rows.push(...(json.result ?? []));
       if (start + 500 >= (json.totalCount ?? 0) || !json.result?.length) break;
       await sleep(300);

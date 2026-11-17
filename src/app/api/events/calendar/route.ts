@@ -21,6 +21,6 @@ export async function GET(req: NextRequest) {
   if (!events.length) return apiError(404, "not_found", "None of these events is listed any more.");
   const body = calendar(events.map((e) => vevent(e, new URL(`/events/${e.slug}`, req.url).toString())));
   return new Response(body, {
-    headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="omnievent-saved.ics"', "Cache-Control": "private, no-store" },
+    headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="mundivi-saved.ics"', "Cache-Control": "private, no-store" },
   });
 }

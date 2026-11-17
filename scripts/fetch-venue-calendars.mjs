@@ -2,7 +2,7 @@
 // for servers whose network a venue refuses. Run: node scripts/fetch-venue-calendars.mjs
 import { writeFileSync } from "node:fs";
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const OUT = new URL("../src/lib/providers/data/venue-calendars.json", import.meta.url);
 const SOURCES = { ccb: "https://www.ccb.pt", chapito: "https://chapito.org" };
 

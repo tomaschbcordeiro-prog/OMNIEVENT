@@ -19,7 +19,7 @@ import { fetchJson, hueOf, keyOf, nearestCityId, parseAmount, parseLocal, plainT
  */
 
 const DAYS = 90;
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 
 export interface MapaSource {
   id: string;

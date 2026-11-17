@@ -459,7 +459,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
         <div className="mx-auto max-w-[1300px] px-4 sm:px-6 pt-8 pb-16 sm:pt-12 sm:pb-20 grid gap-8 lg:grid-cols-[1fr_minmax(0,500px)] items-center">
           <div className="relative z-10">
             <p className="mx-mark t-small">
-              <Headphones size={15} aria-hidden /> OMNIEVENT Mixtape
+              <Headphones size={15} aria-hidden /> Mundivi Mixtape
             </p>
             <h1 className="t-display mt-3 text-white text-balance">
               Your weekend,

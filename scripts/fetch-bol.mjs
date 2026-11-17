@@ -3,7 +3,7 @@
 // postcode. Run: node scripts/fetch-bol.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const OUT = new URL("../src/lib/providers/data/bol-events.json", import.meta.url);
 const VENUES = new URL("../src/lib/providers/data/bol-venues.json", import.meta.url);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

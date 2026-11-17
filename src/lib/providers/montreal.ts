@@ -131,7 +131,7 @@ export const montrealProvider: ProviderAdapter = {
   async sync(ctx) {
     const syncedAt = new Date().toISOString();
     // The portal refuses requests without a browser-like user agent.
-    const json = (await fetchJson("montreal", API, ctx, { revalidate: 0, timeoutMs: 90000, headers: { "User-Agent": "Mozilla/5.0 (compatible; OMNIEVENT/1.0; +https://omnievent.vercel.app)" } })) as { features?: { properties?: MtlProps }[] };
+    const json = (await fetchJson("montreal", API, ctx, { revalidate: 0, timeoutMs: 90000, headers: { "User-Agent": "Mozilla/5.0 (compatible; Mundivi/1.0; +https://omnievent.vercel.app)" } })) as { features?: { properties?: MtlProps }[] };
     const batch = normalizeMontreal((json.features ?? []).map((f) => f.properties ?? {}), syncedAt);
     return { batch, run: { imported: batch.events.length, updated: 0, failures: 0, rateLimited: false, ok: true, finishedAt: new Date().toISOString() } };
   },

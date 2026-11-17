@@ -70,7 +70,7 @@ export async function GET(req: Request) {
         <div style={{ display: "flex", flexDirection: "column", width: 470, height: 300, borderRadius: 30, background: "linear-gradient(180deg, #262b3d, #141826)", border: "2px solid rgba(255,255,255,0.14)", padding: "22px 26px", boxShadow: "0 30px 60px rgba(0,0,0,0.45)" }}>
           <div style={{ display: "flex", flexDirection: "column", borderRadius: 14, background: "#fbf6ea", height: 186, overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: 36, padding: "0 16px", background: hsl(hue, 85, 58), color: "#fff", fontSize: 15, fontWeight: 900, letterSpacing: 3 }}>
-              <div style={{ display: "flex" }}>OMNIEVENT · MIXTAPE</div>
+              <div style={{ display: "flex" }}>MUNDIVI · MIXTAPE</div>
               <div style={{ display: "flex", fontSize: 22 }}>A</div>
             </div>
             <div style={{ display: "flex", padding: "10px 18px 0", fontSize: name.length > 22 ? 24 : 30, fontWeight: 900, color: "#1b1712", letterSpacing: -0.5 }}>{clip(name, 34)}</div>

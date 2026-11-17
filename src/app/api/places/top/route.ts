@@ -11,7 +11,7 @@ const schema = z.object({
   lng: z.coerce.number().min(-180).max(180),
 });
 
-const UA = "OMNIEVENT/1.0 (event discovery; https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (event discovery; https://omnievent.vercel.app)";
 const cache = new Map<string, { at: number; sights: Sight[] }>();
 const DAY = 86_400_000;
 

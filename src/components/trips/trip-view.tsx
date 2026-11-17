@@ -444,7 +444,7 @@ export function TripView({ id }: { id: string }) {
             <p className="trip-tip t-micro text-text-2">
               <span className="trip-tip-icon" aria-hidden><Plane size={12} /></span>
               <span>
-                Add events from anywhere on OMNIEVENT: the plane button on any event puts it here, and on a computer you can drag events onto your trip.{" "}
+                Add events from anywhere on Mundivi: the plane button on any event puts it here, and on a computer you can drag events onto your trip.{" "}
                 <Link href={stopSearch(stops[0])} className="font-semibold text-cyan hover:underline">Browse {placeName(stops[0])} →</Link>
               </span>
             </p>
@@ -570,7 +570,7 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
   const stamp = (iso: string) => iso.replace(/[-:]/g, "").replace(/\.\d+/, "");
   const ics = () => {
     const esc = (s: string) => s.replace(/[\\,;]/g, (m) => `\\${m}`).replace(/\n/g, "\\n");
-    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//Trip//EN", `X-WR-CALNAME:${esc(trip.name)}`];
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mundivi//Trip//EN", `X-WR-CALNAME:${esc(trip.name)}`];
     for (const s of trip.stops ?? []) lines.push("BEGIN:VEVENT", `UID:${trip.id}-${s.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART;VALUE=DATE:${s.from.replace(/-/g, "")}`, `DTEND;VALUE=DATE:${s.to.replace(/-/g, "")}`, `SUMMARY:${esc(`${trip.name}: ${s.name}`)}`, "END:VEVENT");
     for (const pl of trip.plans ?? []) lines.push(...planIcs(pl, trip.id, stamp(new Date().toISOString())));
     for (const e of events) lines.push("BEGIN:VEVENT", `UID:${e.id}@omnievent`, `DTSTAMP:${stamp(new Date().toISOString())}`, `DTSTART:${stamp(new Date(e.start).toISOString())}`, `SUMMARY:${esc(e.title)}`, `LOCATION:${esc(`${e.venueName}, ${e.city}`)}`, `URL:${window.location.origin}/events/${e.slug}`, "END:VEVENT");

@@ -19,10 +19,10 @@ export default async function DataPage() {
       <main className="mx-auto max-w-3xl px-4 sm:px-6 pt-10">
         <h1 className="t-h1">How our data works</h1>
         <div className="t-body text-text-2 mt-4 grid gap-4 measure">
-          <p>OMNIEVENT doesn&apos;t make up events. Every listing comes from a connected source, keeps a link back to it, and shows when it was last updated. Sources refresh automatically on a schedule.</p>
+          <p>Mundivi doesn&apos;t make up events. Every listing comes from a connected source, keeps a link back to it, and shows when it was last updated. Sources refresh automatically on a schedule.</p>
           <p>No single source covers every event on Earth. Coverage grows as more licensed sources are connected, so an event missing here doesn&apos;t mean it isn&apos;t happening.</p>
           <p>Ticket prices are what sellers advertise. We say whether fees are included only when the seller tells us, and we never compare a fee-inclusive price with one that excludes fees as if they were the same. We don&apos;t sell tickets: you buy from the seller.</p>
-          <p>When no real source is connected, OMNIEVENT runs on fictional demo data. Every demo listing carries a yellow Demo badge and is hidden from search engines.</p>
+          <p>When no real source is connected, Mundivi runs on fictional demo data. Every demo listing carries a yellow Demo badge and is hidden from search engines.</p>
         </div>
 
         <h2 className="t-h2 mt-10">Sources</h2>

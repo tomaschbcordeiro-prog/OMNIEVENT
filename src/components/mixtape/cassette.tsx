@@ -69,7 +69,7 @@ export function Cassette({
         {/* The label */}
         <rect x="30" y="24" width="380" height="182" rx="12" fill="#fbf6ea" />
         <path d="M42 24h356a12 12 0 0 1 12 12v22H30V36a12 12 0 0 1 12-12z" className="cassette-band" />
-        <text x="48" y="46" fontSize="12.5" fontWeight="800" fill="#fff" letterSpacing="2.4">OMNIEVENT · MIXTAPE</text>
+        <text x="48" y="46" fontSize="12.5" fontWeight="800" fill="#fff" letterSpacing="2.4">MUNDIVI · MIXTAPE</text>
         <text x="394" y="48" fontSize="20" fontWeight="900" fill="#fff" textAnchor="end">{side}</text>
         <text x="48" y="118" fontSize="12.5" fill="#6b6253" fontWeight="600">{sub}</text>
         <path d="M48 101h344" stroke="#e8dfcb" strokeWidth="1.2" />

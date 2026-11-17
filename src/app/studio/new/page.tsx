@@ -4,7 +4,7 @@ import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "New event · Studio",
-  description: "Put your event on the map: a few short steps, a poster that designs itself, and it appears on the OMNIEVENT globe, in search and on its city's page.",
+  description: "Put your event on the map: a few short steps, a poster that designs itself, and it appears on the Mundivi globe, in search and on its city's page.",
   robots: { index: false, follow: true },
 };
 

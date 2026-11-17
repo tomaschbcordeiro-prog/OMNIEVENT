@@ -10,6 +10,7 @@ import { useUser } from "@/lib/user/store";
 import { translate } from "@/lib/i18n";
 import { NotificationBell } from "./community/bell";
 import { AccountMenu } from "./community/account-menu";
+import { MundiviMark, Wordmark } from "./brand";
 
 const NAV = [
   { href: "/", key: "nav.discover" },
@@ -25,17 +26,12 @@ const NAV = [
   { href: "/my-world", key: "nav.myworld" },
 ];
 
-/** Wordmark: a meridian ring around a single point — one planet, one place. */
+/** Mundivi's logo: the mark (a planet whose meridians draw an "M", one event lit up) and the name. */
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 shrink-0 py-2.5 -my-2.5" aria-label="OMNIEVENT home">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-        <circle cx="12" cy="12" r="10" fill="#1463FF" />
-        <ellipse cx="12" cy="12" rx="4.2" ry="10" fill="none" stroke="#fff" strokeOpacity=".7" strokeWidth="1.3" />
-        <path d="M2.5 12h19" stroke="#fff" strokeOpacity=".45" strokeWidth="1.1" />
-        <circle cx="16.4" cy="7.6" r="2.6" fill="#FFB800" stroke="#fff" strokeWidth="1" />
-      </svg>
-      <span className="font-bold tracking-[-0.03em] text-[16px]">OMNIEVENT</span>
+    <Link href="/" className="logo flex items-center gap-2 shrink-0 py-2.5 -my-2.5" aria-label="Mundivi home">
+      <MundiviMark size={26} className="logo-mark" />
+      <Wordmark className="text-[19px]" />
     </Link>
   );
 }
@@ -57,7 +53,7 @@ export function Header() {
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   return (
-    <header data-scrolled={scrolled && !isHome ? "" : undefined} className={`site-header ${isHome ? "absolute inset-x-0 top-0" : "sticky top-0 bg-bg/85 backdrop-blur-md border-b border-line"} z-40`}>
+    <header data-scrolled={scrolled && !isHome ? "" : undefined} data-home={isHome ? "" : undefined} className={`site-header ${isHome ? "absolute inset-x-0 top-0" : "sticky top-0 bg-bg/85 backdrop-blur-md border-b border-line"} z-40`}>
       <a href="#main" className="sr-only-focusable absolute left-2 top-2 z-50 btn btn-primary">
         Skip to content
       </a>

@@ -1,5 +1,5 @@
 /**
- * OMNIEVENT universal domain model.
+ * Mundivi universal domain model.
  *
  * One event model powers every category (music, sports, theatre, attractions, …).
  * Category-specific information lives in optional, typed sub-structures

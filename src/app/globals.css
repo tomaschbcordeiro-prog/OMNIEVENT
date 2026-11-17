@@ -3,7 +3,7 @@
 @custom-variant compact (@media (max-width: 639px) or (max-height: 520px));
 
 /*
- * OMNIEVENT design tokens: "sunlit atlas".
+ * Mundivi design tokens: "sunlit atlas".
  * A daytime sky behind the globe, white paper panels and deep-navy ink. Ocean blue
  * is the interactive colour (`--cyan` keeps its historical name), sun yellow marks
  * what is selected or happening now, and category hues appear only on data.
@@ -11149,4 +11149,65 @@ section + .ideas-grid {
   .globe-placeholder {
     animation: none;
   }
+}
+
+/* Mundivi's name: lower case, tight, the two i's dotted with the events' warm light. */
+.wordmark {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.wordmark-i {
+  position: relative;
+  display: inline-block;
+}
+.wordmark-i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.04em;
+  width: 0.21em;
+  height: 0.21em;
+  border-radius: 50%;
+  background: #ffb800;
+  translate: -50% 0;
+  box-shadow: 0 0 0.35em rgb(255 184 0 / 0.55);
+}
+.logo:hover .wordmark-i::after {
+  animation: wordmark-blink 700ms ease-out;
+}
+.logo:hover .wordmark-i:last-child::after {
+  animation-delay: 120ms;
+}
+.logo-mark {
+  transition: rotate 400ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.logo:hover .logo-mark {
+  rotate: -8deg;
+}
+@keyframes wordmark-blink {
+  40% {
+    scale: 1.6;
+    box-shadow: 0 0 0.7em rgb(255 184 0 / 0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo:hover .wordmark-i::after,
+  .logo:hover .logo-mark {
+    animation: none;
+    rotate: none;
+  }
+}
+/* Over the home page's sky the planet gets a white rim, and the light a ring the colour of what's behind it. */
+.mark-spark {
+  stroke: var(--bg);
+}
+.site-header[data-home] .mark-globe {
+  stroke: #fff;
+  stroke-width: 1.6;
+}
+.site-header[data-home] .mark-spark {
+  stroke: #fff;
 }

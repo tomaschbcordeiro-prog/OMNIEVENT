@@ -37,7 +37,7 @@ export function InstallApp({ className = "" }: { className?: string }) {
     };
   }, []);
 
-  if (done) return <p className={`t-small text-text-2 ${className}`}>Installed. OMNIEVENT is on your home screen.</p>;
+  if (done) return <p className={`t-small text-text-2 ${className}`}>Installed. Mundivi is on your home screen.</p>;
   if (prompt)
     return (
       <button

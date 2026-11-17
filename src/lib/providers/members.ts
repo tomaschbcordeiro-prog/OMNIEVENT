@@ -1,12 +1,12 @@
 import { loadAllUserEvents, toBatch, PROVIDER_ID } from "../user-events";
 import type { ProviderAdapter } from "./types";
 
-/** Events listed on OMNIEVENT by its members (see src/lib/user-events.ts). */
+/** Events listed on Mundivi by its members (see src/lib/user-events.ts). */
 export const membersProvider: ProviderAdapter = {
   id: PROVIDER_ID,
   name: "Listed by members",
   isDemo: false,
-  coverage: "Events that OMNIEVENT members list themselves, anywhere in the world.",
+  coverage: "Events that Mundivi members list themselves, anywhere in the world.",
   isConfigured: () => true,
   selfShared: true,
   // A new listing shows on every server within a minute; the check is one tiny read.

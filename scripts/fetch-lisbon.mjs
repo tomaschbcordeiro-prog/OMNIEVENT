@@ -4,7 +4,7 @@
 import { writeFileSync } from "node:fs";
 
 const BASE = "https://www.agendalx.pt/wp-json/agendalx/v1/events";
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const OUT = new URL("../src/lib/providers/data/lisbon-events.json", import.meta.url);
 const KEEP = ["id", "title", "featured_media_large", "subtitle", "subject", "string_times", "venue", "categories_name_list", "tags_name_list", "link", "occurences", "StartDate", "LastDate", "price_cat", "price_val"];
 

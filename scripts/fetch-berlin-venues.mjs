@@ -3,7 +3,7 @@
 // matches. Run: node scripts/fetch-berlin-venues.mjs   (re-run to add new venues)
 import { readFileSync, writeFileSync } from "node:fs";
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const API = "https://api-v2.kulturdaten.berlin/api";
 const OUT = new URL("../src/lib/providers/data/berlin-venues.json", import.meta.url);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

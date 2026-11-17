@@ -6,7 +6,7 @@
 // Run: node scripts/find-localist.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const LIST = "https://raw.githubusercontent.com/Hipo/university-domains-list/master/world_universities_and_domains.json";
 const OUT = new URL("../src/lib/providers/data/localist-hosts.json", import.meta.url);
 

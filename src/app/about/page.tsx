@@ -4,8 +4,8 @@ import { Globe2, Search, Heart, Users, Ticket, Database } from "lucide-react";
 import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "About OMNIEVENT",
-  description: "What OMNIEVENT is: one place to find concerts, sport, theatre, festivals, exhibitions and more anywhere on Earth, with links straight to the official sellers.",
+  title: "About Mundivi",
+  description: "What Mundivi is: one place to find concerts, sport, theatre, festivals, exhibitions and more anywhere on Earth, with links straight to the official sellers.",
   alternates: { canonical: "/about" },
 };
 
@@ -23,7 +23,7 @@ export default function AboutPage() {
         <p className="t-small font-semibold text-text-3">About</p>
         <h1 className="t-h1 mt-1 max-w-[22ch]">Every event on Earth, <em>in one place</em></h1>
         <p className="t-lede text-text-2 mt-3">
-          OMNIEVENT gathers concerts, sport, theatre, festivals, exhibitions, talks and family days from official sources around the world, so you can find what&apos;s on anywhere, on any date, without opening twenty sites.
+          Mundivi gathers concerts, sport, theatre, festivals, exhibitions, talks and family days from official sources around the world, so you can find what&apos;s on anywhere, on any date, without opening twenty sites.
         </p>
 
         <ul className="mt-10 grid gap-4 sm:grid-cols-2">

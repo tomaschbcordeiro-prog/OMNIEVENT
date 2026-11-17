@@ -514,7 +514,7 @@ function Alerts() {
       <h1 className="t-h1">Alerts</h1>
       <div className="mt-3">
         <Notice>
-          Your choices are saved, but <strong className="text-text">no alerts are being sent yet</strong>: OMNIEVENT doesn&apos;t have an email or push service connected. Nothing here will be marked as sent until a delivery service confirms it.
+          Your choices are saved, but <strong className="text-text">no alerts are being sent yet</strong>: Mundivi doesn&apos;t have an email or push service connected. Nothing here will be marked as sent until a delivery service confirms it.
         </Notice>
       </div>
       <ul className="mt-5 divide-y divide-line">
@@ -608,7 +608,7 @@ function Account() {
               const blob = new Blob([userActions.exportData()], { type: "application/json" });
               const a = document.createElement("a");
               a.href = URL.createObjectURL(blob);
-              a.download = "omnievent-my-data.json";
+              a.download = "mundivi-my-data.json";
               a.click();
               URL.revokeObjectURL(a.href);
             }}

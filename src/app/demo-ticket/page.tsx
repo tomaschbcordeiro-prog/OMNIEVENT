@@ -27,7 +27,7 @@ export default async function DemoTicket({ searchParams }: { searchParams: Promi
         )}
       </p>
       <p className="t-body text-text-2 mt-3">
-        With a real provider connected, this button opens the seller&apos;s official page in a new tab. OMNIEVENT never takes payment details and never says a ticket was bought unless the seller confirms it.
+        With a real provider connected, this button opens the seller&apos;s official page in a new tab. Mundivi never takes payment details and never says a ticket was bought unless the seller confirms it.
       </p>
       <div className="mt-6 flex gap-2">
         {ev && <Link href={`/events/${ev.slug}`} className="btn btn-primary">Back to the event</Link>}

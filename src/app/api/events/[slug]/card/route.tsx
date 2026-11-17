@@ -56,9 +56,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 26, fontWeight: 900, letterSpacing: 1 }}>
-            <div style={{ display: "flex", width: 34, height: 34, borderRadius: 34, background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", border: "3px solid rgba(255,255,255,0.85)" }} />
-            OMNIEVENT
+          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 34, fontWeight: 900, letterSpacing: -1.2 }}>
+            <svg width="44" height="44" viewBox="0 0 32 32">
+              <circle cx="15" cy="17" r="13" fill="#1463FF" stroke="#fff" strokeWidth="1.6" />
+              <path d="M9.2 22.6V13.9c0-2.4 2-3.1 3.3-1.4L15 16l2.5-3.5c1.3-1.7 3.3-1 3.3 1.4v8.7" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="25.2" cy="7.2" r="4.3" fill="#FFB800" stroke="#fff" strokeWidth="2" />
+            </svg>
+            mundivi
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", fontSize: 24, fontWeight: 700, letterSpacing: 4, opacity: 0.85 }}>{label}</div>

@@ -150,7 +150,7 @@ export function DailyDuel() {
   const shareIt = async () => {
     if (!duel) return;
     const picks = duel.rounds.map((r) => (r.mine === "a" ? r.a : r.b).title);
-    const text = `I played today's OMNIEVENT duel in ${duel.city} ⚔️ My picks: ${picks.join(", ")}. What would you pick?`;
+    const text = `I played today's Mundivi duel in ${duel.city} ⚔️ My picks: ${picks.join(", ")}. What would you pick?`;
     const url = `${location.origin}/community#duel`;
     try {
       if (navigator.share) await navigator.share({ title: "Daily duel", text, url });

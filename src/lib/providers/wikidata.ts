@@ -19,7 +19,7 @@ import { fetchJson, hueOf, keyOf, nearestCityId, zonedDay } from "./common";
  */
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
-const UA = "OMNIEVENT/1.0 (https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (https://omnievent.vercel.app)";
 const YEARS = 6;
 
 const KEEP = /olympic|paralympic|championship|world cup|cup final|super bowl|grand prix|festival|expo\b|world's fair|exhibition|concert|tournament|\bopen\b|games|marathon|convention|worldcon|eurovision|song contest|ceremony|\bgame\b|\bfinal\b|race|tour de|fair\b|competition|\bmatch\b|sporting event|music event/i;

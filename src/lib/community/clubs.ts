@@ -30,7 +30,7 @@ const MAX_OWNED = 3;
 const MAX_JOINED = 40;
 const MAX_PICKS = 120;
 const VIBES = new Set(GROUPS.map((g) => g.slug));
-const RESERVED = /\b(omnievent|official|admin|moderator|staff|support)\b/i;
+const RESERVED = /\b(omnievent|mundivi|official|admin|moderator|staff|support)\b/i;
 
 const now = () => new Date().toISOString();
 export const wallOf = (id: string) => `k:${id}`;

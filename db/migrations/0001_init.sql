@@ -1,4 +1,4 @@
--- OMNIEVENT core schema (PostgreSQL 15+ with PostGIS).
+-- Mundivi core schema (PostgreSQL 15+ with PostGIS).
 -- Mirrors src/lib/types.ts. Apply with: psql "$DATABASE_URL" -f db/migrations/0001_init.sql
 -- On Supabase: paste into the SQL editor or use `supabase db push`.
 

@@ -170,7 +170,7 @@ export function GlobeSpin({
 
   const share = async (c: EventCard) => {
     const url = `${location.origin}/events/${c.slug}`;
-    const text = `🎲 I spun the globe on OMNIEVENT and it picked ${c.title} in ${placeOf(c)}!`;
+    const text = `🎲 I spun the globe on Mundivi and it picked ${c.title} in ${placeOf(c)}!`;
     try {
       if (navigator.share) await navigator.share({ title: c.title, text, url });
       else {

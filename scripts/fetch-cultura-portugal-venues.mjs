@@ -3,7 +3,7 @@
 // sharing a significant word with the result. Run: node scripts/fetch-cultura-portugal-venues.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const OUT = new URL("../src/lib/providers/data/cultura-portugal-venues.json", import.meta.url);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const norm = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();

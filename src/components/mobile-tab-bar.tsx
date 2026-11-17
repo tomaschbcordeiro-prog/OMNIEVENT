@@ -5,20 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, CalendarDays, Disc3, Download, Heart, Lightbulb, MapPinned, Menu, MessagesSquare, Moon, Plane, Search, Share, Sparkles, Sun, Users, X } from "lucide-react";
 import { installApp, useInstall } from "./app-shell";
+import { MundiviMark } from "./brand";
 import { useUser } from "@/lib/user/store";
 import { SearchBox } from "./search-box";
 import { ThemeToggle } from "./theme-toggle";
 
-/** The planet, the site's own mark, drawn large for the bar's middle button. */
+/** The site's own mark (a planet with one event lit up), drawn large for the bar's middle button. */
 function GlobeMark({ size = 30 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="tab-globe-mark">
-      <circle cx="12" cy="12" r="10" fill="#1463FF" />
-      <ellipse className="tab-globe-meridian" cx="12" cy="12" rx="4.2" ry="10" fill="none" stroke="#fff" strokeOpacity=".75" strokeWidth="1.2" />
-      <path d="M2.5 12h19" stroke="#fff" strokeOpacity=".5" strokeWidth="1" />
-      <circle cx="16.4" cy="7.6" r="2.6" fill="#FFB800" stroke="#fff" strokeWidth="1" />
-    </svg>
-  );
+  return <MundiviMark size={size} ring="#fff" className="tab-globe-mark" />;
 }
 
 const MORE: { href: string; label: string; note: string; Icon: typeof Heart }[] = [
@@ -131,7 +125,7 @@ export function MobileTabBar() {
 
       {sheet && <button type="button" className="tab-backdrop lg:hidden" aria-label="Close" tabIndex={-1} onClick={() => setSheet(null)} />}
       {sheet === "more" && (
-        <section className="tab-sheet lg:hidden panel-in" role="dialog" aria-modal="true" aria-label="More of OMNIEVENT">
+        <section className="tab-sheet lg:hidden panel-in" role="dialog" aria-modal="true" aria-label="More of Mundivi">
           <ul className="grid grid-cols-2 gap-2">
             {MORE.map(({ href, label, note, Icon }) => (
               <li key={href}>
@@ -163,7 +157,7 @@ export function MobileTabBar() {
                 <ol className="tab-install-how t-small">
                   <li>Tap <Share size={14} aria-label="Share" className="inline -mt-0.5" /> at the bottom of Safari.</li>
                   <li>Choose <b>Add to Home Screen</b>.</li>
-                  <li>Tap <b>Add</b>. OMNIEVENT opens like an app.</li>
+                  <li>Tap <b>Add</b>. Mundivi opens like an app.</li>
                 </ol>
               )}
             </div>

@@ -246,7 +246,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
 
   const ownerAction = async (action: "cancel" | "restore" | "delete") => {
     if (!editId) return;
-    if (action === "delete" && !window.confirm("Remove this event from OMNIEVENT? This can't be undone.")) return;
+    if (action === "delete" && !window.confirm("Remove this event from Mundivi? This can't be undone.")) return;
     if (action === "cancel" && !window.confirm("Mark this event as cancelled? It stays listed with a clear “Cancelled” label.")) return;
     setBusy(true);
     try {

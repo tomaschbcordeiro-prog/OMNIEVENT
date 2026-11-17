@@ -1612,7 +1612,7 @@ function EventPreview({ card, onClose, onBack, backLabel, onNextLive }: { card: 
             </Link>
           )}
         </div>
-        {card.isDemo && <Notice tone="demo">Demo listings show how OMNIEVENT works. Connect a real provider to see live events and official ticket links.</Notice>}
+        {card.isDemo && <Notice tone="demo">Demo listings show how Mundivi works. Connect a real provider to see live events and official ticket links.</Notice>}
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ import SNAPSHOT from "./data/lisbon-events.json";
 const BASE = "https://www.agendalx.pt/wp-json/agendalx/v1/events";
 const TZ = "Europe/Lisbon";
 // Identifies us as the agenda asks. (Their firewall rejects some user-agent wordings with HTTP 520.)
-const UA = "OMNIEVENT/1.0 (+https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (+https://omnievent.vercel.app)";
 const LISBON = { lat: 38.7223, lng: -9.1393 };
 
 type Term = { id?: number; slug?: string; name?: string };

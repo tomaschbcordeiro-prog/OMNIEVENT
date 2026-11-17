@@ -41,7 +41,7 @@ export function Footer() {
           <nav aria-label="About">
             <p className="font-semibold mb-1">About</p>
             <ul className="text-text-2">
-              <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about">About OMNIEVENT</Link></li>
+              <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about">About Mundivi</Link></li>
               <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about/data">How our data works</Link></li>
             </ul>
           </nav>

@@ -56,7 +56,7 @@ async function fetchImage(start: URL): Promise<Response | string> {
   let url = start;
   for (let hop = 0; hop < 4; hop++) {
     if (!(await publicHost(url))) return "private";
-    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000), headers: { "User-Agent": "Mozilla/5.0 (compatible; OMNIEVENT image preview; +https://omnievent.vercel.app)", Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
+    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000), headers: { "User-Agent": "Mozilla/5.0 (compatible; Mundivi image preview; +https://omnievent.vercel.app)", Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
     if (res.status >= 300 && res.status < 400) {
       const next = res.headers.get("location");
       if (!next) return "redirect-without-location";

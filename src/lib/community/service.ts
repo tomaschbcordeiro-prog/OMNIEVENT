@@ -202,7 +202,7 @@ async function endSessions(id: string, keep?: string): Promise<number> {
   await pipe([...(all.length ? ([["DEL", ...all]] as Cmd[]) : []), ["DEL", sessionsOf(id)], ...(keep ? ([["SADD", sessionsOf(id), keep], ["EXPIRE", sessionsOf(id), SESSION_TTL]] as Cmd[]) : [])]);
   return all.length;
 }
-const RESERVED = new Set(["admin", "administrator", "omnievent", "support", "help", "staff", "moderator", "mod", "root", "system", "null", "undefined", "me", "community", "official", "team"]);
+const RESERVED = new Set(["admin", "administrator", "omnievent", "mundivi", "support", "help", "staff", "moderator", "mod", "root", "system", "null", "undefined", "me", "community", "official", "team"]);
 
 /** Who a browser secret is: the account it is signed in to, else its pre-account profile. */
 export async function memberOf(secret: unknown): Promise<string | undefined> {
@@ -236,7 +236,7 @@ const COMMON = new Set([
   "password", "password1", "password12", "password123", "passw0rd", "12345678", "123456789", "1234567890", "12341234", "87654321",
   "11111111", "00000000", "qwertyui", "qwertyuiop", "qwerty123", "qwerty12", "1q2w3e4r", "1qaz2wsx", "abc12345", "abcd1234",
   "iloveyou", "letmein1", "welcome1", "football", "sunshine", "princess", "admin123", "aaaaaaaa", "senha123", "contraseña",
-  "benfica1", "sporting", "fcporto1", "portugal", "lisboa123", "omnievent", "concerto", "festival", "tickets1", "bilhetes",
+  "benfica1", "sporting", "fcporto1", "portugal", "lisboa123", "omnievent", "mundivi", "concerto", "festival", "tickets1", "bilhetes",
 ]);
 
 function checkPassword(raw: unknown, who?: { username?: string; email?: string }): string {

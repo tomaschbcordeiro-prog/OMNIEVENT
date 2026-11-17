@@ -111,7 +111,7 @@ export interface IcsTrack {
 
 /** A calendar file with every track of the tape. */
 export function tapeIcs(name: string, tracks: IcsTrack[], now = Date.now()): string {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//Mixtape//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc(name)}`];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mundivi//Mixtape//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc(name)}`];
   tracks.forEach((t, i) => {
     const note = `Track ${i + 1} of ${tracks.length} on "${name}".${t.flex ? " Drop in any time while it's open; this time is a suggestion." : ""} Details and tickets: ${t.url}`;
     lines.push(

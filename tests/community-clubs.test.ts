@@ -46,7 +46,7 @@ describe("founding a club", () => {
     expect((await createClub(B, club(), "ip-b")).slug).toBe("lisbon-jazz-nights-2");
   });
   it("refuses official-sounding names, contact details and a fourth club", async () => {
-    await expect(createClub(A, club({ name: "OMNIEVENT Official" }), "ip-a")).rejects.toThrow(/official/);
+    await expect(createClub(A, club({ name: "Mundivi Official" }), "ip-a")).rejects.toThrow(/official/);
     await expect(createClub(A, club({ tagline: "Call 912 345 678 to join" }), "ip-a")).rejects.toThrow(/phone numbers/);
     await createClub(A, club({ name: "One club" }), "ip-a");
     await createClub(A, club({ name: "Two club" }), "ip-a");

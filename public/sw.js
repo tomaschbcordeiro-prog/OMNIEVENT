@@ -1,10 +1,10 @@
 /*
- * OMNIEVENT on a phone, like an app: pages and data come from the network first (so they are
+ * Mundivi on a phone, like an app: pages and data come from the network first (so they are
  * always current), and from the phone when there's no network; the site's own files (scripts,
  * styles, fonts, icons, the globe's pictures) come from the phone once fetched, so coming back
  * is instant. Nothing is stored that isn't needed, and old copies are cleared on each update.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const DATA = `data-${VERSION}`;

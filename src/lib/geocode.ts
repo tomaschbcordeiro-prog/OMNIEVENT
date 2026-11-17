@@ -38,7 +38,7 @@ export interface ReversePlace {
 // (allowed HTTP origins), so MapTiler refuses it from the server; using it here would break search.
 const KEY = process.env.MAPTILER_KEY || "";
 export const GEOCODER = KEY ? "MapTiler Geocoding" : "Photon (OpenStreetMap)";
-const UA = "OMNIEVENT/1.0 (event discovery; https://omnievent.vercel.app)";
+const UA = "Mundivi/1.0 (event discovery; https://omnievent.vercel.app)";
 
 const cache = new Map<string, { at: number; value: unknown }>();
 const TTL = 24 * 3600 * 1000;

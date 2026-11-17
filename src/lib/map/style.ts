@@ -2,7 +2,7 @@ import type { StyleSpecification, LayerSpecification, ExpressionSpecification, S
 import { classesOf, POI_CLASSES, POI_GROUPS, POI_JUNK, POI_SKIP_SUBCLASSES, poiColorExpression, type PoiGroup } from "../pois";
 
 /**
- * Map data providers and the single OMNIEVENT map style.
+ * Map data providers and the single Mundivi map style.
  *
  * One style holds every layer; switching between "Satellite" and "Map" and toggling
  * layers only flips visibility, so the camera, sources and loaded tiles are kept.

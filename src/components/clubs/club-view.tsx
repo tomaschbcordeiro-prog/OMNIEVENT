@@ -96,7 +96,7 @@ export function ClubView({ slug }: { slug: string }) {
   };
   const share = async () => {
     const url = `${location.origin}/clubs/${club.slug}`;
-    const text = `Join ${club.name} on OMNIEVENT ${club.emoji} ${club.tagline}`;
+    const text = `Join ${club.name} on Mundivi ${club.emoji} ${club.tagline}`;
     try {
       if (navigator.share) await navigator.share({ title: club.name, text, url });
       else {

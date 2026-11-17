@@ -197,7 +197,7 @@ export default async function EventPage({ params }: { params: P }) {
         {e.provenance.isDemo && (
           <div className="mb-5">
             <Notice tone="demo">
-              <strong className="text-text">This is a fictional demo event.</strong> The venue, performers and ticket offers are invented to show how OMNIEVENT works. Real events appear once a data provider is connected.
+              <strong className="text-text">This is a fictional demo event.</strong> The venue, performers and ticket offers are invented to show how Mundivi works. Real events appear once a data provider is connected.
             </Notice>
           </div>
         )}

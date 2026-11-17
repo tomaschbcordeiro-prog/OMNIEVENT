@@ -350,7 +350,7 @@ export function NightFlight({
 
   const share = async () => {
     const url = `${location.origin}/?flight=1`;
-    const text = `✈ I followed tonight round the planet on OMNIEVENT: ${route.map(placeOf).join(" → ")}`;
+    const text = `✈ I followed tonight round the planet on Mundivi: ${route.map(placeOf).join(" → ")}`;
     try {
       if (navigator.share) await navigator.share({ title: "Night Flight", text, url });
       else {

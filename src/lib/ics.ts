@@ -24,5 +24,5 @@ export function vevent(e: EventView, url: string): string[] {
 }
 
 export function calendar(events: string[][]): string {
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OMNIEVENT//EN", "CALSCALE:GREGORIAN", ...events.flat(), "END:VCALENDAR"].join("\r\n");
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mundivi//EN", "CALSCALE:GREGORIAN", ...events.flat(), "END:VCALENDAR"].join("\r\n");
 }

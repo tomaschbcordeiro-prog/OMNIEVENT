@@ -165,7 +165,7 @@ function MemberPass({ p }: { p: PublicProfile }) {
         <div className="px-4 pt-3.5 pb-3 flex items-center gap-3">
           <Avatar p={p} size={44} />
           <div className="min-w-0">
-            <p className="t-micro text-text-3">OMNIEVENT member</p>
+            <p className="t-micro text-text-3">Mundivi member</p>
             <p className="font-semibold truncate">{p.name}</p>
           </div>
         </div>

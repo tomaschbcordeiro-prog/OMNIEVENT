@@ -36,13 +36,13 @@ const display = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: { default: "OMNIEVENT: discover events anywhere on Earth", template: "%s | OMNIEVENT" },
+  title: { default: "Mundivi: discover events anywhere on Earth", template: "%s | Mundivi" },
   description:
     "Explore concerts, sport, theatre, festivals, conferences, exhibitions and attractions on an interactive 3D globe, compare ticket options and go straight to official sellers.",
-  openGraph: { type: "website", siteName: "OMNIEVENT" },
+  openGraph: { type: "website", siteName: "Mundivi" },
   twitter: { card: "summary_large_image" },
   icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "OMNIEVENT", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Mundivi", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
