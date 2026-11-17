@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront, Users } from "lucide-react";
+import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront, Users, Wallet, ListChecks, MessageCircle } from "lucide-react";
 import type { EventCard } from "@/lib/types";
+import { listProgress, moneySummary } from "@/lib/trip-share";
+import { useRefreshShared } from "@/lib/group-sync";
 import { useUser, type Trip } from "@/lib/user/store";
 import { KIND_ICON } from "./agenda";
 import { codeOf, ideaGroups, REGIONS, routeFromEvents, type Place } from "@/lib/trip";
@@ -220,6 +222,7 @@ function TripCard({ trip: t, i, today }: { trip: Trip; i: number; today: string 
           )}
         </div>
       )}
+      <TripFacts trip={t} />
       <div className="trip-card-actions">
         {stops.length > 0 && (
           <Link href={`/trips/${t.id}?show=1`} className="trip-pass-view press" aria-label={`View ${t.name} as a film`}>
@@ -240,6 +243,8 @@ function TripCard({ trip: t, i, today }: { trip: Trip; i: number; today: string 
 /** The trips as passes (soonest first, the ones behind you after), or ready-made routes to start from. */
 export function TripsList() {
   const user = useUser();
+  // Shared trips: the latest from the others, so each card says what's new.
+  useRefreshShared(user.trips.filter((t) => t.group).map((t) => t.id));
   // Trips live in this browser: shown once it has been read.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -282,5 +287,46 @@ export function TripsList() {
       </section>
     )}
     </>
+  );
+}
+
+/** The trip's money, lists and chat at a glance, each a shortcut to its tab. */
+function TripFacts({ trip: t }: { trip: Trip }) {
+  const money = (t.expenses?.length ?? 0) > 0 ? moneySummary({ expenses: t.expenses ?? [], currency: t.currency }) : null;
+  const lists = listProgress(t.checklist ?? []);
+  const g = t.group;
+  const unread = g ? (t.messages ?? []).filter((m) => m.by !== g.me && (!g.lastRead || m.at > g.lastRead)).length : 0;
+  if (!money && !lists.all && !unread) return null;
+  const fmt = (n: number, cur: string) => {
+    try {
+      return new Intl.NumberFormat("en-GB", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(n);
+    } catch {
+      return `${Math.round(n)} ${cur}`;
+    }
+  };
+  return (
+    <ul className="trip-facts" aria-label={`${t.name} at a glance`}>
+      {money && (
+        <li>
+          <Link href={`/trips/${t.id}?tab=money`} className="trip-fact press" data-over={t.budget && money.total > t.budget ? "" : undefined}>
+            <Wallet size={13} aria-hidden /> <span className="tnum">{fmt(money.total, money.currency)}{t.budget ? ` of ${fmt(t.budget, money.currency)}` : ""}</span>
+          </Link>
+        </li>
+      )}
+      {lists.all > 0 && (
+        <li>
+          <Link href={`/trips/${t.id}?tab=lists`} className="trip-fact press" data-done={lists.done === lists.all ? "" : undefined}>
+            <ListChecks size={13} aria-hidden /> <span className="tnum">{lists.done}/{lists.all} ready</span>
+          </Link>
+        </li>
+      )}
+      {unread > 0 && (
+        <li>
+          <Link href={`/trips/${t.id}?chat=1`} className="trip-fact trip-fact-chat press">
+            <MessageCircle size={13} aria-hidden /> <span className="tnum">{unread} new</span>
+          </Link>
+        </li>
+      )}
+    </ul>
   );
 }

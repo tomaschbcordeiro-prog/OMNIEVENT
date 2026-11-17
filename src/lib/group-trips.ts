@@ -62,6 +62,8 @@ export interface GroupView {
   updatedAt: string;
   /** Storage isn't connected yet: shared trips may be cleared (said plainly in the app). */
   testMode?: true;
+  /** Members with the trip open right now. */
+  here?: string[];
 }
 
 const MAX_MEMBERS = 30;
@@ -72,6 +74,14 @@ const hash = (key: string) => createHash("sha256").update(`trip:${key}`).digest(
 const tripKey = (id: string) => `g:trip:${id}`;
 const codeKey = (code: string) => `g:code:${code}`;
 const invKey = (token: string) => `g:inv:${token}`;
+/** "Here now": a key per member that lives 35 seconds, renewed each time their device asks for news. */
+const hereKey = (id: string, member: string) => `g:here:${id}:${member}`;
+
+async function presence(doc: GroupDoc, me: Member): Promise<string[]> {
+  const res = await pipe([["SET", hereKey(doc.id, me.id), "1", "EX", 35], ["MGET", ...doc.members.map((m) => hereKey(doc.id, m.id))]]);
+  const vals = Array.isArray(res[1]) ? (res[1] as unknown[]) : [];
+  return doc.members.filter((_, i) => vals[i] != null).map((m) => m.id);
+}
 const newPin = () => Array.from({ length: 8 }, () => PIN_ALPHABET[randomInt(PIN_ALPHABET.length)]).join("");
 const newToken = () => randomBytes(18).toString("base64url");
 /** "abcd-EFGH 23" → "ABCDEFGH"; anything else → "". */
@@ -136,7 +146,7 @@ function view(doc: GroupDoc, me: Member): GroupView {
   return {
     id: doc.id,
     v: doc.v,
-    content: doc.content,
+    content: { ...doc.content, messages: doc.content.messages ?? [] },
     members: doc.members.map(({ id, name, role, seen }) => ({ id, name, role, ...(seen ? { seen } : {}) })),
     me: me.id,
     role: me.role,
@@ -199,12 +209,13 @@ export async function createGroup(rawContent: unknown, rawName: unknown, ip: str
 }
 
 /** The trip for one of its members; `since` answers "nothing new" without the whole trip. */
-export async function readGroup(id: string, key: unknown, since?: number): Promise<GroupView | { same: true; v: number }> {
+export async function readGroup(id: string, key: unknown, since?: number): Promise<GroupView | { same: true; v: number; here: string[] }> {
   const doc = await read(id);
   if (!doc) throw new CommunityError("This trip isn't shared any more.", 404);
   const me = memberFor(doc, key);
-  if (since === doc.v) return { same: true, v: doc.v };
-  return view(doc, me);
+  const here = await presence(doc, me);
+  if (since === doc.v) return { same: true, v: doc.v, here };
+  return { ...view(doc, me), here };
 }
 
 /** Changes from a member's device, applied in turn. */
@@ -219,13 +230,29 @@ export async function changeGroup(id: string, key: unknown, rawOps: unknown): Pr
   }
   return locked(id, async (doc) => {
     const me = memberFor(doc, key);
-    if (me.role === "viewer") throw new CommunityError("You can see this trip but not change it. Ask its owner to make you an editor.", 403);
+    const chatOnly = ops.every((op) => op.t !== "set" && op.c === "messages");
+    // Viewers can't change the trip, but they can talk in its chat.
+    if (me.role === "viewer" && !chatOnly) throw new CommunityError("You can see this trip but not change it. Ask its owner to make you an editor.", 403);
+    // Messages are signed by the server: whoever sends one is its author, and only they change it.
+    ops = ops.flatMap((op): Op[] => {
+      if (op.t === "set" || op.c !== "messages") return [op];
+      if (op.t === "order") return [];
+      const was = doc.content.messages?.find((m) => m.id === (op.t === "put" ? op.item.id : op.id));
+      if (op.t === "del") {
+        if (was && was.by !== me.id && me.role !== "owner") throw new CommunityError("You can only remove your own messages.", 403);
+        return [op];
+      }
+      if (was && was.by !== me.id) throw new CommunityError("You can only change your own messages.", 403);
+      return [{ ...op, item: { ...op.item, by: me.id, name: me.name, at: was?.at ?? now() } }];
+    });
     const before = doc.content;
     try {
-      doc.content = applyChecked(doc.content, ops);
+      doc.content = applyChecked({ ...doc.content, messages: doc.content.messages ?? [] }, ops);
     } catch (err) {
       wrap(err);
     }
+    // The chat keeps its last 300 messages.
+    if (doc.content.messages.length > 300) doc.content = { ...doc.content, messages: doc.content.messages.slice(-300) };
     doc.v += 1;
     doc.updatedAt = now();
     me.seen = now();

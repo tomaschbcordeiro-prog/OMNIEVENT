@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Check, Pencil, Plus, Trash2, Wallet, X } from "lucide-react";
+import { ArrowRight, Check, CornerDownLeft, Pencil, Plus, Send, SlidersHorizontal, Trash2, Wallet, X } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
-import { EXPENSE_CATEGORIES, moneySummary, newId, perTraveller, settleUp, type Expense, type ExpenseCategory } from "@/lib/trip-share";
+import { categoryForKind, EXPENSE_CATEGORIES, guessCategory, moneySummary, moneyText, newId, parseExpense, perTraveller, settleUp, type Expense, type ExpenseCategory } from "@/lib/trip-share";
 import { convert, SUPPORTED_CURRENCIES } from "@/lib/currency";
-import { kindLabel, type PlanKind } from "@/lib/trip-plans";
+import { kindLabel } from "@/lib/trip-plans";
 import { toast } from "../toast";
 import { PersonDot } from "./together";
 
@@ -24,18 +24,6 @@ const money = (n: number, cur: string) => {
 };
 const COMMON = ["EUR", "USD", "GBP", "BRL", "CHF", "JPY", "CAD", "AUD"];
 const CURRENCIES = [...COMMON, ...SUPPORTED_CURRENCIES.filter((c) => !COMMON.includes(c)).sort()];
-
-/** A guess at what kind of cost it is, from its name ("dinner at Ramiro" → food). */
-export function guessCategory(text: string): ExpenseCategory {
-  const t = text.toLowerCase();
-  if (/hotel|hostel|airbnb|apartment|stay|room|alojamento|hotel|quarto/.test(t)) return "stay";
-  if (/flight|plane|train|bus|taxi|uber|bolt|metro|subway|tram|ferry|car|fuel|petrol|gas|parking|toll|voo|comboio|autocarro|gasolina|portagem/.test(t)) return "transport";
-  if (/dinner|lunch|breakfast|brunch|restaurant|café|cafe|coffee|bar|drinks|beer|wine|food|groceries|jantar|almoço|almoco|pequeno|restaurante|comida|supermercado/.test(t)) return "food";
-  if (/museum|ticket|tour|concert|show|game|match|entry|park|gallery|bilhete|museu|concerto|jogo|entrada/.test(t)) return "activities";
-  if (/gift|souvenir|shop|clothes|presente|compras|roupa/.test(t)) return "shopping";
-  return "other";
-}
-const fromKind = (k: PlanKind): ExpenseCategory => (k === "stay" ? "stay" : k === "flight" || k === "train" || k === "bus" || k === "car" ? "transport" : k === "meal" ? "food" : k === "visit" || k === "activity" ? "activities" : "other");
 
 export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
   const cur = trip.currency ?? "EUR";
@@ -106,6 +94,8 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
         {sum.converted && <p className="t-micro text-text-3 mt-1">Other currencies are converted at approximate rates, not today&apos;s exact rate.</p>}
       </section>
 
+      {canEdit && !adding && !editing && <QuickCost trip={trip} onMore={(draft) => (setEditing(draft), setAdding(false))} />}
+
       {sum.total > 0 && (
         <section className="mt-4" aria-labelledby="cats-h">
           <h3 id="cats-h" className="t-small font-semibold">Where it goes</h3>
@@ -124,7 +114,17 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
 
       {travellers.length >= 2 && expenses.some((e) => !e.estimate) && (
         <section className="mt-5" aria-labelledby="split-h">
-          <h3 id="split-h" className="t-small font-semibold">Who paid, who owes</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 id="split-h" className="t-small font-semibold">Who paid, who owes</h3>
+            <button type="button" className="btn btn-ghost btn-sm press" onClick={() => {
+              const text = moneyText({ name: trip.name, expenses, travellers, currency: cur, budget }, money);
+              const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+              if (nav.share) void nav.share({ title: trip.name, text }).catch(() => {});
+              else void navigator.clipboard?.writeText(text).then(() => toast({ title: "Copied", body: "Paste it in your group chat.", emoji: "📋" })).catch(() => {});
+            }}>
+              <Send size={14} aria-hidden /> Send to the group
+            </button>
+          </div>
           <ul className="mt-2 grid gap-1">
             {travellers.map((t) => {
               const x = per[t.id] ?? { paid: 0, share: 0 };
@@ -180,7 +180,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
                   const input = (e.currentTarget.elements.namedItem("amount") as HTMLInputElement);
                   const n = Number(input.value.replace(",", "."));
                   if (!Number.isFinite(n) || n <= 0) return;
-                  userActions.putTripItem(trip.id, "expenses", { id: newId(), title: p.title, amount: Math.round(n * 100) / 100, currency: cur, category: fromKind(p.kind), day: p.day, planId: p.id, paidBy: travellers.length === 1 ? travellers[0].id : undefined, createdAt: new Date().toISOString() });
+                  userActions.putTripItem(trip.id, "expenses", { id: newId(), title: p.title, amount: Math.round(n * 100) / 100, currency: cur, category: categoryForKind(p.kind), day: p.day, planId: p.id, paidBy: travellers.length === 1 ? travellers[0].id : undefined, createdAt: new Date().toISOString() });
                 }}>
                   <input name="amount" className="field !h-9 !w-24 tnum" inputMode="decimal" placeholder={cur} aria-label={`Price of ${p.title}, in ${cur}`} />
                   <button type="submit" className="btn btn-secondary btn-icon btn-sm" aria-label={`Add the price of ${p.title}`}><Plus size={15} aria-hidden /></button>
@@ -194,9 +194,9 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
       <section className="mt-5" aria-labelledby="costs-h">
         <div className="flex items-center justify-between gap-2">
           <h3 id="costs-h" className="t-small font-semibold">Costs <span className="text-text-3 font-normal tnum">{expenses.length || ""}</span></h3>
-          {canEdit && !adding && (
-            <button type="button" className="btn btn-primary btn-sm press" onClick={() => (setEditing(null), setAdding(true))}>
-              <Plus size={15} aria-hidden /> Add a cost
+          {canEdit && !adding && !editing && (
+            <button type="button" className="btn btn-ghost btn-sm press" onClick={() => (setEditing(null), setAdding(true))}>
+              <SlidersHorizontal size={14} aria-hidden /> Add with details
             </button>
           )}
         </div>
@@ -205,6 +205,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
             key={editing?.id ?? "new"}
             trip={trip}
             start={editing}
+            isNew={!!editing && !expenses.some((e) => e.id === editing.id)}
             onDone={() => (setAdding(false), setEditing(null))}
           />
         )}
@@ -250,7 +251,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
 }
 
 /** One cost: what, how much, what kind, who paid and who it's for. The kind guesses itself from the name. */
-function ExpenseForm({ trip, start, onDone }: { trip: Trip; start: Expense | null; onDone: () => void }) {
+function ExpenseForm({ trip, start, onDone, isNew }: { trip: Trip; start: Expense | null; onDone: () => void; isNew?: boolean }) {
   const travellers = trip.travellers ?? [];
   const cur = trip.currency ?? "EUR";
   const meTraveller = travellers.find((t) => t.member && t.member === trip.group?.me)?.id ?? (travellers.length === 1 ? travellers[0].id : undefined);
@@ -354,9 +355,67 @@ function ExpenseForm({ trip, start, onDone }: { trip: Trip; start: Expense | nul
         </label>
       </div>
       <div className="mt-4 flex gap-2">
-        <button type="submit" className="btn btn-primary press" disabled={!ok}><Check size={15} aria-hidden /> {start ? "Save" : "Add"}</button>
+        <button type="submit" className="btn btn-primary press" disabled={!ok}><Check size={15} aria-hidden /> {start && !isNew ? "Save" : "Add"}</button>
         <button type="button" className="btn btn-ghost press" onClick={onDone}><X size={15} aria-hidden /> Cancel</button>
       </div>
+    </form>
+  );
+}
+
+/**
+ * A cost in one line, the way it's said: "dinner 45€ paid by Ana", "taxi 12,50", "museu 30
+ * para a Eva e a Ana". What it understood shows as it's typed; Enter adds it; "More" opens
+ * every field with it filled in.
+ */
+function QuickCost({ trip, onMore }: { trip: Trip; onMore: (draft: Expense) => void }) {
+  const [text, setText] = useState("");
+  const travellers = trip.travellers ?? [];
+  const cur = trip.currency ?? "EUR";
+  const me = travellers.find((t) => t.member && t.member === trip.group?.me)?.id ?? (travellers.length === 1 ? travellers[0].id : undefined);
+  const p = parseExpense(text, travellers, cur);
+  const ready = !!p.title && p.amount !== undefined && p.amount > 0;
+  const nameOf = (id: string) => travellers.find((t) => t.id === id)?.name ?? "";
+  const draft = (): Expense => ({ id: newId(), title: p.title || text.trim(), amount: p.amount ?? 0, currency: p.currency, category: p.category, paidBy: p.paidBy ?? me, split: p.split, createdAt: new Date().toISOString() });
+  const cat = EXPENSE_CATEGORIES.find((c) => c.id === p.category);
+  return (
+    <form
+      className="quick-cost mt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!ready) return;
+        const x = draft();
+        userActions.putTripItem(trip.id, "expenses", x);
+        toast({ title: "Cost added", body: `${x.title}, ${money(x.amount, x.currency)}`, emoji: cat?.emoji ?? "💶", action: { label: "Undo", run: () => userActions.removeTripItem(trip.id, "expenses", x.id) } });
+        setText("");
+      }}
+    >
+      <label htmlFor="quick-cost" className="sr-only">Add a cost in one line</label>
+      <div className="quick-cost-line">
+        <input
+          id="quick-cost"
+          className="field"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={travellers.length > 1 ? `Dinner 45€ paid by ${travellers[1]?.name ?? "Ana"}` : "Dinner 45€, taxi 12, hotel 300…"}
+          autoComplete="off"
+          enterKeyHint="done"
+          aria-describedby="quick-cost-read"
+        />
+        <button type="submit" className="btn btn-primary btn-icon press" aria-label="Add this cost" disabled={!ready}><CornerDownLeft size={16} aria-hidden /></button>
+      </div>
+      <p id="quick-cost-read" className="quick-cost-read" aria-live="polite">
+        {text.trim() ? (
+          <>
+            <span className="qc-chip"><span aria-hidden>{cat?.emoji}</span> {cat?.label}</span>
+            {p.amount !== undefined ? <span className="qc-chip qc-amount tnum">{money(p.amount, p.currency)}</span> : <span className="qc-chip qc-missing">add an amount</span>}
+            {(p.paidBy ?? me) && travellers.length > 1 && <span className="qc-chip">paid by {nameOf((p.paidBy ?? me)!)}</span>}
+            {p.split && <span className="qc-chip">for {p.split.map(nameOf).join(", ")}</span>}
+            <button type="button" className="qc-more" onClick={() => onMore(draft())}>More…</button>
+          </>
+        ) : (
+          <span className="t-micro text-text-3">Type it as you&apos;d say it: what, how much{travellers.length > 1 ? ", who paid, and who it's for" : ""}. Enter adds it.</span>
+        )}
+      </p>
     </form>
   );
 }

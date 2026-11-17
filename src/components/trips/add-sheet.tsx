@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { ArrowLeft, BedDouble, Briefcase, Landmark, Loader2, MapPin, NotebookPen, Plane, Plus, Search, Sparkles, TrainFront, UtensilsCrossed, X } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
+import { categoryForKind } from "@/lib/trip-share";
 import { addDays, daysOf, placeName, stopColor, type TripStop } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { kindLabel, parsePlan, splitWhen, type PlanKind, type TripPlan } from "@/lib/trip-plans";
@@ -309,17 +310,27 @@ export function AddSheet({
     }
     finish(addPicked(trip, stop, picking, w, el));
   };
+  // The price typed in the form (kept as the trip's cost for that booking).
+  const price = useRef<{ amount?: number; currency: string } | null>(null);
+  const savePrice = (plan: TripPlan) => {
+    if (!price.current) return;
+    userActions.setPlanPrice(trip.id, plan, price.current.amount, price.current.currency, categoryForKind(plan.kind));
+    price.current = null;
+  };
   const saveForm = (d: Draft, edit?: TripPlan) => {
     if (!d.title.trim()) return;
     if (edit) {
       userActions.updatePlan(trip.id, edit.id, { ...d, title: d.title.trim() });
+      savePrice({ ...edit, ...d, title: d.title.trim() });
       announcePlan(edit.id);
       toast({ title: `${d.title.trim()} changed`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.updatePlan(trip.id, edit.id, edit) } });
       return finish(edit.id);
     }
     const id = newId();
     announcePlan(id);
-    userActions.addPlan(trip.id, { ...d, title: d.title.trim(), id, createdAt: new Date().toISOString() });
+    const plan: TripPlan = { ...d, title: d.title.trim(), id, createdAt: new Date().toISOString() };
+    userActions.addPlan(trip.id, plan);
+    savePrice(plan);
     toast({ title: `${kindLabel(d.kind)} added`, body: `${d.title.trim()}${d.day ? `, ${dayName(d.day)}${d.time ? ` ${d.time}` : ""}` : ""}`, emoji: "🗓️", action: { label: "Undo", run: () => userActions.removePlan(trip.id, id) } });
     finish(id);
   };
@@ -571,6 +582,11 @@ export function AddSheet({
               onDelete={step.edit ? () => remove(step.edit!) : undefined}
               onSave={() => saveForm(step.draft, step.edit)}
               saveLabel={step.edit ? "Save" : "Add to trip"}
+              price={(() => {
+                const e = step.edit && (trip.expenses ?? []).find((x) => x.planId === step.edit!.id);
+                return e ? { amount: e.amount, currency: e.currency } : { currency: trip.currency ?? "EUR" };
+              })()}
+              onPrice={(amount, currency) => (price.current = { amount, currency })}
             />
           )}
         </div>

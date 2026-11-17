@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { applyOps, cleanContent, cleanOp, contentOf, diffContent, listIdeas, moneySummary, perTraveller, settleUp, withContent, type TripContent } from "@/lib/trip-share";
+import { applyOps, cleanContent, cleanOp, contentOf, diffContent, listIdeas, moneySummary, moneyText, parseExpense, perTraveller, settleUp, withContent, type TripContent } from "@/lib/trip-share";
 import { resetMemory } from "@/lib/community/kv";
 import { changeGroup, createGroup, deleteGroup, joinGroup, manageGroup, normalPin, peekGroup, readGroup, type GroupView } from "@/lib/group-trips";
 
@@ -19,6 +19,7 @@ const base = (): TripContent => ({
     { id: "rui", name: "Rui" },
     { id: "eva", name: "Eva" },
   ],
+  messages: [],
 });
 
 describe("changes travel as small operations", () => {
@@ -149,7 +150,7 @@ describe("trips planned together (server)", () => {
     expect(ticked.log.at(-1)?.text).toBe("ticked Insurance");
 
     // Nothing new since a version: a tiny answer.
-    expect(await readGroup(view.id, rui.key, ticked.v)).toEqual({ same: true, v: ticked.v });
+    expect(await readGroup(view.id, rui.key, ticked.v)).toMatchObject({ same: true, v: ticked.v });
   });
 
   it("roles, new PIN, closing, leaving and stopping", async () => {
@@ -188,5 +189,57 @@ describe("trips planned together (server)", () => {
       }
     }
     expect(blocked).toBe(true);
+  });
+});
+
+describe("a cost typed in one line", () => {
+  const who = [{ id: "ana", name: "Ana" }, { id: "rui", name: "Rui" }, { id: "eva", name: "Eva" }];
+  it("amount, currency, kind and who paid, in English and Portuguese", () => {
+    expect(parseExpense("Dinner at Ramiro 90€", who)).toEqual({ title: "Dinner at Ramiro", amount: 90, currency: "EUR", category: "food" });
+    expect(parseExpense("taxi 12,50 paid by Ana", who)).toMatchObject({ title: "Taxi", amount: 12.5, currency: "EUR", category: "transport", paidBy: "ana" });
+    expect(parseExpense("jantar 45 pago pela Eva", who)).toMatchObject({ title: "Jantar", amount: 45, category: "food", paidBy: "eva" });
+    expect(parseExpense("Rui paid £30 museum", who)).toMatchObject({ amount: 30, currency: "GBP", paidBy: "rui", category: "activities" });
+    expect(parseExpense("Hotel 2 nights $240", who)).toMatchObject({ title: "Hotel 2 nights", amount: 240, currency: "USD", category: "stay" });
+  });
+  it("who it's for", () => {
+    expect(parseExpense("museu 30€ para a Eva e a Ana", who)).toMatchObject({ title: "Museu", amount: 30, split: ["eva", "ana"] });
+    expect(parseExpense("snacks 8 for everyone", who)).toMatchObject({ title: "Snacks", amount: 8 });
+    // A name that isn't a traveller stays in the title.
+    expect(parseExpense("present for Mum 20", who)).toMatchObject({ title: "Present for Mum", amount: 20 });
+  });
+  it("no amount: nothing invented", () => {
+    expect(parseExpense("souvenirs", who).amount).toBeUndefined();
+  });
+  it("a summary to send", () => {
+    const c = { ...base(), currency: "EUR", expenses: [{ id: "x", title: "Hotel", amount: 300, currency: "EUR", category: "stay" as const, paidBy: "ana", createdAt: "x" }] };
+    const text = moneyText(c, (n) => `€${n}`);
+    expect(text).toContain("Portugal: €300");
+    expect(text).toContain("Rui → Ana: €100");
+  });
+});
+
+describe("presence and the trip's chat (server)", () => {
+  beforeEach(() => resetMemory());
+  it("shows who's here, signs messages, lets viewers talk but not edit", async () => {
+    const { key: owner, view } = await createGroup({ ...base(), travellers: [] }, "Tomás", "ip1");
+    const ana = await joinGroup({ invite: view.invite }, "Ana", "ip2");
+    const r1 = (await readGroup(view.id, owner)) as GroupView;
+    expect(r1.here).toEqual([view.me]);
+    const r2 = (await readGroup(view.id, ana.key, r1.v)) as { here: string[] };
+    expect(r2.here.sort()).toEqual([view.me, ana.view.me].sort());
+
+    // Ana tries to post as Tomás: the server signs it as Ana.
+    const after = await changeGroup(view.id, ana.key, [{ t: "put", c: "messages", item: { id: "m1", by: view.me, name: "Tomás", text: "Hotel booked!", at: "2000-01-01T00:00:00Z" } }]);
+    expect(after.content.messages[0]).toMatchObject({ by: ana.view.me, name: "Ana", text: "Hotel booked!" });
+    expect(after.content.messages[0].at).not.toBe("2000-01-01T00:00:00.000Z");
+    // Nobody changes someone else's message.
+    await expect(changeGroup(view.id, owner, [{ t: "put", c: "messages", item: { id: "m1", text: "edited", by: "x", name: "x", at: "x" } }])).rejects.toThrow(/your own messages/);
+    // Messages don't fill the history.
+    expect(after.log.some((l) => /message/.test(l.text))).toBe(false);
+
+    // A viewer can talk, but not change the trip.
+    await manageGroup(view.id, owner, { do: "role", member: ana.view.me, role: "viewer" });
+    await changeGroup(view.id, ana.key, [{ t: "put", c: "messages", item: { id: "m2", text: "Can I add the museum?", by: "", name: "", at: "" } }]);
+    await expect(changeGroup(view.id, ana.key, [{ t: "set", f: "budget", v: 10 }])).rejects.toThrow(/not change it/);
   });
 });

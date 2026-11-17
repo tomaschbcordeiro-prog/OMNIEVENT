@@ -162,7 +162,7 @@ export function announcePlan(id: string, from?: DOMRect | null) {
 }
 
 /** A plan as one row of the agenda (also the preview of what's being typed). */
-export function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "createdAt">; onEdit?: () => void; preview?: boolean }) {
+export function PlanRow({ p, onEdit, preview, price }: { p: Omit<TripPlan, "id" | "createdAt">; onEdit?: () => void; preview?: boolean; /** Its price, from the trip's money. */ price?: string }) {
   const Icon = KIND_ICON[p.kind];
   const length = durationOf(p);
   const route = isTravel(p.kind) && (p.from || p.to) ? `${p.from ?? "?"} → ${p.to ?? "?"}` : "";
@@ -183,6 +183,7 @@ export function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "crea
         {meta && <span className="ag-meta">{meta}</span>}
         {preview && <span className="ag-meta">{dayName(p.day)}{p.kind === "stay" && p.endDay ? ` → ${dayName(p.endDay)}, ${nightsOf(p)} ${nightsOf(p) === 1 ? "night" : "nights"}` : ""}</span>}
       </span>
+      {price && <span className="ag-price tnum">{price}</span>}
     </Tag>
   );
 }
@@ -191,8 +192,14 @@ export function PlanRow({ p, onEdit, preview }: { p: Omit<TripPlan, "id" | "crea
 export type Draft = Omit<TripPlan, "id" | "createdAt">;
 
 /** Every field of a plan, for when a line isn't enough (or to change one). */
-export function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel, kinds }: { draft: Draft; days: string[]; onChange: (d: Draft) => void; onSave: () => void; onCancel: () => void; onDelete?: () => void; saveLabel: string; /** The kinds it can be switched to (all when not said; none hides the choice). */ kinds?: PlanKind[] }) {
+export function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, saveLabel, kinds, price, onPrice }: { draft: Draft; days: string[]; onChange: (d: Draft) => void; onSave: () => void; onCancel: () => void; onDelete?: () => void; saveLabel: string; /** The kinds it can be switched to (all when not said; none hides the choice). */ kinds?: PlanKind[]; /** Its price (the trip's cost for it), when the trip keeps money. */ price?: { amount?: number; currency: string }; onPrice?: (amount: number | undefined, currency: string) => void }) {
   const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
+  const [priceText, setPriceText] = useState(price?.amount != null ? String(price.amount) : "");
+  const [priceCur, setPriceCur] = useState(price?.currency ?? "EUR");
+  const tellPrice = (t: string, c: string) => {
+    const n = Number(t.replace(",", "."));
+    onPrice?.(t.trim() && Number.isFinite(n) && n > 0 ? n : undefined, c);
+  };
   const opts = [...new Set([addDays(days[0] ?? today(), -1), ...days, addDays(days[days.length - 1] ?? today(), 1), draft.day, draft.endDay].filter((x): x is string => !!x))].sort();
   const travel = isTravel(draft.kind);
   const stay = draft.kind === "stay";
@@ -261,6 +268,17 @@ export function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, sa
         <span>{travel ? "Flight / booking no." : "Booking ref"}</span>
         <input value={draft.ref ?? ""} maxLength={30} onChange={(e) => set({ ref: e.target.value || undefined })} placeholder={travel ? "TP 1350" : "ABC123"} />
       </label>
+      {onPrice && (
+        <label className="ag-field">
+          <span>Price <span className="font-normal text-text-3">(goes in Money)</span></span>
+          <span className="flex gap-1">
+            <input value={priceText} inputMode="decimal" placeholder="0" className="tnum" onChange={(e) => (setPriceText(e.target.value), tellPrice(e.target.value, priceCur))} aria-label="Price" />
+            <select value={priceCur} onChange={(e) => (setPriceCur(e.target.value), tellPrice(priceText, e.target.value))} aria-label="Currency" className="!w-[5.25rem]">
+              {[...new Set([priceCur, "EUR", "USD", "GBP", "BRL", "CHF", "JPY"])].map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </span>
+        </label>
+      )}
       <label className="ag-field ag-wide">
         <span>Notes</span>
         <input value={draft.notes ?? ""} maxLength={200} onChange={(e) => set({ notes: e.target.value || undefined })} placeholder="Seat 12A, gate closes 40 min before" />
@@ -285,6 +303,19 @@ export function PlanForm({ draft, days, onChange, onSave, onCancel, onDelete, sa
 export function TripAgenda({ trip, stops, events, only, near, compose = true, onAddOnDay, onOpenEvent, onPickStop, onShowPlace }: { trip: Trip; stops: TripStop[]; events: { e: TripEvent; day: string }[]; only?: string[]; /** A city: its places to see. */ near?: TripStop; /** Its own line to type plans in (a city's page has its own). */ compose?: boolean; /** A day's "+", when something else does the adding. */ onAddOnDay?: (day: string) => void; onOpenEvent: (id: string) => void; onPickStop: (i: number) => void; /** A plan with a place on the map, shown there. */ onShowPlace?: (p: TripPlan) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const days = useMemo(() => buildDays(trip, stops, events, only), [trip, stops, events, only]);
+  // Each booking's price, from the trip's money (Money and the agenda are the same thing).
+  const prices = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of trip.expenses ?? []) {
+      if (!e.planId) continue;
+      try {
+        m.set(e.planId, new Intl.NumberFormat("en-GB", { style: "currency", currency: e.currency, maximumFractionDigits: e.amount % 1 ? 2 : 0 }).format(e.amount));
+      } catch {
+        m.set(e.planId, `${e.amount} ${e.currency}`);
+      }
+    }
+    return m;
+  }, [trip.expenses]);
   // Places to see on no day yet (all of them; a city's own when it's a city's view).
   const toSee = useMemo(
     () => (trip.plans ?? []).filter((p) => !isScheduled(p) && (!near || (p.lat != null && p.lng != null && haversineKm(p.lat, p.lng, near.lat, near.lng) <= STOP_RADIUS_KM))),
@@ -363,7 +394,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 {(
                   <div className="ag-idea-row">
                     <span className="ag-grip" aria-hidden><GripVertical size={14} /></span>
-                    <PlanRow p={p} onEdit={() => openAdd({ edit: p })} />
+                    <PlanRow p={p} price={prices.get(p.id)} onEdit={() => openAdd({ edit: p })} />
                     <span className="ag-idea-actions">
                       {p.lat != null && onShowPlace && (
                         <button type="button" className="ag-icon-btn" aria-label={`Show ${p.title} on the globe`} onClick={() => onShowPlace(p)}>
@@ -412,7 +443,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 <li key={r.key} data-flip={r.key} data-plan={"plan" in r ? r.plan.id : undefined} className={`ag-row ag-${r.type}`}>
                   {r.type === "plan" && (
                     <div className="ag-idea-row">
-                      <PlanRow p={r.plan} onEdit={() => openAdd({ edit: r.plan })} />
+                      <PlanRow p={r.plan} price={prices.get(r.plan.id)} onEdit={() => openAdd({ edit: r.plan })} />
                       {r.plan.lat != null && onShowPlace && (
                         <span className="ag-idea-actions">
                           <button type="button" className="ag-icon-btn" aria-label={`Show ${r.plan.title} on the globe`} onClick={() => onShowPlace(r.plan)}>
@@ -429,6 +460,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                           <b>{r.out ? "Check out" : r.night === 1 ? "Check in" : "Staying"}</b> · {r.plan.title}
                           {r.plan.place ? `, ${r.plan.place}` : ""}
                         </span>
+                        {r.night === 1 && !r.out && prices.get(r.plan.id) && <span className="ag-price tnum">{prices.get(r.plan.id)}</span>}
                         <span className="tnum shrink-0">{r.out ? (r.plan.endTime ?? "") : r.night === 1 && r.plan.time ? r.plan.time : `${r.night}/${r.nights}`}</span>
                       </button>
                     )}

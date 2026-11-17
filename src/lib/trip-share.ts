@@ -84,6 +84,16 @@ export interface Traveller {
   member?: string;
 }
 
+/** A message in the trip's chat (who and when are set by the server). */
+export interface Message {
+  id: string;
+  /** The member who wrote it. */
+  by: string;
+  name: string;
+  text: string;
+  at: string;
+}
+
 /** An event on the trip, with what it looked like when it was added. */
 export interface TripEventItem {
   id: string;
@@ -107,14 +117,15 @@ export interface TripContent {
   checklist: CheckItem[];
   contacts: Contact[];
   travellers: Traveller[];
+  messages: Message[];
 }
 
 export const FIELDS = ["name", "start", "end", "emoji", "notes", "interests", "currency", "budget"] as const;
 export type Field = (typeof FIELDS)[number];
-export const COLLS = ["stops", "plans", "events", "expenses", "checklist", "contacts", "travellers"] as const;
+export const COLLS = ["stops", "plans", "events", "expenses", "checklist", "contacts", "travellers", "messages"] as const;
 export type Coll = (typeof COLLS)[number];
 /** Collections whose order means something (the route, the events as added, the lists). */
-const ORDERED: Coll[] = ["stops", "events", "checklist", "travellers"];
+const ORDERED: Coll[] = ["stops", "events", "checklist", "travellers", "messages"];
 
 export type Op =
   | { t: "set"; f: Field; v: unknown }
@@ -140,6 +151,7 @@ export interface TripLike {
   checklist?: CheckItem[];
   contacts?: Contact[];
   travellers?: Traveller[];
+  messages?: Message[];
 }
 
 export function contentOf(t: TripLike): TripContent {
@@ -159,6 +171,7 @@ export function contentOf(t: TripLike): TripContent {
     checklist: t.checklist ?? [],
     contacts: t.contacts ?? [],
     travellers: t.travellers ?? [],
+    messages: t.messages ?? [],
   };
 }
 
@@ -184,6 +197,7 @@ export function withContent<T extends TripLike>(t: T, c: TripContent): T {
     checklist: c.checklist,
     contacts: c.contacts,
     travellers: c.travellers,
+    messages: c.messages ?? [],
   };
 }
 
@@ -199,13 +213,13 @@ export function applyOps(c: TripContent, ops: Op[]): TripContent {
       if (op.v === undefined || op.v === null || op.v === "") delete o[op.f];
       else o[op.f] = op.v;
     } else if (op.t === "put") {
-      const list = out[op.c] as { id: string }[];
+      const list = (out[op.c] ?? []) as { id: string }[];
       const i = list.findIndex((x) => x.id === op.item.id);
       (out as unknown as Record<Coll, unknown[]>)[op.c] = i < 0 ? [...list, op.item] : list.map((x, j) => (j === i ? op.item : x));
     } else if (op.t === "del") {
-      (out as unknown as Record<Coll, unknown[]>)[op.c] = (out[op.c] as { id: string }[]).filter((x) => x.id !== op.id);
+      (out as unknown as Record<Coll, unknown[]>)[op.c] = ((out[op.c] ?? []) as { id: string }[]).filter((x) => x.id !== op.id);
     } else if (op.t === "order") {
-      const list = out[op.c] as { id: string }[];
+      const list = (out[op.c] ?? []) as { id: string }[];
       const rank = new Map(op.ids.map((id, i) => [id, i]));
       // What the order names goes in that order; anything it doesn't know (added meanwhile) keeps its place after.
       (out as unknown as Record<Coll, unknown[]>)[op.c] = [...list].sort((a, b) => (rank.get(a.id) ?? 1e9 + list.indexOf(a)) - (rank.get(b.id) ?? 1e9 + list.indexOf(b)));
@@ -219,13 +233,13 @@ export function diffContent(a: TripContent, b: TripContent): Op[] {
   const ops: Op[] = [];
   for (const f of FIELDS) if (!same(a[f], b[f])) ops.push({ t: "set", f, v: b[f] ?? null });
   for (const c of COLLS) {
-    const before = new Map((a[c] as { id: string }[]).map((x) => [x.id, x]));
-    const after = b[c] as ({ id: string } & Record<string, unknown>)[];
+    const before = new Map(((a[c] ?? []) as { id: string }[]).map((x) => [x.id, x]));
+    const after = (b[c] ?? []) as ({ id: string } & Record<string, unknown>)[];
     const ids = new Set(after.map((x) => x.id));
     for (const x of after) if (!before.has(x.id) || !same(before.get(x.id), x)) ops.push({ t: "put", c, item: x });
     for (const id of before.keys()) if (!ids.has(id)) ops.push({ t: "del", c, id });
     if (ORDERED.includes(c)) {
-      const kept = (a[c] as { id: string }[]).map((x) => x.id).filter((id) => ids.has(id));
+      const kept = ((a[c] ?? []) as { id: string }[]).map((x) => x.id).filter((id) => ids.has(id));
       const added = after.map((x) => x.id).filter((id) => !before.has(id));
       if (!same([...kept, ...added], after.map((x) => x.id))) ops.push({ t: "order", c, ids: after.map((x) => x.id) });
     }
@@ -235,13 +249,15 @@ export function diffContent(a: TripContent, b: TripContent): Op[] {
 
 /** A line a person reads in the trip's history ("Ana added Hotel Lisboa"). */
 export function describeOps(ops: Op[], before?: TripContent): string[] {
-  const NOUN: Record<Coll, string> = { stops: "a city", plans: "a plan", events: "an event", expenses: "a cost", checklist: "a list item", contacts: "a contact", travellers: "a traveller" };
+  const NOUN: Record<Coll, string> = { stops: "a city", plans: "a plan", events: "an event", expenses: "a cost", checklist: "a list item", contacts: "a contact", travellers: "a traveller", messages: "a message" };
   const lines: string[] = [];
   for (const op of ops) {
+    // The chat speaks for itself: messages don't go in the history.
+    if ((op.t === "put" || op.t === "del" || op.t === "order") && op.c === "messages") continue;
     if (op.t === "put") {
       const item = op.item as Record<string, unknown>;
       const name = String(item.title ?? item.name ?? item.text ?? (item.snap as Record<string, unknown> | undefined)?.title ?? "").slice(0, 60);
-      const was = before ? (before[op.c] as ({ id: string } & Record<string, unknown>)[]).find((x) => x.id === op.item.id) : undefined;
+      const was = before ? ((before[op.c] ?? []) as ({ id: string } & Record<string, unknown>)[]).find((x) => x.id === op.item.id) : undefined;
       const verb = before && !was ? "added" : op.c === "checklist" && was && !was.done && item.done ? "ticked" : before ? "changed" : "updated";
       lines.push(name ? `${verb} ${name}` : `${verb} ${NOUN[op.c]}`);
     } else if (op.t === "del") lines.push(`removed ${NOUN[op.c]}`);
@@ -396,6 +412,12 @@ function cleanTraveller(o: Record<string, unknown>): Traveller {
   return compact({ id: id(o.id), name, emoji, member: typeof o.member === "string" && ID.test(o.member) ? o.member : undefined }) as unknown as Traveller;
 }
 
+function cleanMessage(o: Record<string, unknown>): Message {
+  const t = text(o.text, 1000).trim();
+  if (!t) throw new TripShareError("A message needs some text.");
+  return { id: id(o.id), by: typeof o.by === "string" && ID.test(o.by) ? o.by : "", name: line(o.name, 40), text: t, at: iso(o.at) };
+}
+
 const CLEAN: Record<Coll, (o: Record<string, unknown>) => { id: string }> = {
   stops: cleanStop,
   plans: cleanPlan,
@@ -404,8 +426,9 @@ const CLEAN: Record<Coll, (o: Record<string, unknown>) => { id: string }> = {
   checklist: cleanCheck,
   contacts: cleanContact,
   travellers: cleanTraveller,
+  messages: cleanMessage,
 };
-export const LIMITS: Record<Coll, number> = { stops: 40, plans: 400, events: 400, expenses: 1000, checklist: 600, contacts: 60, travellers: 30 };
+export const LIMITS: Record<Coll, number> = { stops: 40, plans: 400, events: 400, expenses: 1000, checklist: 600, contacts: 60, travellers: 30, messages: 400 };
 
 function cleanField(f: Field, v: unknown): unknown {
   if (v === null || v === undefined || v === "") return undefined;
@@ -447,7 +470,7 @@ export function cleanOp(raw: unknown): Op {
 /** A whole trip as sent by a browser (to start planning it together), checked. */
 export function cleanContent(raw: unknown): TripContent {
   const o = (raw ?? {}) as Record<string, unknown>;
-  const base: TripContent = { name: "Trip", stops: [], plans: [], events: [], expenses: [], checklist: [], contacts: [], travellers: [] };
+  const base: TripContent = { name: "Trip", stops: [], plans: [], events: [], expenses: [], checklist: [], contacts: [], travellers: [], messages: [] };
   const ops: Op[] = FIELDS.map((f) => ({ t: "set" as const, f, v: cleanField(f, o[f]) ?? null }));
   let c = applyOps(base, ops);
   for (const coll of COLLS) {
@@ -463,7 +486,7 @@ export function cleanContent(raw: unknown): TripContent {
 /** Applies changes and checks the trip stays within its limits. */
 export function applyChecked(c: TripContent, ops: Op[]): TripContent {
   const next = applyOps(c, ops);
-  for (const coll of COLLS) if ((next[coll] as unknown[]).length > LIMITS[coll]) throw new TripShareError(`A trip can hold up to ${LIMITS[coll]} ${coll}.`);
+  for (const coll of COLLS) if (((next[coll] ?? []) as unknown[]).length > LIMITS[coll]) throw new TripShareError(`A trip can hold up to ${LIMITS[coll]} ${coll}.`);
   return next;
 }
 
@@ -598,6 +621,108 @@ export function listIdeas(c: Pick<TripContent, "stops" | "plans" | "events" | "c
 export function listProgress(items: CheckItem[], list?: ListKind) {
   const mine = list ? items.filter((x) => x.list === list) : items;
   return { done: mine.filter((x) => x.done).length, all: mine.length };
+}
+
+// ---------------------------------------------------------------- costs typed in a line
+
+/** A guess at what kind of cost it is, from its name ("dinner at Ramiro" → food). English, Portuguese, Spanish. */
+export function guessCategory(text: string): ExpenseCategory {
+  const t = text.toLowerCase();
+  if (/hotel|hostel|airbnb|apartment|apartamento|stay|room|alojamento|quarto|habitaci/.test(t)) return "stay";
+  if (/flight|plane|train|bus|taxi|uber|bolt|metro|subway|tram|ferry|car\b|car hire|rental|fuel|petrol|gas\b|parking|toll|voo|avião|aviao|comboio|autocarro|gasolina|portagem|estacionamento|tren|vuelo|gasolina/.test(t)) return "transport";
+  if (/dinner|lunch|breakfast|brunch|restaurant|café|cafe|coffee|bar\b|drinks|beer|wine|food|groceries|snack|jantar|almoço|almoco|pequeno|restaurante|comida|supermercado|cerveja|vinho|cena|almuerzo|desayuno/.test(t)) return "food";
+  if (/museum|ticket|tour|concert|show|game|match|entry|park|gallery|bilhete|museu|concerto|jogo|entrada|visita|excurs|entrada|museo|espectáculo/.test(t)) return "activities";
+  if (/gift|souvenir|shop|clothes|presente|compras|roupa|lembrança|regalo|ropa/.test(t)) return "shopping";
+  return "other";
+}
+
+/** The kind of cost a booking is (a flight is getting around, a stay is a place to sleep). */
+export const categoryForKind = (k: string): ExpenseCategory => (k === "stay" ? "stay" : k === "flight" || k === "train" || k === "bus" || k === "car" ? "transport" : k === "meal" ? "food" : k === "visit" || k === "activity" ? "activities" : "other");
+
+const SYMBOL: Record<string, string> = { "€": "EUR", "$": "USD", "£": "GBP", "r$": "BRL", "us$": "USD", "¥": "JPY", "chf": "CHF", eur: "EUR", euro: "EUR", euros: "EUR", usd: "USD", dollars: "USD", dollar: "USD", gbp: "GBP", pounds: "GBP", pound: "GBP", libras: "GBP", brl: "BRL", reais: "BRL", jpy: "JPY", yen: "JPY", dólares: "USD", dolares: "USD" };
+
+export interface TypedCost {
+  title: string;
+  amount?: number;
+  currency: string;
+  category: ExpenseCategory;
+  paidBy?: string;
+  split?: string[];
+}
+
+/**
+ * A cost typed the way people say it: "Dinner at Ramiro 90€", "taxi 12,50 paid by Ana",
+ * "jantar 45 pago pela Ana", "museu 30€ para a Eva e a Ana". Whatever isn't understood stays in
+ * the name; nothing is invented.
+ */
+export function parseExpense(raw: string, travellers: Pick<Traveller, "id" | "name">[], fallback = "EUR"): TypedCost {
+  let t = ` ${raw.replace(/\s+/g, " ").trim()} `;
+  let currency = fallback;
+  let amount: number | undefined;
+  // An amount with its currency next to it wins over a bare number ("dinner for 4, 90€").
+  const sym = "(r\\$|us\\$|€|\\$|£|¥|chf|eur|euros?|usd|dollars?|d[oó]lares|gbp|pounds?|libras|brl|reais|jpy|yen)";
+  const num = "(\\d{1,7}(?:[.,]\\d{1,2})?)";
+  const withCur = new RegExp(`(?:\\s${sym}\\s?${num}|\\s${num}\\s?${sym})(?=[\\s.,;!?]|$)`, "i");
+  const m = withCur.exec(t);
+  if (m) {
+    const n = m[2] ?? m[3];
+    const c = (m[1] ?? m[4]).toLowerCase();
+    amount = Number(n.replace(",", "."));
+    currency = SYMBOL[c] ?? fallback;
+    t = t.replace(m[0], " ");
+  } else {
+    const bare = [...t.matchAll(/\s(\d{1,7}(?:[.,]\d{1,2})?)(?=[\s.,;!?]|$)/g)];
+    const last = bare[bare.length - 1];
+    if (last) {
+      amount = Number(last[1].replace(",", "."));
+      t = t.slice(0, last.index) + " " + t.slice((last.index ?? 0) + last[0].length);
+    }
+  }
+  // Who paid: "paid by Ana", "Ana paid", "pago pela Ana", "pagou a Ana", "pagado por Ana".
+  const names = [...travellers].sort((a, b) => b.name.length - a.name.length);
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let paidBy: string | undefined;
+  for (const tr of names) {
+    const n = esc(tr.name);
+    const re = new RegExp(`\\s(?:paid by|pago (?:pel[oa]|por)|pagou (?:[oa] )?|pagado por|payé par)\\s?${n}(?=\\s|$)|\\s${n}\\s(?:paid|pagou|pagó|paga)(?=\\s|$)`, "i");
+    const hit = re.exec(t);
+    if (hit) {
+      paidBy = tr.id;
+      t = t.replace(hit[0], " ");
+      break;
+    }
+  }
+  // Who it's for: "for Ana and Eva", "para a Ana e o Rui", "para Ana y Eva".
+  let split: string[] | undefined;
+  const forRe = /\s(?:for|para|pour)\s((?:(?:a|o|as|os|the)\s)?[\p{L}' -]+?)(?=\s*$)/iu;
+  const f = forRe.exec(t);
+  if (f) {
+    const words = f[1].split(/\s*(?:,|\band\b|\be\b|\by\b|\bet\b)\s*/i).map((w) => w.replace(/^(?:a|o|as|os|the)\s+/i, "").trim().toLowerCase()).filter(Boolean);
+    const ids = words.map((w) => travellers.find((tr) => tr.name.toLowerCase() === w)?.id);
+    if (ids.length && ids.every(Boolean)) {
+      split = ids as string[];
+      t = t.replace(f[0], " ");
+    } else if (/^(?:everyone|all|todos|tod[oa]s nós|todos nos)$/i.test(f[1].trim())) t = t.replace(f[0], " ");
+  }
+  const title = t.replace(/\s+/g, " ").replace(/\s([.,;:])/g, "$1").replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, "");
+  const nice = title ? title[0].toUpperCase() + title.slice(1) : "";
+  return { title: nice, ...(amount !== undefined && Number.isFinite(amount) ? { amount: Math.round(amount * 100) / 100 } : {}), currency, category: guessCategory(nice), ...(paidBy ? { paidBy } : {}), ...(split ? { split } : {}) };
+}
+
+/** The trip's money as a few lines to send to the group ("Hotel €330 · Ana pays Tomás €120"). */
+export function moneyText(c: Pick<TripContent, "name" | "expenses" | "travellers" | "currency" | "budget">, fmt: (n: number, cur: string) => string): string {
+  const cur = c.currency ?? "EUR";
+  const sum = moneySummary(c, cur);
+  const per = perTraveller(c, cur);
+  const pay = settleUp(per);
+  const name = (id: string) => c.travellers.find((t) => t.id === id)?.name ?? "?";
+  const lines = [`${c.name}: ${fmt(sum.total, cur)}${c.budget ? ` of ${fmt(c.budget, cur)}` : ""}`];
+  for (const x of EXPENSE_CATEGORIES) if (sum.byCategory[x.id] > 0) lines.push(`${x.emoji} ${x.label}: ${fmt(sum.byCategory[x.id], cur)}`);
+  if (pay.length) {
+    lines.push("", "To settle up:");
+    for (const p of pay) lines.push(`${name(p.from)} → ${name(p.to)}: ${fmt(p.amount, cur)}`);
+  }
+  return lines.join("\n");
 }
 
 export const newId = () => Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);

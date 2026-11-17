@@ -29,6 +29,7 @@ interface PeerView {
   open: boolean;
   log: GroupLink["log"];
   testMode?: boolean;
+  here?: string[];
 }
 
 const states = new Map<string, SyncState>();
@@ -38,6 +39,30 @@ const setState = (id: string, s: SyncState) => {
   states.set(id, s);
   stateListeners.forEach((l) => l());
 };
+
+// Who has each trip open right now (member ids), as the server last said.
+const present = new Map<string, string[]>();
+const setPresent = (id: string, ids: string[] | undefined) => {
+  if (!ids) return;
+  const was = present.get(id);
+  if (was && was.length === ids.length && was.every((x, i) => x === ids[i])) return;
+  present.set(id, ids);
+  stateListeners.forEach((l) => l());
+};
+const NOBODY: string[] = [];
+/** Who has this shared trip open right now. */
+export function usePresence(tripId: string): string[] {
+  return useSyncExternalStore(
+    (l) => {
+      stateListeners.add(l);
+      return () => stateListeners.delete(l);
+    },
+    () => present.get(tripId) ?? NOBODY,
+    () => NOBODY,
+  );
+}
+/** When news last came from someone else (to ask for news more often while things move). */
+const lastNews = new Map<string, number>();
 
 /** How a shared trip's sync is doing: saved, saving, offline (waiting) or a problem. */
 export function useSyncState(tripId: string): SyncState {
@@ -66,19 +91,29 @@ async function call<T>(body: Record<string, unknown>, key?: string): Promise<T> 
 
 const tripOf = (id: string) => getUser().trips.find((t) => t.id === id);
 
-function linkFrom(view: PeerView, key: string): GroupLink {
-  return { id: view.id, key, me: view.me, role: view.role, v: view.v, base: view.content, members: view.members, code: view.code, invite: view.invite, open: view.open, log: view.log, syncedAt: new Date().toISOString(), ...(view.testMode ? { testMode: true } : {}) };
+function linkFrom(view: PeerView, key: string, was?: GroupLink): GroupLink {
+  return {
+    id: view.id, key, me: view.me, role: view.role, v: view.v, base: view.content, members: view.members, code: view.code, invite: view.invite, open: view.open, log: view.log, syncedAt: new Date().toISOString(),
+    ...(view.testMode ? { testMode: true } : {}),
+    // This device's own bookmarks: when the trip was last opened, the chat last read.
+    ...(was?.lastOpened ? { lastOpened: was.lastOpened } : {}),
+    ...(was?.lastRead ? { lastRead: was.lastRead } : {}),
+  };
 }
+
+/** Changes that a viewer may still send: their messages in the chat. */
+const chatOnly = (ops: ReturnType<typeof diffContent>) => ops.filter((op) => op.t !== "set" && op.c === "messages" && op.t !== "order");
 
 /** The server's version in place on this device, with what was done here meanwhile kept on top. */
 function merge(tripId: string, view: PeerView, sent?: TripContent) {
   userActions.replaceTrip(tripId, (t) => {
     if (!t.group) return t;
     const here = contentOf(t);
-    // A viewer's own edits can't go anywhere: the server's trip is the trip.
-    const pending = t.group.role === "viewer" || view.role === "viewer" ? [] : diffContent(sent ?? t.group.base, here);
+    // A viewer's own edits can't go anywhere (only their messages): the server's trip is the trip.
+    const all = diffContent(sent ?? t.group.base, here);
+    const pending = t.group.role === "viewer" || view.role === "viewer" ? chatOnly(all) : all;
     const content = pending.length ? applyOps(view.content, pending) : view.content;
-    return { ...withContent(t, content), group: linkFrom(view, t.group.key) };
+    return { ...withContent(t, content), group: linkFrom(view, t.group.key, t.group) };
   });
 }
 
@@ -96,9 +131,9 @@ const retry = new Map<string, number>();
 async function flush(tripId: string) {
   const t = tripOf(tripId);
   if (!t?.group || inflight.has(tripId)) return;
-  if (t.group.role === "viewer") return;
   const sent = contentOf(t);
-  const ops = diffContent(t.group.base, sent);
+  const all = diffContent(t.group.base, sent);
+  const ops = t.group.role === "viewer" ? chatOnly(all) : all;
   if (!ops.length) return setState(tripId, "saved");
   if (typeof navigator !== "undefined" && !navigator.onLine) return setState(tripId, "offline");
   inflight.add(tripId);
@@ -143,10 +178,33 @@ export async function pull(tripId: string, force = false) {
     const data = (await res.json().catch(() => ({}))) as { same?: boolean; error?: { message?: string } } & PeerView;
     if (res.status === 403 || res.status === 404) return gone(tripId, data.error?.message ?? "This trip isn't shared any more.");
     if (!res.ok) return setState(tripId, "error");
-    if (!data.same) merge(tripId, data);
+    setPresent(tripId, data.here);
+    if (!data.same) {
+      tellNews(t, data);
+      merge(tripId, data);
+    }
     if (states.get(tripId) !== "saving") setState(tripId, "saved");
   } catch {
     setState(tripId, "offline");
+  }
+}
+
+/** What others just did, said in a line as it arrives ("Ana added Hotel"), and their new messages. */
+function tellNews(t: Trip, view: PeerView) {
+  const g = t.group;
+  if (!g) return;
+  const myName = g.members.find((m) => m.id === g.me)?.name;
+  const lastAt = g.log[g.log.length - 1]?.at ?? "";
+  const fresh = view.log.filter((l) => l.at > lastAt && l.by !== myName);
+  const known = new Set((g.base.messages ?? []).map((m) => m.id));
+  const said = (view.content.messages ?? []).filter((m) => !known.has(m.id) && m.by !== g.me);
+  if (fresh.length || said.length) lastNews.set(t.id, Date.now());
+  if (said.length) {
+    const m = said[said.length - 1];
+    toast({ title: m.name, body: m.text.length > 120 ? `${m.text.slice(0, 117)}…` : m.text, emoji: "💬", action: { label: "Reply", run: () => window.dispatchEvent(new CustomEvent("omni:trip-chat", { detail: t.id })) } });
+  } else if (fresh.length) {
+    const l = fresh[fresh.length - 1];
+    toast({ title: `${l.by} ${l.text}`, body: fresh.length > 1 ? `and ${fresh.length - 1} more ${fresh.length === 2 ? "change" : "changes"}` : undefined, emoji: "✨" });
   }
 }
 
@@ -181,12 +239,22 @@ export function useGroupSync(tripId: string | undefined, shared: boolean) {
     if (!tripId || !shared) return;
     void pull(tripId);
     const tick = () => document.visibilityState === "visible" && void pull(tripId);
-    const iv = window.setInterval(tick, 8000);
+    // Often while others are here, things are moving, or the trip was just opened (people are
+    // joining, answering); calmly otherwise (it saves the server work).
+    let timer = 0;
+    const opened = Date.now();
+    const loop = () => {
+      const t = tripOf(tripId);
+      const others = (present.get(tripId) ?? []).some((id) => id !== t?.group?.me);
+      const busy = Date.now() - (lastNews.get(tripId) ?? 0) < 120_000 || Date.now() - opened < 180_000;
+      timer = window.setTimeout(() => (tick(), loop()), others || busy ? 5000 : 20000);
+    };
+    loop();
     const onVis = () => tick();
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onVis);
     return () => {
-      window.clearInterval(iv);
+      window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onVis);
     };
@@ -194,6 +262,38 @@ export function useGroupSync(tripId: string | undefined, shared: boolean) {
 }
 
 // ---------------------------------------------------------------- the actions
+
+/** A message in the trip's chat (the server signs it with the sender's name). */
+export function sendMessage(tripId: string, text: string) {
+  const t = tripOf(tripId);
+  const clean = text.trim().slice(0, 1000);
+  if (!t?.group || !clean) return;
+  const me = t.group.members.find((m) => m.id === t.group!.me);
+  const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  userActions.replaceTrip(tripId, (x) => ({ ...x, messages: [...(x.messages ?? []), { id, by: t.group!.me, name: me?.name ?? "", text: clean, at: new Date().toISOString() }], group: x.group ? { ...x.group, lastRead: new Date().toISOString() } : x.group }));
+}
+
+/** Marks the chat read, and the trip opened, on this device. */
+export function markSeen(tripId: string, what: "chat" | "trip") {
+  userActions.replaceTrip(tripId, (x) => (x.group ? { ...x, group: { ...x.group, ...(what === "chat" ? { lastRead: new Date().toISOString() } : { lastOpened: new Date().toISOString() }) } } : x));
+}
+
+/** The latest of every shared trip on this device, once (the trips page, on arrival). */
+export function useRefreshShared(ids: string[]) {
+  const key = ids.join(",");
+  useEffect(() => {
+    start();
+    const all = () => document.visibilityState === "visible" && (key ? key.split(",") : []).forEach((id) => void pull(id));
+    all();
+    // And again now and then while the page is open, and on coming back to it.
+    const iv = window.setInterval(all, 30_000);
+    document.addEventListener("visibilitychange", all);
+    return () => {
+      window.clearInterval(iv);
+      document.removeEventListener("visibilitychange", all);
+    };
+  }, [key]);
+}
 
 /** Starts planning a trip together. */
 export async function startSharing(tripId: string, name: string) {

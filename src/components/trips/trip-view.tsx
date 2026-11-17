@@ -14,11 +14,11 @@ import { CityPlan, plansIn } from "./city-plan";
 import { TripShow } from "./trip-show";
 import { AddSheet } from "./add-sheet";
 import { ShareTripDialog } from "./shared-trips";
-import { TogetherBar, TogetherDialog } from "./together";
+import { TogetherBar, TogetherDialog, TripChat } from "./together";
 import { TripMoney } from "./trip-money";
 import { TripLists } from "./trip-lists";
 import { TripInfo } from "./trip-info";
-import { manageTrip, stopSharing, useGroupSync } from "@/lib/group-sync";
+import { manageTrip, markSeen, stopSharing, useGroupSync } from "@/lib/group-sync";
 import { listProgress, moneySummary } from "@/lib/trip-share";
 import { ADD_EVENT, openAdd, type AddRequest } from "./add-bus";
 import type { MapClick } from "../earth/earth-map";
@@ -101,6 +101,23 @@ export function TripView({ id }: { id: string }) {
   /** The public Share dialog is open, or the planning-together one. */
   const [sharing, setSharing] = useState(false);
   const [together, setTogether] = useState(false);
+  const [chat, setChat] = useState(false);
+  // "Reply" on a message that just arrived opens the chat.
+  useEffect(() => {
+    const on = (e: Event) => (e as CustomEvent<string>).detail === id && setChat(true);
+    window.addEventListener("omni:trip-chat", on);
+    return () => window.removeEventListener("omni:trip-chat", on);
+  }, [id]);
+  // What changed since this device last opened the trip: kept for this visit, then the visit counts.
+  const [sinceAt, setSinceAt] = useState<string | undefined>();
+  const groupId = trip?.group?.id;
+  useEffect(() => {
+    if (!groupId) return;
+    setSinceAt(trip?.group?.lastOpened);
+    markSeen(id, "trip");
+    // Once per visit to this trip.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, id]);
   // Planned with others: changes go out and come in while it's open.
   useGroupSync(trip?.id, !!trip?.group);
   const canEdit = !trip?.group || trip.group.role !== "viewer";
@@ -156,6 +173,21 @@ export function TripView({ id }: { id: string }) {
   }, [trip?.id]);
   const stop = sel === null ? undefined : stops[sel];
   useEffect(() => setLoaded(true), []);
+  // Sent to one of the trip's parts (from its card): that tab, or the chat, straight away.
+  const sentTo = useRef(false);
+  useEffect(() => {
+    if (!trip || sentTo.current) return;
+    sentTo.current = true;
+    const tab = sp.get("tab");
+    if (tab === "money" || tab === "lists" || tab === "info" || tab === "cities") {
+      setView(tab);
+      if (tab !== "cities") sheet.setSnap("full");
+    }
+    if (sp.get("chat") && trip.group) setChat(true);
+    if (tab || sp.get("chat")) router.replace(`/trips/${trip.id}`, { scroll: false });
+    // Once, when the trip is there.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id]);
   // The trip open here is the one events go to from the rest of the site.
   useEffect(() => {
     if (trip) rememberTrip(trip.id);
@@ -355,6 +387,7 @@ export function TripView({ id }: { id: string }) {
         <AddSheet key={adding.n} trip={trip} stops={stops} events={dayEvents} req={adding.req} near={stop} onClose={() => setAdding(null)} onDone={reveal} />
       )}
       {sharing && <ShareTripDialog trip={trip} onClose={() => setSharing(false)} />}
+      {chat && trip.group && <TripChat trip={trip} onClose={() => setChat(false)} />}
       {together && <TogetherDialog trip={trip} onClose={() => setTogether(false)} onPublish={() => (setTogether(false), setSharing(true))} />}
       {showing && ready && (
         <TripShow
@@ -392,7 +425,7 @@ export function TripView({ id }: { id: string }) {
             </div>
             <Link href="/trips" className="btn btn-ghost btn-icon btn-sm shrink-0" aria-label="All your trips"><X size={18} aria-hidden /></Link>
           </div>
-          {trip.group && <TogetherBar trip={trip} onOpen={() => setTogether(true)} />}
+          {trip.group && <TogetherBar trip={trip} onOpen={() => setTogether(true)} onChat={() => setChat(true)} since={sinceAt} />}
           {trip.group?.role === "viewer" && <p className="t-micro text-text-2 mt-1">You can see everything on this trip. To change it, ask {trip.group.members.find((m) => m.role === "owner")?.name ?? "its owner"} to make you an editor.</p>}
           <div className="trip-head-actions">
             {stops.length > 0 && canEdit && (

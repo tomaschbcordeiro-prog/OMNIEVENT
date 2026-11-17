@@ -18,14 +18,18 @@ export function TripLists({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
   const travellers = trip.travellers ?? [];
   const content = { stops: trip.stops ?? [], plans: trip.plans ?? [], events: trip.eventIds.map((id) => ({ id })), checklist: items, start: trip.start, end: trip.end };
   const ideas = canEdit ? listIdeas(content, list).slice(0, 8) : [];
-  const mine = items.filter((x) => x.list === list);
+  // On a shared trip: only what's yours to do, at a tap.
+  const meT = travellers.find((t) => t.member && t.member === trip.group?.me)?.id;
+  const [onlyMine, setOnlyMine] = useState(false);
+  const mine = items.filter((x) => x.list === list && (!onlyMine || x.who === meT));
   // Still to do first, then what's done.
   const ordered = [...mine.filter((x) => !x.done), ...mine.filter((x) => x.done)];
   const all = listProgress(items);
   const add = (t: string) => {
     const clean = t.trim();
     if (!clean) return;
-    userActions.putTripItem(trip.id, "checklist", { id: newId(), list, text: clean.slice(0, 160), createdAt: new Date().toISOString() });
+    // Added while looking at "Mine": it's yours.
+    userActions.putTripItem(trip.id, "checklist", { id: newId(), list, text: clean.slice(0, 160), ...(onlyMine && meT ? { who: meT } : {}), createdAt: new Date().toISOString() });
   };
   const put = (x: CheckItem) => userActions.putTripItem(trip.id, "checklist", x);
   const remove = (x: CheckItem) => {
@@ -57,6 +61,14 @@ export function TripLists({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
         })}
       </div>
 
+      {meT && travellers.length > 1 && (
+        <div className="flex gap-1.5 mt-3" role="group" aria-label="Show">
+          <button type="button" className="chip" aria-pressed={!onlyMine} onClick={() => setOnlyMine(false)}>Everyone&apos;s</button>
+          <button type="button" className="chip" aria-pressed={onlyMine} onClick={() => setOnlyMine(true)}>
+            Mine <span className="tnum">{items.filter((x) => x.list === list && x.who === meT && !x.done).length || ""}</span>
+          </button>
+        </div>
+      )}
       {canEdit && (
         <form className="list-add mt-3" onSubmit={(e) => (e.preventDefault(), add(text), setText(""))}>
           <label htmlFor="list-new" className="sr-only">Add to {LISTS.find((l) => l.id === list)?.label}</label>

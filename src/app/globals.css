@@ -11883,3 +11883,290 @@ nav[aria-label="Breadcrumb"] a,
     transition: none;
   }
 }
+
+/* ---- Together, live: who's here, the chat, what changed ---- */
+.together-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+.together-row .together-bar {
+  margin-top: 0;
+  min-width: 0;
+}
+.together-face {
+  position: relative;
+  display: inline-flex;
+}
+.together-face + .together-face {
+  margin-left: -7px;
+}
+.together-face[data-here]::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.here-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgb(34 197 94 / 0.25);
+  animation: here-pulse 2s ease-in-out infinite;
+}
+@keyframes here-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgb(34 197 94 / 0.08);
+  }
+}
+.together-chat {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2, var(--panel));
+  color: var(--text);
+}
+.together-unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.together-since {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--sun) 18%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+}
+.chat-dialog {
+  overflow: hidden;
+}
+.chat-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.chat-empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+}
+.chat-day {
+  margin: 0.5rem 0 0.25rem;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.chat-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.375rem;
+}
+.chat-item[data-mine] .chat-line {
+  justify-content: flex-end;
+}
+.chat-avatar {
+  width: 26px;
+  flex: none;
+}
+.chat-bubble {
+  max-width: 78%;
+  padding: 0.4rem 0.7rem 0.3rem;
+  border-radius: 1rem 1rem 1rem 0.3rem;
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--line);
+  font-size: 14.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.chat-item[data-mine] .chat-bubble {
+  border-radius: 1rem 1rem 0.3rem 1rem;
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+.chat-name {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: hsl(var(--h) 60% 38%);
+}
+:root[data-theme="dark"] .chat-name {
+  color: hsl(var(--h) 70% 72%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chat-name {
+    color: hsl(var(--h) 70% 72%);
+  }
+}
+.chat-text {
+  white-space: pre-wrap;
+}
+.chat-time {
+  display: block;
+  margin-top: 0.1rem;
+  text-align: right;
+  font-size: 10px;
+  opacity: 0.7;
+}
+.chat-compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.375rem;
+  padding: 0.625rem;
+  border-top: 1px solid var(--line);
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+.chat-input {
+  height: auto !important;
+  min-height: 2.75rem;
+  max-height: 8rem;
+  padding-top: 0.6rem;
+  resize: none;
+  field-sizing: content;
+}
+
+/* A cost in one line, and what it understood. */
+.quick-cost-line {
+  display: flex;
+  gap: 0.375rem;
+}
+.quick-cost-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  margin-top: 0.375rem;
+}
+.qc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2, var(--panel));
+  font-size: 12px;
+  font-weight: 600;
+  animation: qc-in 160ms ease-out;
+}
+.qc-amount {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.qc-missing {
+  border-style: dashed;
+  color: var(--text-3);
+  font-weight: 500;
+}
+.qc-more {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan-strong);
+}
+@keyframes qc-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+.ag-price {
+  align-self: center;
+  flex: none;
+  padding: 0.0625rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 700;
+}
+.trip-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0 0.875rem;
+  margin-top: 0.5rem;
+}
+.trip-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.trip-fact[data-over] {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.trip-fact[data-done] {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.trip-fact-chat {
+  border-color: var(--cyan);
+  color: var(--cyan-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .here-dot,
+  .qc-chip {
+    animation: none;
+  }
+}
+.chat-item[data-mine] .chat-time {
+  opacity: 1;
+  color: rgb(255 255 255 / 0.92);
+}

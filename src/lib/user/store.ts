@@ -3,7 +3,7 @@
 import type { TripPlan } from "../trip-plans";
 import { useSyncExternalStore } from "react";
 import type { TripStop } from "../trip";
-import type { CheckItem, Contact, Expense, Traveller, TripContent } from "../trip-share";
+import type { CheckItem, Contact, Expense, Message, Traveller, TripContent } from "../trip-share";
 
 /**
  * Personal data store — DEMO MODE implementation.
@@ -45,6 +45,8 @@ export interface Trip {
   contacts?: Contact[];
   /** Who's travelling (to split costs and hand out tasks). */
   travellers?: Traveller[];
+  /** The trip's chat, when planned together. */
+  messages?: Message[];
   /** Planned together with others: the shared trip it is, and this device's key to it. */
   group?: GroupLink;
 }
@@ -66,6 +68,9 @@ export interface GroupLink {
   syncedAt?: string;
   /** The site's storage isn't connected yet: shared trips may be cleared. */
   testMode?: boolean;
+  /** This device only: when the trip was last opened here, and the chat last read. */
+  lastOpened?: string;
+  lastRead?: string;
 }
 
 /** A trip's event as kept with the trip: what a saved event keeps, plus where it is. */
@@ -326,6 +331,20 @@ export const userActions = {
         const cur = (t[list] ?? []) as { id: string }[];
         const i = cur.findIndex((x) => x.id === item.id);
         return { ...t, [list]: i < 0 ? [...cur, item] : cur.map((x, j) => (j === i ? item : x)), updatedAt: now() };
+      }),
+    }));
+  },
+  /** A booking's price, kept as the trip's cost for it (no amount: the cost goes). */
+  setPlanPrice(tripId: string, plan: TripPlan, amount: number | undefined, currency: string, category: Expense["category"]) {
+    update((d) => ({
+      ...d,
+      trips: d.trips.map((t) => {
+        if (t.id !== tripId) return t;
+        const list = t.expenses ?? [];
+        const was = list.find((e) => e.planId === plan.id);
+        if (amount === undefined || !Number.isFinite(amount) || amount <= 0) return was ? { ...t, expenses: list.filter((e) => e !== was), updatedAt: now() } : t;
+        const e: Expense = { ...(was ?? {}), id: was?.id ?? `pl${plan.id}`.slice(0, 48), title: plan.title, amount: Math.round(amount * 100) / 100, currency, category: was?.category ?? category, day: plan.day || undefined, planId: plan.id, createdAt: was?.createdAt ?? now() };
+        return { ...t, expenses: was ? list.map((x) => (x === was ? e : x)) : [...list, e], updatedAt: now() };
       }),
     }));
   },

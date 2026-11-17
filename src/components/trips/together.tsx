@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Check, CloudOff, Copy, Crown, Eye, Globe2, Link2, Loader2, LogOut, Pencil, RefreshCw, Share2, ShieldCheck, Users, X } from "lucide-react";
+import { Check, CloudOff, Copy, Crown, Eye, Globe2, Link2, Loader2, LogOut, MessageCircle, Pencil, RefreshCw, SendHorizontal, Share2, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import type { GroupLink, Trip } from "@/lib/user/store";
-import { inviteLink, manageTrip, prettyPin, rememberName, rememberedName, startSharing, stopSharing, useSyncState } from "@/lib/group-sync";
+import { inviteLink, manageTrip, markSeen, prettyPin, rememberName, rememberedName, sendMessage, startSharing, stopSharing, usePresence, useSyncState } from "@/lib/group-sync";
 import { toast } from "../toast";
 
 /** A person's colour, the same on every device. */
@@ -39,29 +39,158 @@ const ago = (iso?: string) => {
 };
 
 /** Who's in a shared trip, as overlapping faces, and whether this device's changes are in. */
-export function TogetherBar({ trip, onOpen }: { trip: Trip; onOpen: () => void }) {
+export function TogetherBar({ trip, onOpen, onChat, since: sinceAt }: { trip: Trip; onOpen: () => void; onChat: () => void; /** When this device last had the trip open (changes after it are news). */ since?: string }) {
   const g = trip.group;
   const state = useSyncState(trip.id);
+  const here = usePresence(trip.id);
   if (!g) return null;
   const others = g.members.filter((m) => m.id !== g.me);
+  const hereNow = others.filter((m) => here.includes(m.id));
+  const unread = (trip.messages ?? []).filter((m) => m.by !== g.me && (!g.lastRead || m.at > g.lastRead)).length;
+  const myName = g.members.find((m) => m.id === g.me)?.name;
+  // What others did since this device last opened the trip.
+  const since = sinceAt ? g.log.filter((l) => l.at > sinceAt && l.by !== myName) : [];
+  const status = state === "saved" ? "All changes saved" : state === "saving" ? "Saving" : state === "offline" ? "Offline: changes will be sent later" : "Couldn't save: will try again";
   return (
-    <button type="button" className="together-bar press" onClick={onOpen} aria-label={`Planned together with ${others.map((m) => m.name).join(", ") || "nobody yet"}. ${state === "saved" ? "All changes saved" : state === "saving" ? "Saving" : state === "offline" ? "Offline: changes will be sent later" : "Couldn't save: will try again"}. Open people and invites`}>
-      <span className="together-faces" aria-hidden>
-        {g.members.slice(0, 4).map((m) => (
-          <PersonDot key={m.id} id={m.id} name={m.name} size={24} ring />
-        ))}
-        {g.members.length > 4 && <span className="together-more">+{g.members.length - 4}</span>}
-      </span>
-      <span className="together-state" data-state={state}>
-        {state === "saving" ? <Loader2 size={12} className="animate-spin" aria-hidden /> : state === "offline" ? <CloudOff size={12} aria-hidden /> : state === "error" ? <RefreshCw size={12} aria-hidden /> : <Check size={12} aria-hidden />}
-        {state === "saved" ? (others.length ? `With ${others.length === 1 ? others[0].name : `${others.length} people`}` : "Invite people") : state === "saving" ? "Saving…" : state === "offline" ? "Offline" : "Retrying"}
-      </span>
-      {g.role === "viewer" && (
-        <span className="together-role">
-          <Eye size={12} aria-hidden /> View only
+    <div className="together-row">
+      <button type="button" className="together-bar press" onClick={onOpen} aria-label={`Planned together with ${others.map((m) => m.name).join(", ") || "nobody yet"}${hereNow.length ? `; ${hereNow.map((m) => m.name).join(", ")} here now` : ""}. ${status}. Open people and invites`}>
+        <span className="together-faces" aria-hidden>
+          {g.members.slice(0, 4).map((m) => (
+            <span key={m.id} className="together-face" data-here={m.id !== g.me && here.includes(m.id) ? "" : undefined}>
+              <PersonDot id={m.id} name={m.name} size={24} ring />
+            </span>
+          ))}
+          {g.members.length > 4 && <span className="together-more">+{g.members.length - 4}</span>}
         </span>
+        <span className="together-state" data-state={state}>
+          {state === "saving" ? <Loader2 size={12} className="animate-spin" aria-hidden /> : state === "offline" ? <CloudOff size={12} aria-hidden /> : state === "error" ? <RefreshCw size={12} aria-hidden /> : hereNow.length ? <span className="here-dot" aria-hidden /> : <Check size={12} aria-hidden />}
+          {state !== "saved" ? (state === "saving" ? "Saving…" : state === "offline" ? "Offline" : "Retrying") : hereNow.length ? `${hereNow.length === 1 ? hereNow[0].name : `${hereNow.length} people`} here now` : others.length ? `With ${others.length === 1 ? others[0].name : `${others.length} people`}` : "Invite people"}
+        </span>
+        {g.role === "viewer" && (
+          <span className="together-role">
+            <Eye size={12} aria-hidden /> View only
+          </span>
+        )}
+      </button>
+      {others.length > 0 && (
+        <button type="button" className="together-chat press" onClick={onChat} aria-label={unread ? `Chat: ${unread} new ${unread === 1 ? "message" : "messages"}` : "Chat with the people on this trip"}>
+          <MessageCircle size={16} aria-hidden />
+          {unread > 0 && <span className="together-unread tnum" aria-hidden>{unread > 9 ? "9+" : unread}</span>}
+        </button>
       )}
-    </button>
+      {since.length > 0 && (
+        <button type="button" className="together-since press" onClick={onOpen}>
+          <Sparkles size={12} aria-hidden className="shrink-0" />
+          <span className="min-w-0">
+            {since.length} {since.length === 1 ? "change" : "changes"} since you were here: <b>{since[since.length - 1].by}</b> {since[since.length - 1].text}
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The trip's chat: a few words between the people planning it ("I booked the hotel!", "Who
+ * brings the adapter?"), right next to the trip. The newest at the bottom, like any chat.
+ */
+export function TripChat({ trip, onClose }: { trip: Trip; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const [text, setText] = useState("");
+  const g = trip.group;
+  const messages = trip.messages ?? [];
+  useEffect(() => {
+    ref.current?.showModal();
+    markSeen(trip.id, "chat");
+  }, [trip.id]);
+  // New messages: scroll to them, and they count as read while the chat is open.
+  useEffect(() => {
+    list.current?.lastElementChild?.scrollIntoView({ block: "end" });
+    if (messages.length) markSeen(trip.id, "chat");
+  }, [messages.length, trip.id]);
+  if (!g) return null;
+  const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const send = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    sendMessage(trip.id, text);
+    setText("");
+  };
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby="chat-h"
+      onCancel={(e) => (e.preventDefault(), onClose())}
+      onClick={(e) => e.target === ref.current && onClose()}
+      className="dialog-backdrop chat-dialog m-auto w-[min(480px,calc(100vw-16px))] h-[min(640px,calc(100dvh-16px))] rounded-[var(--radius-l)] bg-panel p-0 text-text shadow-2xl backdrop:bg-[rgb(13_27_51_/_0.45)] backdrop:backdrop-blur-sm"
+    >
+      <div className="chat-wrap panel-in">
+        <header className="chat-head">
+          <span className="together-faces" aria-hidden>
+            {g.members.slice(0, 4).map((m) => <PersonDot key={m.id} id={m.id} name={m.name} size={26} ring />)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <h2 id="chat-h" className="font-semibold truncate">{trip.name}</h2>
+            <span className="block t-micro text-text-2 truncate">{g.members.map((m) => (m.id === g.me ? "you" : m.name)).join(", ")}</span>
+          </span>
+          <button type="button" className="btn btn-ghost btn-icon" aria-label="Close the chat" onClick={onClose}><X size={18} aria-hidden /></button>
+        </header>
+        {messages.length === 0 ? (
+          <div className="chat-empty">
+            <MessageCircle size={28} aria-hidden className="text-text-3" />
+            <p className="t-small text-text-2">Say hello, ask who books what, share a find. Only the people on this trip see it.</p>
+            <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+              {["I booked the hotel!", "Who's bringing the adapter?", "Shall we add a day in the mountains?"].map((x) => (
+                <button key={x} type="button" className="chip chip-idea press" onClick={() => setText(x)}>{x}</button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ol ref={list} className="chat-list" aria-live="polite" aria-label="Messages">
+            {messages.map((m, i) => {
+              const mine = m.by === g.me;
+              const prev = messages[i - 1];
+              const newDay = !prev || day(prev.at) !== day(m.at);
+              const sameAuthor = prev && prev.by === m.by && !newDay;
+              return (
+                <li key={m.id} className="chat-item" data-mine={mine ? "" : undefined}>
+                  {newDay && <p className="chat-day">{day(m.at)}</p>}
+                  <div className="chat-line">
+                    {!mine && <span className="chat-avatar" aria-hidden>{!sameAuthor && <PersonDot id={m.by} name={m.name} size={26} />}</span>}
+                    <div className="chat-bubble">
+                      {!mine && !sameAuthor && <span className="chat-name" style={{ "--h": personHue(m.by) } as React.CSSProperties}>{m.name}</span>}
+                      <span className="chat-text">{m.text}</span>
+                      <span className="chat-time tnum">{time(m.at)}</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        <form className="chat-compose" onSubmit={send}>
+          <label htmlFor="chat-new" className="sr-only">Message</label>
+          <textarea
+            id="chat-new"
+            className="field chat-input"
+            rows={1}
+            value={text}
+            maxLength={1000}
+            placeholder="Message the group…"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                send(e);
+              }
+            }}
+          />
+          <button type="submit" className="btn btn-primary btn-icon press" aria-label="Send" disabled={!text.trim()}><SendHorizontal size={17} aria-hidden /></button>
+        </form>
+      </div>
+    </dialog>
   );
 }
 
@@ -168,6 +297,7 @@ export function TogetherDialog({ trip, onClose, onPublish }: { trip: Trip; onClo
 function SharedBody({ trip, g, busy, copied, copy, run, onClose }: { trip: Trip; g: GroupLink; busy: string | null; copied: "link" | "pin" | null; copy: (w: "link" | "pin", t: string) => void; run: (what: string, fn: () => Promise<unknown>) => Promise<void>; onClose: () => void }) {
   const owner = g.role === "owner";
   const canInvite = g.role !== "viewer";
+  const here = usePresence(trip.id);
   const link = g.invite ? inviteLink(g.invite) : "";
   const shareNative = () =>
     void navigator
@@ -228,7 +358,7 @@ function SharedBody({ trip, g, busy, copied, copy, run, onClose }: { trip: Trip;
                 </span>
                 <span className="block t-micro text-text-2">
                   {m.role === "owner" ? "Owner" : m.role === "editor" ? "Can edit" : "Can view"}
-                  {m.seen && m.id !== g.me ? ` · active ${ago(m.seen)}` : ""}
+                  {m.id !== g.me && here.includes(m.id) ? " · here now" : m.seen && m.id !== g.me ? ` · active ${ago(m.seen)}` : ""}
                 </span>
               </span>
               {owner && m.id !== g.me ? (
