@@ -79,6 +79,22 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     ),
   },
   {
+    q: "Can I plan a trip with friends?",
+    a: (
+      <>
+        Yes. Open the trip and tap <b>Invite</b>, then send the link or the 8-character PIN. Whoever joins (no account needed) sees and changes the same trip: the route, bookings, costs and lists. It&apos;s private: only the people in it can open it, and the owner can make someone view-only or take them out. To join someone&apos;s trip, go to <Link href="/trips/join">Trips → Join with a PIN</Link>.
+      </>
+    ),
+  },
+  {
+    q: "Can I keep track of what the trip costs?",
+    a: (
+      <>
+        Yes, in the trip&apos;s <b>Money</b> tab: set a budget, add each cost (or the price of a booking), and see where the money goes. Travelling together, say who paid and who it&apos;s for, and Mundivi works out who owes whom, in the fewest payments. Other currencies are converted at approximate rates.
+      </>
+    ),
+  },
+  {
     q: "How do I put Mundivi on my phone like an app?",
     a: (
       <>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront } from "lucide-react";
+import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront, Users } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { useUser, type Trip } from "@/lib/user/store";
 import { KIND_ICON } from "./agenda";
@@ -87,7 +87,10 @@ export function TripsHome() {
           <h1 className="t-display">Trips</h1>
           <p className="t-lede text-text-2 mt-2 measure">Cities, countries, dates, and the events you want on the way, all on the globe.</p>
         </div>
-        <Link href="/trips/new" className="btn btn-primary press"><Plus size={16} aria-hidden /> Plan a trip</Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/trips/join" className="btn btn-secondary press"><Users size={16} aria-hidden /> Join with a PIN</Link>
+          <Link href="/trips/new" className="btn btn-primary press"><Plus size={16} aria-hidden /> Plan a trip</Link>
+        </div>
       </div>
       <div className="trips-layout">
         <div className="min-w-0">
@@ -194,7 +197,7 @@ function TripCard({ trip: t, i, today }: { trip: Trip; i: number; today: string 
           end={t.end}
           events={t.eventIds.length}
           compact={past}
-          tag={<><span className="trip-pass-tag-dot" aria-hidden />{phaseLabel(r)}</>}
+          tag={<><span className="trip-pass-tag-dot" aria-hidden />{phaseLabel(r)}{t.group && t.group.members.length > 1 ? ` · with ${t.group.members.filter((m) => m.id !== t.group!.me).map((m) => m.name).slice(0, 2).join(", ")}${t.group.members.length > 3 ? ` +${t.group.members.length - 3}` : ""}` : ""}</>}
           aside={stops.length > 0 ? <RouteSketch stops={stops} /> : undefined}
         />
       </Link>

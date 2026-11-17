@@ -3,6 +3,7 @@
 import type { TripPlan } from "../trip-plans";
 import { useSyncExternalStore } from "react";
 import type { TripStop } from "../trip";
+import type { CheckItem, Contact, Expense, Traveller, TripContent } from "../trip-share";
 
 /**
  * Personal data store — DEMO MODE implementation.
@@ -35,6 +36,36 @@ export interface Trip {
   plans?: TripPlan[];
   /** Its id among the trips shared with everyone, once shared. */
   sharedId?: string;
+  /** The trip's money: its currency, a budget, and every cost (with who paid and who shares it). */
+  currency?: string;
+  budget?: number;
+  expenses?: Expense[];
+  /** Packing, things to do before leaving, documents. */
+  checklist?: CheckItem[];
+  contacts?: Contact[];
+  /** Who's travelling (to split costs and hand out tasks). */
+  travellers?: Traveller[];
+  /** Planned together with others: the shared trip it is, and this device's key to it. */
+  group?: GroupLink;
+}
+
+export type GroupRole = "owner" | "editor" | "viewer";
+export interface GroupLink {
+  id: string;
+  key: string;
+  me: string;
+  role: GroupRole;
+  /** The version last seen from the server, and the trip as it was then (to know what changed here). */
+  v: number;
+  base: TripContent;
+  members: { id: string; name: string; role: GroupRole; seen?: string }[];
+  code?: string;
+  invite?: string;
+  open: boolean;
+  log: { at: string; by: string; text: string }[];
+  syncedAt?: string;
+  /** The site's storage isn't connected yet: shared trips may be cleared. */
+  testMode?: boolean;
 }
 
 /** A trip's event as kept with the trip: what a saved event keeps, plus where it is. */
@@ -180,6 +211,17 @@ function update(fn: (d: UserData) => UserData) {
 
 const serverSnapshot = empty();
 
+/** For code outside React that follows the trips (the shared-trip sync). */
+export function subscribeUser(l: () => void): () => void {
+  load();
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+export function getUser(): UserData {
+  load();
+  return data;
+}
+
 export function useUser(): UserData {
   return useSyncExternalStore(
     (l) => {
@@ -266,6 +308,29 @@ export const userActions = {
   },
   removePlan(tripId: string, planId: string) {
     update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === tripId ? { ...t, plans: (t.plans ?? []).filter((p) => p.id !== planId), updatedAt: now() } : t)) }));
+  },
+  /** A whole trip arriving on this device (joined from someone else). */
+  addTrip(trip: Trip) {
+    update((d) => ({ ...d, trips: [trip, ...d.trips.filter((t) => t.id !== trip.id)] }));
+  },
+  /** Replaces a trip as a whole (the shared-trip sync, after the server's answer). */
+  replaceTrip(id: string, fn: (t: Trip) => Trip) {
+    update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === id ? fn(t) : t)) }));
+  },
+  /** An item on one of the trip's lists (a cost, a checklist item, a contact, a traveller): added, or changed. */
+  putTripItem<K extends "expenses" | "checklist" | "contacts" | "travellers">(tripId: string, list: K, item: NonNullable<Trip[K]>[number]) {
+    update((d) => ({
+      ...d,
+      trips: d.trips.map((t) => {
+        if (t.id !== tripId) return t;
+        const cur = (t[list] ?? []) as { id: string }[];
+        const i = cur.findIndex((x) => x.id === item.id);
+        return { ...t, [list]: i < 0 ? [...cur, item] : cur.map((x, j) => (j === i ? item : x)), updatedAt: now() };
+      }),
+    }));
+  },
+  removeTripItem(tripId: string, list: "expenses" | "checklist" | "contacts" | "travellers", itemId: string) {
+    update((d) => ({ ...d, trips: d.trips.map((t) => (t.id === tripId ? { ...t, [list]: ((t[list] ?? []) as { id: string }[]).filter((x) => x.id !== itemId), updatedAt: now() } : t)) }));
   },
   deleteTrip(id: string) {
     update((d) => ({ ...d, trips: d.trips.filter((t) => t.id !== id) }));

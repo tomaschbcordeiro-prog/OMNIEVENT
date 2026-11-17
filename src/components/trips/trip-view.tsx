@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, Pencil, Plane, Play, Plus, Share2, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, LogOut, Pencil, Plane, Play, Plus, Trash2, TriangleAlert, Users, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
 import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
@@ -14,6 +14,12 @@ import { CityPlan, plansIn } from "./city-plan";
 import { TripShow } from "./trip-show";
 import { AddSheet } from "./add-sheet";
 import { ShareTripDialog } from "./shared-trips";
+import { TogetherBar, TogetherDialog } from "./together";
+import { TripMoney } from "./trip-money";
+import { TripLists } from "./trip-lists";
+import { TripInfo } from "./trip-info";
+import { manageTrip, stopSharing, useGroupSync } from "@/lib/group-sync";
+import { listProgress, moneySummary } from "@/lib/trip-share";
 import { ADD_EVENT, openAdd, type AddRequest } from "./add-bus";
 import type { MapClick } from "../earth/earth-map";
 import type { TripPlan } from "@/lib/trip-plans";
@@ -80,8 +86,8 @@ export function TripView({ id }: { id: string }) {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
-  /** The whole trip as an agenda, day by day, or as its cities. */
-  const [view, setView] = useState<"agenda" | "cities">("agenda");
+  /** The whole trip as an agenda, day by day, as its cities, its money, its lists, or the rest. */
+  const [view, setView] = useState<"agenda" | "cities" | "money" | "lists" | "info">("agenda");
   /** Event icons are out (after the glide to the city, so they spring from the pin). */
   const [burst, setBurst] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -92,8 +98,12 @@ export function TripView({ id }: { id: string }) {
   const [showing, setShowing] = useState<{ at?: string; pad: Pad } | null>(null);
   // The trip's one Add sheet, asked for from anywhere on the page.
   const [adding, setAdding] = useState<{ req: AddRequest; n: number } | null>(null);
-  /** The Share dialog is open. */
+  /** The public Share dialog is open, or the planning-together one. */
   const [sharing, setSharing] = useState(false);
+  const [together, setTogether] = useState(false);
+  // Planned with others: changes go out and come in while it's open.
+  useGroupSync(trip?.id, !!trip?.group);
+  const canEdit = !trip?.group || trip.group.role !== "viewer";
   useEffect(() => {
     const on = (e: Event) => setAdding((a) => ({ req: (e as CustomEvent<AddRequest>).detail ?? {}, n: (a?.n ?? 0) + 1 }));
     window.addEventListener(ADD_EVENT, on);
@@ -169,6 +179,11 @@ export function TripView({ id }: { id: string }) {
     frameAll();
     if (sp.get("show")) {
       play(sp.get("city") ?? undefined);
+      router.replace(`/trips/${trip.id}`, { scroll: false });
+    }
+    if (sp.get("joined")) {
+      const others = trip.group?.members.filter((m) => m.id !== trip.group?.me).map((m) => m.name) ?? [];
+      toast({ title: "You're in!", body: others.length ? `You're planning this trip with ${others.join(", ")}. Everything you change, they see.` : "Everything you change is shared.", emoji: "🤝", celebrate: true });
       router.replace(`/trips/${trip.id}`, { scroll: false });
     }
     if (sp.get("hello")) {
@@ -318,8 +333,9 @@ export function TripView({ id }: { id: string }) {
     return (
       <main className="mx-auto max-w-xl px-4 pt-20 text-center">
         <p className="t-h2">This trip isn&apos;t in this browser</p>
-        <p className="t-body text-text-2 mt-2">Trips are kept on the device they were planned on.</p>
-        <div className="mt-5 flex justify-center gap-2">
+        <p className="t-body text-text-2 mt-2">Trips are kept on the device they were planned on. Planning with someone? Ask them for the trip&apos;s link or PIN.</p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link href="/trips/join" className="btn btn-secondary"><Users size={15} aria-hidden /> Join with a PIN</Link>
           <Link href="/trips" className="btn btn-secondary">Your trips</Link>
           <Link href="/trips/new" className="btn btn-primary">Plan a trip</Link>
         </div>
@@ -339,6 +355,7 @@ export function TripView({ id }: { id: string }) {
         <AddSheet key={adding.n} trip={trip} stops={stops} events={dayEvents} req={adding.req} near={stop} onClose={() => setAdding(null)} onDone={reveal} />
       )}
       {sharing && <ShareTripDialog trip={trip} onClose={() => setSharing(false)} />}
+      {together && <TogetherDialog trip={trip} onClose={() => setTogether(false)} onPublish={() => (setTogether(false), setSharing(true))} />}
       {showing && ready && (
         <TripShow
           trip={trip}
@@ -375,22 +392,26 @@ export function TripView({ id }: { id: string }) {
             </div>
             <Link href="/trips" className="btn btn-ghost btn-icon btn-sm shrink-0" aria-label="All your trips"><X size={18} aria-hidden /></Link>
           </div>
-          {stops.length > 0 && (
-            <div className="trip-head-actions">
+          {trip.group && <TogetherBar trip={trip} onOpen={() => setTogether(true)} />}
+          {trip.group?.role === "viewer" && <p className="t-micro text-text-2 mt-1">You can see everything on this trip. To change it, ask {trip.group.members.find((m) => m.role === "owner")?.name ?? "its owner"} to make you an editor.</p>}
+          <div className="trip-head-actions">
+            {stops.length > 0 && canEdit && (
               <button type="button" className="trip-add press" onClick={() => openAdd({ stopId: stop?.id })}>
                 <span className="trip-add-plus" aria-hidden><Plus size={16} strokeWidth={2.75} /></span>
                 <span>{stop ? `Add to ${stop.name}` : "Add to trip"}</span>
               </button>
+            )}
+            {stops.length > 0 && (
               <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
                 <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
                 <span>View</span>
               </button>
-              <button type="button" className="trip-share press" onClick={() => setSharing(true)} aria-label={trip.sharedId ? "Shared with travellers: change or take down" : "Share this trip with travellers"} data-shared={trip.sharedId ? "" : undefined}>
-                <Share2 size={16} aria-hidden />
-                <span className="max-sm:sr-only">{trip.sharedId ? "Shared" : "Share"}</span>
-              </button>
-            </div>
-          )}
+            )}
+            <button type="button" className="trip-share press" onClick={() => setTogether(true)} aria-label={trip.group ? "People on this trip and invitations" : "Plan this trip together: invite people"} data-shared={trip.group ? "" : undefined}>
+              <Users size={16} aria-hidden />
+              <span className="max-sm:sr-only">{trip.group ? "People" : "Invite"}</span>
+            </button>
+          </div>
           <div className="trip-chips" role="tablist" aria-label="Cities on this trip">
             <button type="button" role="tab" aria-selected={sel === null} className="trip-chip" onClick={() => pick(null)}>
               <Globe2 size={14} aria-hidden /> Whole trip
@@ -404,7 +425,7 @@ export function TripView({ id }: { id: string }) {
         </header>
 
         <div className="planner-body" key={sel ?? "all"}>
-          {!stops.length && (
+          {!stops.length && (view === "agenda" || view === "cities") && (
             <div className="trip-empty">
               <p className="font-semibold">This trip has no route yet</p>
               <p className="t-small text-text-2 mt-1">Add its cities and dates to see it on the globe, with what&apos;s on in each place.</p>
@@ -412,12 +433,22 @@ export function TripView({ id }: { id: string }) {
             </div>
           )}
 
-          {sel === null && (stops.length > 0 || (trip.plans?.length ?? 0) > 0) && (
-            <div className="seg" role="tablist" aria-label="Show the trip as">
+          {sel === null && (
+            <div className="seg seg-trip no-scrollbar" role="tablist" aria-label="The trip's parts">
               <button type="button" role="tab" aria-selected={view === "agenda"} className="seg-btn" onClick={() => setView("agenda")}>Agenda</button>
               <button type="button" role="tab" aria-selected={view === "cities"} className="seg-btn" onClick={() => setView("cities")}>Cities</button>
+              <button type="button" role="tab" aria-selected={view === "money"} className="seg-btn" onClick={() => (setView("money"), sheet.setSnap("full"))}>
+                Money{(trip.expenses?.length ?? 0) > 0 && <span className="seg-note tnum">{Math.round(moneySummary({ expenses: trip.expenses ?? [], currency: trip.currency }).total).toLocaleString("en-GB")}</span>}
+              </button>
+              <button type="button" role="tab" aria-selected={view === "lists"} className="seg-btn" onClick={() => (setView("lists"), sheet.setSnap("full"))}>
+                Lists{(trip.checklist?.length ?? 0) > 0 && <span className="seg-note tnum">{listProgress(trip.checklist ?? []).done}/{listProgress(trip.checklist ?? []).all}</span>}
+              </button>
+              <button type="button" role="tab" aria-selected={view === "info"} className="seg-btn" onClick={() => (setView("info"), sheet.setSnap("full"))}>Info</button>
             </div>
           )}
+          {sel === null && view === "money" && <TripMoney trip={trip} canEdit={canEdit} />}
+          {sel === null && view === "lists" && <TripLists trip={trip} canEdit={canEdit} />}
+          {sel === null && view === "info" && <TripInfo trip={trip} canEdit={canEdit} />}
           {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
 
           {sel === null &&
@@ -489,13 +520,28 @@ export function TripView({ id }: { id: string }) {
         </div>
 
         <footer className="planner-foot trip-actions">
-          <Link href={`/trips/new?edit=${trip.id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> <span className="max-sm:sr-only">Edit route</span></Link>
+          {canEdit && <Link href={`/trips/new?edit=${trip.id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> <span className="max-sm:sr-only">Edit route</span></Link>}
           <ExportButtons trip={trip} events={events} />
-          <button type="button" className="btn btn-ghost btn-icon btn-sm text-bad" aria-label="Delete this trip" onClick={() => {
-            if (!confirm(`Delete “${trip.name}”?`)) return;
-            userActions.deleteTrip(trip.id);
-            router.push("/trips");
-          }}><Trash2 size={15} aria-hidden /></button>
+          {trip.group ? (
+            <button type="button" className="btn btn-ghost btn-icon btn-sm text-bad" aria-label="Leave this shared trip and remove it from this device" onClick={() => {
+              const g = trip.group!;
+              const alone = g.members.length <= 1;
+              if (g.role === "owner" && !alone) return setTogether(true);
+              if (!confirm(alone ? `Delete “${trip.name}”? Nobody else is in it.` : `Leave “${trip.name}” and remove it from this device? The others keep planning it.`)) return;
+              void (alone && g.role === "owner" ? stopSharing(trip.id) : manageTrip(trip.id, { do: "leave" }))
+                .catch(() => {})
+                .finally(() => {
+                  userActions.deleteTrip(trip.id);
+                  router.push("/trips");
+                });
+            }}><LogOut size={15} aria-hidden /></button>
+          ) : (
+            <button type="button" className="btn btn-ghost btn-icon btn-sm text-bad" aria-label="Delete this trip" onClick={() => {
+              if (!confirm(`Delete “${trip.name}”?`)) return;
+              userActions.deleteTrip(trip.id);
+              router.push("/trips");
+            }}><Trash2 size={15} aria-hidden /></button>
+          )}
         </footer>
       </section>
     </div>
