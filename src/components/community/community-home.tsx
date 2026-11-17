@@ -26,7 +26,7 @@ const NEXT: { badge: string; need: (p: PublicProfile) => [number, number] }[] = 
   { badge: "legend", need: (p) => [p.karma, 250] },
 ];
 
-export function CommunityHome({ starters }: { starters: EventCard[] }) {
+export function CommunityHome({ starters, persistent = true }: { starters: EventCard[]; /** Known on the server, so the note is there from the first paint (nothing jumps). */ persistent?: boolean }) {
   const { profile } = useMe();
   const [home, setHome] = useState<Home | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -96,7 +96,7 @@ export function CommunityHome({ starters }: { starters: EventCard[] }) {
         </div>
       </section>
 
-      {home && !home.persistent && (
+      {!(home?.persistent ?? persistent) && (
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 mt-4">
           <p className="rounded-[var(--radius-m)] border border-warn/30 bg-warn/5 p-3 t-small text-text-2">The community is in test mode for now: posts and accounts may be cleared.</p>
         </div>

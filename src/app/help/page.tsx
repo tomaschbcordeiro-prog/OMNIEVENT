@@ -27,6 +27,14 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     ),
   },
   {
+    q: "Can I search the way I talk, or in Portuguese?",
+    a: (
+      <>
+        Yes. Type it as you&apos;d say it, in English, Portuguese, Spanish, French or German: <i>&ldquo;fado em Lisboa sexta à noite&rdquo;</i>, <i>&ldquo;museus para crianças este fim de semana&rdquo;</i>, <i>&ldquo;comedy in London under £20&rdquo;</i>. Typos in city names are fine too. The search shows what it understood, and you can remove any part of it.
+      </>
+    ),
+  },
+  {
     q: "How do I buy tickets?",
     a: (
       <>

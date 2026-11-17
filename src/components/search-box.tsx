@@ -205,7 +205,7 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
     user.recentSearches.forEach((s) => items.push({ key: `r-${s}`, label: s, icon: <History size={15} aria-hidden />, run: () => (setQ(s), submit(s)) }));
   }
 
-  const examples = ["Concerts in Lisbon next month", "Football in London this weekend", "Family activities in Paris under €50", "Tech conferences in Berlin"];
+  const examples = ["Concerts in Lisbon next month", "Fado em Lisboa sexta à noite", "Football in London this weekend", "Family activities in Paris under €50", "Conciertos en Madrid mañana"];
 
   return (
     <div ref={wrap} className={`relative ${className}`}>

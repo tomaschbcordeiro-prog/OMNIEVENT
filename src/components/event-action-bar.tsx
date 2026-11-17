@@ -62,7 +62,7 @@ export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, offici
           <Share2 size={16} aria-hidden />
         </button>
         {primary && (
-          <a href={primary.href} {...(primary.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`btn btn-sm press ${inactive ? "btn-secondary" : "btn-primary"}`} tabIndex={shown ? 0 : -1}>
+          <a href={primary.href} {...(primary.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} data-ticket={primary.external && !isFree ? "" : undefined} className={`btn btn-sm press ${inactive ? "btn-secondary" : "btn-primary"}`} tabIndex={shown ? 0 : -1}>
             <Ticket size={15} aria-hidden /> {primary.label}
           </a>
         )}

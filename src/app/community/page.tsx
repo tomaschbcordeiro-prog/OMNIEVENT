@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ensureFresh, searchEvents } from "@/lib/store";
 import { Footer } from "@/components/footer";
 import { CommunityHome } from "@/components/community/community-home";
+import { persistent } from "@/lib/community/kv";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function CommunityPage() {
     .slice(0, 6);
   return (
     <>
-      <CommunityHome starters={starters} />
+      <CommunityHome starters={starters} persistent={persistent} />
       <Footer />
     </>
   );

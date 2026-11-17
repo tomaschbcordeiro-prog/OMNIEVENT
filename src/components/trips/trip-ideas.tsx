@@ -119,7 +119,7 @@ export function TripIdeasFeed({ seed: daily }: { seed: string }) {
 
   return (
     <main className="mx-auto max-w-[1200px] px-4 sm:px-6 pt-8 pb-16">
-      <p className="t-small font-semibold text-text-2"><Link href="/trips" className="hover:underline">Trips</Link> / Ideas</p>
+      <nav aria-label="Breadcrumb" className="t-small font-semibold text-text-2"><Link href="/trips" className="hover:underline">Trips</Link> / Ideas</nav>
       <div className="flex items-end justify-between gap-3 mt-1">
         <h1 className="t-display">Trip ideas</h1>
         <button type="button" className="btn btn-primary press ideas-shuffle shrink-0" onClick={shuffle}><Dices size={16} aria-hidden /> Shuffle</button>

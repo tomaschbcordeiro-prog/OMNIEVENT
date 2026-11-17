@@ -28,6 +28,7 @@ import { KeepExploring } from "@/components/keep-exploring";
 import { TrailPager } from "@/components/event-trail";
 import { TicketStamp } from "@/components/ticket";
 import { snapOf } from "@/lib/after-event";
+import { TicketReturn } from "@/components/ticket-return";
 
 // Event pages are the same for everyone: each is kept ready (on the network edge) and
 // rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
@@ -218,7 +219,7 @@ export default async function EventPage({ params }: { params: P }) {
               <div className="flex flex-wrap items-center gap-2 t-small text-text-2">
                 <CategoryIcon slug={e.categorySlug} size={15} />
                 <span>
-                  <Link href={`/categories/${group}?sub=${e.categorySlug}`} className="hover:text-text">{cat?.name}</Link>
+                  <Link href={`/categories/${group}?sub=${e.categorySlug}`} className="hit-pad hover:text-text">{cat?.name}</Link>
                   {e.sports?.competition && `, ${e.sports.competition}${e.sports.stage ? `, ${e.sports.stage}` : ""}`}
                 </span>
                 <StatusBadge status={e.status} quiet />
@@ -493,13 +494,14 @@ export default async function EventPage({ params }: { params: P }) {
                 )}
                 {e.officialUrl && (
                   // With no offers to compare, the official page is the main way on.
-                  <a href={e.officialUrl} target="_blank" rel="noopener noreferrer" className={`btn ${!inactive && (e.isFree || e.offers.length === 0) ? "btn-primary" : "btn-secondary"} w-full`}>
+                  <a href={e.officialUrl} target="_blank" rel="noopener noreferrer" data-ticket={e.isFree ? undefined : ""} className={`btn ${!inactive && (e.isFree || e.offers.length === 0) ? "btn-primary" : "btn-secondary"} w-full`}>
                     {e.isFree ? "Official page" : e.offers.length ? "Official event page" : "Tickets on the official page"} <ExternalLink size={14} aria-hidden />
                   </a>
                 )}
                 <CommunityPulse target={`e:${e.id}`} />
                 <div className="flex flex-wrap gap-2">
                   <SaveButton id={e.id} title={e.title} snap={snap} />
+                  <TicketReturn id={e.id} title={e.title} snap={snap} />
                   {tripEvent && <TripButton variant="label" primary event={tripEvent} title={e.title} />}
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />

@@ -27,7 +27,7 @@ function DayHead({ day, today }: { day: string; today: string | null }) {
   const plain = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC", ...(today && day.slice(0, 4) !== today.slice(0, 4) ? { year: "numeric" } : {}) });
   const label = !today ? plain : day < today ? "On now" : day === today ? "Today" : day === addDay(today, 1) ? "Tomorrow" : plain;
   return (
-    <li className="day-head" role="presentation">
+    <li className="day-head">
       <h3>
         {label}
         {today && label !== plain && label !== "On now" && <span className="day-head-date">{plain}</span>}

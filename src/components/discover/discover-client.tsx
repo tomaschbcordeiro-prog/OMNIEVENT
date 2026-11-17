@@ -749,29 +749,8 @@ export function DiscoverClient() {
                 Spin it, tap a glowing marker, or ask for anything.
               </span>
             </h1>
-            {!(view.zoom > 4 || place || mode === "list") && (
-              <div className="hero-ctas mt-3 flex items-center gap-2 compact:hidden sm:flex-wrap">
-                {here && (
-                  <div className="lg:hidden shrink-0">
-                    <HerePill here={here} tone="glass" onChange={(h) => {
-                      setHere(h);
-                      if (h.city) fly({ lat: h.city.lat, lng: h.city.lng, zoom: 10.5 });
-                    }} />
-                  </div>
-                )}
-                <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold text-on-sun hover:brightness-105">
-                  <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
-                </button>
-                <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
-                  <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight
-                </button>
-                <Link href="/mixtape" className="mx-cta press inline-flex items-center gap-2 rounded-full px-4 py-2 t-small font-bold">
-                  <span className="mx-cta-tape" aria-hidden>📼</span> Mixtape <span className="nf-cta-new" aria-label="new">NEW</span>
-                </Link>
-              </div>
-            )}
             <SearchBox
-              className="mt-3.5 compact:mt-0 compact:mr-[5.75rem]"
+              className="mt-3 compact:mt-0 compact:mr-[5.75rem]"
               size="lg"
               mapCenter={{ lat: view.lat, lng: view.lng }}
               onQuery={(p) => applyParsed(p)}
@@ -838,6 +817,28 @@ export function DiscoverClient() {
           {nFilters + (filters.q ? 1 : 0) > 0 && (
             <div className="pointer-events-auto mt-2">
               <ActiveFilters f={filters} onChange={(f) => (setFilters(f), setInterp(null))} />
+            </div>
+          )}
+          {!(view.zoom > 4 || place || mode === "list") && (
+            <div className="hero-ctas pointer-events-auto mt-2.5 flex items-center gap-2 compact:hidden sm:flex-wrap">
+              <span className="t-micro font-semibold text-white/85 on-sky max-lg:hidden">Or try</span>
+              {here && (
+                <div className="lg:hidden shrink-0">
+                  <HerePill here={here} tone="glass" onChange={(h) => {
+                    setHere(h);
+                    if (h.city) fly({ lat: h.city.lat, lng: h.city.lng, zoom: 10.5 });
+                  }} />
+                </div>
+              )}
+              <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold text-on-sun hover:brightness-105">
+                <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
+              </button>
+              <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
+                <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight
+              </button>
+              <Link href="/mixtape" className="mx-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
+                <span className="mx-cta-tape" aria-hidden>📼</span> Mixtape <span className="nf-cta-new" aria-label="new">NEW</span>
+              </Link>
             </div>
           )}
         </div>

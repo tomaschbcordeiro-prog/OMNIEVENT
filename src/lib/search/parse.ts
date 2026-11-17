@@ -23,6 +23,11 @@ const STOP = new Set([
   "what", "whats", "what's", "is", "are", "on", "happening", "i", "can", "buy", "tickets", "ticket", "with", "please",
   "some", "any", "all", "list", "at", "my", "get", "looking", "want", "going", "around", "near", "in", "this", "next",
   "between", "from", "until", "till", "by", "e", "y", "de", "em", "en", "no", "na", "que",
+  // The same small words in Portuguese, Spanish, French and German ("concertos em lisboa este fim de semana").
+  "este", "esta", "estes", "estas", "neste", "nesta", "o", "os", "as", "um", "uma", "para", "ao", "aos", "do", "da", "dos", "das", "nos", "nas",
+  "el", "la", "los", "las", "del", "al", "un", "una", "para", "le", "les", "ce", "cette", "ces", "du", "des", "au", "aux", "pour", "et",
+  "der", "die", "das", "dem", "den", "und", "im", "am", "fur", "diese", "dieses", "diesen",
+  "quero", "ver", "ir", "coisas", "fazer", "algo", "busco", "quiero", "cosas", "hacer", "je", "veux", "ich", "will",
 ]);
 
 const CURRENCY_WORDS: Record<string, string> = {
@@ -105,6 +110,34 @@ function monthRange(today: Date, month: number, forceNextYear = false): [Date, D
   return [new Date(Date.UTC(y, month, 1)), new Date(Date.UTC(y, month + 1, 0))];
 }
 
+/** Days of the week in English, Portuguese, Spanish, French and German (0 = Sunday). */
+const WEEKDAYS: [RegExp, number][] = [
+  [/sunday|domingo|dimanche|sonntag/, 0],
+  [/monday|segunda feira|lunes|lundi|montag/, 1],
+  [/tuesday|terca feira|martes|mardi|dienstag/, 2],
+  [/wednesday|quarta feira|miercoles|mercredi|mittwoch/, 3],
+  [/thursday|quinta feira|jueves|jeudi|donnerstag/, 4],
+  [/friday|sexta feira|sexta|viernes|vendredi|freitag/, 5],
+  [/saturday|sabado|samedi|samstag/, 6],
+];
+// "segunda", "terça", "quarta", "quinta" are also everyday words ("Quinta da Regaleira"):
+// on their own they only count after "na", "nesta", "esta", "próxima" or "até".
+const SHORT_PT: [string, number][] = [["segunda", 1], ["terca", 2], ["quarta", 3], ["quinta", 4]];
+
+function findWeekday(text: string): { day: number; next: boolean; match: RegExp } | undefined {
+  const lead = "(?:(next|proxima|proximo|el proximo|prochain)\\s+|(?:this|on|esta|este|nesta|neste|na|no|el|ce|am)\\s+)?";
+  const tail = "(?:\\s+(?:night|evening|a noite|noite|a tarde|por la noche|noche|soir|abend|nacht))?";
+  for (const [re, day] of WEEKDAYS) {
+    const m = new RegExp(`\\b${lead}(${re.source})s?\\b${tail}`).exec(text);
+    if (m) return { day, next: !!m[1], match: new RegExp(m[0].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) };
+  }
+  for (const [w, day] of SHORT_PT) {
+    const m = new RegExp(`\\b(?:(proxima)|na|nesta|esta|ate)\\s+${w}\\b${tail}`).exec(text);
+    if (m) return { day, next: !!m[1], match: new RegExp(m[0].trim()) };
+  }
+  return undefined;
+}
+
 export interface ParseOptions {
   now?: Date;
   timeZone?: string;
@@ -117,7 +150,9 @@ export function parseQuery(input: string, opts: ParseOptions = {}): ParsedQuery 
   const interpretation: ParsedQuery["interpretation"] = [];
   const ambiguities: string[] = [];
 
-  let text = ` ${norm(input).replace(/[“”"!?]/g, " ").replace(/\s+/g, " ").trim()} `;
+  let text = ` ${norm(input).replace(/[“”"!?¿¡,;]/g, " ").replace(/([a-z])-(?=[a-z])/g, "$1 ").replace(/\s+/g, " ").trim()} `;
+  // "Live" is how people say "a concert"; on its own it isn't something to look for in titles.
+  text = text.replace(/ (ao vivo|en vivo|en directo|en direct) /g, " ");
   const consume = (re: RegExp) => {
     text = text.replace(re, " ");
   };
@@ -196,29 +231,31 @@ export function parseQuery(input: string, opts: ParseOptions = {}): ParsedQuery 
   if (!dateDone) {
     const dow = today.getUTCDay(); // 0 Sun
     const rules: [RegExp, () => [Date, Date, string]][] = [
-      [/\b(today|hoje|hoy|aujourd'hui|heute)\b/, () => [today, today, "Today"]],
-      [/\btonight\b/, () => [today, today, "Tonight"]],
-      [/\b(tomorrow|amanha|mañana|manana|demain|morgen)\b/, () => [addDays(today, 1), addDays(today, 1), "Tomorrow"]],
-      [/\bnext weekend\b/, () => {
+      // "Tonight" in every language comes before "today", so "hoje à noite" isn't read as nightlife.
+      [/\b(tonight|this evening|hoje a noite|hoje noite|esta noite|logo a noite|hoje ao fim do dia|esta noche|hoy por la noche|ce soir|heute abend|heute nacht)\b/, () => [today, today, "Tonight"]],
+      [/\b(today|hoje|hoy|aujourd'hui|aujourd hui|heute)\b/, () => [today, today, "Today"]],
+      [/\b(day after tomorrow|depois de amanha|pasado manana|apres demain|ubermorgen)\b/, () => [addDays(today, 2), addDays(today, 2), "Day after tomorrow"]],
+      [/\b(tomorrow|amanha|manana|demain|morgen)\b/, () => [addDays(today, 1), addDays(today, 1), "Tomorrow"]],
+      [/\b(next weekend|proximo fim de semana|fim de semana que vem|proximo fin de semana|el fin de semana que viene|week end prochain|le week end prochain|nachstes wochenende)\b/, () => {
         const sat = addDays(today, ((6 - dow + 7) % 7 || 7) + 7);
         return [addDays(sat, -1), addDays(sat, 1), "Next weekend"];
       }],
-      [/\b(this weekend|weekend|fim de semana|fin de semana|ce week-end)\b/, () => {
+      [/\b(this weekend|weekend|fim de semana|fds|fin de semana|finde|week end|wochenende)\b/, () => {
         if (dow === 0) return [today, today, "This weekend"];
         if (dow === 6) return [today, addDays(today, 1), "This weekend"];
         const fri = addDays(today, 5 - dow);
         return [fri < today ? today : fri, addDays(today, 7 - dow), "This weekend"];
       }],
-      [/\bnext week\b/, () => {
+      [/\b(next week|proxima semana|semana que vem|la semana que viene|la proxima semana|semaine prochaine|la semaine prochaine|nachste woche)\b/, () => {
         const mon = addDays(today, ((8 - dow) % 7) || 7);
         return [mon, addDays(mon, 6), "Next week"];
       }],
-      [/\bthis week\b/, () => [today, addDays(today, (7 - dow) % 7), "This week"]],
-      [/\bnext month\b/, () => {
+      [/\b(this week|esta semana|nesta semana|cette semaine|diese woche)\b/, () => [today, addDays(today, (7 - dow) % 7), "This week"]],
+      [/\b(next month|proximo mes|mes que vem|el proximo mes|el mes que viene|mois prochain|le mois prochain|nachsten monat|nachster monat)\b/, () => {
         const [a, b] = monthRange(today, (today.getUTCMonth() + 1) % 12, today.getUTCMonth() === 11);
         return [a, b, a.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })];
       }],
-      [/\bthis month\b/, () => [today, new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)), "This month"]],
+      [/\b(this month|este mes|neste mes|ce mois|ce mois ci|diesen monat)\b/, () => [today, new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)), "This month"]],
     ];
     for (const [re, fn] of rules) {
       if (re.test(text)) {
@@ -228,6 +265,20 @@ export function parseQuery(input: string, opts: ParseOptions = {}): ParsedQuery 
         dateDone = true;
         break;
       }
+    }
+  }
+  // A day of the week: "friday", "sexta", "sábado à noite", "next sunday", "el viernes", "samedi soir".
+  if (!dateDone) {
+    const hit = findWeekday(text);
+    if (hit) {
+      const dow = today.getUTCDay();
+      let ahead = (hit.day - dow + 7) % 7;
+      if (hit.next && ahead === 0) ahead = 7;
+      const d = addDays(today, ahead);
+      const name = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][hit.day];
+      setRange(d, d, ahead === 0 ? `Today (${name})` : ahead === 1 ? `Tomorrow (${name})` : `${name} ${shortFmt(fmtYMD(d))}`);
+      text = text.replace(hit.match, " ");
+      dateDone = true;
     }
   }
   // Single explicit date: "on november 10", "nov 10"
@@ -261,7 +312,7 @@ export function parseQuery(input: string, opts: ParseOptions = {}): ParsedQuery 
     for (let i = 0; i + n <= words.length; i++) {
       const gram = words.slice(i, i + n).join(" ");
       if (!gram || STOP.has(gram)) continue;
-      if (/^(family|families|kids|children|child|familia|niños|enfants|kinder)$/.test(gram)) {
+      if (/^(family|families|kids|kid|children|child|familia|familias|familiar|ninos|nino|infantil|infantis|enfants|enfant|kinder|criancas|crianca|miudos|pequenos|familie|familien)$/.test(gram)) {
         family = true;
         text = text.replace(new RegExp(`\\b${gram}\\b`), " ");
         continue;
@@ -330,6 +381,9 @@ export function parseQuery(input: string, opts: ParseOptions = {}): ParsedQuery 
   }
 
   // ---------------- seasons (hemisphere-aware) ----------------
+  // Seasons in other languages, read as their English names first.
+  const SEASON: Record<string, string> = { primavera: "spring", printemps: "spring", fruhling: "spring", verao: "summer", verano: "summer", ete: "summer", sommer: "summer", outono: "autumn", otono: "autumn", automne: "autumn", herbst: "autumn", inverno: "winter", invierno: "winter", hiver: "winter" };
+  text = text.replace(/\b(?:(proximo|proxima|proximo|prochain)\s+)?(primavera|printemps|fruhling|verao|verano|ete|sommer|outono|otono|automne|herbst|inverno|invierno|hiver)\b/, (_m, next: string | undefined, w: string) => `${next ? "next " : ""}${SEASON[w]}`);
   const sm = text.match(/\b(?:(next|this)\s+)?(spring|summer|autumn|fall|winter)\b/);
   if (sm && !filters.from) {
     const southern = !!place?.southern;

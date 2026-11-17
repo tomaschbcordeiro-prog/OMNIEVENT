@@ -11139,11 +11139,12 @@ section + .ideas-grid {
   --d: min(62vmin, 34rem);
   position: absolute;
   z-index: 0;
-  left: calc(50% - var(--shift, 0px));
-  top: calc(var(--room-top, 0px) + (100% - var(--room-top, 0px) - var(--room-bottom, 0px)) / 2);
+  /* Placed with a transform, so making room for the panels never counts as the page jumping. */
+  left: 50%;
+  top: 50%;
   width: var(--d);
   height: var(--d);
-  translate: -50% -50%;
+  translate: calc(-50% - var(--shift, 0px)) calc(-50% + (var(--room-top, 0px) - var(--room-bottom, 0px)) / 2);
   border-radius: 50%;
   background:
     radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.55), transparent 32%),
@@ -11422,4 +11423,47 @@ section + .ideas-grid {
 .site-header .surface-float,
 .tab-sheet .surface-float {
   background: var(--panel);
+}
+
+/* Offline: a calm note at the top, above everything, saying what still works. */
+.net-off {
+  position: fixed;
+  z-index: 70;
+  top: calc(env(safe-area-inset-top) + 0.5rem);
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--on-ink);
+  font-size: 13px;
+  line-height: 1.3;
+  box-shadow: 0 12px 30px -12px rgb(10 30 70 / 0.55);
+}
+
+/* WCAG 2.4.11: whatever has the keyboard focus, or is jumped to, never hides under the
+   sticky header or the phone's bottom bar. */
+html {
+  scroll-padding-top: calc(var(--header-h) + 0.75rem);
+  scroll-padding-bottom: calc(var(--tabbar-h) + 0.75rem);
+}
+
+/* Fitts: small text links get a taller tap area (24 px or more, WCAG 2.5.8) without moving
+   anything: the padding is taken back by a negative margin. */
+nav[aria-label="Breadcrumb"] a,
+.hit-pad {
+  display: inline-block;
+  padding-block: 0.3125rem;
+  margin-block: -0.3125rem;
+}
+@media (pointer: coarse) {
+  nav[aria-label="Breadcrumb"] a,
+  .hit-pad {
+    padding-block: 0.625rem;
+    margin-block: -0.625rem;
+  }
 }
