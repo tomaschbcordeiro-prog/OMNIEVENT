@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, Tag, User, Building2, CalendarDays, History, Loader2, X, Navigation } from "lucide-react";
+import { ArrowRight, Search, MapPin, Tag, User, Building2, CalendarDays, History, Loader2, X, Navigation } from "lucide-react";
 import { zoomForKind } from "@/lib/map/view";
 import { parseQuery } from "@/lib/search/parse";
 import { filtersToParams } from "@/lib/search/params";
@@ -255,11 +255,17 @@ export function SearchBox({ onQuery, onPlace, onGeoPlace, mapCenter, placeholder
                 setActive(-1);
               }
             }}
-            className={`flex-1 min-w-0 self-stretch bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-[17px]" : "text-base lg:text-sm"}`}
+            className={`flex-1 min-w-0 self-stretch bg-transparent outline-none placeholder:text-text-3 ${size === "lg" ? "text-[17px]" : "text-base lg:text-sm touch:!text-base"}`}
           />
           {q && (
-            <button type="button" aria-label="Clear search" className="text-text-3 hover:text-text" onClick={() => (setQ(""), input.current?.focus())}>
+            <button type="button" aria-label="Clear search" className="search-clear" onClick={() => (setQ(""), input.current?.focus())}>
               <X size={15} aria-hidden />
+            </button>
+          )}
+          {/* A button to press, not only the keyboard's own key (which many people don't notice). */}
+          {q.trim() && (
+            <button type="submit" aria-label="Search" className={`search-go ${size === "lg" ? "search-go--lg" : ""}`}>
+              <ArrowRight size={size === "lg" ? 18 : 15} aria-hidden />
             </button>
           )}
           {!q && size !== "lg" && (

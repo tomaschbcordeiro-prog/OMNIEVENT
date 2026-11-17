@@ -263,7 +263,7 @@ export function ExplorePanel({
               {res ? `${res.total.toLocaleString()} ${res.total === 1 ? "event" : "events"} found` : "Searching"}
             </p>
             <label className="sr-only" htmlFor="explore-sort">Sort results</label>
-            <select id="explore-sort" className="field !h-7 !w-auto !text-[12px]" value={sort} onChange={(e) => setSort(e.target.value as "date" | "distance")}>
+            <select id="explore-sort" className="field !h-7 !w-auto !text-[12px] touch:!h-9 touch:!text-base" value={sort} onChange={(e) => setSort(e.target.value as "date" | "distance")}>
               <option value="date">Starting soonest</option>
               <option value="distance">Nearest first</option>
             </select>

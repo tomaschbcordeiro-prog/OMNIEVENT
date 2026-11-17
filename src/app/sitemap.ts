@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const s = allSlugs();
   const now = new Date();
   const fixed = [
-    ...["", "/events", "/categories", "/destinations", "/mixtape", "/about/data"].map((p) => ({ url: `${SITE}${p}`, lastModified: now })),
+    ...["", "/events", "/categories", "/destinations", "/mixtape", "/help", "/about", "/about/data"].map((p) => ({ url: `${SITE}${p}`, lastModified: now })),
     ...GROUPS.map((g) => ({ url: `${SITE}/categories/${g.slug}`, lastModified: now })),
     ...ALL_DESTINATIONS.map((d) => ({ url: `${SITE}/destinations/${d.slug}`, lastModified: now })),
     ...s.venues.slice(0, 5000).map((slug) => ({ url: `${SITE}/venues/${slug}`, lastModified: now })),

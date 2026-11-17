@@ -160,7 +160,7 @@ export function EventsBrowser({
           <label className="sr-only" htmlFor="sort">Sort by</label>
           <span className="sort-pick">
             <ArrowUpDown size={15} aria-hidden className="sort-pick-icon" />
-            <select id="sort" className="field max-sm:!h-9 max-sm:!text-[14px] lg:!h-[1.875rem] !w-auto lg:!text-[13px]" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
+            <select id="sort" className="field max-sm:!h-9 max-sm:!text-[14px] lg:!h-[1.875rem] !w-auto lg:!text-[13px] touch:!text-base" value={filters.sort ?? (filters.q ? "relevance" : "date")} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
               <option value="date">Soonest first</option>
               <option value="relevance">Best match</option>
               <option value="price">Lowest price</option>

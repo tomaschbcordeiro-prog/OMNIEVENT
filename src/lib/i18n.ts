@@ -13,7 +13,8 @@ export const INTL_LOCALE: Record<Locale, string> = { en: "en-GB", pt: "pt-PT", e
 type Dict = Record<string, string>;
 
 const en: Dict = {
-  "nav.discover": "Discover",
+  "nav.discover": "Globe",
+  "nav.more": "More",
   "nav.events": "Events",
   "nav.categories": "Categories",
   "nav.destinations": "Destinations",
@@ -47,7 +48,8 @@ const en: Dict = {
 };
 
 const pt: Dict = {
-  "nav.discover": "Descobrir",
+  "nav.discover": "Globo",
+  "nav.more": "Mais",
   "nav.events": "Eventos",
   "nav.categories": "Categorias",
   "nav.destinations": "Destinos",
@@ -81,7 +83,8 @@ const pt: Dict = {
 };
 
 const es: Dict = {
-  "nav.discover": "Descubrir",
+  "nav.discover": "Globo",
+  "nav.more": "Más",
   "nav.events": "Eventos",
   "nav.categories": "Categorías",
   "nav.destinations": "Destinos",
@@ -115,7 +118,8 @@ const es: Dict = {
 };
 
 const fr: Dict = {
-  "nav.discover": "Découvrir",
+  "nav.discover": "Globe",
+  "nav.more": "Plus",
   "nav.events": "Événements",
   "nav.categories": "Catégories",
   "nav.destinations": "Destinations",
@@ -149,7 +153,8 @@ const fr: Dict = {
 };
 
 const de: Dict = {
-  "nav.discover": "Entdecken",
+  "nav.discover": "Globus",
+  "nav.more": "Mehr",
   "nav.events": "Events",
   "nav.categories": "Kategorien",
   "nav.destinations": "Reiseziele",

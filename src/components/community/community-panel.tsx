@@ -145,7 +145,7 @@ export function CommunityPanel({
 
       {thread && !thread.persistent && (
         <p className="mt-3 rounded-[var(--radius-m)] border border-warn/30 bg-warn/5 p-3 t-small text-text-2">
-          Community storage isn&apos;t connected yet, so posts are kept only temporarily on this server.
+          The community is in test mode for now: posts and accounts may be cleared.
         </p>
       )}
 

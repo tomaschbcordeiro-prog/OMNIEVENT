@@ -3,28 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Disc3, Download, Heart, Lightbulb, MapPinned, Menu, MessagesSquare, Moon, Plane, Search, Share, Sparkles, Sun, Users, X } from "lucide-react";
+import { Bookmark, CalendarDays, ChevronRight, Disc3, Download, Heart, Menu, Moon, Search, Share, Sparkles, Sun, X } from "lucide-react";
 import { installApp, useInstall } from "./app-shell";
 import { MundiviMark } from "./brand";
 import { useUser } from "@/lib/user/store";
 import { SearchBox } from "./search-box";
 import { ThemeToggle } from "./theme-toggle";
+import { COMMUNITY, EXTRA, HELP, TRIPS, type NavItem } from "./nav-items";
 
 /** The site's own mark (a planet with one event lit up), drawn large for the bar's middle button. */
 function GlobeMark({ size = 30 }: { size?: number }) {
   return <MundiviMark size={size} ring="#fff" className="tab-globe-mark" />;
 }
 
-const MORE: { href: string; label: string; note: string; Icon: typeof Heart }[] = [
-  { href: "/trips", label: "Trips", note: "Plan it on the globe", Icon: Plane },
-  { href: "/trips/ideas", label: "Trip ideas", note: "Endless routes", Icon: Lightbulb },
-  { href: "/destinations", label: "Destinations", note: "Cities to explore", Icon: MapPinned },
-  { href: "/match", label: "Match", note: "Swipe your next plan", Icon: Heart },
-  { href: "/mixtape", label: "Mixtape", note: "A weekend, planned", Icon: Disc3 },
-  { href: "/community", label: "Community", note: "Reviews and tips", Icon: MessagesSquare },
-  { href: "/clubs", label: "Clubs", note: "Go together", Icon: Users },
-  { href: "/studio", label: "Studio", note: "List your event", Icon: Sparkles },
-];
+/** Trips and the community first (they have no tab of their own), then the rest. */
+const MORE: NavItem[] = [TRIPS, COMMUNITY, ...EXTRA];
 
 /** One tap to what people look for most (read as plain words by the search). */
 const QUICK: { q: string; label: string; Icon: typeof Heart }[] = [
@@ -53,6 +46,8 @@ export function MobileTabBar() {
   const [sheet, setSheet] = useState<null | "more" | "search">(null);
   const isHome = path === "/";
   const on = (href: string) => (href === "/" ? isHome : path.startsWith(href));
+  // In the More sheet, only the closest match is marked (Trip ideas, not Trips as well).
+  const here = (href: string) => on(href) && !MORE.some((m) => m.href !== href && m.href.startsWith(href) && on(m.href));
   const saved = user.saved.length;
   const install = useInstall();
   const [howTo, setHowTo] = useState(false);
@@ -127,13 +122,13 @@ export function MobileTabBar() {
       {sheet === "more" && (
         <section className="tab-sheet lg:hidden panel-in" role="dialog" aria-modal="true" aria-label="More of Mundivi">
           <ul className="grid grid-cols-2 gap-2">
-            {MORE.map(({ href, label, note, Icon }) => (
+            {MORE.map(({ href, label, note, Icon, fresh }) => (
               <li key={href}>
-                <Link href={href} className="tab-tile press" aria-current={on(href) ? "page" : undefined} onClick={() => setSheet(null)}>
+                <Link href={href} className="tab-tile press" aria-current={here(href) ? "page" : undefined} onClick={() => setSheet(null)}>
                   <Icon size={20} aria-hidden className="text-cyan shrink-0" />
                   <span className="min-w-0">
-                    <span className="block font-semibold leading-tight">{label}</span>
-                    <span className="block t-micro text-text-3 truncate">{note}</span>
+                    <span className="block font-semibold leading-tight">{label}{fresh && <span className="tab-new">New</span>}</span>
+                    <span className="block t-micro text-text-2 line-clamp-2">{note}</span>
                   </span>
                 </Link>
               </li>
@@ -162,9 +157,14 @@ export function MobileTabBar() {
               )}
             </div>
           )}
-          <div className="mt-3 pt-3 border-t border-line flex items-center justify-between">
-            <span className="t-small text-text-2">Light or dark</span>
-            <ThemeToggle className="border border-line-strong" />
+          <div className="mt-3 pt-2 border-t border-line flex items-center justify-between gap-3">
+            <Link href={HELP.href} className="tab-help press" aria-current={on(HELP.href) ? "page" : undefined} onClick={() => setSheet(null)}>
+              <HELP.Icon size={18} aria-hidden className="text-cyan shrink-0" />
+              <span className="font-semibold">Help</span>
+              <span className="t-micro text-text-3 truncate">{HELP.note}</span>
+              <ChevronRight size={15} aria-hidden className="text-text-3 shrink-0" />
+            </Link>
+            <ThemeToggle className="border border-line-strong shrink-0" />
           </div>
         </section>
       )}

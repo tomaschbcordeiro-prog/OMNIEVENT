@@ -163,12 +163,12 @@ export default async function CategoryPage({ params, searchParams }: { params: P
               <form className="flex flex-wrap gap-2" action={`/categories/${slug}`}>
                 {selectedSub && <input type="hidden" name="cat" value={selectedSub} />}
                 <label className="sr-only" htmlFor="sport">Sport</label>
-                <select id="sport" name="sport" defaultValue={filters.sport ?? ""} className="field !h-8 !w-auto !text-[13px]">
+                <select id="sport" name="sport" defaultValue={filters.sport ?? ""} className="field !h-8 !w-auto !text-[13px] touch:!h-10 touch:!text-base">
                   <option value="">All sports</option>
                   {sm.sports.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <label className="sr-only" htmlFor="competition">Competition</label>
-                <select id="competition" name="competition" defaultValue={filters.competition ?? ""} className="field !h-8 !w-auto !text-[13px]">
+                <select id="competition" name="competition" defaultValue={filters.competition ?? ""} className="field !h-8 !w-auto !text-[13px] touch:!h-10 touch:!text-base">
                   <option value="">All competitions</option>
                   {sm.competitions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>

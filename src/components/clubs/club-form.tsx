@@ -144,7 +144,7 @@ export function ClubForm({ club, onSaved, onCancel }: { club?: Club; onSaved?: (
               </span>
             ))}
             <input
-              className="min-w-32 flex-1 bg-transparent py-1 text-base sm:text-sm outline-none"
+              className="min-w-32 flex-1 bg-transparent py-1 text-base sm:text-sm touch:!text-base outline-none"
               value={tag}
               maxLength={24}
               disabled={f.tags.length >= 6}
