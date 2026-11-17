@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageCircle, Ticket } from "lucide-react";
+import { Share2, Ticket } from "lucide-react";
 import { Price, SaveButton } from "./ui";
 import type { SavedSnap } from "@/lib/user/store";
 import type { TripEvent } from "@/lib/trip-snap";
 import { TripButton } from "./trips/trip-add";
+import { toast } from "./toast";
 
 /**
  * Phones: a bar fixed to the bottom of an event page, so tickets, saving and the trip are
@@ -40,9 +41,26 @@ export function EventActionBar({ id, title, isFree, fromPrice, hasOffers, offici
         </div>
         {tripEvent && <TripButton event={tripEvent} title={title} className="btn-secondary" />}
         <SaveButton id={id} title={title} compact className="btn-secondary" snap={snap} />
-        <a href="#community" className="btn btn-secondary btn-sm btn-icon press" aria-label="Community: who's going, questions and tips" tabIndex={shown ? 0 : -1}>
-          <MessageCircle size={16} aria-hidden />
-        </a>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm btn-icon press"
+          aria-label={`Share ${title}`}
+          tabIndex={shown ? 0 : -1}
+          onClick={async () => {
+            const url = window.location.href.split("#")[0];
+            try {
+              if (navigator.share) await navigator.share({ title, url });
+              else {
+                await navigator.clipboard.writeText(url);
+                toast({ title: "Link copied", body: title, emoji: "🔗" });
+              }
+            } catch {
+              // the share sheet was closed
+            }
+          }}
+        >
+          <Share2 size={16} aria-hidden />
+        </button>
         {primary && (
           <a href={primary.href} {...(primary.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`btn btn-sm press ${inactive ? "btn-secondary" : "btn-primary"}`} tabIndex={shown ? 0 : -1}>
             <Ticket size={15} aria-hidden /> {primary.label}

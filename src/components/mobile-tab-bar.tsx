@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, CalendarDays, Disc3, Heart, MapPinned, Menu, MessagesSquare, Plane, Search, Sparkles, Users, X } from "lucide-react";
+import { Bookmark, CalendarDays, Disc3, Download, Heart, Lightbulb, MapPinned, Menu, MessagesSquare, Moon, Plane, Search, Share, Sparkles, Sun, Users, X } from "lucide-react";
+import { installApp, useInstall } from "./app-shell";
 import { useUser } from "@/lib/user/store";
 import { SearchBox } from "./search-box";
 import { ThemeToggle } from "./theme-toggle";
@@ -22,6 +23,7 @@ function GlobeMark({ size = 30 }: { size?: number }) {
 
 const MORE: { href: string; label: string; note: string; Icon: typeof Heart }[] = [
   { href: "/trips", label: "Trips", note: "Plan it on the globe", Icon: Plane },
+  { href: "/trips/ideas", label: "Trip ideas", note: "Endless routes", Icon: Lightbulb },
   { href: "/destinations", label: "Destinations", note: "Cities to explore", Icon: MapPinned },
   { href: "/match", label: "Match", note: "Swipe your next plan", Icon: Heart },
   { href: "/mixtape", label: "Mixtape", note: "A weekend, planned", Icon: Disc3 },
@@ -29,6 +31,22 @@ const MORE: { href: string; label: string; note: string; Icon: typeof Heart }[] 
   { href: "/clubs", label: "Clubs", note: "Go together", Icon: Users },
   { href: "/studio", label: "Studio", note: "List your event", Icon: Sparkles },
 ];
+
+/** One tap to what people look for most (read as plain words by the search). */
+const QUICK: { q: string; label: string; Icon: typeof Heart }[] = [
+  { q: "tonight", label: "Tonight", Icon: Moon },
+  { q: "this weekend", label: "This weekend", Icon: Sun },
+  { q: "free this week", label: "Free", Icon: Sparkles },
+  { q: "live music this weekend", label: "Live music", Icon: Disc3 },
+  { q: "for kids this weekend", label: "With kids", Icon: Heart },
+];
+
+/** Tapping the tab of the page you're on takes you back to its top, as apps do. */
+function backToTop(e: React.MouseEvent) {
+  if (window.scrollY < 4) return;
+  e.preventDefault();
+  window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
 
 /**
  * Phones and tablets: the site's main places one thumb away, at the bottom of the screen.
@@ -42,6 +60,8 @@ export function MobileTabBar() {
   const isHome = path === "/";
   const on = (href: string) => (href === "/" ? isHome : path.startsWith(href));
   const saved = user.saved.length;
+  const install = useInstall();
+  const [howTo, setHowTo] = useState(false);
 
   // A new page closes whatever was open.
   const last = useRef(path);
@@ -70,7 +90,7 @@ export function MobileTabBar() {
   return (
     <>
       <nav className="tabbar lg:hidden" aria-label="Main">
-        <Link href="/events" className="tab" aria-current={on("/events") ? "page" : undefined}>
+        <Link href="/events" className="tab" aria-current={on("/events") ? "page" : undefined} onClick={(e) => path === "/events" && backToTop(e)}>
           <CalendarDays size={21} aria-hidden />
           <span>Events</span>
         </Link>
@@ -96,7 +116,7 @@ export function MobileTabBar() {
           </span>
           <span>Globe</span>
         </Link>
-        <Link href="/my-world" className="tab" aria-current={on("/my-world") ? "page" : undefined} aria-label={saved ? `Saved: ${saved} ${saved === 1 ? "event" : "events"}` : "Saved"}>
+        <Link href="/my-world" className="tab" aria-current={on("/my-world") ? "page" : undefined} onClick={(e) => path === "/my-world" && backToTop(e)} aria-label={saved ? `Saved: ${saved} ${saved === 1 ? "event" : "events"}` : "Saved"}>
           <span className="relative">
             <Bookmark size={21} aria-hidden />
             {saved > 0 && <span className="tab-badge tnum">{saved > 99 ? "99+" : saved}</span>}
@@ -125,6 +145,29 @@ export function MobileTabBar() {
               </li>
             ))}
           </ul>
+          {(install.canPrompt || install.ios) && (
+            <div className="mt-2">
+              <button
+                type="button"
+                className="tab-install press"
+                aria-expanded={install.ios ? howTo : undefined}
+                onClick={() => (install.canPrompt ? void installApp().then((ok) => ok && setSheet(null)) : setHowTo((h) => !h))}
+              >
+                <span className="tab-install-icon" aria-hidden><Download size={18} /></span>
+                <span className="min-w-0 text-left">
+                  <span className="block font-semibold leading-tight">Install the app</span>
+                  <span className="block t-micro text-text-2">On your home screen, full screen, works offline</span>
+                </span>
+              </button>
+              {install.ios && howTo && (
+                <ol className="tab-install-how t-small">
+                  <li>Tap <Share size={14} aria-label="Share" className="inline -mt-0.5" /> at the bottom of Safari.</li>
+                  <li>Choose <b>Add to Home Screen</b>.</li>
+                  <li>Tap <b>Add</b>. OMNIEVENT opens like an app.</li>
+                </ol>
+              )}
+            </div>
+          )}
           <div className="mt-3 pt-3 border-t border-line flex items-center justify-between">
             <span className="t-small text-text-2">Light or dark</span>
             <ThemeToggle className="border border-line-strong" />
@@ -133,6 +176,15 @@ export function MobileTabBar() {
       )}
       {sheet === "search" && (
         <section className="tab-sheet tab-sheet--top lg:hidden panel-in" role="dialog" aria-modal="true" aria-label="Search">
+          <ul className="tab-quick no-scrollbar mb-2.5" aria-label="Quick picks">
+            {QUICK.map(({ q, label, Icon }) => (
+              <li key={q}>
+                <Link href={`/search?q=${encodeURIComponent(q)}`} className="chip chip-link press" onClick={() => setSheet(null)}>
+                  <Icon size={14} aria-hidden /> {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
           <SearchBox autoFocus placeholder="Events, artists, venues, cities…" />
         </section>
       )}

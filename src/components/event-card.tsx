@@ -7,7 +7,9 @@ import { MapPin } from "lucide-react";
 import type { EventCard as Card } from "@/lib/types";
 import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
-import { useUser } from "@/lib/user/store";
+import { userActions, useUser } from "@/lib/user/store";
+import { useRef } from "react";
+import { toast } from "./toast";
 import { GROUP_HEX } from "@/lib/categories";
 import { snapOf } from "@/lib/after-event";
 import { Marked } from "./marked";
@@ -58,12 +60,78 @@ function DateBlock({ c }: { c: Card }) {
 
 // Event links don't load ahead just for being on screen (a list would ask for every event);
 // the whole page loads when the pointer rests on one or a finger touches it (IntentPrefetch).
+/**
+ * Phones: an event row swiped to the left saves it (or takes it out of saved), as in mail and
+ * to-do apps. A swipe never opens the event; an ordinary tap still does.
+ */
+function useSwipeToSave(c: Card, saved: boolean) {
+  const ref = useRef<HTMLLIElement>(null);
+  const st = useRef({ x: 0, y: 0, dx: 0, axis: "" as "" | "x" | "y", swiped: false });
+  const ARM = -72;
+  const set = (dx: number) => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty("--swipe", `${dx}px`);
+    if (dx < 0) el.dataset.swiping = "";
+    else delete el.dataset.swiping;
+    if (dx <= ARM) el.dataset.armed = "";
+    else delete el.dataset.armed;
+  };
+  return {
+    ref,
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      st.current = { x: t.clientX, y: t.clientY, dx: 0, axis: "", swiped: false };
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const s = st.current;
+      const t = e.touches[0];
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      if (!s.axis) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        s.axis = dx < 0 && Math.abs(dx) > Math.abs(dy) * 1.4 ? "x" : "y";
+      }
+      if (s.axis !== "x") return;
+      s.dx = Math.max(-120, Math.min(0, dx));
+      s.swiped = true;
+      const was = ref.current?.dataset.armed !== undefined;
+      set(s.dx);
+      // A tick when it's far enough to save.
+      if (!was && s.dx <= ARM) navigator.vibrate?.(6);
+    },
+    onTouchEnd: () => {
+      const s = st.current;
+      if (s.axis === "x" && s.dx <= ARM) {
+        userActions.toggleSave(c.id, snapOf(c));
+        navigator.vibrate?.(saved ? 6 : [8, 40, 12]);
+        toast(saved ? { title: "Removed from saved", body: c.title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.toggleSave(c.id, snapOf(c)) } } : { title: "Saved", body: c.title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
+      }
+      const el = ref.current;
+      if (el && s.axis === "x") {
+        el.dataset.settling = "";
+        set(0);
+        window.setTimeout(() => delete el.dataset.settling, 260);
+      }
+    },
+    // A swipe isn't a tap: the event doesn't open.
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!st.current.swiped) return;
+      st.current.swiped = false;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+  };
+}
+
 export function EventRow({
   c, onSelect, compact = false, highlighted = false, onHover, terms,
 }: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void; /** Searched words to mark in the title. */ terms?: string[] }) {
   const user = useUser();
   const router = useRouter();
   const people = peopleLine(c);
+  const saved = user.saved.some((s) => s.id === c.id);
+  const swipe = useSwipeToSave(c, saved);
   const body = (
     <>
       <DateBlock c={c} />
@@ -105,7 +173,14 @@ export function EventRow({
   );
   return (
     <li
+      ref={swipe.ref}
       data-venue={c.venueSlug}
+      data-saved={saved || undefined}
+      onTouchStart={swipe.onTouchStart}
+      onTouchMove={swipe.onTouchMove}
+      onTouchEnd={swipe.onTouchEnd}
+      onTouchCancel={swipe.onTouchEnd}
+      onClickCapture={swipe.onClickCapture}
       onMouseEnter={onHover ? () => onHover(c) : undefined}
       onMouseLeave={onHover ? () => onHover(null) : undefined}
       onFocusCapture={onHover ? () => onHover(c) : undefined}

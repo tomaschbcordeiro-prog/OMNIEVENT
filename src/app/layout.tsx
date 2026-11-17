@@ -9,6 +9,7 @@ import { Shortcuts } from "@/components/shortcuts";
 import { TiltCards } from "@/components/tilt-cards";
 import { Toaster } from "@/components/toast";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
+import { AppShell } from "@/components/app-shell";
 import { SITE } from "@/lib/site";
 import { Suspense } from "react";
 import { NavProgress } from "@/components/nav-progress";
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TiltCards />
         <Toaster />
         <MobileTabBar />
+        <AppShell />
         <IntentPrefetch />
         <TrailRecorder />
         <AfterEventNudge />

@@ -10,6 +10,20 @@ const RETRY_SECONDS = 6;
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const router = useRouter();
   const [left, setLeft] = useState<number | null>(null);
+  // No network (a phone in a tunnel, the app opened offline): said as it is, and tried again
+  // as soon as the connection is back.
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const check = () => setOffline(!navigator.onLine);
+    check();
+    const back = () => window.location.reload();
+    window.addEventListener("offline", check);
+    window.addEventListener("online", back);
+    return () => {
+      window.removeEventListener("offline", check);
+      window.removeEventListener("online", back);
+    };
+  }, []);
 
   const retry = () =>
     startTransition(() => {
@@ -41,7 +55,18 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
   return (
     <main className="mx-auto max-w-xl px-4 pt-24 pb-24">
-      {left != null ? (
+      {offline ? (
+        <>
+          <h1 className="t-h1">No connection</h1>
+          <p className="t-body text-text-2 mt-3">This page needs the internet. It opens by itself as soon as you&apos;re back online. Your saved events and trips are still on your phone.</p>
+          {/* Whole-page loads (not Link): offline, the app's kept copies answer them. */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <a href="/my-world" className="btn btn-primary">Saved events</a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/trips" className="btn btn-secondary">Your trips</a>
+          </div>
+        </>
+      ) : left != null ? (
         <>
           <h1 className="t-h1">Almost there</h1>
           <p className="t-body text-text-2 mt-3">This server has just woken up and is still loading events from around the world. We&apos;ll try again in a moment.</p>

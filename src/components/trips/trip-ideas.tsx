@@ -18,8 +18,6 @@ const HUE: Record<ThemeKey, number> = { s: 199, h: 32, m: 160, f: 12, w: 340, c:
 
 type Where = { kind: "near"; label: string; lat: number; lng: number } | { kind: "in"; label: string; cc: string };
 
-/** Today's ideas are the same for everyone (and for the page sent by the server); shuffling changes them. */
-const dailySeed = () => new Date().toISOString().slice(0, 10);
 
 function readFilter(): { f: IdeaFilter; where: Where | null } {
   if (typeof window === "undefined") return { f: {}, where: null };
@@ -39,10 +37,11 @@ function readFilter(): { f: IdeaFilter; where: Where | null } {
   return { f, where };
 }
 
-export function TripIdeasFeed() {
+/** `seed`: today's, from the server, so the page it sends and the browser's match; shuffling changes it. */
+export function TripIdeasFeed({ seed: daily }: { seed: string }) {
   const [f, setF] = useState<IdeaFilter>({});
   const [where, setWhere] = useState<Where | null>(null);
-  const [seed, setSeed] = useState(dailySeed);
+  const [seed, setSeed] = useState(daily);
   // Filters from the address, once in the browser.
   useEffect(() => {
     const r = readFilter();
@@ -62,7 +61,7 @@ export function TripIdeasFeed() {
     window.history.replaceState(window.history.state, "", s ? `?${s}` : window.location.pathname);
   }, [f, where]);
 
-  const [ideas, setIdeas] = useState<TripIdea[]>(() => ideasPage(dailySeed(), 0, PAGE).ideas);
+  const [ideas, setIdeas] = useState<TripIdea[]>(() => ideasPage(daily, 0, PAGE).ideas);
   const [next, setNext] = useState(0);
   const [done, setDone] = useState(false);
   const seen = useRef(new Set<string>());
@@ -70,7 +69,7 @@ export function TripIdeasFeed() {
   const first = useRef(true);
   // A new choice starts the list again.
   useEffect(() => {
-    if (first.current && !Object.keys(filter).length && seed === dailySeed()) {
+    if (first.current && !Object.keys(filter).length && seed === daily) {
       first.current = false;
       const page = ideasPage(seed, 0, PAGE, filter);
       seen.current = new Set(page.ideas.map((i) => i.key));

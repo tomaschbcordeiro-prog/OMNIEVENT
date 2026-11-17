@@ -296,6 +296,8 @@ export function SaveButton({ id, title, compact = false, className = "", snap }:
         e.preventDefault();
         e.stopPropagation();
         userActions.toggleSave(id, snap);
+        // A small tap felt on phones that can.
+        navigator.vibrate?.(saved ? 6 : [8, 40, 12]);
         if (!saved) setBurst((n) => n + 1);
         toast(saved ? { title: "Removed from saved", body: title, emoji: "🗑️", action: { label: "Undo", run: () => userActions.toggleSave(id, snap) } } : { title: "Saved", body: title, emoji: "🔖", href: "/my-world", linkLabel: "My World" });
       }}
