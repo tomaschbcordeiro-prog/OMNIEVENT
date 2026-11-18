@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { angleBetween, arcPoints, guessHome, landPoints, lngDelta, project, sceneLayout, spherePoint, unproject, viewTrig } from "@/lib/opening";
+import { angleBetween, arcPoints, greeting, guessHome, landPoints, lngDelta, project, sceneLayout, spherePoint, unproject, viewTrig } from "@/lib/opening";
 
 describe("the opening scene's planet", () => {
   it("has land where land is (Lisbon, Nairobi, Denver) and not in the oceans", () => {
@@ -52,9 +52,28 @@ describe("the opening scene's planet", () => {
     expect(lngDelta(170, -170)).toBe(20);
     expect(lngDelta(-170, 170)).toBe(-20);
     const phone = sceneLayout(390, 664);
-    expect(phone.cy + phone.R).toBeLessThan(664 - 250);
+    expect(phone.side).toBe(false);
+    expect(phone.cy + phone.R).toBeLessThan(664 - 268);
     expect(phone.cy - phone.R).toBeGreaterThan(40);
+    // Side by side on a phone turned sideways and on a computer: the planet on the right.
     expect(sceneLayout(844, 390).side).toBe(true);
-    expect(sceneLayout(1440, 900).R).toBeLessThanOrEqual(360);
+    const pc = sceneLayout(1440, 900);
+    expect(pc.side).toBe(true);
+    expect(pc.cx - pc.R).toBeGreaterThan(1440 * 0.42);
+    expect(pc.R).toBeLessThanOrEqual(400);
+    expect(sceneLayout(768, 1024).side).toBe(false);
+    // Taller words (measured): a smaller planet, still clear of them.
+    const tall = sceneLayout(390, 664, false, 330);
+    expect(tall.cy + tall.R).toBeLessThanOrEqual(664 - 330 - 34 + 1);
+    // A phone on its side: the planet and the line under it fit in the height.
+    const side = sceneLayout(844, 390);
+    expect(side.cy + side.R + 30).toBeLessThan(390);
+  });
+
+  it("says hello by the visitor's own clock", () => {
+    expect(greeting(8)).toBe("Good morning");
+    expect(greeting(14)).toBe("Good afternoon");
+    expect(greeting(20)).toBe("Good evening");
+    expect(greeting(23)).toBe("Good night");
   });
 });

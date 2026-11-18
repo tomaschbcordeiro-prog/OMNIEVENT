@@ -121,21 +121,29 @@ export function lngDelta(from: number, to: number): number {
 }
 
 /**
- * Where the planet sits and how big it is, leaving room for the words under it (or beside it,
- * on a phone turned sideways) and the Skip button above.
+ * Where the planet sits and how big it is. Side by side on a wide screen (the words on the left,
+ * the planet on the right, as on a computer or a phone turned sideways); otherwise the planet
+ * above and the words below, leaving room for the bar at the top.
  */
-export function sceneLayout(W: number, H: number, splash = false): { cx: number; cy: number; R: number; side: boolean } {
-  const side = W > H && H < 520;
+export function sceneLayout(W: number, H: number, splash = false, wordsHeight?: number): { cx: number; cy: number; R: number; side: boolean } {
+  const side = !splash && W > H && (W >= 1000 || H < 520);
   if (side) {
-    const R = Math.max(70, Math.min(H * 0.4, W * 0.24));
-    return { cx: W * 0.28, cy: H / 2, R, side };
+    const short = H < 520;
+    const R = Math.max(70, Math.min(H * (short ? 0.34 : 0.36), W * 0.24, 400));
+    return { cx: W * (short ? 0.73 : 0.66), cy: short ? H / 2 - 6 : H / 2 + 12, R, side };
   }
   const top = 64;
-  const words = splash ? 90 : W < 720 ? 250 : 270;
-  const hint = splash ? 0 : 40;
+  // The words' own height when it's known (measured on the page), else about what they take.
+  const words = splash ? 90 : Math.max(wordsHeight ?? 0, W < 720 ? 268 : 290);
+  const hint = splash ? 0 : 34;
   const room = Math.max(160, H - top - words - hint);
-  const R = Math.max(80, Math.min(W < 720 ? W * 0.44 : W * 0.3, room / 2, 360));
+  const R = Math.max(80, Math.min(W < 720 ? W * 0.43 : W * 0.3, room / 2, 360));
   return { cx: W / 2, cy: top + room / 2, R, side };
+}
+
+/** "Good morning" to "Good night", by the visitor's own clock. */
+export function greeting(hour: number): string {
+  return hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : hour < 22 ? "Good evening" : "Good night";
 }
 
 /** The point on the sphere under a spot on the disc (-1..1, y up), for a view; null off the planet. */

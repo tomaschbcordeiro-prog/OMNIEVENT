@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, Hand, MapPin, X } from "lucide-react";
+import { ArrowRight, Hand } from "lucide-react";
 import { CITIES } from "@/lib/destinations";
-import { angleBetween, arcPoints, clamp01, easeOut, easeOutBack, guessHome, landPoints, lngDelta, project, sceneLayout, spherePoint, unproject, viewTrig, type SpherePoint, type View } from "@/lib/opening";
+import { angleBetween, arcPoints, clamp01, easeOut, easeOutBack, greeting, guessHome, landPoints, lngDelta, project, sceneLayout, spherePoint, unproject, viewTrig, type SpherePoint, type View } from "@/lib/opening";
 import { MundiviMark, Wordmark } from "../brand";
 
 /*
@@ -142,9 +142,11 @@ export default function OpeningStage({ mode, onDone }: { mode: OpeningMode; onDo
     const b = window.setTimeout(() => setStage(2), quick ? 300 : 3600);
     return () => (window.clearTimeout(a), window.clearTimeout(b));
   }, [mode, leave]);
+  // Focus goes to the scene itself (read out by screen readers); Tab reaches the buttons, and
+  // no button shows a focus ring that nobody asked for.
   useEffect(() => {
-    if (stage >= 1) goBtn.current?.focus({ preventScroll: true });
-  }, [stage]);
+    root.current?.focus({ preventScroll: true });
+  }, []);
 
   // ---- The drawing ----------------------------------------------------------------------------
   useEffect(() => {
@@ -181,7 +183,9 @@ export default function OpeningStage({ mode, onDone }: { mode: OpeningMode; onDo
       H = cv.clientHeight;
       cv.width = Math.round(W * dpr);
       cv.height = Math.round(H * dpr);
-      layout.current = sceneLayout(W, H, mode === "splash");
+      // Room for the words as they really are (their size depends on the screen and the font).
+      const words = box.querySelector<HTMLElement>(".opening-words");
+      layout.current = sceneLayout(W, H, mode === "splash", words ? words.offsetHeight + 12 : undefined);
       const { cx, cy, R, side } = layout.current;
       // The words and the hint are placed round the planet.
       box.style.setProperty("--g-cx", `${cx}px`);
@@ -211,10 +215,12 @@ export default function OpeningStage({ mode, onDone }: { mode: OpeningMode; onDo
 
     // The planet's body and its atmosphere, drawn once per size and stamped each frame.
     let bodyR = 0;
+    let bodyDpr = 0;
     const bodyCv = document.createElement("canvas");
     const bodyOf = (R: number) => {
-      if (Math.abs(R - bodyR) < 0.5) return bodyCv;
+      if (Math.abs(R - bodyR) < 0.5 && bodyDpr === dpr) return bodyCv;
       bodyR = R;
+      bodyDpr = dpr;
       const S = Math.ceil(R * 1.24 * 2 * dpr);
       bodyCv.width = bodyCv.height = S;
       const b = bodyCv.getContext("2d")!;
@@ -587,9 +593,18 @@ export default function OpeningStage({ mode, onDone }: { mode: OpeningMode; onDo
   };
 
   const pickedN = picked ? counts.current.get(picked.id) ?? 0 : 0;
+  const hello = `${greeting(new Date().getHours())}${home.name ? `, ${home.name}` : ""}`;
 
   return createPortal(
-    <div ref={root} className={`opening ${out ? "is-out" : ""} ${mode === "splash" ? "is-splash" : ""}`} role="dialog" aria-modal="true" aria-labelledby="opening-title">
+    <div
+      ref={root}
+      className={`opening ${out ? "is-out" : ""} ${mode === "splash" ? "is-splash" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="opening-title"
+      aria-describedby="opening-desc"
+      tabIndex={-1}
+    >
       <span className="opening-mark" aria-hidden>
         <MundiviMark size={44} ring="#0a1533" />
       </span>
@@ -604,48 +619,77 @@ export default function OpeningStage({ mode, onDone }: { mode: OpeningMode; onDo
         onPointerCancel={() => (drag.current = null)}
         onKeyDown={onKey}
       />
-      {mode === "full" && (
-        <button type="button" className="opening-skip" onClick={() => leave()}>
-          Skip <X size={14} aria-hidden />
-        </button>
-      )}
-      {mode === "full" && stage >= 2 && !touched && !picked && (
-        <p className="opening-hint" aria-hidden>
-          <Hand size={15} aria-hidden /> Drag to spin · tap a light
-        </p>
-      )}
-      <div className="opening-words" data-on={stage >= 1 || mode === "splash" ? "" : undefined}>
-        <h2 id="opening-title" className="opening-brand">
-          <MundiviMark size={34} ring="#0a1533" />
+
+      {/* The bar: the name on the left, a way out on the right. */}
+      <div className="opening-bar" data-on={stage >= 1 || mode === "splash" ? "" : undefined}>
+        <span className="opening-logo">
+          <MundiviMark size={26} ring="#0a1533" />
           <Wordmark />
-        </h2>
+        </span>
         {mode === "full" && (
-          <>
-            <p className="opening-line">
-              One planet. <em>Every experience.</em>
-            </p>
-            {picked ? (
-              <div className="opening-pick" aria-live="polite">
-                <MapPin size={16} aria-hidden />
-                <span className="min-w-0">
-                  <strong>{picked.name}</strong>, {picked.country}
-                  <span className="block opening-sub tnum">{pickedN > 0 ? `${fmt(pickedN)} things to do` : "Concerts, shows, sport and more"}</span>
-                </span>
-                <button type="button" className="btn btn-primary btn-sm press" onClick={() => leave(picked)}>
-                  Take me there <ArrowRight size={14} aria-hidden />
-                </button>
-              </div>
-            ) : (
-              <p className="opening-sub tnum" aria-live="polite">
-                {total ? <>{fmt(shownTotal)} things to do around the world, right now</> : <>Concerts, sport, shows and festivals, on one planet</>}
-              </p>
-            )}
-            <button ref={goBtn} type="button" className="btn btn-primary opening-go press" onClick={() => leave()}>
-              Start exploring <ArrowRight size={16} aria-hidden />
-            </button>
-          </>
+          <button type="button" className="opening-skip" onClick={() => leave()}>
+            Skip
+          </button>
         )}
       </div>
+
+      {/* How to play with it, shown by a hand rather than told in a box. */}
+      {mode === "full" && stage >= 2 && !touched && !picked && (
+        <>
+          <span className="opening-gesture" aria-hidden>
+            <span className="opening-touch" />
+            <Hand size={30} strokeWidth={1.6} />
+          </span>
+          <p className="opening-caption" aria-hidden>
+            Drag to spin · Tap a light
+          </p>
+        </>
+      )}
+
+      {mode === "full" && (
+        <div className="opening-words" data-on={stage >= 1 ? "" : undefined} aria-live="polite">
+          {picked ? (
+            // The words become the place picked: its name, what's on, and the way there.
+            <div key={picked.id} className="opening-copy is-place">
+              <p className="opening-kicker">{picked.country}</p>
+              <h2 id="opening-title" className="opening-title">{picked.name}</h2>
+              <p id="opening-desc" className="opening-sub tnum">
+                {pickedN > 0 ? `${fmt(pickedN)} things to do, from tonight on` : "Concerts, shows, sport and more"}
+              </p>
+              <div className="opening-actions">
+                <button ref={goBtn} type="button" className="opening-go press" onClick={() => leave(picked)}>
+                  Explore {picked.name} <ArrowRight size={18} aria-hidden />
+                </button>
+                <button type="button" className="opening-alt" onClick={() => choose(null)}>
+                  Keep spinning
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div key="planet" className="opening-copy">
+              <p className="opening-kicker">{hello}</p>
+              <h2 id="opening-title" className="opening-title">
+                One planet.
+                <br />
+                <em>Every experience.</em>
+              </h2>
+              <p id="opening-desc" className="opening-sub tnum">
+                {total ? <>{fmt(shownTotal)} things to do around the world, right now.</> : <>Concerts, sport, shows and festivals, all on one planet.</>}
+              </p>
+              <div className="opening-actions">
+                <button ref={goBtn} type="button" className="opening-go press" onClick={() => leave()}>
+                  Start exploring <ArrowRight size={18} aria-hidden />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {mode === "splash" && (
+        <h2 id="opening-title" className="sr-only">
+          Mundivi
+        </h2>
+      )}
     </div>,
     document.body,
   );
