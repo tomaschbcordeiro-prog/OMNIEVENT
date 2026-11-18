@@ -4529,6 +4529,12 @@ mark.hit {
   color: var(--cyan);
 }
 .phone-tool--spin {
+  display: inline-flex;
+  gap: 0.3rem;
+  width: auto;
+  padding: 0 0.8rem 0 0.65rem;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--on-sun);
   background: linear-gradient(120deg, var(--sun), #ff8a3d 60%, var(--coral));
   border-color: transparent;
@@ -12169,4 +12175,53 @@ nav[aria-label="Breadcrumb"] a,
 .chat-item[data-mine] .chat-time {
   opacity: 1;
   color: rgb(255 255 255 / 0.92);
+}
+
+/* Said once: what the two small buttons on every event do. */
+.icons-tip {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--cyan) 8%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.icons-tip b {
+  color: var(--text);
+}
+.icons-tip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.icons-tip-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.icons-tip-x {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--text-3);
+}
+.icons-tip-x:hover {
+  color: var(--text);
+  background: rgb(15 90 230 / 0.08);
 }

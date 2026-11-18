@@ -56,7 +56,7 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 // The free-text subject is often more specific than the category.
 const SUBJECT_MAP: [RegExp, string][] = [
-  [/jazz/, "jazz"], [/fado/, "traditional"], [/[óo]pera/, "opera"], [/cl[áa]ssica|orquestra|sinf[óo]nic/, "classical"],
+  [/jazz/, "jazz"], [/fado/, "traditional"], [/(?<![\p{L}])[óo]peras?(?![\p{L}])/u, "opera"], [/cl[áa]ssica|orquestra|sinf[óo]nic/, "classical"],
   [/eletr[óo]nica|electr[óo]nica|dj/, "electronic"], [/rock|metal/, "rock-metal"], [/hip[- ]?hop|rap\b/, "hip-hop"],
   [/stand-?up|com[ée]dia|humor/, "stand-up"], [/circo/, "circus"], [/marioneta|fantoche/, "kids-theatre"],
   [/dan[çc]a|ballet|bailado/, "dance"], [/musical/, "musicals"], [/fotografia/, "photography"],

@@ -52,26 +52,34 @@ export interface OaRow {
 
 const COUNTRY: Record<string, string> = { FR: "France", BE: "Belgium", CH: "Switzerland", LU: "Luxembourg", IT: "Italy", ES: "Spain", DE: "Germany", CA: "Canada", MA: "Morocco", MC: "Monaco", RE: "France", GP: "France", MQ: "France", GF: "France", YT: "France", NC: "France", PF: "France" };
 
-// Checked in order on the title and keywords; the first match decides.
+/**
+ * Whole words only ("opéra" but not "opération", "sport" but not "transport", "cours" but
+ * not "concours"): a word starts where no letter comes before it, accented letters included.
+ */
+const words = (body: string) => new RegExp(`(?<![\\p{L}])(?:${body})`, "u");
+
+// Checked in order on the title, the keywords and the agenda's name; the first match decides.
 const KEYWORDS: [RegExp, string][] = [
-  [/jeune public|enfant|famille|conte|marionnette|kids/, "family-shows"],
-  [/op[ée]ra/, "opera"],
-  [/jazz/, "jazz"],
-  [/orchestre|symphon|classique|r[ée]cital|musique de chambre|chorale|choeur/, "classical"],
-  [/festival/, "festivals"],
-  [/concert|musique|chanson|rock|rap\b|[ée]lectro/, "concerts"],
-  [/danse|ballet/, "dance"],
-  [/cirque/, "circus"],
-  [/humour|stand.?up|one.?man/, "stand-up"],
-  [/th[ée][âa]tre|spectacle|com[ée]die/, "plays"],
-  [/cin[ée]ma|projection|film/, "cinema"],
-  [/exposition|expo\b|vernissage|mus[ée]e|galerie/, "art-exhibitions"],
-  [/conf[ée]rence|rencontre|d[ée]bat|lecture|dédicace|d[ée]dicace/, "public-lectures"],
-  [/atelier|stage|initiation|cours/, "creative-workshops"],
-  [/visite|balade|randonn[ée]e|patrimoine|journ[ée]es europ/, "guided-tours"],
-  [/march[ée]|brocante|vide.?grenier|foire|f[êe]te/, "street-festivals"],
-  [/d[ée]gustation|vin|gastronom/, "tastings"],
-  [/course|trail|marathon|sport|match|tournoi/, "sports"],
+  // Jobs and careers first: recruiting days and industry weeks aren't concerts or operas.
+  [words("emploi|recrut|job ?dating|forum (?:de l'|des )?(?:emploi|m[ée]tiers)|m[ée]tiers?(?![\\p{L}])|alternance|insertion|entreprendre|entrepreneur|cr[ée]ation d'entreprise|industri|usines?(?![\\p{L}])|france travail|p[ôo]le emploi|candidat|apprentissage|orientation professionnelle"), "career-fairs"],
+  [words("jeune public|enfants?(?![\\p{L}])|famille|contes?(?![\\p{L}])|marionnette|kids"), "family-shows"],
+  [words("op[ée]ras?(?![\\p{L}])"), "opera"],
+  [words("jazz"), "jazz"],
+  [words("orchestre|symphon|classique|r[ée]cital|musique de chambre|chorale|ch(?:oe|œ)ur"), "classical"],
+  [words("festival"), "festivals"],
+  [words("concerts?(?![\\p{L}])|musiques?(?![\\p{L}])|chanson|rock(?![\\p{L}])|rap(?![\\p{L}])|[ée]lectro(?![\\p{L}])"), "concerts"],
+  [words("danse|ballet"), "dance"],
+  [words("cirque"), "circus"],
+  [words("humour|stand.?up|one.?man"), "stand-up"],
+  [words("th[ée][âa]tre|spectacle|com[ée]die"), "plays"],
+  [words("cin[ée]ma|projection|films?(?![\\p{L}])"), "cinema"],
+  [words("exposition|expo(?![\\p{L}])|vernissage|mus[ée]es?(?![\\p{L}])|galerie"), "art-exhibitions"],
+  [words("conf[ée]rence|rencontre|d[ée]bat|lecture|d[ée]dicace"), "public-lectures"],
+  [words("atelier|stages?(?![\\p{L}])|initiation|cours(?![\\p{L}])"), "creative-workshops"],
+  [words("visite|balade|randonn[ée]e|patrimoine|journ[ée]es europ"), "guided-tours"],
+  [words("march[ée]s?(?![\\p{L}])|brocante|vide.?grenier|foire|f[êe]tes?(?![\\p{L}])"), "street-festivals"],
+  [words("d[ée]gustation|vins?(?![\\p{L}])|gastronom"), "tastings"],
+  [words("course(?![\\p{L}])|trail(?![\\p{L}])|marathon|sports?(?![\\p{L}])|match(?![\\p{L}])|tournoi"), "sports"],
 ];
 
 export function mapOaCategory(title: string, keywords: string[]): string {
@@ -141,7 +149,7 @@ export function normalizeOpenAgenda(rows: OaRow[], syncedAt: string, now = Date.
       });
 
     const keywords = Array.isArray(r.keywords_fr) ? r.keywords_fr : typeof r.keywords_fr === "string" ? r.keywords_fr.split(/[;,]/) : [];
-    const cat = mapOaCategory(title, keywords);
+    const cat = mapOaCategory(title, [...keywords, r.originagenda_title ?? ""]);
     const firstEnd = Date.parse(r.firstdate_end ?? "");
     // Several sessions or a run over days: shown from the first session to the last.
     const multi = lastEnd - start > 24 * 3600000;

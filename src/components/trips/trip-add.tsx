@@ -447,10 +447,10 @@ export function TripDock() {
         <Link href={`/trips/${active.id}`} className="trip-dock-pass" onClick={() => rememberTrip(active.id)}>
           <span className="trip-dock-emoji" aria-hidden>{active.emoji ?? "✈️"}</span>
           <span className="min-w-0">
-            <span className="block t-micro text-text-3 leading-none">Your trip</span>
+            <span className="block t-micro text-text-3 leading-none">Events you add go to</span>
             <span className="block font-semibold truncate leading-tight">{active.name}</span>
           </span>
-          <span className="trip-dock-count tnum" key={active.eventIds.length}>{active.eventIds.length}</span>
+          <span className="trip-dock-count tnum" key={active.eventIds.length} title={`${active.eventIds.length} ${active.eventIds.length === 1 ? "event" : "events"} in this trip`} aria-label={`${active.eventIds.length} ${active.eventIds.length === 1 ? "event" : "events"} in it`}>{active.eventIds.length}</span>
         </Link>
       ) : null}
     </div>

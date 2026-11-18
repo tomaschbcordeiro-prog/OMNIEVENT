@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUp, ArrowUpDown, CalendarDays, LayoutGrid, List, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
+import { ArrowUp, ArrowUpDown, Bookmark, CalendarDays, LayoutGrid, List, Plane, Plus, SlidersHorizontal, X, Loader2, Map as MapIcon } from "lucide-react";
 import { rememberSearch } from "@/lib/search/session";
 import { hasWhereOrWhen } from "@/lib/search/summary";
 import type { EventCard, Paged, SearchFilters } from "@/lib/types";
@@ -146,16 +146,16 @@ export function EventsBrowser({
         )}
 
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-line pb-3">
-          <p className="t-small text-text-2 tnum mr-auto flex items-center gap-2" aria-live="polite">
+          <p className="t-small text-text-2 tnum mr-auto flex items-center gap-2 max-sm:basis-full" aria-live="polite">
             {pending && <Loader2 size={14} className="animate-spin" aria-hidden />}
             {result.total.toLocaleString()} {result.total === 1 ? "event" : "events"}
           </p>
           <Link href={`/?${filtersToParams({ ...filters, page: undefined, pageSize: undefined, sort: undefined })}`} className="btn btn-secondary btn-sm" aria-label="Show on map">
-            <MapIcon size={14} aria-hidden /> <span className="max-sm:hidden">Show on map</span>
+            <MapIcon size={14} aria-hidden /> <span className="max-sm:hidden">Show on map</span><span className="sm:hidden">Map</span>
           </Link>
-          {/* On phones the controls share one row: Filters and Sort as icons (named for screen readers). */}
+          {/* On phones the controls share one row under the count: Map and Filters by name, Sort as an icon. */}
           <button className="btn btn-secondary btn-sm lg:hidden" onClick={() => setDrawer(true)} aria-label={n ? `Filters, ${n} on` : "Filters"}>
-            <SlidersHorizontal size={14} aria-hidden /> <span className="max-sm:hidden">Filters</span>{n ? <span className="text-cyan tnum">{n}</span> : null}
+            <SlidersHorizontal size={14} aria-hidden /> <span>Filters</span>{n ? <span className="text-cyan tnum">{n}</span> : null}
           </button>
           <label className="sr-only" htmlFor="sort">Sort by</label>
           <span className="sort-pick">
@@ -184,6 +184,7 @@ export function EventsBrowser({
         <div className="py-3 empty:hidden">
           <ActiveFilters f={filters} onChange={go} hide={implicitCity && filters.city === implicitCity ? ["city"] : []} />
         </div>
+        {items.length > 0 && layout !== "calendar" && <IconsTip />}
 
         <div className={pending ? "opacity-60 transition-opacity" : ""}>
           {layout === "calendar" ? (
@@ -422,4 +423,45 @@ function useListKeys() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+}
+
+/**
+ * What the two small buttons on every event do, said once: the bookmark saves it, the plane
+ * puts it in a trip. Closed, it stays closed.
+ */
+function IconsTip() {
+  const KEY = "omnievent:tip-icons";
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    try {
+      setShow(!localStorage.getItem(KEY));
+    } catch {
+      // private mode: no tip
+    }
+  }, []);
+  if (!show) return null;
+  const close = () => {
+    setShow(false);
+    try {
+      localStorage.setItem(KEY, "1");
+    } catch {
+      // private mode
+    }
+  };
+  return (
+    <aside className="icons-tip panel-in" aria-label="What the buttons on each event do">
+      <span className="icons-tip-item">
+        <span className="icons-tip-icon" aria-hidden><Bookmark size={14} /></span>
+        <span><b>Save</b> it: find it later in Saved</span>
+      </span>
+      <span className="icons-tip-item">
+        <span className="icons-tip-icon trip-btn" aria-hidden>
+          <Plane size={14} />
+          <span className="trip-btn-badge"><Plus size={8} strokeWidth={4} /></span>
+        </span>
+        <span><b>Add it to a trip</b>: plan where and when</span>
+      </span>
+      <button type="button" className="icons-tip-x" onClick={close} aria-label="Got it, hide this tip"><X size={14} aria-hidden /></button>
+    </aside>
+  );
 }

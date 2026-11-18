@@ -76,7 +76,12 @@ export function RouteMap({ stops, active, follow, centre, onPick }: { stops: Rou
     void import("@/lib/map/maplibre").then(({ maplibregl: ml }) => {
       if (gone) return;
       pins.current.forEach((p) => p.remove());
+      // Two tracks at the same place: their pins sit side by side, both easy to tap.
+      const seen = new Map<string, number>();
       pins.current = stops.map((s, i) => {
+        const at = `${s.lat.toFixed(4)},${s.lng.toFixed(4)}`;
+        const k = seen.get(at) ?? 0;
+        seen.set(at, k + 1);
         const el = document.createElement("button");
         el.type = "button";
         el.className = "tape-pin";
@@ -85,7 +90,7 @@ export function RouteMap({ stops, active, follow, centre, onPick }: { stops: Rou
         el.toggleAttribute("data-active", i === activeNow.current);
         el.setAttribute("aria-label", `Track ${i + 1}: ${s.title}`);
         el.addEventListener("click", () => pick.current(i));
-        return new ml.Marker({ element: el }).setLngLat([s.lng, s.lat]).addTo(m);
+        return new ml.Marker({ element: el, offset: k ? [k * 26, -k * 6] : [0, 0] }).setLngLat([s.lng, s.lat]).addTo(m);
       });
       // One line per day: the walk or ride between that day's tracks.
       const days: number[][][] = [];

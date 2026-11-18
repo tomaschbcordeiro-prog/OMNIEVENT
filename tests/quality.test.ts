@@ -31,4 +31,9 @@ describe("company and industry days", () => {
   it("are dull too", () => {
     expect(isDull(card("Semaine de l'industrie chez VINCI Energies Océan Indien", "VINCI – Sainte-Clotilde", "food-drink"))).toBe(true);
   });
+  it("job fairs and job-centre contact points come after the outings", () => {
+    expect(isDull({ title: "Opération Pyrénées : façonnez votre avenir", venueName: "Tarbes", categorySlug: "career-fairs", groupSlug: "conferences", imageUrl: "x" })).toBe(true);
+    expect(isDull({ title: "point contact Verchocq", venueName: "Verchocq - Agence MARCONNELLE", categorySlug: "culture", groupSlug: "culture", imageUrl: "x" })).toBe(true);
+    expect(isDull({ title: "Concert de l'harmonie", venueName: "Salle des fêtes", categorySlug: "concerts", groupSlug: "music", imageUrl: "x" })).toBe(false);
+  });
 });

@@ -70,14 +70,14 @@ export function JoinTrip({ invite, initialCode = "" }: { invite?: string; initia
             className="field pin-field tnum"
             value={typed.length > 4 ? `${typed.slice(0, 4)}-${typed.slice(4)}` : typed}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="K7QM-2XPA"
+            placeholder="XXXX-XXXX"
             autoComplete="one-time-code"
             autoCapitalize="characters"
             spellCheck={false}
             inputMode="text"
             aria-describedby="pin-help"
           />
-          <p id="pin-help" className="t-micro text-text-2 mt-1.5">8 letters and numbers. Whoever invited you finds it in their trip, under Together.</p>
+          <p id="pin-help" className="t-micro text-text-2 mt-1.5">8 letters and numbers, like K7QM-2XPA. Whoever invited you finds it in their trip: they tap Invite (or People).</p>
           {error && <p className="mt-3 t-small text-bad" role="alert">{error}</p>}
           <button type="submit" className="btn btn-primary press mt-4 w-full" disabled={busy || typed.length !== 8}>
             {busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowRight size={16} aria-hidden />} Find the trip

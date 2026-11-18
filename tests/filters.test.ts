@@ -1,3 +1,4 @@
+import { isDull } from "@/lib/quality";
 import { describe, it, expect, beforeAll } from "vitest";
 import { ensureFresh, searchEvents, clusterEvents, getEventView } from "@/lib/store";
 import { descendantsOf, getCategory } from "@/lib/categories";
@@ -57,7 +58,7 @@ describe("filters only let through what was asked for", () => {
   const days = Array.from({ length: 7 }, (_, i): [string, string] => [ymd(Date.now() + i * DAY), ymd(Date.now() + i * DAY)]);
   it.each([...ranges, ...days])("date order follows the dates shown, %s to %s", (from, to) => {
     const items = all({ from, to, sort: "date" }).filter((c) => !c.ongoing && !c.hoursUnknown && c.eventType !== "daily_attraction");
-    for (let i = 1; i < items.length; i++) expect([items[i].title, Date.parse(items[i].start) >= Date.parse(items[i - 1].start)]).toEqual([items[i].title, true]);
+    expectDateOrder(items);
   });
 
   it("without dates, nothing that has already ended shows", () => {
@@ -161,3 +162,14 @@ describe("search survives incomplete records", () => {
     expect(__testing.textScore(card, ["rock"])).toBe(0);
   });
 });
+
+/** Day by day (UTC days, as the search sorts); within a day, by start time, except that listings few go out for (job fairs, information sessions) come after the rest of their day. */
+function expectDateOrder(items: { title: string; start: string; venueName: string; categorySlug: string; groupSlug: string; imageUrl?: string }[]) {
+  const day = (c: { start: string }) => Math.floor(Date.parse(c.start) / 86_400_000);
+  for (let i = 1; i < items.length; i++) {
+    const [a, b] = [items[i - 1], items[i]];
+    expect([b.title, day(b) >= day(a)]).toEqual([b.title, true]);
+    if (day(a) === day(b) && isDull(a) === isDull(b)) expect([b.title, Date.parse(b.start) >= Date.parse(a.start)]).toEqual([b.title, true]);
+    if (day(a) === day(b)) expect([b.title, !(isDull(a) && !isDull(b))]).toEqual([b.title, true]);
+  }
+}

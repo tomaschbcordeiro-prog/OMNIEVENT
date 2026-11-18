@@ -54,7 +54,7 @@ export interface HelEvent {
 
 const MAP: [RegExp, string][] = [
   [/children|lapset|lasten|kids|famil|perhe/, "family-shows"],
-  [/opera|ooppera/, "opera"],
+  [/(?<![\p{L}])(?:operas?|ooppera)(?![\p{L}])/u, "opera"],
   [/jazz/, "jazz"],
   [/classical|klassinen/, "classical"],
   [/concert|konsert|music|musiikki/, "concerts"],
@@ -66,7 +66,7 @@ const MAP: [RegExp, string][] = [
   [/lecture|luento|talk|keskustelu/, "public-lectures"],
   [/workshop|työpaja|course|kurssi/, "creative-workshops"],
   [/festival/, "festivals"],
-  [/sport|liikunta|urheilu|exercise/, "sports"],
+  [/(?<![\p{L}])(?:sports?|liikunta|urheilu|exercise)/u, "sports"],
   [/tour|kierros|walk/, "guided-tours"],
 ];
 

@@ -38,7 +38,7 @@ type Geo = { lat: number; lng: number } | null;
 const TYPE: [RegExp, string][] = [
   [/exposi/i, "art-exhibitions"], [/concert|m[uú]sica/i, "concerts"], [/teatro/i, "plays"], [/dan[cç]a/i, "dance"],
   [/confer|semin|col[oó]quio|debate|palestra/i, "public-lectures"], [/oficina|workshop|forma[cç]/i, "creative-workshops"],
-  [/visita/i, "guided-tours"], [/cinema|filme/i, "cinema"], [/festival/i, "festivals"], [/[oó]pera/i, "opera"],
+  [/visita/i, "guided-tours"], [/cinema|filme/i, "cinema"], [/festival/i, "festivals"], [/(?<![\p{L}])[oó]peras?(?![\p{L}])/iu, "opera"],
 ];
 
 export function mapCpCategory(e: Pick<CpEvent, "Type" | "Theme">): string {

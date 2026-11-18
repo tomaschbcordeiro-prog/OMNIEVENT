@@ -437,7 +437,7 @@ export function TripView({ id }: { id: string }) {
             {stops.length > 0 && (
               <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
                 <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
-                <span>View</span>
+                <span>Play</span>
               </button>
             )}
             <button type="button" className="trip-share press" onClick={() => setTogether(true)} aria-label={trip.group ? "People on this trip and invitations" : "Plan this trip together: invite people"} data-shared={trip.group ? "" : undefined}>
@@ -471,7 +471,14 @@ export function TripView({ id }: { id: string }) {
               <button type="button" role="tab" aria-selected={view === "agenda"} className="seg-btn" onClick={() => setView("agenda")}>Agenda</button>
               <button type="button" role="tab" aria-selected={view === "cities"} className="seg-btn" onClick={() => setView("cities")}>Cities</button>
               <button type="button" role="tab" aria-selected={view === "money"} className="seg-btn" onClick={() => (setView("money"), sheet.setSnap("full"))}>
-                Money{(trip.expenses?.length ?? 0) > 0 && <span className="seg-note tnum">{Math.round(moneySummary({ expenses: trip.expenses ?? [], currency: trip.currency }).total).toLocaleString("en-GB")}</span>}
+                Money{(trip.expenses?.length ?? 0) > 0 && <span className="seg-note tnum">{(() => {
+                  const m = moneySummary({ expenses: trip.expenses ?? [], currency: trip.currency });
+                  try {
+                    return new Intl.NumberFormat("en-GB", { style: "currency", currency: m.currency, maximumFractionDigits: 0 }).format(m.total);
+                  } catch {
+                    return Math.round(m.total).toLocaleString("en-GB");
+                  }
+                })()}</span>}
               </button>
               <button type="button" role="tab" aria-selected={view === "lists"} className="seg-btn" onClick={() => (setView("lists"), sheet.setSnap("full"))}>
                 Lists{(trip.checklist?.length ?? 0) > 0 && <span className="seg-note tnum">{listProgress(trip.checklist ?? []).done}/{listProgress(trip.checklist ?? []).all}</span>}
@@ -553,7 +560,7 @@ export function TripView({ id }: { id: string }) {
         </div>
 
         <footer className="planner-foot trip-actions">
-          {canEdit && <Link href={`/trips/new?edit=${trip.id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> <span className="max-sm:sr-only">Edit route</span></Link>}
+          {canEdit && <Link href={`/trips/new?edit=${trip.id}`} className="btn btn-secondary btn-sm"><Pencil size={14} aria-hidden /> <span><span className="max-sm:hidden">Edit </span>Route</span></Link>}
           <ExportButtons trip={trip} events={events} />
           {trip.group ? (
             <button type="button" className="btn btn-ghost btn-icon btn-sm text-bad" aria-label="Leave this shared trip and remove it from this device" onClick={() => {
@@ -680,8 +687,8 @@ function ExportButtons({ trip, events }: { trip: Trip; events: TripEvent[] }) {
   };
   return (
     <>
-      <button type="button" className="btn btn-secondary btn-sm" onClick={ics}><Download size={14} aria-hidden /> <span className="max-sm:sr-only">Calendar</span></button>
-      <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copy()}>{copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />} <span className="max-sm:sr-only">{copied ? "Copied" : "Copy"}</span></button>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={ics}><Download size={14} aria-hidden /> <span>Calendar</span></button>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copy()}>{copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />} <span>{copied ? "Copied" : "Copy"}</span></button>
     </>
   );
 }

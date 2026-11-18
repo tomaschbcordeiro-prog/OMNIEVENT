@@ -26,6 +26,17 @@ describe("OpenAgenda", () => {
     expect(mapOaCategory("Vide-grenier du village", [])).toBe("street-festivals");
     expect(mapOaCategory("Exposition", ["peinture"])).toBe("art-exhibitions");
   });
+  it("reads whole words, so a job fair isn't an opera or a concert", () => {
+    expect(mapOaCategory("Opération Pyrénées : façonnez votre avenir dans l'industrie", [])).toBe("career-fairs");
+    expect(mapOaCategory("Forum de l'emploi saisonnier", [])).toBe("career-fairs");
+    expect(mapOaCategory("Concertation sur le transport urbain", [])).toBe("culture");
+    expect(mapOaCategory("Concours de pâtisserie", [])).toBe("culture");
+    expect(mapOaCategory("Soirée opéra : La Traviata", [])).toBe("opera");
+    expect(mapOaCategory("Concert de l'harmonie", [])).toBe("concerts");
+    expect(mapOaCategory("Cours de yoga", [])).toBe("creative-workshops");
+    expect(mapOaCategory("Le Petit Prince, contes pour enfants", [])).toBe("family-shows");
+    expect(mapOaCategory("Démonstration", ["électronique"])).toBe("culture");
+  });
   it("normalises a village event with price and venue", () => {
     const out = normalizeOpenAgenda([row()], "x", now);
     expect(out.events[0]).toMatchObject({ title: "Concert de l'harmonie", categorySlug: "concerts", timeZone: "Europe/Paris", start: "2026-11-14T19:30:00.000Z" });

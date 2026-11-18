@@ -833,10 +833,10 @@ export function DiscoverClient() {
               <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold text-on-sun hover:brightness-105">
                 <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
               </button>
-              <button type="button" onClick={startFlight} className="nf-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
+              <button type="button" onClick={startFlight} title="A guided flight over tonight's events around the world" className="nf-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
                 <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight
               </button>
-              <Link href="/mixtape" className="mx-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
+              <Link href="/mixtape" title="A weekend plan made for you, from real events" className="mx-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
                 <span className="mx-cta-tape" aria-hidden>📼</span> Mixtape <span className="nf-cta-new" aria-label="new">NEW</span>
               </Link>
             </div>
@@ -909,8 +909,8 @@ export function DiscoverClient() {
           />
           </div>
           <div className="hidden compact:flex items-center gap-1.5 shrink-0 pb-px">
-            <button type="button" className="phone-tool phone-tool--spin press" aria-label="Spin the globe: land on a random event" onClick={startSpin}>
-              <Dices size={19} aria-hidden />
+            <button type="button" className="phone-tool phone-tool--spin press" aria-label="Surprise me: spin the globe and land on a random event" onClick={startSpin}>
+              <Dices size={18} aria-hidden /> <span>Surprise</span>
             </button>
             <button type="button" className="phone-tool press" aria-label="Map tools" aria-expanded={tools} onClick={() => setTools((t) => !t)}>
               <Ellipsis size={19} aria-hidden />

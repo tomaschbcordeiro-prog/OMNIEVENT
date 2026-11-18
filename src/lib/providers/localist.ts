@@ -52,7 +52,7 @@ export interface LocalistHost {
 }
 
 const MAP: [RegExp, string][] = [
-  [/opera/, "opera"], [/jazz/, "jazz"], [/orchestra|symphony|chamber|classical|recital/, "classical"], [/concert|music|choir|band\b/, "concerts"],
+  [/(?<![\p{L}])operas?(?![\p{L}])/u, "opera"], [/jazz/, "jazz"], [/orchestra|symphony|chamber|classical|recital/, "classical"], [/concert|music|choir|band\b/, "concerts"],
   [/dance/, "dance"], [/theat|play\b|drama|musical/, "plays"], [/comedy|improv/, "stand-up"], [/film|cinema|screening|movie/, "cinema"],
   [/exhibit|gallery|museum|art show/, "art-exhibitions"], [/athletic|sport|game\b|basketball|football|soccer|hockey|baseball|volleyball|tennis|swim|track|lacrosse|softball|wrestling|golf/, "sports"],
   [/tour|walk|garden|hike/, "guided-tours"], [/festival/, "festivals"], [/fair|market/, "street-festivals"], [/workshop|class\b|craft/, "creative-workshops"],

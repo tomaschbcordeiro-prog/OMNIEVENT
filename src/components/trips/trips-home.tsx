@@ -161,7 +161,7 @@ function Meter({ Icon, label, more, have, need }: { Icon: typeof Plus; label: st
       <span className="trip-meter-top">
         <Icon size={13} aria-hidden />
         <span className="tnum font-semibold">{done ? <Check size={13} aria-label="All set" /> : `${have}/${need}`}</span>
-        <span className="truncate">{label}{more && <span className="max-sm:hidden"> {more}</span>}</span>
+        <span className="leading-tight">{label}{more && <span> {more}</span>}</span>
       </span>
       <span className="trip-meter-bar" aria-hidden><span style={{ width: `${Math.round((have / need) * 100)}%` }} /></span>
     </li>
@@ -226,7 +226,7 @@ function TripCard({ trip: t, i, today }: { trip: Trip; i: number; today: string 
       <div className="trip-card-actions">
         {stops.length > 0 && (
           <Link href={`/trips/${t.id}?show=1`} className="trip-pass-view press" aria-label={`View ${t.name} as a film`}>
-            <span aria-hidden><Play size={10} fill="currentColor" /></span> View trip
+            <span aria-hidden><Play size={10} fill="currentColor" /></span> Play trip
           </Link>
         )}
         {!past && (

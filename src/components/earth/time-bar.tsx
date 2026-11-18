@@ -181,7 +181,7 @@ export function TimeBar({
           title="Travel in time"
           className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full pl-2.5 pr-3 bg-text text-on-ink hover:bg-cyan transition-colors text-[13px] font-semibold"
         >
-          <Play size={13} aria-hidden className="translate-x-[1px]" /> Timeline
+          <Play size={13} aria-hidden className="translate-x-[1px]" /> Day by day
         </button>
         {items.map((i) => {
           const on = active === i.id;

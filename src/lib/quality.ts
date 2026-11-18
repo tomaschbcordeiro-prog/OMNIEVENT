@@ -17,6 +17,7 @@ const DULL_TITLE = new RegExp(
     "conseil municipal", "city council", "c[âa]mara municipal", "intervention", "visite (de |d')?(l'|la |le )?(entreprise|usine|coll[èe]ge|lyc[ée]e|[ée]cole)",
     "semaine de l'industrie", "industry week", "journ[ée]e (de l')?entreprise", "visite d'entreprise", "salon (de l')?emploi", "salon professionnel",
     "coll[èe]ge [\\p{L}]", "lyc[ée]e [\\p{L}]", "[ée]cole (primaire|maternelle|[ée]l[ée]mentaire)",
+    "point (de )?contact", "entreprendre et", "s'ins[ée]rer", "insertion professionnelle", "france travail",
   ].join("|"),
   "iu",
 );
@@ -37,6 +38,8 @@ export function isShouting(title: string): boolean {
 export function dullness(c: Pick<EventCard, "title" | "venueName" | "categorySlug" | "groupSlug" | "imageUrl">): number {
   let d = 0;
   if (DULL_TITLE.test(c.title)) d += 2;
+  // Job and career fairs are real events, but not an outing: after the rest of their day.
+  if (c.categorySlug === "career-fairs") d += 2;
   if (DULL_PLACE.test(c.venueName ?? "")) d += 1;
   if (isShouting(c.title)) d += 1;
   if (d && (SOFT_KINDS.has(c.groupSlug) || SOFT_KINDS.has(c.categorySlug))) d += 0.5;
