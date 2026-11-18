@@ -8,8 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/trips/ideas" },
 };
 
-// Today's ideas: the page is made again each hour, with the day's seed in it.
-export const revalidate = 3600;
+// Today's ideas: the day's seed goes in, so they change each day.
 
 export default function TripIdeasPage() {
   return (

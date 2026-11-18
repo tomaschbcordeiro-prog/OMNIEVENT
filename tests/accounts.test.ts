@@ -7,7 +7,7 @@ const laptop = "l".repeat(32);
 const other = "o".repeat(32);
 const T = "e:tm-1";
 const meta = { target: T, title: "Gig", href: "/events/gig" };
-const maria = { firstName: "Maria", lastName: "Costa", username: "maria.costa", email: "Maria@Example.com", password: "fado-e-sardinhas" };
+const maria = { firstName: "Maria", lastName: "Costa", username: "maria.costa", email: "Maria@Example.com", password: "fado-e-sardinhas-assadas" };
 
 beforeEach(() => resetMemory());
 
@@ -18,7 +18,7 @@ describe("accounts", () => {
     expect(await accountInfo(p.id)).toEqual({ email: "maria@example.com", username: "maria.costa", firstName: "Maria", lastName: "Costa" });
     expect(await idForUsername("@Maria.Costa")).toBe(p.id);
     // The password itself is never stored.
-    expect(JSON.stringify(await cmd(["GET", `c:acct:${p.id}`]))).not.toContain("fado-e-sardinhas");
+    expect(JSON.stringify(await cmd(["GET", `c:acct:${p.id}`]))).not.toContain("fado-e-sardinhas-assadas");
   });
 
   it("keeps usernames and emails unique", async () => {
@@ -33,7 +33,7 @@ describe("accounts", () => {
     const p = await signUp(phone, maria, "ip1");
     await expect(signIn(laptop, { login: "maria@example.com", password: "wrong password" }, "ip3")).rejects.toThrow(/Wrong/);
     expect(await memberOf(laptop)).not.toBe(p.id);
-    expect((await signIn(laptop, { login: "@maria.costa", password: "fado-e-sardinhas" }, "ip3")).id).toBe(p.id);
+    expect((await signIn(laptop, { login: "@maria.costa", password: "fado-e-sardinhas-assadas" }, "ip3")).id).toBe(p.id);
     expect(await memberOf(laptop)).toBe(p.id);
     const post = await createPost(laptop, { target: T, text: "Posted from the laptop" }, meta, "ip3");
     expect(post.author).toBe(p.id);
@@ -60,9 +60,9 @@ describe("accounts", () => {
     expect(edited).toMatchObject({ name: "Maria João Costa", username: "mjc", bio: "Fado lover" });
     expect(await idForUsername("maria.costa")).toBeUndefined();
     expect(await idForUsername("mjc")).toBe(p.id);
-    await expect(changePassword(phone, { current: "nope nope", next: "new password 1" }, "ip1")).rejects.toThrow(/current password/);
-    await changePassword(phone, { current: "fado-e-sardinhas", next: "new password 1" }, "ip1");
-    expect((await signIn(laptop, { login: "mj@example.com", password: "new password 1" }, "ip3")).id).toBe(p.id);
+    await expect(changePassword(phone, { current: "nope nope", next: "a brand new password 1" }, "ip1")).rejects.toThrow(/current password/);
+    await changePassword(phone, { current: "fado-e-sardinhas-assadas", next: "a brand new password 1" }, "ip1");
+    expect((await signIn(laptop, { login: "mj@example.com", password: "a brand new password 1" }, "ip3")).id).toBe(p.id);
   });
 
   it("validates usernames, emails and passwords", async () => {
@@ -72,7 +72,7 @@ describe("accounts", () => {
     expect(() => cleanUsername("ana silva")).toThrow();
     expect(cleanEmail(" Ana@Mail.PT ")).toBe("ana@mail.pt");
     expect(() => cleanEmail("ana@mail")).toThrow();
-    await expect(signUp(phone, { ...maria, password: "short" }, "ip")).rejects.toThrow(/8 characters/);
+    await expect(signUp(phone, { ...maria, password: "short" }, "ip")).rejects.toThrow(/15 characters/);
     await expect(signUp(phone, { ...maria, firstName: "<b>" }, "ip")).rejects.toThrow(/First name/);
   });
 });
@@ -83,11 +83,11 @@ describe("deleting an account", () => {
     const p = await signUp(phone, maria, "ip1");
     await setPlan(phone, T, "going", meta);
     await expect(deleteAccount(phone, { password: "nope nope" })).rejects.toThrow(/password/);
-    await deleteAccount(phone, { password: "fado-e-sardinhas" });
+    await deleteAccount(phone, { password: "fado-e-sardinhas-assadas" });
     expect(await getProfile(p.id)).toBeUndefined();
     expect(await idForUsername("maria.costa")).toBeUndefined();
     expect(await cmd(["SISMEMBER", `c:go:${T}`, p.id])).toBe(0);
-    await expect(signIn(laptop, { login: "maria.costa", password: "fado-e-sardinhas" }, "ip3")).rejects.toThrow(/Wrong/);
+    await expect(signIn(laptop, { login: "maria.costa", password: "fado-e-sardinhas-assadas" }, "ip3")).rejects.toThrow(/Wrong/);
     // The username and email can be used again.
     expect((await signUp(other, maria, "ip2")).username).toBe("maria.costa");
   });

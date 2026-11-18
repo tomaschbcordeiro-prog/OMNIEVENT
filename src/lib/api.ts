@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 import { log } from "./log";
@@ -66,6 +67,8 @@ export function redactSecrets(text: string): string {
  */
 export function sameOrigin(req: Request): boolean {
   if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return true;
+  // Browsers also say how the request came about; another site's page is refused outright.
+  if (req.headers.get("sec-fetch-site") === "cross-site") return false;
   const origin = req.headers.get("origin");
   if (!origin) return true;
   if (origin === "null") return false;
@@ -82,7 +85,11 @@ export function handler<A extends unknown[]>(fn: (...args: A) => Promise<Respons
   return async (...args: A): Promise<Response> => {
     try {
       const req = args[0];
-      if (req instanceof Request && !sameOrigin(req)) return apiError(403, "cross_site", "Requests that change something must come from this site.");
+      if (req instanceof Request) {
+        if (!sameOrigin(req)) return apiError(403, "cross_site", "Requests that change something must come from this site.");
+        // A ceiling for every API answer, whatever each route allows on its own: ten a second per address.
+        if (!rateLimit(`api:${clientKey(req)}`, 600)) return apiError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
+      }
       return await fn(...args);
     } catch (err) {
       log("error", "unhandled api error", { err: String(err), stack: err instanceof Error ? err.stack : undefined });
@@ -111,4 +118,16 @@ export function rateLimit(key: string, limit = 120, windowMs = 60000): boolean {
  */
 export function clientKey(req: Request): string {
   return req.headers.get("x-real-ip") || req.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
+}
+
+/**
+ * Whether the request carries `Authorization: Bearer <secret>` (Vercel Cron sends CRON_SECRET
+ * this way). Compared in constant time over hashes, so the answer's timing says nothing about
+ * how much of a guess was right, or how long the secret is.
+ */
+export function hasBearer(req: Request, secret: string | undefined): boolean {
+  if (!secret) return false;
+  const got = createHash("sha256").update(req.headers.get("authorization") ?? "").digest();
+  const want = createHash("sha256").update(`Bearer ${secret}`).digest();
+  return timingSafeEqual(got, want);
 }

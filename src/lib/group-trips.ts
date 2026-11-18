@@ -16,7 +16,8 @@ import { applyChecked, cleanContent, cleanOp, describeOps, line, TripShareError,
  * - Changes arrive as small operations on single items and are applied in turn under a short
  *   lock, so changes made at the same time on different things all stay. Each trip keeps a
  *   short history: who changed what, when.
- * - Keys: g:trip:<id> (JSON), g:code:<PIN> → id, g:inv:<token> → id, g:lock:<id>.
+ * - Keys: g:trip:<id> (JSON), g:code:<PIN> → id, g:inv:<token> → id, g:lock:<id>. Each
+ *   expires two years after the trip last changed.
  */
 
 export type Role = "owner" | "editor" | "viewer";
@@ -109,10 +110,20 @@ async function read(id: string): Promise<GroupDoc | null> {
   }
 }
 
+/**
+ * Kept while it's in use: a shared trip nobody has changed for two years is deleted from the
+ * server, with its link and PIN (each member still has their own copy on their device).
+ */
+const KEEP_SECONDS = 730 * 86400;
+
 async function write(doc: GroupDoc) {
   const body = JSON.stringify(doc);
   if (body.length > MAX_BYTES) throw new CommunityError("This trip has grown too big to save. Take out a few things you no longer need.", 413);
-  await cmd(["SET", tripKey(doc.id), body]);
+  await pipe([
+    ["SET", tripKey(doc.id), body, "EX", KEEP_SECONDS],
+    ["EXPIRE", codeKey(doc.code), KEEP_SECONDS],
+    ["EXPIRE", invKey(doc.invite), KEEP_SECONDS],
+  ]);
 }
 
 /** Runs `fn` on the trip with nobody else changing it meanwhile. */
@@ -203,8 +214,8 @@ export async function createGroup(rawContent: unknown, rawName: unknown, ip: str
     updatedAt: now(),
   };
   logLine(doc, owner.name, "started planning together");
+  await pipe([["SET", codeKey(doc.code), doc.id, "EX", KEEP_SECONDS], ["SET", invKey(doc.invite), doc.id, "EX", KEEP_SECONDS]]);
   await write(doc);
-  await pipe([["SET", codeKey(doc.code), doc.id], ["SET", invKey(doc.invite), doc.id]]);
   return { key, view: view(doc, owner) };
 }
 
@@ -366,7 +377,7 @@ export async function manageGroup(id: string, key: unknown, raw: Record<string, 
         await pipe([["DEL", codeKey(doc.code)], ["DEL", invKey(doc.invite)]]);
         doc.code = newPin();
         doc.invite = newToken();
-        await pipe([["SET", codeKey(doc.code), doc.id], ["SET", invKey(doc.invite), doc.id]]);
+        await pipe([["SET", codeKey(doc.code), doc.id, "EX", KEEP_SECONDS], ["SET", invKey(doc.invite), doc.id, "EX", KEEP_SECONDS]]);
         logLine(doc, me.name, "made a new link and PIN (the old ones stopped working)");
         break;
       }

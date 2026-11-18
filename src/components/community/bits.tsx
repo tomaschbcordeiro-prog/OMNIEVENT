@@ -6,6 +6,7 @@ import { Check, ChevronDown, Eye, EyeOff, LogOut, Star, X } from "lucide-react";
 import { AVATARS, BADGES, USERNAME_RE, type Profile, type PublicProfile } from "@/lib/community/types";
 import { communityPost, deleteAccount, getMe, hasAccount, refreshMe, setMe, signIn, signOut, signUp, useMe } from "@/lib/community/client";
 import { toast } from "../toast";
+import { PASSWORD_MAX, PASSWORD_MIN, passwordLength, passwordProblem } from "@/lib/community/password-rules";
 
 export function Avatar({ p, size = 36, className = "" }: { p?: Pick<Profile, "avatar" | "hue" | "name"> | null; size?: number; className?: string }) {
   return (
@@ -146,17 +147,45 @@ const slug = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "");
 
-function PasswordField({ id, label, value, onChange, autoComplete }: { id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
+function PasswordField({ id, label, value, onChange, autoComplete, who }: { id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string; who?: { username?: string; email?: string } }) {
   const [show, setShow] = useState(false);
+  // A new password says, while it's typed, how far there is to go and what would be refused.
+  const isNew = autoComplete === "new-password";
+  const n = passwordLength(value);
+  const problem = isNew && n >= PASSWORD_MIN ? passwordProblem(value.normalize("NFKC"), who) : null;
+  const hintId = `${id}-hint`;
   return (
     <div>
       <label htmlFor={id} className="label">{label}</label>
       <div className="relative">
-        <input id={id} type={show ? "text" : "password"} className="field w-full pr-11" value={value} minLength={8} maxLength={128} autoComplete={autoComplete} onChange={(e) => onChange(e.target.value)} required />
+        <input
+          id={id}
+          type={show ? "text" : "password"}
+          className="field w-full pr-11"
+          value={value}
+          minLength={isNew ? PASSWORD_MIN : undefined}
+          maxLength={PASSWORD_MAX}
+          autoComplete={autoComplete}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          aria-describedby={isNew ? hintId : undefined}
+          aria-invalid={problem ? true : undefined}
+        />
         <button type="button" className="absolute right-1 top-1/2 -translate-y-1/2 btn btn-ghost btn-icon btn-sm" aria-label={show ? "Hide password" : "Show password"} onClick={() => setShow((v) => !v)}>
           {show ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
         </button>
       </div>
+      {isNew && (
+        <p id={hintId} className={`t-small mt-1 ${problem ? "text-bad" : n >= PASSWORD_MIN ? "text-ok" : "text-text-3"}`} aria-live="polite">
+          {problem
+            ? problem
+            : n >= PASSWORD_MIN
+              ? "Long enough. ✓ We'll also check it hasn't leaked from another site."
+              : n === 0
+                ? `At least ${PASSWORD_MIN} characters. A few words together is easiest, like “sardines at midnight in Porto”.`
+                : `${PASSWORD_MIN - n} more character${PASSWORD_MIN - n === 1 ? "" : "s"} to go. Spaces count.`}
+        </p>
+      )}
     </div>
   );
 }
@@ -198,7 +227,8 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
   // Errors are shown next to the field they're about; anything else under the form.
   const [emailTouched, setEmailTouched] = useState(false);
   const emailBad = emailTouched && email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const errField = mode === "signin" || !error ? null : /username/i.test(error) ? "user" : /e-?mail/i.test(error) ? "email" : /password/i.test(error) && mode !== "edit" ? "pw" : /\bname\b/i.test(error) ? "name" : null;
+  // Anything about the password goes under the password, even when it names the username.
+  const errField = mode === "signin" || !error ? null : /password/i.test(error) ? (mode !== "edit" ? "pw" : null) : /username/i.test(error) ? "user" : /e-?mail/i.test(error) ? "email" : /\bname\b/i.test(error) ? "name" : null;
   const fieldError = (f: string, id: string) => errField === f && <p id={id} role="alert" className="t-small text-bad mt-1">{error}</p>;
   const shownName = `${firstName} ${lastName}`.trim() || "Your name";
   const run = async (fn: () => Promise<void>) => {
@@ -339,7 +369,7 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
               </div>
               {mode !== "edit" && (
                 <div>
-                  <PasswordField id="acc-pw" label="Password" value={password} onChange={setPassword} autoComplete="new-password" />
+                  <PasswordField id="acc-pw" label="Password" value={password} onChange={setPassword} autoComplete="new-password" who={{ username, email }} />
                   {fieldError("pw", "acc-pw-err")}
                 </div>
               )}
@@ -382,7 +412,7 @@ function AccountDialog({ initial, onClose }: { initial: AccountMode; onClose: (o
                   {pwOpen && (
                     <div className="px-3 pb-3 grid gap-2">
                       <PasswordField id="acc-cur" label="Current password" value={currentPw} onChange={setCurrentPw} autoComplete="current-password" />
-                      <PasswordField id="acc-new" label="New password" value={nextPw} onChange={setNextPw} autoComplete="new-password" />
+                      <PasswordField id="acc-new" label="New password" value={nextPw} onChange={setNextPw} autoComplete="new-password" who={{ username: account?.username, email: account?.email }} />
                     </div>
                   )}
                 </details>

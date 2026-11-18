@@ -2,6 +2,8 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import tzlookup from "@photostructure/tz-lookup";
 import { z } from "zod";
+
+z.config({ jitless: true });
 import { cmd, pipe, type Cmd } from "./community/kv";
 import { CommunityError, limit, requireProfile } from "./community/service";
 import { getCategory, groupOf } from "./categories";

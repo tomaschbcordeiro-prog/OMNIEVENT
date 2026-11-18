@@ -4,6 +4,7 @@ import { getCategory } from "@/lib/categories";
 import { formatMoney } from "@/lib/format";
 import { PosterArt, POSTER_H, POSTER_W, isPosterStyle, type PosterData } from "@/lib/studio/poster";
 import { loadOgFonts } from "@/lib/og-fonts";
+import { clientKey, rateLimit } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -14,6 +15,8 @@ export const maxDuration = 30;
  * so each one is cached for good.
  */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Drawing a picture costs time on the server: thirty a minute per visitor (the CDN keeps each one).
+  if (!rateLimit(`poster:${clientKey(req)}`, 30)) return new Response("Too many requests", { status: 429, headers: { "Retry-After": "60" } });
   const { id } = await params;
   if (!/^ue[a-z0-9]{8}$/.test(id)) return new Response("Not found", { status: 404 });
   const style = new URL(req.url).searchParams.get("s");

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { ensureFresh, getEventView } from "@/lib/store";
-import { apiError } from "@/lib/api";
+import { apiError, clientKey, rateLimit } from "@/lib/api";
 import { calendar, vevent } from "@/lib/ics";
 
 // Background data syncs keep running after the response, up to this many seconds.
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/events/:slug/ics — iCalendar file for the event. */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
+  if (!rateLimit(`ics:${clientKey(req)}`, 60)) return apiError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
   const { slug } = await ctx.params;
   await ensureFresh();
   const e = getEventView(slug);

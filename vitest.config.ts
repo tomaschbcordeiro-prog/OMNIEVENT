@@ -10,5 +10,5 @@ export default defineConfig({
   },
   // Components are compiled the way Next compiles them (no React import needed).
   esbuild: { jsx: "automatic" },
-  test: { include: ["tests/**/*.test.ts"], environment: "node" },
+  test: { include: ["tests/**/*.test.ts"], environment: "node", env: { PASSWORD_BREACH_CHECK: "off" } },
 });

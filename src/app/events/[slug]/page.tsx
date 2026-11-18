@@ -30,13 +30,8 @@ import { TicketStamp } from "@/components/ticket";
 import { snapOf } from "@/lib/after-event";
 import { TicketReturn } from "@/components/ticket-return";
 
-// Event pages are the same for everyone: each is kept ready (on the network edge) and
-// rebuilt at most every ten minutes, so it opens at once. None is built ahead of time.
-export const revalidate = 600;
-export const dynamicParams = true;
-export async function generateStaticParams() {
-  return [];
-}
+// Made for each visit (every page carries its own script nonce, see src/middleware.ts); the
+// event itself comes from memory, so this stays quick.
 type P = Promise<{ slug: string }>;
 
 /** An event a member just listed may not have reached this server yet: read the listings again once. */

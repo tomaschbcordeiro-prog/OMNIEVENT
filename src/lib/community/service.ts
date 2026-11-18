@@ -1,5 +1,6 @@
 import "server-only";
-import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { checkHash, hashPassword, newPasswordProblem, wasteTime } from "./passwords";
 import { cmd, pairs, persistent, pipe, type Cmd } from "./kv";
 import { safetyProblem } from "./safety";
 import {
@@ -182,17 +183,35 @@ export async function requireProfile(secret: string): Promise<Profile> {
 
 interface Account extends AccountInfo {
   id: string;
-  /** scrypt: "s1$salt$hash", base64. */
+  /** scrypt: "s2$salt$hash" (or the older, lighter "s1$…"), base64. */
   pw: string;
   createdAt: string;
 }
 
-const SESSION_TTL = 400 * 86400;
+/*
+ * Sessions (OWASP Session Management, NIST SP 800-63B): a browser stays signed in while it's
+ * used, and is signed out after 30 days without a visit, and in any case 90 days after signing
+ * in. The key is a hash of the browser's secret, so the store never holds the secret itself.
+ * Stored as "<account>|<day signed in>|<day last seen>" (days since 1970); an older plain
+ * "<account>" starts its 90 days the next time it's used.
+ */
+export const SESSION_IDLE_DAYS = 30;
+export const SESSION_MAX_DAYS = 90;
+const SESSION_TTL = SESSION_MAX_DAYS * 86400;
+const today = () => Math.floor(Date.now() / 86_400_000);
 const sessionKey = (secret: string) => `c:sess:${memberId(secret)}`;
+const sessionValue = (id: string, born: number, seen: number) => `${id}|${born}|${seen}`;
+/** Seconds the session may still last: the idle time, but never past its 90 days. */
+const sessionEx = (born: number, now = today()) => Math.max(60, Math.min(SESSION_IDLE_DAYS, born + SESSION_MAX_DAYS - now) * 86400);
+function parseSession(raw: unknown): { id: string; born?: number; seen?: number } | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  const [id, born, seen] = raw.split("|");
+  return born === undefined ? { id } : { id, born: Number(born), seen: Number(seen) };
+}
 /** Every signed-in browser of an account, so they can all be signed out at once. */
 const sessionsOf = (id: string) => `c:ss:${id}`;
 const openSession = (secret: string, id: string): Cmd[] => [
-  ["SET", sessionKey(secret), id, "EX", SESSION_TTL],
+  ["SET", sessionKey(secret), sessionValue(id, today(), today()), "EX", sessionEx(today())],
   ["SADD", sessionsOf(id), sessionKey(secret)],
   ["EXPIRE", sessionsOf(id), SESSION_TTL],
 ];
@@ -207,8 +226,19 @@ const RESERVED = new Set(["admin", "administrator", "omnievent", "mundivi", "sup
 /** Who a browser secret is: the account it is signed in to, else its pre-account profile. */
 export async function memberOf(secret: unknown): Promise<string | undefined> {
   if (typeof secret !== "string" || secret.length < 20) return undefined;
-  const session = await cmd(["GET", sessionKey(secret)]);
-  return typeof session === "string" ? session : memberId(secret);
+  const key = sessionKey(secret);
+  const s = parseSession(await cmd(["GET", key]));
+  if (!s) return memberId(secret);
+  const now = today();
+  const born = s.born ?? now;
+  // Past its 90 days: signed out.
+  if (now - born >= SESSION_MAX_DAYS) {
+    await pipe([["DEL", key], ["SREM", sessionsOf(s.id), key]]);
+    return memberId(secret);
+  }
+  // Seen today: its 30 days start again (one write a day at most).
+  if (s.seen !== now) await cmd(["SET", key, sessionValue(s.id, born, now), "EX", sessionEx(born, now)]);
+  return s.id;
 }
 
 function personName(raw: unknown, what: string): string {
@@ -231,41 +261,12 @@ export function cleanEmail(raw: unknown): string {
   return e;
 }
 
-// The passwords tried first in every attack, and what people pick for sites like this one.
-const COMMON = new Set([
-  "password", "password1", "password12", "password123", "passw0rd", "12345678", "123456789", "1234567890", "12341234", "87654321",
-  "11111111", "00000000", "qwertyui", "qwertyuiop", "qwerty123", "qwerty12", "1q2w3e4r", "1qaz2wsx", "abc12345", "abcd1234",
-  "iloveyou", "letmein1", "welcome1", "football", "sunshine", "princess", "admin123", "aaaaaaaa", "senha123", "contraseña",
-  "benfica1", "sporting", "fcporto1", "portugal", "lisboa123", "omnievent", "mundivi", "concerto", "festival", "tickets1", "bilhetes",
-]);
-
-function checkPassword(raw: unknown, who?: { username?: string; email?: string }): string {
-  const pw = String(raw ?? "");
-  if (pw.length < 8) throw new CommunityError("Use at least 8 characters for the password.");
-  if (pw.length > 128) throw new CommunityError("That password is too long.");
-  const low = pw.toLowerCase();
-  if (COMMON.has(low) || /^(.)\1+$/.test(pw) || /^(?:0?123456789|abcdefgh)/.test(low))
-    throw new CommunityError("That password is too easy to guess. Try a few words together, like a short sentence.");
-  const local = who?.email?.split("@")[0];
-  if ((who?.username && who.username.length >= 4 && low.includes(who.username)) || (local && local.length >= 4 && low.includes(local)))
-    throw new CommunityError("Don't use your username or email in the password.");
-  return pw.normalize("NFKC");
-}
-
-const derive = (pw: string, salt: Buffer) =>
-  new Promise<Buffer>((resolve, reject) => scrypt(pw, salt, 32, { N: 16384, r: 8, p: 1 }, (err, key) => (err ? reject(err) : resolve(key))));
-
-async function hashPassword(pw: string): Promise<string> {
-  const salt = randomBytes(16);
-  return `s1$${salt.toString("base64")}$${(await derive(pw, salt)).toString("base64")}`;
-}
-
-async function passwordMatches(pw: string, stored: string): Promise<boolean> {
-  const [v, salt, hash] = stored.split("$");
-  if (v !== "s1" || !salt || !hash) return false;
-  const got = await derive(pw, Buffer.from(salt, "base64"));
-  const want = Buffer.from(hash, "base64");
-  return got.length === want.length && timingSafeEqual(got, want);
+/** A new password, checked (src/lib/community/passwords.ts): throws what to change. */
+async function checkPassword(raw: unknown, who: { username?: string; email?: string }): Promise<string> {
+  const pw = String(raw ?? "").normalize("NFKC");
+  const problem = await newPasswordProblem(pw, who);
+  if (problem) throw new CommunityError(problem);
+  return pw;
 }
 
 /** Claims a unique key (username or email) for an account; false if someone else has it. */
@@ -294,7 +295,7 @@ export async function signUp(secret: string, input: Record<string, unknown>, ip:
   const lastName = personName(input.lastName, "Last name");
   const username = cleanUsername(input.username);
   const email = cleanEmail(input.email);
-  const password = checkPassword(input.password, { username, email });
+  const password = await checkPassword(input.password, { username, email });
   const current = await memberOf(secret);
   const prev = current ? json<Profile>(await cmd(["GET", `c:u:${current}`])) : undefined;
   if (prev?.username) throw new CommunityError("You're already signed in. Sign out first to create another account.", 409);
@@ -341,19 +342,21 @@ export async function signIn(secret: string, input: Record<string, unknown>, ip:
   const id = await cmd(["GET", login.includes("@") ? `c:email:${login}` : `c:uname:${login}`]);
   await limit(`acct:${typeof id === "string" ? id : login}:signin`, 10, 900);
   const account = typeof id === "string" ? await getAccount(id) : undefined;
-  const pw = String(input.password ?? "").normalize("NFKC");
+  const pw = String(input.password ?? "").normalize("NFKC").slice(0, 1024);
   // An unknown login takes as long to refuse as a wrong password, so timing doesn't reveal who has an account.
-  if (!account) await derive(pw, DUMMY_SALT);
-  if (!account || !(await passwordMatches(pw, account.pw))) throw new CommunityError("Wrong email, username or password.", 401);
-  await pipe(openSession(secret, account.id));
+  if (!account) await wasteTime(pw);
+  const check = account ? await checkHash(pw, account.pw) : { ok: false, upgrade: false };
+  if (!account || !check.ok) throw new CommunityError("Wrong email, username or password.", 401);
+  // A password stored the older, lighter way is stored again the stronger way, now that we have it.
+  if (check.upgrade) account.pw = await hashPassword(pw);
+  await pipe([...(check.upgrade ? ([["SET", `c:acct:${account.id}`, JSON.stringify(account)]] as Cmd[]) : []), ...openSession(secret, account.id)]);
   return (await getProfile(account.id))!;
 }
-const DUMMY_SALT = randomBytes(16);
 
 export async function signOut(secret: string) {
   if (typeof secret !== "string" || secret.length < 20) return;
-  const id = await cmd(["GET", sessionKey(secret)]);
-  await pipe([["DEL", sessionKey(secret)], ...(typeof id === "string" ? ([["SREM", sessionsOf(id), sessionKey(secret)]] as Cmd[]) : [])]);
+  const id = parseSession(await cmd(["GET", sessionKey(secret)]))?.id;
+  await pipe([["DEL", sessionKey(secret)], ...(id ? ([["SREM", sessionsOf(id), sessionKey(secret)]] as Cmd[]) : [])]);
 }
 
 /** Signs the account out on every device, this one included. */
@@ -368,8 +371,8 @@ export async function changePassword(secret: string, input: Record<string, unkno
   const me = await requireProfile(secret);
   await limit(`acct:${me.id}:signin`, 10, 900);
   const account = await getAccount(me.id);
-  if (!account || !(await passwordMatches(String(input.current ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("Your current password isn't right.", 401);
-  account.pw = await hashPassword(checkPassword(input.next, { username: account.username, email: account.email }));
+  if (!account || !(await checkHash(String(input.current ?? "").normalize("NFKC").slice(0, 1024), account.pw)).ok) throw new CommunityError("Your current password isn't right.", 401);
+  account.pw = await hashPassword(await checkPassword(input.next, { username: account.username, email: account.email }));
   await cmd(["SET", `c:acct:${me.id}`, JSON.stringify(account)]);
   // A new password signs out every other device: whoever knew the old one is out.
   await endSessions(me.id, sessionKey(secret));
@@ -384,7 +387,7 @@ export async function deleteAccount(secret: string, input: Record<string, unknow
   const me = await requireProfile(secret);
   await limit(`acct:${me.id}:signin`, 10, 900);
   const account = await getAccount(me.id);
-  if (!account || !(await passwordMatches(String(input.password ?? "").normalize("NFKC"), account.pw))) throw new CommunityError("That password isn't right.", 401);
+  if (!account || !(await checkHash(String(input.password ?? "").normalize("NFKC").slice(0, 1024), account.pw)).ok) throw new CommunityError("That password isn't right.", 401);
   await endSessions(me.id);
   const [plansRaw, follows, followers] = await pipe([["ZRANGE", `c:ugo:${me.id}`, 0, -1], ["SMEMBERS", `c:fol:${me.id}`], ["SMEMBERS", `c:fby:${me.id}`]]);
   const plans = ((plansRaw as string[]) ?? []).filter(Boolean);

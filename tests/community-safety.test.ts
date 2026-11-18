@@ -15,7 +15,7 @@ const ids: Record<string, string> = {};
 
 /** Accounts made "yesterday", so links are allowed unless a test says otherwise. */
 async function member(secret: string, name: string, ageMs = 2 * 86400000) {
-  const p = await signUp(secret, { firstName: name, lastName: "Teste", username: name.toLowerCase(), email: `${name.toLowerCase()}@example.com`, password: "três palavras juntas" }, `ip-${name}`);
+  const p = await signUp(secret, { firstName: name, lastName: "Teste", username: name.toLowerCase(), email: `${name.toLowerCase()}@example.com`, password: "três palavras juntas aqui" }, `ip-${name}`);
   await cmd(["SET", `c:u:${p.id}`, JSON.stringify({ ...p, createdAt: new Date(Date.now() - ageMs).toISOString() })]);
   ids[secret] = p.id;
 }
@@ -123,17 +123,19 @@ describe("reactions, mentions and meet-ups", () => {
 
 describe("account safety", () => {
   it("refuses easy passwords and ones made of the username", async () => {
-    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quim", email: "q@example.com", password: "password123" }, "ip9")).rejects.toThrow(/too easy/);
-    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quimzé", email: "q@example.com", password: "aaaaaaaaaa" }, "ip9")).rejects.toThrow();
-    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "joaquim", email: "q@example.com", password: "joaquim2026!" }, "ip9")).rejects.toThrow(/username or email/);
+    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quim", email: "q@example.com", password: "password123" }, "ip9")).rejects.toThrow(/15 characters/);
+    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quim", email: "q@example.com", password: "passwordpassword1" }, "ip9")).rejects.toThrow(/too easy/);
+    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quim", email: "q@example.com", password: "Benfica!1234567890" }, "ip9")).rejects.toThrow(/too easy/);
+    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "quimze", email: "q@example.com", password: "aaaaaaaaaaaaaaaaaa" }, "ip9")).rejects.toThrow(/too easy/);
+    await expect(signUp("q".repeat(32), { firstName: "Q", lastName: "Q", username: "joaquim", email: "q@example.com", password: "joaquim goes to 2026!" }, "ip9")).rejects.toThrow(/username or email/);
   });
   it("signs out other devices when the password changes, and everywhere on request", async () => {
     const laptop = "l".repeat(32);
     const tablet = "t".repeat(32);
-    await signIn(laptop, { login: "ana", password: "três palavras juntas" }, "ip1");
-    await signIn(tablet, { login: "ana", password: "três palavras juntas" }, "ip1");
+    await signIn(laptop, { login: "ana", password: "três palavras juntas aqui" }, "ip1");
+    await signIn(tablet, { login: "ana", password: "três palavras juntas aqui" }, "ip1");
     expect(await memberOf(tablet)).toBe(ids[A]);
-    await changePassword(laptop, { current: "três palavras juntas", next: "outra frase bem longa" }, "ip1");
+    await changePassword(laptop, { current: "três palavras juntas aqui", next: "outra frase bem longa" }, "ip1");
     expect(await memberOf(laptop)).toBe(ids[A]);
     expect(await memberOf(tablet)).not.toBe(ids[A]);
     expect(await memberOf(A)).not.toBe(ids[A]);

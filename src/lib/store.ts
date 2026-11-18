@@ -582,10 +582,22 @@ export async function ensureFresh(opts: { heavy?: boolean } = {}): Promise<void>
  * Reads one source again now (after a member lists, changes or removes an event), waiting for
  * a read already under way to finish first so the new one sees the change.
  */
-export async function refreshSource(id: string): Promise<void> {
+const forcedAt = new Map<string, number>();
+const FORCE_GAP_MS = 10_000;
+
+/**
+ * Reads one source again now (a member's event that may have just been listed elsewhere).
+ * At most once every ten seconds per source and server: asking for made-up addresses over and
+ * over can't make the server read the store over and over. A member's own change (`now`)
+ * always goes through.
+ */
+export async function refreshSource(id: string, { now = false } = {}): Promise<void> {
   const p = activeProviders().find((x) => x.id === id);
   if (!p) return;
   await state.syncing.get(id)?.catch(() => {});
+  const last = forcedAt.get(id) ?? 0;
+  if (!now && Date.now() - last < FORCE_GAP_MS) return;
+  forcedAt.set(id, Date.now());
   await syncProvider(p);
 }
 

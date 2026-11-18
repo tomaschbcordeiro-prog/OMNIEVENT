@@ -1,49 +1,27 @@
-import { Resolver } from "node:dns/promises";
-import { isIP } from "node:net";
 import { clientKey, rateLimit } from "@/lib/api";
 import { THUMB_WIDTHS } from "@/lib/thumb";
 import { loadingNow } from "@/lib/store";
 import { CONTACT_URL } from "@/lib/site";
+import { obviouslyInside, publicAddresses, safeGet, type SafeResponse } from "@/lib/safe-fetch";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
 
 const MAX_BYTES = 12 * 1024 * 1024;
 
-/** Addresses on private, local or reserved networks: never fetched (no reaching inside). */
-function privateAddress(ip: string): boolean {
-  if (isIP(ip) === 4) {
-    const [a, b] = ip.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
-  }
-  const v = ip.toLowerCase();
-  if (v.startsWith("::ffff:")) return privateAddress(v.slice(7));
-  return v === "::" || v === "::1" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe8") || v.startsWith("fe9") || v.startsWith("fea") || v.startsWith("feb") || v.startsWith("ff");
-}
-
 /** The original picture, when ours can't be made: the browser loads it as it would have. */
 const original = (u: string, why: string) =>
   new Response(null, {
     status: 302,
     // A passing reason (busy, too many requests) isn't kept: the next look may get the small one.
-    headers: { Location: u, "Cache-Control": why === "busy" || why === "rate" ? "no-store" : "public, max-age=3600, s-maxage=3600", "X-Img-Fallback": why },
+    // Kept apart from other kinds of request (Vary), so a stored hop is only ever reused for a picture.
+    headers: { Location: u, "Cache-Control": why === "busy" || why === "rate" ? "no-store" : "public, max-age=3600, s-maxage=3600", "X-Img-Fallback": why, Vary: "Sec-Fetch-Dest" },
   });
 
 let inFlight = 0;
 
-// Names are resolved with the DNS client that doesn't use Node's small pool of worker threads
-// (dns.lookup does): slow lookups there held up everything else using that pool, such as
-// unpacking the shared copies a new server loads.
-const resolver = new Resolver({ timeout: 2000, tries: 1 });
-
 /** Only public addresses on the internet. */
-async function publicHost(url: URL): Promise<boolean> {
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIP(host)) return !privateAddress(host);
-  const [v4, v6] = await Promise.all([resolver.resolve4(host).catch(() => [] as string[]), resolver.resolve6(host).catch(() => [] as string[])]);
-  const addrs = [...v4, ...v6];
-  return addrs.length > 0 && !addrs.some((a) => privateAddress(a));
-}
+const publicHost = (url: URL) => publicAddresses(url.hostname).then(() => true, () => false);
 
 /**
  * Sites that didn't answer us lately (some refuse cloud servers): their pictures go straight to
@@ -53,13 +31,13 @@ const unreachable = new Map<string, number>();
 const HOST_PAUSE_MS = 3600000;
 
 /** Fetches a picture, following up to three redirects, each to a public https address. */
-async function fetchImage(start: URL): Promise<Response | string> {
+async function fetchImage(start: URL): Promise<SafeResponse | string> {
   let url = start;
   for (let hop = 0; hop < 4; hop++) {
-    if (!(await publicHost(url))) return "private";
-    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000), headers: { "User-Agent": `Mozilla/5.0 (compatible; Mundivi image preview; +${CONTACT_URL})`, Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
+    const res = await safeGet(url, { timeoutMs: 5000, headers: { "User-Agent": `Mozilla/5.0 (compatible; Mundivi image preview; +${CONTACT_URL})`, Accept: "image/avif,image/webp,image/*;q=0.9,*/*;q=0.5" } });
     if (res.status >= 300 && res.status < 400) {
-      const next = res.headers.get("location");
+      res.cancel();
+      const next = res.headers.location;
       if (!next) return "redirect-without-location";
       url = new URL(next, url);
       if (url.protocol !== "https:") return "redirect-not-https";
@@ -86,6 +64,12 @@ export async function GET(req: Request) {
     return new Response("Bad image address", { status: 400 });
   }
   if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443") || !THUMB_WIDTHS.includes(w as (typeof THUMB_WIDTHS)[number])) return new Response("Bad image request", { status: 400 });
+  // Pictures only: opened as a page (a link someone was sent), this address leads nowhere, so it
+  // can't be used to send people on to another site. Browsers without the header are trusted.
+  const dest = req.headers.get("sec-fetch-dest");
+  if (dest && dest !== "image") return new Response("This address only serves pictures.", { status: 400, headers: { "Cache-Control": "no-store", Vary: "Sec-Fetch-Dest" } });
+  // Somewhere inside a network: neither fetched nor handed back to the browser.
+  if (obviouslyInside(url)) return new Response("Not allowed", { status: 403, headers: { "Cache-Control": "no-store" } });
   if (!rateLimit(`img:${clientKey(req)}`, 400)) return original(url.href, "rate");
 
   if ((unreachable.get(url.hostname) ?? 0) > Date.now()) return original(url.href, "host-paused");
@@ -99,23 +83,29 @@ export async function GET(req: Request) {
     if (!(await publicHost(url))) return new Response("Not allowed", { status: 403 });
     const res = await fetchImage(url);
     if (typeof res === "string") return original(url.href, res);
-    const type = res.headers.get("content-type") ?? "";
-    if (!res.ok) return original(url.href, `status-${res.status}`);
-    if (!type.startsWith("image/") || type.includes("svg")) return original(url.href, `type-${type.split(";")[0].slice(0, 40)}`);
-    if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES || !res.body) return original(url.href, "size");
+    const type = String(res.headers["content-type"] ?? "");
+    if (res.status < 200 || res.status >= 300) {
+      res.cancel();
+      return original(url.href, `status-${res.status}`);
+    }
+    if (!type.startsWith("image/") || type.includes("svg")) {
+      res.cancel();
+      return original(url.href, `type-${type.split(";")[0].slice(0, 40)}`);
+    }
+    if (Number(res.headers["content-length"] ?? 0) > MAX_BYTES) {
+      res.cancel();
+      return original(url.href, "size");
+    }
     // Read with a cap, whatever the server claimed.
-    const chunks: Uint8Array[] = [];
+    const chunks: Buffer[] = [];
     let size = 0;
-    const reader = res.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
+    for await (const chunk of res.body) {
+      size += chunk.byteLength;
       if (size > MAX_BYTES) {
-        await reader.cancel();
+        res.cancel();
         return original(url.href, "size");
       }
-      chunks.push(value);
+      chunks.push(chunk);
     }
     const { default: sharp } = await import("sharp");
     const out = await sharp(Buffer.concat(chunks), { limitInputPixels: 50_000_000, animated: false })
@@ -127,13 +117,15 @@ export async function GET(req: Request) {
       headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=604800, s-maxage=2592000, stale-while-revalidate=604800", "X-Content-Type-Options": "nosniff" },
     });
   } catch (err) {
-    const e = err as Error & { cause?: { code?: string } };
+    const e = err as Error & { code?: string; cause?: { code?: string } };
+    // Somewhere it may not go (a redirect inside, or a name that changed its answer).
+    if (e?.code === "EPRIVATE") return new Response("Not allowed", { status: 403 });
     // A site that times out or drops the connection is left alone for a while.
-    if (e?.name === "TimeoutError" || e?.cause?.code) {
+    if (e?.name === "TimeoutError" || e?.code || e?.cause?.code) {
       unreachable.set(url.hostname, Date.now() + HOST_PAUSE_MS);
       if (unreachable.size > 500) unreachable.delete(unreachable.keys().next().value!);
     }
-    return original(url.href, `error-${String(e?.cause?.code ?? e?.name ?? "unknown").slice(0, 40)}`);
+    return original(url.href, `error-${String(e?.code ?? e?.cause?.code ?? e?.name ?? "unknown").slice(0, 40)}`);
   } finally {
     inFlight--;
   }

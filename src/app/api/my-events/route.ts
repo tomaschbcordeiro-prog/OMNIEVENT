@@ -64,7 +64,7 @@ export const POST = handler(async (req: Request) => {
     }
     // This server shows the change at once; the others pick it up within a minute. Event
     // pages are kept ready for a few minutes: drop those copies so the change shows now.
-    await refreshSource(PROVIDER_ID).catch(() => {});
+    await refreshSource(PROVIDER_ID, { now: true }).catch(() => {});
     try {
       revalidatePath("/events/[slug]", "page");
     } catch {

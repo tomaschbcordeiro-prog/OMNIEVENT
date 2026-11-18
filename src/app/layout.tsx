@@ -13,6 +13,7 @@ import { AppShell } from "@/components/app-shell";
 import { NetworkStatus } from "@/components/network-status";
 import { SITE } from "@/lib/site";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { NavProgress } from "@/components/nav-progress";
 import { IntentPrefetch } from "@/components/intent-prefetch";
 import { TrailRecorder } from "@/components/event-trail";
@@ -58,12 +59,15 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The page's own script nonce (src/middleware.ts): only scripts carrying it may run. Reading
+  // it renders each page for its request, so every page gets a fresh one.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     // data-theme is set by the script below before React starts, hence the warning switched off.
     <html lang="en" className={`${GeistSans.variable} ${display.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body className="min-h-dvh">
         <Suspense fallback={null}>

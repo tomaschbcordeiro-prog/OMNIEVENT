@@ -1,38 +1,27 @@
 import type { NextConfig } from "next";
 
-/**
- * Security headers for every response.
- * - CSP: scripts and styles only from this site (Next's inline bootstrap needs 'unsafe-inline');
- *   pictures from any https source (event images come from hundreds of sites); map tiles and
- *   fonts from the tile servers; MapLibre's workers run from blob: URLs. No plugins, no
- *   framing by other sites.
- * - The rest: no MIME sniffing, no framing, a short referrer to other sites, and no access
- *   to camera, microphone or payment APIs (location only for "near me", on this site).
- */
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://tiles.openfreemap.org https://api.maptiler.com https://tiles.maps.eox.at https://s3.amazonaws.com https://gibs.earthdata.nasa.gov https://api.open-meteo.com",
-  "worker-src 'self' blob:",
-  "child-src 'self' blob:",
-  "frame-src 'none'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
+import { API_CSP } from "./src/lib/csp";
 
+/**
+ * Security headers for every response. Pages also get their own Content-Security-Policy, with
+ * a fresh nonce each time (src/middleware.ts, src/lib/csp.ts); API answers and files get one
+ * where nothing may run.
+ * - HTTPS only, for two years, on this domain and below it (HSTS).
+ * - No MIME sniffing, no framing by other sites, a short referrer to other sites, its own
+ *   browsing context group (no window.opener tricks), and no access to the camera,
+ *   microphone, payments, USB and the like (location only for "near me", on this site).
+ */
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), payment=(), usb=(), geolocation=(self)" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), display-capture=(), browsing-topics=(), geolocation=(self)",
+  },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
 ];
 
 const nextConfig: NextConfig = {
@@ -56,6 +45,7 @@ const nextConfig: NextConfig = {
     const forever = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     return [
       { source: "/:path*", headers: securityHeaders },
+      { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: API_CSP }] },
       { source: "/maplibre/:path*", headers: forever },
       { source: "/fonts/:path*", headers: forever },
     ];

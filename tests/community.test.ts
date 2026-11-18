@@ -16,7 +16,7 @@ const memberId = (secret: string) => ids[secret];
 beforeEach(async () => {
   resetMemory();
   for (const [s, n] of [[A, "Ana"], [B, "Bruno"], [C, "Carla"], [D, "Duda"]])
-    ids[s] = (await signUp(s, { firstName: n, lastName: "Silva", username: n.toLowerCase(), email: `${n.toLowerCase()}@example.com`, password: "correct horse", avatar: "🦊" }, `ip-${n}`)).id;
+    ids[s] = (await signUp(s, { firstName: n, lastName: "Silva", username: n.toLowerCase(), email: `${n.toLowerCase()}@example.com`, password: "correct horse battery", avatar: "🦊" }, `ip-${n}`)).id;
 });
 
 describe("community", () => {

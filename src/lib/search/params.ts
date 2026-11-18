@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { EventStatus, SearchFilters } from "../types";
 
+// Zod checks whether it may compile code at run time (eval); the site's script policy says no,
+// so it isn't even asked.
+z.config({ jitless: true });
+
 /**
  * Single source of truth for encoding filters in URLs. Used by pages (shareable
  * URLs) and API routes (validated with zod — invalid params produce a 400).

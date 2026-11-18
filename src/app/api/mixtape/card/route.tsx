@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { clientKey, rateLimit } from "@/lib/api";
 import { dataReady, ensureFresh, getCards } from "@/lib/store";
 import { getDestination } from "@/lib/destinations";
 import { parseTapeQuery } from "@/lib/mixtape/share";
@@ -33,6 +34,8 @@ function Reel({ tape }: { tape: number }) {
  * address, so each one is cached for good.
  */
 export async function GET(req: Request) {
+  // Drawing a picture costs time on the server: thirty a minute per visitor (the CDN keeps each one).
+  if (!rateLimit(`tape-card:${clientKey(req)}`, 30)) return new Response("Too many requests", { status: 429, headers: { "Retry-After": "60" } });
   const link = parseTapeQuery(new URL(req.url).searchParams);
   const city = link ? getDestination(link.city) : undefined;
   if (!link || !city || city.kind !== "city") return new Response("Not found", { status: 404 });
