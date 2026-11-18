@@ -773,7 +773,7 @@ export function DiscoverClient() {
       <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] compact:top-[calc((var(--header-h)-3rem)/2)] z-20 px-4 compact:px-3 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
         {/* A compact column in the corner: the globe is the page. On phones, the search shares
             the top row with the account button and one row of chips follows: nothing else. */}
-        <div ref={topBox} className="max-w-[min(34rem,100%)]">
+        <div ref={topBox} className="home-hero relative max-w-[min(34rem,100%)]">
           <div className="pointer-events-auto">
             <h1 className={`text-balance on-sky compact:sr-only ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
               <span className="block t-hero">One planet. <em className="text-white/85">Every experience.</em></span>

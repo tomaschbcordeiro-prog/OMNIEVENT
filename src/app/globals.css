@@ -1604,6 +1604,7 @@ body.nf-on header {
 body.nf-on .maplibregl-ctrl-bottom-right {
   top: var(--nf-bar);
   bottom: auto;
+  transform: none;
 }
 /* A soft darkening towards the edges, as through a cabin window. */
 .nf-vignette {
@@ -4593,10 +4594,17 @@ mark.hit {
   flex-shrink: 0;
 }
 
-/* On the globe page, the map's credits sit above the controls at the bottom (phones). */
+/* On the globe page, the map's credits sit above the controls at the bottom (phones). Moved with a
+   transform, not "bottom", so the page doesn't count it as content jumping about. */
 .globe-stage .maplibregl-ctrl-bottom-right {
-  bottom: var(--map-bottom-pad, 0px);
-  transition: bottom 300ms ease;
+  transform: translateY(calc(-1 * var(--map-bottom-pad, 0px)));
+  transition: transform 300ms ease;
+}
+/* Under the opening scene the map's corners aren't seen: left out until it ends, so their
+   settling in doesn't count as the page moving. */
+html[data-intro] .globe-stage .maplibregl-ctrl-bottom-right,
+html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
+  display: none;
 }
 /* Large screens have the full navigation at the top: no bottom bar. */
 @media (min-width: 1024px) {
@@ -12499,6 +12507,8 @@ nav[aria-label="Breadcrumb"] a,
 .opening-sub {
   margin: 0.8rem auto 0;
   max-width: 32ch;
+  /* Two lines kept for it, so the words don't jump when the count of things to do arrives. */
+  min-height: 2.9em;
   font-size: 1rem;
   line-height: 1.45;
   color: rgb(255 255 255 / 0.74);
@@ -12649,3 +12659,59 @@ nav[aria-label="Breadcrumb"] a,
   }
 }
 
+
+/* ---- Soft panels: notes, empty states and invitations sit on a quiet tint, not in a dashed
+   box (the dashed line is kept for what it means: a place to drop or add something). ---- */
+.soft-panel,
+.mx-empty,
+.trips-empty,
+.trip-empty,
+.trip-tip {
+  border: 0 !important;
+  background:
+    radial-gradient(90% 130% at 0% 0%, color-mix(in srgb, var(--cyan) 7%, transparent), transparent 62%),
+    color-mix(in srgb, var(--text) 3.5%, transparent);
+}
+.starter {
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.starter:hover {
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+  color: var(--text);
+}
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
+}
+/* The one-time tip on event lists: a quiet tint, no outline. */
+.icons-tip {
+  border: 0;
+  background:
+    radial-gradient(90% 160% at 0% 0%, color-mix(in srgb, var(--cyan) 12%, transparent), transparent 65%),
+    color-mix(in srgb, var(--text) 3.5%, transparent);
+}
+.icons-tip-icon {
+  border-color: transparent;
+  box-shadow: 0 1px 2px rgb(13 27 51 / 0.08);
+}
+/* The home's words over the globe: a soft pool of sky behind them on a computer, so the map's
+   labels don't run through the title, the search and the chips. */
+@media (min-width: 1024px) {
+  .home-hero::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: -6rem;
+    top: -7rem;
+    width: 50rem;
+    height: 36rem;
+    pointer-events: none;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--sky-top) 82%, transparent) 0%, color-mix(in srgb, var(--sky-top) 48%, transparent) 58%, transparent 100%);
+  }
+}

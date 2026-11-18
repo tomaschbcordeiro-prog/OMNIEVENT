@@ -820,8 +820,9 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     map.setSky(orbit || dark ? SPACE_SKY : DAY_SKY);
     if (map.getLayer("night")) {
       map.setPaintProperty("night", "fill-color", orbit ? "#050B26" : "#1B2A5C");
-      // Three nested twilight bands stack up: deep night ends up about 70% shaded in space view.
-      map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.34 : 0.22, 7, orbit ? 0.22 : 0.12, 10, 0]);
+      // Ten nested twilight bands stack up (lib/map/night.ts), each light, so the shade deepens
+      // smoothly: deep night ends up about 80% shaded in space view, as with the four before.
+      map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.153 : 0.094, 7, orbit ? 0.094 : 0.05, 10, 0]);
     }
     for (const [id, p] of Object.entries(labelPaint(orbit, dark))) {
       if (!map.getLayer(id)) continue;

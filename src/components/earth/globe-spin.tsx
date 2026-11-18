@@ -265,7 +265,7 @@ export function GlobeSpin({
         )}
 
         {phase === "empty" && (
-          <div className="rounded-[var(--radius-m)] border border-dashed border-line-strong p-4 text-center">
+          <div className="rounded-[var(--radius-m)] soft-panel p-4 text-center">
             <p className="text-2xl" aria-hidden>🌵</p>
             <p className="font-semibold mt-1">Nothing like that {when === "tonight" ? "tonight" : when === "weekend" ? "this weekend" : "this week"}</p>
             <p className="t-small text-text-2 mt-0.5">Try another vibe or a different day.</p>

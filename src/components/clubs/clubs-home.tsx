@@ -117,7 +117,7 @@ export function ClubsHome() {
         {!dir && !failed && <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-hidden>{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-64 rounded-[var(--radius-l)]" />)}</div>}
 
         {empty && (
-          <div className="mt-6 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6 sm:p-8">
+          <div className="mt-6 rounded-[var(--radius-l)] soft-panel p-6 sm:p-8">
             <Sparkles size={24} className="text-sun" aria-hidden />
             <p className="t-h3 mt-2">No clubs yet. Found the first one!</p>
             <p className="t-small text-text-2 mt-1">Start from an idea, or make your own.</p>

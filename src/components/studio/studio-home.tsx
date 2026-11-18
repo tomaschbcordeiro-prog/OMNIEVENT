@@ -180,7 +180,7 @@ export function StudioHome() {
             <Link href="/studio/new" className="btn btn-secondary btn-sm">＋ New event</Link>
           </div>
           {loaded && !profile?.username ? (
-            <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+            <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6">
               <p className="font-semibold">Sign in to see the events you&apos;ve listed</p>
               <p className="t-small text-text-2 mt-1">You can start an event now; you&apos;ll be asked for a free account when you publish.</p>
               <button type="button" className="btn btn-ghost btn-sm mt-3" onClick={() => void requireMember(false)}>Sign in</button>
@@ -264,7 +264,7 @@ function MyStudioEvents() {
   if (!rows) return <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>{[0, 1, 2].map((i) => <div key={i} className="skeleton h-56 rounded-[var(--radius-l)]" />)}</div>;
   if (!rows.length)
     return (
-      <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+      <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6">
         <p className="font-semibold">Nothing listed yet</p>
         <p className="t-small text-text-2 mt-1">A concert, a market, a run club, a supper: if it&apos;s happening, put it on the map.</p>
       </div>

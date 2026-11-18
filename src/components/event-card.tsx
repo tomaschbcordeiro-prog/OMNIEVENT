@@ -7,8 +7,8 @@ import { MapPin } from "lucide-react";
 import type { EventCard as Card } from "@/lib/types";
 import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
-import { userActions, useUser } from "@/lib/user/store";
-import { useRef } from "react";
+import { userActions, useUserSelect } from "@/lib/user/store";
+import { useRef, memo } from "react";
 import { toast } from "./toast";
 import { GROUP_HEX } from "@/lib/categories";
 import { snapOf } from "@/lib/after-event";
@@ -137,13 +137,15 @@ function useSwipeToSave(c: Card, saved: boolean) {
   };
 }
 
-export function EventRow({
+// A row only redraws when its own event, or what it shows of you, changes (opening the filters
+// or saving another event leaves the other 79 rows alone).
+export const EventRow = memo(function EventRow({
   c, onSelect, compact = false, highlighted = false, onHover, terms,
 }: { c: Card; onSelect?: (c: Card) => void; compact?: boolean; highlighted?: boolean; onHover?: (c: Card | null) => void; /** Searched words to mark in the title. */ terms?: string[] }) {
-  const user = useUser();
+  const saved = useUserSelect((d) => d.saved.some((s) => s.id === c.id));
+  const currency = useUserSelect((d) => d.prefs.currency);
   const router = useRouter();
   const people = peopleLine(c);
-  const saved = user.saved.some((s) => s.id === c.id);
   const swipe = useSwipeToSave(c, saved);
   const body = (
     <>
@@ -171,14 +173,14 @@ export function EventRow({
         </p>
         {/* One line for price and anything that changes whether you can go; nothing when there's nothing to say. */}
         <div className={`${compact ? "flex" : "flex md:hidden"} flex-wrap items-center gap-1.5 mt-1 empty:hidden`}>
-          <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-micro" quiet />
+          <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={currency} className="t-micro" quiet />
           {c.isDemo && <DemoBadge />}
           <StatusBadge status={c.status} quiet />
           <TripTag c={c} className="!ml-0" />
         </div>
       </div>
       <div className={`${compact ? "hidden" : "hidden md:flex"} flex-col items-end gap-1.5 shrink-0 text-right empty:hidden`}>
-        <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" quiet />
+        <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={currency} className="t-small" quiet />
         {c.isDemo && <DemoBadge />}
         <StatusBadge status={c.status} quiet />
       </div>
@@ -214,10 +216,10 @@ export function EventRow({
       </div>
     </li>
   );
-}
+});
 
-export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
-  const user = useUser();
+export const EventTile = memo(function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
+  const currency = useUserSelect((d) => d.prefs.currency);
   const router = useRouter();
   const people = peopleLine(c);
   return (
@@ -245,7 +247,7 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
             {c.venueName}, {c.city}
           </p>
           <div className="mt-auto pt-2 flex items-end justify-between gap-2">
-            <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={user.prefs.currency} className="t-small" quiet />
+            <Price amount={c.fromPrice?.amount} currency={c.fromPrice?.currency} feesIncluded={c.fromPrice?.feesIncluded} isFree={c.isFree} displayCurrency={currency} className="t-small" quiet />
           </div>
         </div>
       </Link>
@@ -255,4 +257,4 @@ export function EventTile({ c, terms }: { c: Card; terms?: string[] }) {
       </div>
     </li>
   );
-}
+});

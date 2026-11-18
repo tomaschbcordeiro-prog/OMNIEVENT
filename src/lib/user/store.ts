@@ -242,6 +242,27 @@ export function useUser(): UserData {
   );
 }
 
+/**
+ * One slice of the user's data, for components shown many times over (a row in a list of 80
+ * events): they redraw only when their slice changes, not on every save or follow anywhere.
+ * `pick` must return the same value for the same data: a stored array or object as it is, or
+ * a plain value (true/false, a string, a number).
+ */
+export function useUserSelect<T>(pick: (d: UserData) => T): T {
+  return useSyncExternalStore(
+    (l) => {
+      load();
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    () => {
+      load();
+      return pick(data);
+    },
+    () => pick(serverSnapshot),
+  );
+}
+
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
 

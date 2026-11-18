@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, Plane, Plus, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
-import { userActions, useUser, type Trip } from "@/lib/user/store";
+import { userActions, useUser, useUserSelect, type Trip } from "@/lib/user/store";
 import { extendFor, fitSpan, STOP_RADIUS_KM, type Fit } from "@/lib/trip";
 import { haversineKm } from "@/lib/geo";
 import { localDateKey } from "@/lib/format";
@@ -131,18 +131,18 @@ async function fetchEvent(id: string): Promise<TripEvent | null> {
  * trips, those it fits first, and offers to stretch a trip or plan a new one round it.
  */
 export function TripButton({ card, event, id, title, variant = "icon", primary = false, className = "" }: { card?: EventCard; event?: TripEvent; id?: string; title: string; variant?: "icon" | "label" | "bare"; primary?: boolean; className?: string }) {
-  const user = useUser();
+  const trips = useUserSelect((d) => d.trips);
   const btn = useRef<HTMLButtonElement>(null);
   const [menu, setMenu] = useState<TripEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const eid = event?.id ?? card?.id ?? id ?? "";
-  const inTrips = user.trips.filter((t) => t.eventIds.includes(eid));
+  const inTrips = trips.filter((t) => t.eventIds.includes(eid));
   const known = useMemo(() => event ?? (card ? tripSnapOf(card) : null), [event, card]);
   const only = useMemo(() => {
     if (!known) return null;
-    const fits = standing(user.trips, known).filter((s) => s.fit?.ok && !s.has);
+    const fits = standing(trips, known).filter((s) => s.fit?.ok && !s.has);
     return fits.length === 1 && !inTrips.length ? fits[0].trip : null;
-  }, [known, user.trips, inTrips.length]);
+  }, [known, trips, inTrips.length]);
 
   const tap = async () => {
     let e = known;
@@ -189,14 +189,14 @@ export function TripButton({ card, event, id, title, variant = "icon", primary =
 
 /** The trips an event can go in: a popover by the button (a sheet on phones). */
 function TripMenu({ e, anchor, onClose }: { e: TripEvent; anchor: HTMLElement | null; onClose: () => void }) {
-  const user = useUser();
+  const trips = useUserSelect((d) => d.trips);
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; sheet: boolean } | null>(null);
   const rows = useMemo(() => {
-    const list = standing(user.trips, e);
+    const list = standing(trips, e);
     const rank = (s: (typeof list)[number]) => (s.has ? 0 : s.fit?.ok ? 1 : 2);
     return list.sort((a, b) => rank(a) - rank(b) || (a.trip.start ?? "9").localeCompare(b.trip.start ?? "9"));
-  }, [user.trips, e]);
+  }, [trips, e]);
 
   useLayoutEffect(() => {
     const sheet = window.innerWidth < 640;
@@ -292,9 +292,9 @@ function TripMenu({ e, anchor, onClose }: { e: TripEvent; anchor: HTMLElement | 
 
 /** Where an event stands with your trips, as a small tag on its card ("In Benelux", "Fits Benelux"). */
 export function TripTag({ c, className = "" }: { c: EventCard; className?: string }) {
-  const user = useUser();
-  if (!user.trips.length || c.online) return null;
-  const s = standing(user.trips, c);
+  const trips = useUserSelect((d) => d.trips);
+  if (!trips.length || c.online) return null;
+  const s = standing(trips, c);
   const has = s.find((x) => x.has);
   const fits = s.find((x) => x.fit?.ok && !x.has);
   const t = has ?? fits;

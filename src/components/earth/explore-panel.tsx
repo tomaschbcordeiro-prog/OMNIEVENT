@@ -280,7 +280,7 @@ export function ExplorePanel({
             </div>
           )}
           {!error && res && res.total === 0 && (
-            <div className="mt-3 rounded-[var(--radius-m)] border border-dashed border-line-strong p-3">
+            <div className="mt-3 rounded-[var(--radius-m)] soft-panel p-3">
               <p className="t-small font-medium">
                 No events found within {formatKm(near.radiusKm)}
                 {summary.when ? ` for ${summary.when}` : ""}.

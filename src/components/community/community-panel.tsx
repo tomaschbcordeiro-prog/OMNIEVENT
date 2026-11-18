@@ -196,7 +196,7 @@ export function CommunityPanel({
           </div>
         )}
         {thread && posts.length === 0 && (
-          <div className="rounded-[var(--radius-l)] border border-dashed border-line-strong p-6 text-center">
+          <div className="rounded-[var(--radius-l)] soft-panel p-6 text-center">
             <Sparkles size={22} className="mx-auto text-sun" aria-hidden />
             <p className="font-semibold mt-2">Be the first to say something</p>
             <p className="t-small text-text-2 mt-1">{mode === "club" ? "Say hi to the club, or suggest something to go to together." : mode === "event-upcoming" ? "Ask a question, share a tip, or find people to go with." : "Your review helps the next person decide."}</p>

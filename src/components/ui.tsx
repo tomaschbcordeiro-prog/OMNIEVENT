@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Music, Trophy, Drama, Laugh, Sparkles, Clapperboard, Presentation, Cpu, Frame, FerrisWheel, Utensils, MoonStar,
+  Music, Trophy, Drama, Laugh, Sparkles, Clapperboard, Presentation, Cpu, Palette, FerrisWheel, Utensils, MoonStar,
   Baby, Mountain, GraduationCap, Shirt, Landmark, CircleDot, Bookmark, BookmarkCheck, SearchX, TriangleAlert, Info,
   Expand, X, type LucideIcon,
 } from "lucide-react";
@@ -10,7 +10,7 @@ import { formatMoney, STATUS_META } from "@/lib/format";
 import { thumb } from "@/lib/thumb";
 import { convert, FX_SOURCE } from "@/lib/currency";
 import type { EventStatus } from "@/lib/types";
-import { userActions, useUser, type SavedSnap } from "@/lib/user/store";
+import { userActions, useUserSelect, type SavedSnap } from "@/lib/user/store";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "./toast";
@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 
 export const ICONS: Record<string, LucideIcon> = {
   music: Music, trophy: Trophy, drama: Drama, laugh: Laugh, sparkles: Sparkles, clapperboard: Clapperboard,
-  presentation: Presentation, cpu: Cpu, frame: Frame, "ferris-wheel": FerrisWheel, utensils: Utensils,
+  presentation: Presentation, cpu: Cpu, palette: Palette, "ferris-wheel": FerrisWheel, utensils: Utensils,
   "moon-star": MoonStar, baby: Baby, mountain: Mountain, "graduation-cap": GraduationCap, shirt: Shirt,
   landmark: Landmark, "circle-dot": CircleDot,
 };
@@ -290,8 +290,7 @@ export function Price({
 }
 
 export function SaveButton({ id, title, compact = false, className = "", snap }: { id: string; title: string; compact?: boolean; className?: string; /** Kept with the saved event, to show it once it's over. */ snap?: SavedSnap }) {
-  const user = useUser();
-  const saved = user.saved.some((s) => s.id === id);
+  const saved = useUserSelect((d) => d.saved.some((s) => s.id === id));
   const Icon = saved ? BookmarkCheck : Bookmark;
   // A ring that ripples out from the button the moment something is saved.
   const [burst, setBurst] = useState(0);
@@ -321,8 +320,10 @@ export function SaveButton({ id, title, compact = false, className = "", snap }:
 
 export function EmptyState({ title, body, action }: { title: string; body?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-[var(--radius-l)] border border-dashed border-line-strong p-8">
-      <SearchX size={22} className="text-text-3" aria-hidden />
+    <div className="flex flex-col items-start gap-3 rounded-[var(--radius-l)] soft-panel p-8">
+      <span className="empty-icon" aria-hidden>
+        <SearchX size={20} />
+      </span>
       <div>
         <p className="t-h3">{title}</p>
         {body && <div className="t-small text-text-2 mt-1 measure">{body}</div>}

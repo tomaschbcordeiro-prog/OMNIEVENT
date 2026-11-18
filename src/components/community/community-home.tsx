@@ -131,7 +131,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
             </div>
           )}
           {quiet && (
-            <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+            <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6">
               <Sparkles size={24} className="text-sun" aria-hidden />
               <p className="t-h3 mt-2">It&apos;s quiet here. Start something!</p>
               <p className="t-small text-text-2 mt-1">Open an event you&apos;re curious about and say you&apos;re going, ask a question, or rate a venue you know.</p>
@@ -156,7 +156,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
 
           {filter === "following" && !follow && <div className="mt-4 grid gap-3" aria-hidden>{[0, 1].map((i) => <div key={i} className="skeleton h-24" />)}</div>}
           {filter === "following" && follow && follow.following === 0 && (
-            <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+            <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6">
               <Users size={24} className="text-cyan" aria-hidden />
               <p className="t-h3 mt-2">Follow people to see their plans here</p>
               <p className="t-small text-text-2 mt-1">Open someone&apos;s profile (tap their name on any post, or in Top members) and press Follow. Their posts and the events they&apos;re going to will show up here.</p>

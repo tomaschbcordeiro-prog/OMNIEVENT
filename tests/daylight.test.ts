@@ -54,9 +54,9 @@ describe("day and night", () => {
     }
   });
 
-  it("gives four bands as GeoJSON", () => {
+  it("gives a band every 2° of twilight, as GeoJSON", () => {
     const g = nightGeoJSON(new Date(Date.UTC(2026, 10, 9, 12)));
-    expect(g.features.map((f) => f.properties.altitude)).toEqual([0, -6, -12, -18]);
+    expect(g.features.map((f) => f.properties.altitude)).toEqual([0, -2, -4, -6, -8, -10, -12, -14, -16, -18]);
     for (const f of g.features) {
       expect(f.geometry.coordinates.length).toBeGreaterThan(0);
       for (const [ring] of f.geometry.coordinates) {

@@ -49,7 +49,7 @@ export function MyEvents() {
         </Link>
       </div>
       {loaded && !profile?.username ? (
-        <div className="rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+        <div className="rounded-[var(--radius-l)] soft-panel p-6">
           <p className="t-h3">Organising something?</p>
           <p className="t-small text-text-2 mt-1">List it in a few steps and it shows up on the globe, in search and on its city&apos;s page. You&apos;ll need a free account.</p>
           <div className="mt-4 flex gap-2">
@@ -62,7 +62,7 @@ export function MyEvents() {
       ) : !rows ? (
         <div className="grid gap-3" aria-hidden>{[0, 1].map((i) => <div key={i} className="skeleton h-20" />)}</div>
       ) : rows.length === 0 ? (
-        <div className="rounded-[var(--radius-l)] border border-dashed border-line-strong p-6">
+        <div className="rounded-[var(--radius-l)] soft-panel p-6">
           <CalendarPlus size={24} className="text-cyan" aria-hidden />
           <p className="t-h3 mt-2">You haven&apos;t listed anything yet</p>
           <p className="t-small text-text-2 mt-1">A concert, a market, a run club, a supper: if it&apos;s happening, put it on the map.</p>

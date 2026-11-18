@@ -178,7 +178,7 @@ export function ClubView({ slug }: { slug: string }) {
               heading="Wall"
               locked={
                 role ? undefined : (
-                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-l)] border border-dashed border-line-strong p-4">
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-l)] soft-panel p-4">
                     <p className="t-small text-text-2 flex-1">Join the club to post, react and plan meet-ups with its members.</p>
                     <button type="button" className="btn btn-gold btn-sm press" onClick={() => void join()}><UserPlus size={15} aria-hidden /> Join</button>
                   </div>
@@ -269,7 +269,7 @@ function Picks({ page, run, me }: { page: ClubPage; run: Run; me: PublicProfile 
         <h2 id="picks-h" className="t-h2">What we&apos;d go to</h2>
         <p className="t-small text-text-2 mt-1">Events members shared. Vote for the ones you&apos;d go to: the most wanted rise to the top.</p>
         {page.picks.length === 0 ? (
-          <div className="mt-4 rounded-[var(--radius-l)] border border-dashed border-line-strong p-6 text-center">
+          <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6 text-center">
             <p className="text-3xl" aria-hidden>🎟️</p>
             <p className="font-semibold mt-1">Nothing shared yet</p>
             <p className="t-small text-text-2 mt-0.5">{role ? "Find an event on the right, or use “Share with a club” on any event page." : "Members share events here."}</p>
