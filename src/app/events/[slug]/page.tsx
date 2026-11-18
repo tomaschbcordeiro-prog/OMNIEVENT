@@ -164,6 +164,15 @@ export default async function EventPage({ params }: { params: P }) {
   // Kept with the event when it's saved, so it can still be shown (and asked about) once it's over.
   const snap = snapOf({ slug: e.slug, title: e.title, start: e.start, timeZone: e.timeZone, eventType: e.eventType, hoursUnknown: e.hoursUnknown, venueName: v.name, venueSlug: v.slug, imageUrl: e.imageUrl, posterHue: e.posterHue, categorySlug: e.categorySlug });
   // What a trip keeps of it (online events go in no trip).
+  // Going with friends: a trip round this event, opened with its invitation ready to send.
+  const friendsHref = e.online
+    ? undefined
+    : (() => {
+        const q = new URLSearchParams({ date: localDateKey(e.start, e.timeZone), event: e.id, together: "1" });
+        if (v.cityId) q.set("city", v.cityId);
+        else q.set("place", `${v.lat.toFixed(4)},${v.lng.toFixed(4)},${encodeURIComponent(v.city)},${v.countryCode ?? ""}`);
+        return `/trips/new?${q}`;
+      })();
   const tripEvent = e.online ? undefined : { id: e.id, ...snap, lat: v.lat, lng: v.lng, city: v.city, cityId: v.cityId, countryCode: v.countryCode, groupSlug: group, until: e.end && Date.parse(e.end) - Date.parse(e.start) > 86_400_000 ? e.end : undefined };
 
   return (
@@ -259,7 +268,8 @@ export default async function EventPage({ params }: { params: P }) {
                         <span className="block text-text-2">Times not listed by the source, see the official page</span>
                       ) : <span className="block">
                         {formatEventTime(e.start, e.timeZone)}
-                        {showEnd && <> to {formatEventTime(e.end!, e.timeZone)}</>}{" "}
+                        {/* Ending on another day: that day is said too ("to Wed 18 Nov, 02:00"). */}
+                        {showEnd && <> to {localDateKey(e.end!, e.timeZone) !== localDateKey(e.start, e.timeZone) && <>{(({ weekday, day, month }) => `${weekday} ${day} ${month}, `)(formatShortDate(e.end!, e.timeZone))}</>}{formatEventTime(e.end!, e.timeZone)}</>}{" "}
                         <span className="text-text-3">{tzAbbrev(e.start, e.timeZone)}</span>
                       </span>}
                       {e.eventType === "multi_day" && e.end && <span className="block text-text-2">Runs until {formatEventDate(e.end, e.timeZone)}</span>}
@@ -498,6 +508,11 @@ export default async function EventPage({ params }: { params: P }) {
                   <SaveButton id={e.id} title={e.title} snap={snap} />
                   <TicketReturn id={e.id} title={e.title} snap={snap} />
                   {tripEvent && <TripButton variant="label" primary event={tripEvent} title={e.title} />}
+                  {friendsHref && !inactive && (
+                    <Link href={friendsHref} className="btn btn-secondary btn-sm" title="Plan it together: a shared trip round this event, with an invitation to send">
+                      <Users size={14} aria-hidden /> Go with friends
+                    </Link>
+                  )}
                   <ShareButton title={e.title} />
                   <CalendarButton slug={e.slug} />
                   {!inactive && !e.provenance.isDemo && <ShareToClub eventId={e.id} title={e.title} />}

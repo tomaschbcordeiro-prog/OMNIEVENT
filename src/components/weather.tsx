@@ -112,10 +112,16 @@ export function useForecast(lat: number | undefined, lng: number | undefined, da
 }
 
 /** "☁️ 18° overcast" for right now (after a comma, to follow a place name; `bare` without). */
-export function WeatherNow({ lat, lng, bare = false }: { lat: number; lng: number; bare?: boolean }) {
+export function WeatherNow({ lat, lng, bare = false, line = false }: { lat: number; lng: number; bare?: boolean; /** On a line of its own, saying it's now (under an address). */ line?: boolean }) {
   const wx = useForecast(lat, lng);
   if (!wx?.now) return null;
   const look = weatherLook(wx.now.code, wx.now.day);
+  if (line)
+    return (
+      <span className="block t-small text-text-3 mt-1 tnum">
+        Right now: {look.emoji} {wx.now.temp}°, {look.label.toLowerCase()}
+      </span>
+    );
   if (bare)
     return (
       <span className="tnum" title={look.label}>

@@ -154,6 +154,10 @@ export function normalizeBol(raw: BolEvent[], syncedAt: string, now = Date.now()
     if (start === undefined) continue;
     let end = parseLocal(e.endDate, tz);
     if (end !== undefined && end <= start) end = undefined;
+    // Some listings put the end a whole day after the start while saying the show lasts an hour
+    // or two: the stated length is the real one (or yesterday's 3 pm play would be "on now").
+    const stated = minutes(e.duration);
+    if (end !== undefined && stated && stated < 12 * 60 && end - start >= 20 * 3600000 && end - start <= 36 * 3600000) end = start + stated * 60000;
     if ((end ?? start) < now - 3 * 3600000) continue;
 
     const loc = e.location ?? {};

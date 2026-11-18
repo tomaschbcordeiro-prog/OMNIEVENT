@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Dices, MapPin, Search, X } from "lucide-react";
-import { AREAS, countryName, findCountries, findPlaces, ideasPage, LENGTHS, planHref, THEMES, type Area, type IdeaFilter, type Length, type ThemeKey, type TripIdea } from "@/lib/travel/ideas";
+import { AREAS, countryName, findCountries, findPlaces, ideasPage, LENGTHS, planHref, THEME_HUE, THEMES, type Area, type IdeaFilter, type Length, type ThemeKey, type TripIdea } from "@/lib/travel/ideas";
 import { flagOf } from "@/lib/trip";
 import { RouteSketch } from "./route-sketch";
 import { SharedTripsRail } from "./shared-trips";
@@ -14,7 +14,7 @@ import { SharedTripsRail } from "./shared-trips";
  */
 
 const PAGE = 12;
-const HUE: Record<ThemeKey, number> = { s: 199, h: 32, m: 160, f: 12, w: 340, c: 228, i: 186, n: 128, l: 208, a: 276, x: 305, v: 45 };
+const HUE = THEME_HUE;
 
 type Where = { kind: "near"; label: string; lat: number; lng: number } | { kind: "in"; label: string; cc: string };
 

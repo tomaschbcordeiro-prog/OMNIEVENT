@@ -184,6 +184,8 @@ export function TripView({ id }: { id: string }) {
       if (tab !== "cities") sheet.setSnap("full");
     }
     if (sp.get("chat") && trip.group) setChat(true);
+    // Planned to go with friends: the invitation, ready to send.
+    if (sp.get("invite")) setTogether(true);
     if (tab || sp.get("chat")) router.replace(`/trips/${trip.id}`, { scroll: false });
     // Once, when the trip is there.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,7 +221,8 @@ export function TripView({ id }: { id: string }) {
       router.replace(`/trips/${trip.id}`, { scroll: false });
     }
     if (sp.get("hello")) {
-      toast({ title: "Your trip is ready", body: "Tap a city to see what's on while you're there.", emoji: trip.emoji ?? "✈️" });
+      // With the invitation open over it, the note would only be hidden behind.
+      if (!sp.get("invite")) toast({ title: "Your trip is ready", body: "Tap a city to see what's on while you're there.", emoji: trip.emoji ?? "✈️" });
       router.replace(`/trips/${trip.id}`, { scroll: false });
     }
     // Once, when the globe is ready.

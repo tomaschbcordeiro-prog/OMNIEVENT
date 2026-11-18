@@ -27,6 +27,8 @@ export function Footer() {
                 ["/events", "All events"],
                 ["/categories", "Categories"],
                 ["/destinations", "Destinations"],
+                ["/trips", "Trips"],
+                ["/trips/ideas", "Trip ideas"],
                 ["/match", "Event Match"],
                 ["/mixtape", "Mixtape: plan a weekend"],
                 ["/community", "Community"],

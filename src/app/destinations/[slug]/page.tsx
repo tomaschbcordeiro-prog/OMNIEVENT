@@ -23,6 +23,9 @@ import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
 import { CommunityPanel } from "@/components/community/community-panel";
 import { WeatherNow, WeatherWeek } from "@/components/weather";
+import { IdeaRail } from "@/components/trips/idea-rail";
+import { ideasPage } from "@/lib/travel/ideas";
+import { ideaCards } from "@/lib/travel/idea-cards";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -82,6 +85,20 @@ export default async function DestinationPage({ params, searchParams }: { params
   const parent = d.kind === "city" ? getDestination(d.parentId!) : d.kind === "country" ? CONTINENTS.find((c) => c.id === d.continent) : undefined;
   // Neighbouring cities (the same country, busiest first): the way on from the end of the page.
   const siblings = d.kind === "city" && parent && parent.kind === "country" ? citiesIn(parent).filter((c) => c.id !== d.id && (stats[c.id]?.total ?? 0) > 0).sort((a, b) => (stats[b.id]?.total ?? 0) - (stats[a.id]?.total ?? 0)).slice(0, 8) : [];
+
+  // Ready-made trips from here (a city) or around here (a country), new ones each day.
+  const ideaSeed = new Date().toISOString().slice(0, 10);
+  const ideas = ideaCards(
+    d.kind === "city"
+      ? ideasPage(ideaSeed, 0, 3, { near: { lat: d.lat, lng: d.lng } }).ideas
+      : d.kind === "country" && d.countryCode
+        ? ideasPage(ideaSeed, 0, 3, { cc: d.countryCode }).ideas
+        : [],
+  );
+  const ideasMore =
+    d.kind === "city"
+      ? `/trips/ideas?near=${encodeURIComponent(`${d.lat.toFixed(3)},${d.lng.toFixed(3)},${d.name}`)}`
+      : `/trips/ideas?in=${d.countryCode ?? ""}`;
 
   return (
     <>
@@ -228,6 +245,7 @@ export default async function DestinationPage({ params, searchParams }: { params
 
         {d.kind === "city" && <CommunityPanel target={`d:${d.id}`} mode="city" title={d.name} />}
 
+        <IdeaRail cards={ideas} title={d.kind === "city" ? `Trips from ${d.name}` : `Trip ideas in ${d.name}`} moreHref={ideasMore} moreLabel="More trip ideas" />
         <section id="all" className="mt-12 scroll-mt-24" aria-labelledby="alltitle">
           <Suspense fallback={null}>
             <ContinueSearch keep={["near", "nearLabel", "city", "country", "continent"]} />

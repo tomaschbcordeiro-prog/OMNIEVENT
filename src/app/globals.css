@@ -12225,3 +12225,10 @@ nav[aria-label="Breadcrumb"] a,
   color: var(--text);
   background: rgb(15 90 230 / 0.08);
 }
+
+/* A sheet or dialog open: notes come in at the top, clear of its buttons (the filters' "Show N
+   events", a form's Save). */
+:root:has([aria-modal="true"], .trip-menu.is-sheet) .toaster {
+  bottom: auto !important;
+  top: max(0.75rem, env(safe-area-inset-top));
+}

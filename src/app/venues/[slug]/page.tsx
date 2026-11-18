@@ -15,6 +15,7 @@ import { getCategory } from "@/lib/categories";
 import { shareImage, ldJson, venueLd } from "@/lib/structured-data";
 import { KeepExploring } from "@/components/keep-exploring";
 import { haversineKm } from "@/lib/geo";
+import { getCountry } from "@/lib/destinations";
 
 export const dynamic = "force-dynamic";
 type P = Promise<{ slug: string }>;
@@ -41,6 +42,9 @@ export default async function VenuePage({ params }: { params: P }) {
   if (!v) notFound();
   const res = searchEvents({ venue: v.slug, pageSize: 80, sort: "date" });
   const type = v.venueType?.replace(/_/g, " ");
+  const country = v.countryCode ? getCountry(v.countryCode) : undefined;
+  // Outside the cities with a page of their own: everything within 25 km of the venue.
+  const nearbyHref = `/events?lat=${v.lat.toFixed(4)}&lng=${v.lng.toFixed(4)}&radius=25&pl=${encodeURIComponent([v.city, v.country].filter(Boolean).join(", "))}`;
   const [next, ...later] = res.items;
   // What this place mostly hosts, from what's on.
   const kinds = new Map<string, number>();
@@ -65,8 +69,13 @@ export default async function VenuePage({ params }: { params: P }) {
         {!v.provenance.isDemo && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(venueLd(v, res.items)) }} />}
         <nav aria-label="Breadcrumb" className="t-small text-text-3 mb-4 flex flex-wrap items-center gap-1">
           <Link href="/destinations" className="inline-block py-1 hover:text-text">Destinations</Link>
-          {v.cityId && (<><span aria-hidden>/</span><Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link></>)}
-          <span aria-hidden>/</span><span className="py-1 text-text-2">Venue</span>
+          {country && (<><span aria-hidden>/</span><Link href={`/destinations/${country.slug}`} className="inline-block py-1 hover:text-text">{country.name}</Link></>)}
+          {v.cityId ? (
+            <><span aria-hidden>/</span><Link href={`/destinations/${v.cityId}`} className="inline-block py-1 hover:text-text">{v.city}</Link></>
+          ) : v.city ? (
+            <><span aria-hidden>/</span><Link href={nearbyHref} className="inline-block py-1 hover:text-text">{v.city}</Link></>
+          ) : null}
+          <span aria-hidden>/</span><span className="py-1 text-text-2" aria-current="page">{v.name}</span>
         </nav>
         {v.provenance.isDemo && <div className="mb-5"><Notice tone="demo">This venue is fictional. Its location is a demonstration point near the real city centre.</Notice></div>}
         <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] items-center">
@@ -75,7 +84,7 @@ export default async function VenuePage({ params }: { params: P }) {
             <h1 className="t-display mt-2">{v.name}</h1>
             <p className="t-body text-text-2 mt-2">
               {[v.address, v.city, v.country].filter(Boolean).join(", ")}
-              <WeatherNow lat={v.lat} lng={v.lng} />
+              <WeatherNow lat={v.lat} lng={v.lng} line />
             </p>
             <p className="t-small text-text-3 mt-3 tnum">
               {res.total ? `${res.total.toLocaleString("en-GB")} upcoming ${res.total === 1 ? "date" : "dates"}` : "Nothing listed right now"}
@@ -95,7 +104,11 @@ export default async function VenuePage({ params }: { params: P }) {
               <FollowButton kind="venue" id={v.slug} name={v.name} />
               <a className="btn btn-secondary btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}`}><Navigation size={14} aria-hidden /> Directions</a>
               {v.url && <a className="btn btn-secondary btn-sm" href={v.url} target="_blank" rel="noopener noreferrer">Venue website</a>}
-              {v.cityId && <Link className="btn btn-ghost btn-sm" href={`/destinations/${v.cityId}`}>More in {v.city}</Link>}
+              {v.cityId ? (
+                <Link className="btn btn-ghost btn-sm" href={`/destinations/${v.cityId}`}>More in {v.city}</Link>
+              ) : (
+                <Link className="btn btn-ghost btn-sm" href={nearbyHref}>Events nearby</Link>
+              )}
             </div>
           </div>
           {next ? <NextUp c={next} /> : <LocationMap lat={v.lat} lng={v.lng} label={v.name} group="other" />}

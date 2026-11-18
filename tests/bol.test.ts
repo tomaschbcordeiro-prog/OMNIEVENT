@@ -27,6 +27,16 @@ describe("BOL", () => {
     expect(list[0].bolCategory).toBe(2);
   });
 
+  it("trusts the stated length over an end a whole day later", () => {
+    const now = Date.parse("2026-12-01T00:00:00Z");
+    const one = normalizeBol([ev({ startDate: "2026-12-17T15:00:00.0000000", endDate: "2026-12-18T15:00:00.0000000", duration: "PT1H" })], "2026-12-01T00:00:00Z", now).events[0];
+    expect(Date.parse(one.end!) - Date.parse(one.start)).toBe(3600000);
+    expect(one.eventType).toBe("single");
+    // A real run over days stays a run.
+    const run = normalizeBol([ev({ startDate: "2026-12-17T10:00:00.0000000", endDate: "2026-12-30T18:00:00.0000000", duration: "PT1H" })], "2026-12-01T00:00:00Z", now).events[0];
+    expect(run.eventType).toBe("multi_day");
+  });
+
   it("fixes a missing minus sign and rejects coordinates outside Portugal", () => {
     expect(venueGeo({ geo: { latitude: "41.1574", longitude: "8.6368" } })).toEqual({ lat: 41.1574, lng: -8.6368 });
     expect(venueGeo({ geo: { latitude: "40.41", longitude: "-3.70" } })).toBeUndefined();

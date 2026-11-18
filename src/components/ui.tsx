@@ -200,9 +200,19 @@ export function Poster({
   const group = groupOf(categorySlug);
   const accent = GROUP_HEX[group] ?? "#9AA8BA";
   const src = stage === 0 ? thumb(imageUrl, SHOWN_PX[size]) : imageUrl;
+  const failed = () => setStage((n) => (n === 0 && src !== imageUrl ? 1 : 2));
+  // A picture that failed before the page's script was running sent its error to nobody:
+  // without this, the browser's broken-picture icon would stay instead of the drawn poster.
+  const img = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const el = img.current;
+    if (el?.complete && !el.naturalWidth && el.getAttribute("src")) failed();
+    // Only on the first look at each address.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
   if (src && stage < 2)
     // eslint-disable-next-line @next/next/no-img-element
-    return <img key={src} src={src} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" referrerPolicy="no-referrer" onError={() => setStage((n) => (n === 0 && src !== imageUrl ? 1 : 2))} className={`object-cover bg-panel-2 ${className}`} />;
+    return <img ref={img} key={src} src={src} alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" referrerPolicy="no-referrer" onError={failed} className={`object-cover bg-panel-2 ${className}`} />;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
   return (
     <div

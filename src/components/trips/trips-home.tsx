@@ -13,6 +13,8 @@ import { getDestination } from "@/lib/destinations";
 import { localDateKey } from "@/lib/format";
 import { TripPass } from "./shared";
 import { RouteSketch } from "./route-sketch";
+import { IdeaRail } from "./idea-rail";
+import type { IdeaCardData } from "@/lib/travel/idea-cards";
 import { phaseLabel, tripReady, type NextStep } from "@/lib/trip-ready";
 import type { TripEvent } from "@/lib/trip-snap";
 
@@ -76,7 +78,7 @@ export function TripIdeas() {
 }
 
 /** Your trips as boarding passes, and the way to plan the next one. */
-export function TripsHome() {
+export function TripsHome({ ideas = [], from }: { ideas?: IdeaCardData[]; from?: { name: string; lat: number; lng: number } } = {}) {
   const user = useUser();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -96,7 +98,7 @@ export function TripsHome() {
       </div>
       <div className="trips-layout">
         <div className="min-w-0">
-          <TripsList />
+          <TripsList ideas={ideas} from={from} />
         </div>
         <aside className="trips-side" aria-label="Plan another trip">
           <Link href="/trips/ideas" className="trips-side-link press" data-kind="ideas">
@@ -241,7 +243,7 @@ function TripCard({ trip: t, i, today }: { trip: Trip; i: number; today: string 
 }
 
 /** The trips as passes (soonest first, the ones behind you after), or ready-made routes to start from. */
-export function TripsList() {
+export function TripsList({ ideas = [], from }: { ideas?: IdeaCardData[]; from?: { name: string; lat: number; lng: number } } = {}) {
   const user = useUser();
   // Shared trips: the latest from the others, so each card says what's new.
   useRefreshShared(user.trips.filter((t) => t.group).map((t) => t.id));
@@ -252,7 +254,8 @@ export function TripsList() {
   const sorted = mounted ? [...user.trips].sort((a, b) => (a.start ?? "9999").localeCompare(b.start ?? "9999")) : [];
   const ahead = sorted.filter((t) => !t.end || t.end >= today);
   const behind = sorted.filter((t) => t.end && t.end < today).reverse();
-  if (!mounted) return <div className="mt-8 grid gap-4">{[0, 1].map((i) => <div key={i} className="skeleton h-40 rounded-[var(--radius-l)]" />)}</div>;
+  // As tall as what comes (trips, or the ideas), so the footer doesn't jump when it does.
+  if (!mounted) return <div className="mt-8 grid gap-4 content-start min-h-[70vh]">{[0, 1].map((i) => <div key={i} className="skeleton h-40 rounded-[var(--radius-l)]" />)}</div>;
   if (!sorted.length)
     return (
       <>
@@ -268,6 +271,12 @@ export function TripsList() {
           ))}
         </ul>
       </div>
+      <IdeaRail
+        cards={ideas}
+        title={from ? `Trips from ${from.name}` : "Ready-made trips"}
+        moreHref={from ? `/trips/ideas?near=${encodeURIComponent(`${from.lat.toFixed(3)},${from.lng.toFixed(3)},${from.name}`)}` : "/trips/ideas"}
+        moreLabel="More trip ideas"
+      />
       </>
     );
   return (

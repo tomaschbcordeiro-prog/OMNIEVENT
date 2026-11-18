@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkles, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkles, Users, Wand2, X } from "lucide-react";
 import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { userActions, useUser } from "@/lib/user/store";
@@ -445,7 +445,8 @@ export function TripPlanner() {
       // no vibration here
     }
     await sleep(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 1100);
-    router.push(`/trips/${id}?hello=1`);
+    // Planned to go with friends: the invitation opens straight away.
+    router.push(`/trips/${id}?hello=1${sp.get("together") ? "&invite=1" : ""}`);
   };
 
   return (
@@ -610,6 +611,7 @@ export function TripPlanner() {
               </div>
               {stamped && <p className="sr-only" role="status">Trip saved. Opening it…</p>}
               {withEvents.length > 0 && <p className="t-small text-text-2 mt-3"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
+              {sp.get("together") && <p className="t-small text-text-2 mt-2"><Users size={14} className="inline text-cyan" aria-hidden /> Next: invite your friends with a link or a PIN, and plan it together.</p>}
             </>
           )}
         </div>

@@ -28,6 +28,9 @@ export const THEMES: { key: ThemeKey; label: string; emoji: string; words: strin
 ];
 const THEME = new Map(THEMES.map((t) => [t.key, t]));
 
+/** Each theme's colour on its cards (a hue, 0 to 360). */
+export const THEME_HUE: Record<ThemeKey, number> = { s: 199, h: 32, m: 160, f: 12, w: 340, c: 228, i: 186, n: 128, l: 208, a: 276, x: 305, v: 45 };
+
 export type Area = "europe" | "asia" | "africa" | "north-america" | "latin-america" | "oceania";
 export const AREAS: { key: Area; label: string; emoji: string }[] = [
   { key: "europe", label: "Europe", emoji: "🏰" },
