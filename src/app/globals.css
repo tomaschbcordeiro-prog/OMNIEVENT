@@ -12232,3 +12232,284 @@ nav[aria-label="Breadcrumb"] a,
   bottom: auto !important;
   top: max(0.75rem, env(safe-area-inset-top));
 }
+
+/* ---- The opening scene (first visit; src/components/opening) ---- */
+.intro-veil {
+  display: none;
+}
+:root[data-intro] .intro-veil {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: radial-gradient(120% 90% at 50% 36%, #0f2459 0%, #071131 46%, #02050f 100%);
+  /* If the scene's script never runs, the page shows after a few seconds all the same. */
+  animation: intro-veil-out 0.5s ease 6s forwards;
+}
+/* Nothing of the page shows through before the scene starts (the bar, the header). */
+:root[data-intro] .tabbar,
+:root[data-intro] body > header,
+:root[data-intro] .site-header {
+  visibility: hidden;
+}
+/* Where the scene's planet will be (lib/opening.ts sceneLayout), so the logo doesn't jump. */
+.intro-veil svg {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 113px);
+  translate: -50% -50%;
+}
+@media (min-width: 720px) {
+  .intro-veil svg {
+    top: calc(50% - 123px);
+  }
+}
+:root[data-intro="splash"] .intro-veil svg {
+  top: calc(50% - 13px);
+}
+@keyframes intro-veil-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.opening {
+  --g-cx: 50vw;
+  --g-cy: 36vh;
+  --g-r: 30vw;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  color: #fff;
+  background: radial-gradient(120% 90% at 50% 36%, #0f2459 0%, #071131 46%, #02050f 100%);
+  transition: opacity 0.6s ease 0.05s;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.opening.is-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.opening-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.opening-canvas:active {
+  cursor: grabbing;
+}
+.opening-canvas:focus-visible {
+  outline: 2px solid #ffd36b;
+  outline-offset: -6px;
+}
+/* The logo the page showed first, blooming into the planet. */
+.opening-mark {
+  position: absolute;
+  left: var(--g-cx);
+  top: var(--g-cy);
+  translate: -50% -50%;
+  pointer-events: none;
+  animation: opening-bloom 0.8s cubic-bezier(0.3, 0, 0.2, 1) 0.15s both;
+}
+@keyframes opening-bloom {
+  to {
+    scale: 2.4;
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+.opening-skip {
+  position: absolute;
+  top: max(0.85rem, env(safe-area-inset-top));
+  right: max(0.85rem, env(safe-area-inset-right));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.9);
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: opening-rise 0.5s ease 0.4s both;
+}
+.opening-skip:hover {
+  background: rgb(255 255 255 / 0.18);
+}
+.opening-hint {
+  position: absolute;
+  left: var(--g-cx);
+  top: calc(var(--g-cy) + var(--g-r) + 0.6rem);
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: rgb(255 255 255 / 0.92);
+  background: rgb(10 25 70 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  pointer-events: none;
+  animation: opening-rise-c 0.5s ease both;
+}
+.opening-hint svg {
+  animation: opening-swipe 1.6s ease-in-out infinite;
+}
+@keyframes opening-swipe {
+  0%,
+  100% {
+    translate: -5px 0;
+    rotate: -8deg;
+  }
+  50% {
+    translate: 5px 0;
+    rotate: 8deg;
+  }
+}
+@keyframes opening-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+@keyframes opening-rise-c {
+  from {
+    opacity: 0;
+    translate: -50% 10px;
+  }
+}
+.opening-words {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 0 1.25rem max(1.4rem, calc(env(safe-area-inset-bottom) + 1rem));
+  text-align: center;
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 0.7s ease,
+    translate 0.7s cubic-bezier(0.2, 0.9, 0.3, 1);
+  pointer-events: none;
+}
+.opening-words[data-on] {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+/* A phone on its side: the planet on the left, the words on the right. */
+.opening[data-side] .opening-words {
+  inset-inline: 52% 0;
+  bottom: auto;
+  top: 50%;
+  translate: 0 -46%;
+  padding: 0 1.25rem 0 0;
+}
+.opening[data-side] .opening-words[data-on] {
+  translate: 0 -50%;
+}
+.opening[data-side] .opening-hint {
+  left: 76%;
+  top: auto;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.opening-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.85rem;
+  color: #fff;
+}
+.opening-line {
+  margin-top: 0.35rem;
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-size: clamp(1.6rem, 7.2vw, 2.7rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.opening[data-side] .opening-line {
+  font-size: 1.7rem;
+}
+.opening-line em {
+  color: #ffd36b;
+}
+.opening-sub {
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  color: rgb(255 255 255 / 0.8);
+}
+.opening-go {
+  margin-top: 1rem;
+  min-height: 52px;
+  padding-inline: 1.75rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.12),
+    0 10px 30px rgb(20 99 255 / 0.55);
+  animation: opening-glow 2.6s ease-in-out 1.2s infinite;
+}
+@keyframes opening-glow {
+  50% {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.2),
+      0 10px 44px rgb(20 99 255 / 0.85);
+  }
+}
+.opening-pick {
+  margin: 0.7rem auto 0;
+  max-width: 26rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.65rem 0.6rem 0.85rem;
+  text-align: left;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: opening-rise 0.35s ease both;
+}
+.opening-pick > svg {
+  flex: none;
+  color: #ffd36b;
+}
+.opening-pick .opening-sub {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+}
+.opening-pick .btn {
+  margin-left: auto;
+  flex: none;
+}
+.opening.is-splash .opening-words {
+  bottom: auto;
+  top: calc(var(--g-cy) + var(--g-r) + 1.25rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-mark {
+    animation: none;
+    opacity: 0;
+  }
+  .opening-words,
+  .opening.is-out {
+    transition-duration: 0.2s;
+  }
+  .opening-hint svg,
+  .opening-go {
+    animation: none;
+  }
+}

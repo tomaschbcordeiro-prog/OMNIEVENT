@@ -650,6 +650,38 @@ export function DiscoverClient() {
     return () => window.removeEventListener("omni:globe", home);
   });
 
+  // Under the opening scene the globe needn't turn (nobody sees it, and a phone has enough to
+  // draw); it starts when the scene leaves.
+  useEffect(() => {
+    if (!document.documentElement.hasAttribute("data-intro")) return;
+    setAutoRotate(false);
+    const done = () => {
+      if (!flyAsked.current) setAutoRotate(true);
+    };
+    window.addEventListener("omni:intro-done", done);
+    return () => window.removeEventListener("omni:intro-done", done);
+  }, []);
+
+  // A city picked in the opening scene: the globe flies there (once it's ready, if it isn't yet).
+  const flyAsked = useRef<{ lat: number; lng: number; zoom: number } | null>(null);
+  useEffect(() => {
+    const go = (e: Event) => {
+      const d = (e as CustomEvent<{ lat: number; lng: number; zoom?: number }>).detail;
+      if (!d || !Number.isFinite(d.lat) || !Number.isFinite(d.lng)) return;
+      const target = { lat: d.lat, lng: d.lng, zoom: d.zoom ?? 10.5 };
+      if (mode === "list") setMode("globe");
+      if (mapReady) fly(target);
+      else flyAsked.current = target;
+    };
+    window.addEventListener("omni:fly", go);
+    return () => window.removeEventListener("omni:fly", go);
+  });
+  useEffect(() => {
+    if (!mapReady || !flyAsked.current) return;
+    fly(flyAsked.current);
+    flyAsked.current = null;
+  }, [mapReady, fly]);
+
   const locate = () => {
     if (!navigator.geolocation) return setError("Location isn't available in this browser.");
     navigator.geolocation.getCurrentPosition(

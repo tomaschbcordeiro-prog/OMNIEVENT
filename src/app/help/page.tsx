@@ -142,6 +142,16 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
       </>
     ),
   },
+  {
+    q: "Can I see the planet that lights up again?",
+    a: (
+      <>
+        {/* A whole page load: the opening is decided before the page is drawn. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        Of course: <a href="/?intro=1">watch the opening again</a>. Drag the planet to spin it, tap a light to see what&apos;s on there, and tap the dark to send a ripple across it.
+      </>
+    ),
+  },
 ];
 
 export default function HelpPage() {

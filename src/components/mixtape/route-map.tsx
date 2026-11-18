@@ -67,6 +67,8 @@ export function RouteMap({ stops, active, follow, centre, onPick }: { stops: Rou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The pins' spreading on the map, kept so the next tape's replaces it.
+  const spreadOff = useRef<() => void>(() => {});
   // Pins, the line and the view, whenever the tape changes.
   const sig = stops.map((s) => s.key).join("|");
   useEffect(() => {
@@ -76,12 +78,7 @@ export function RouteMap({ stops, active, follow, centre, onPick }: { stops: Rou
     void import("@/lib/map/maplibre").then(({ maplibregl: ml }) => {
       if (gone) return;
       pins.current.forEach((p) => p.remove());
-      // Two tracks at the same place: their pins sit side by side, both easy to tap.
-      const seen = new Map<string, number>();
       pins.current = stops.map((s, i) => {
-        const at = `${s.lat.toFixed(4)},${s.lng.toFixed(4)}`;
-        const k = seen.get(at) ?? 0;
-        seen.set(at, k + 1);
         const el = document.createElement("button");
         el.type = "button";
         el.className = "tape-pin";
@@ -90,8 +87,30 @@ export function RouteMap({ stops, active, follow, centre, onPick }: { stops: Rou
         el.toggleAttribute("data-active", i === activeNow.current);
         el.setAttribute("aria-label", `Track ${i + 1}: ${s.title}`);
         el.addEventListener("click", () => pick.current(i));
-        return new ml.Marker({ element: el, offset: k ? [k * 26, -k * 6] : [0, 0] }).setLngLat([s.lng, s.lat]).addTo(m);
+        return new ml.Marker({ element: el }).setLngLat([s.lng, s.lat]).addTo(m);
       });
+      // Tracks at the same place, or close enough to touch at this zoom: their pins move apart
+      // (round the first), so each is a whole target to tap. Again after every move or zoom.
+      const GAP = 32;
+      const spread = () => {
+        const placed: { x: number; y: number }[] = [];
+        for (const mk of pins.current) {
+          const p = m.project(mk.getLngLat());
+          let dx = 0, dy = 0;
+          for (let k = 0; k < 24 && placed.some((q) => Math.hypot(q.x - p.x - dx, q.y - p.y - dy) < GAP); k++) {
+            const ring = 1 + Math.floor(k / 8);
+            const a = (k % 8) * (Math.PI / 4) - Math.PI / 2;
+            dx = Math.cos(a) * GAP * ring;
+            dy = Math.sin(a) * GAP * ring;
+          }
+          mk.setOffset([dx, dy]);
+          placed.push({ x: p.x + dx, y: p.y + dy });
+        }
+      };
+      m.off("moveend", spreadOff.current);
+      spreadOff.current = spread;
+      m.on("moveend", spread);
+      spread();
       // One line per day: the walk or ride between that day's tracks.
       const days: number[][][] = [];
       stops.forEach((s, i) => {
