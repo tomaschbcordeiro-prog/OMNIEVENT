@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, bestOrder, codeOf, daysOf, extendFor, fitOf, fitSpan, flagOf, moveBoundary, nightsBetween, rescaleNights, REGIONS, routeKm, splitNights, stopOn, suggestName, withNights, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, codeOf, daysOf, extendFor, fitOf, fitSpan, flagOf, countryRuns, moveBoundary, nightsBetween, rescaleNights, runOrder, REGIONS, routeKm, splitNights, stopOn, suggestName, withNights, type TripStop } from "@/lib/trip";
 
 const benelux = REGIONS.find((r) => r.id === "benelux")!.places;
 const stops = (start: string, nights: number[]): TripStop[] => withNights(benelux.map((p, i) => ({ ...p, id: `s${i}`, from: "", to: "" })), start, nights);
@@ -231,5 +231,30 @@ describe("new dates for the same trip", () => {
   });
   it("leaves day trips when there are fewer nights than cities", () => {
     expect(rescaleNights([1, 1, 1], 2).reduce((a, b) => a + b, 0)).toBe(2);
+  });
+});
+
+describe("countries on the route", () => {
+  const route = [
+    { name: "Lisbon", countryCode: "PT", country: "Portugal" },
+    { name: "Porto", countryCode: "PT", country: "Portugal" },
+    { name: "Madrid", countryCode: "ES", country: "Spain" },
+    { name: "Seville", countryCode: "ES" },
+    { name: "Faro", countryCode: "PT", country: "Portugal" },
+  ];
+  it("groups the cities of a country that follow each other", () => {
+    const runs = countryRuns(route);
+    expect(runs.map((r) => [r.code, r.from, r.to])).toEqual([["PT", 0, 1], ["ES", 2, 3], ["PT", 4, 4]]);
+    expect(runs[1].country).toBe("Spain");
+    expect(runs[0].flag).toBe("🇵🇹");
+  });
+  it("moves a whole country, its cities in their order", () => {
+    const runs = countryRuns(route);
+    expect(runOrder(runs, 1, 0)).toEqual([2, 3, 0, 1, 4]);
+    expect(runOrder(runs, 0, 2)).toEqual([2, 3, 4, 0, 1]);
+    expect(runOrder(runs, 2, 2)).toEqual([0, 1, 2, 3, 4]);
+  });
+  it("names a country from its code when the stop doesn't say", () => {
+    expect(countryRuns([{ countryCode: "fr" }])[0].country).toBe("France");
   });
 });

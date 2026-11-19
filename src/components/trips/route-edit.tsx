@@ -1,5 +1,6 @@
 "use client";
 
+import { listReorder, startLift } from "@/lib/lift";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GripVertical, Loader2, MapPin, Pencil, Plus, Search, X } from "lucide-react";
 import { CITIES } from "@/lib/destinations";
@@ -206,7 +207,8 @@ export function RouteList({
   onPick,
 }: {
   stops: RouteStop[];
-  onMove: (from: number, to: number) => void;
+  /** A stop moved; `dragged` when it was carried there (it settles itself, no page transition). */
+  onMove: (from: number, to: number, dragged?: boolean) => void;
   onRemove: (i: number) => void;
   onRename: (i: number, name: string) => void;
   onInsert: (i: number, p: Place) => void;
@@ -217,75 +219,48 @@ export function RouteList({
   onPick: (i: number) => void;
 }) {
   const list = useRef<HTMLOListElement>(null);
-  const drag = useRef<{ from: number; to: number; y0: number; shift: number; mids: number[]; h: number } | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [said, setSaid] = useState("");
   const legs = legsKm(stops);
-  const items = () => [...(list.current?.querySelectorAll<HTMLElement>(":scope > li") ?? [])];
-
-  const begin = (e: React.PointerEvent, i: number) => {
-    if (e.button !== 0 || stops.length < 2) return;
-    e.preventDefault();
-    const el = items()[i];
-    const before = el.getBoundingClientRect().top;
-    // The legs fold away while a stop is moved, so every stop is the same height.
-    list.current!.dataset.reordering = "";
-    const rects = items().map((x) => x.getBoundingClientRect());
-    drag.current = { from: i, to: i, y0: e.clientY, shift: before - rects[i].top, mids: rects.map((r) => r.top + r.height / 2), h: rects[1] ? rects[1].top - rects[0].top : rects[0].height };
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    el.style.transform = `translateY(${drag.current.shift}px)`;
-    setDragging(i);
-  };
-  const follow = (e: React.PointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
-    const dy = e.clientY - d.y0 + d.shift;
-    const centre = d.mids[d.from] + dy;
-    let to = d.from;
-    d.mids.forEach((m, j) => {
-      if (j < d.from && centre < m) to = Math.min(to, j);
-      if (j > d.from && centre > m) to = Math.max(to, j);
+  /** Picks stop i up: a long press anywhere on it (touch), or its grip (touch or mouse). */
+  const pickUp = (e: React.PointerEvent<HTMLElement>, i: number, grip = false) => {
+    if (stops.length < 2 || !list.current) return;
+    // With a mouse, only the grip drags (the rest of the row has buttons to click).
+    if (e.pointerType === "mouse" && !grip) return;
+    if (grip) e.stopPropagation();
+    const box = list.current;
+    const order = listReorder({
+      box,
+      from: i,
+      onDrop: (to) => {
+        onMove(i, to, true);
+        setSaid(`${stops[i].name} is now stop ${to + 1} of ${stops.length}.`);
+      },
     });
-    d.to = to;
-    items().forEach((el, j) => {
-      if (j === d.from) el.style.transform = `translateY(${dy}px)`;
-      else if (d.from < to && j > d.from && j <= to) el.style.transform = `translateY(${-d.h}px)`;
-      else if (to < d.from && j >= to && j < d.from) el.style.transform = `translateY(${d.h}px)`;
-      else el.style.transform = "";
-    });
-  };
-  const end = () => {
-    const d = drag.current;
-    if (!d) return;
-    drag.current = null;
-    setDragging(null);
-    for (const el of items()) {
-      el.style.transition = "none";
-      el.style.transform = "";
-      requestAnimationFrame(() => (el.style.transition = ""));
-    }
-    delete list.current!.dataset.reordering;
-    if (d.to !== d.from) {
-      onMove(d.from, d.to);
-      setSaid(`${stops[d.from].name} is now stop ${d.to + 1} of ${stops.length}.`);
-    }
+    startLift(
+      e,
+      {
+        lift: (p) => (setDragging(i), order.lift(p)),
+        move: order.move,
+        drop: (p) => (setDragging(null), order.drop(p)),
+        cancel: () => (setDragging(null), order.cancel()),
+      },
+      { instant: grip, scroller: box.closest<HTMLElement>("[data-lift-scroll]") },
+    );
   };
 
   return (
     <>
       <ol ref={list} className="route-list" data-dragging={dragging !== null || undefined}>
         {stops.map((s, i) => (
-          <li key={s.key} className="route-item" style={{ "--ink": stopColor(i) } as React.CSSProperties} data-lifted={dragging === i || undefined} onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(undefined)}>
+          <li key={s.key} className="route-item" style={{ "--ink": stopColor(i) } as React.CSSProperties} onPointerDown={(e) => pickUp(e, i)} onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(undefined)}>
             <div className="route-stop">
               <button
                 type="button"
                 className="route-grip"
-                aria-label={`Move ${s.name}: drag, or use the up and down arrow keys`}
+                aria-label={`Move ${s.name}: drag (or hold the stop and drag), or use the up and down arrow keys`}
                 disabled={stops.length < 2}
-                onPointerDown={(e) => begin(e, i)}
-                onPointerMove={follow}
-                onPointerUp={end}
-                onPointerCancel={end}
+                onPointerDown={(e) => pickUp(e, i, true)}
                 onKeyDown={(e) => {
                   const to = e.key === "ArrowUp" ? i - 1 : e.key === "ArrowDown" ? i + 1 : -1;
                   if (to < 0 || to >= stops.length) return;

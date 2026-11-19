@@ -202,6 +202,42 @@ export function rescaleNights(nights: number[], total: number): number[] {
   return out;
 }
 
+/** A country on the route: its cities in a row (the same country later on is another run). */
+export interface CountryRun {
+  code: string;
+  country?: string;
+  flag: string;
+  /** The first and last of its stops (both included). */
+  from: number;
+  to: number;
+}
+
+/** The route as countries, in order: a run per country for as long as the route stays in it. */
+export function countryRuns(stops: Pick<TripStop, "countryCode" | "country">[]): CountryRun[] {
+  const out: CountryRun[] = [];
+  stops.forEach((s, i) => {
+    const code = (s.countryCode || s.country || "").toUpperCase();
+    const last = out[out.length - 1];
+    if (last && code && last.code === code) last.to = i;
+    else out.push({ code, country: s.country || regionName(s.countryCode), flag: flagOf(s.countryCode), from: i, to: i });
+  });
+  return out;
+}
+
+/** The stops' new order (their old indexes) once run `from` has been moved to place `to`. */
+export function runOrder(runs: CountryRun[], from: number, to: number): number[] {
+  return moved(runs, from, to).flatMap((r) => Array.from({ length: r.to - r.from + 1 }, (_, k) => r.from + k));
+}
+
+function regionName(cc?: string): string | undefined {
+  if (!cc) return undefined;
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(cc.toUpperCase());
+  } catch {
+    return undefined;
+  }
+}
+
 /** Total length of a route in km, in the order given. */
 export function routeKm(stops: { lat: number; lng: number }[]): number {
   let km = 0;

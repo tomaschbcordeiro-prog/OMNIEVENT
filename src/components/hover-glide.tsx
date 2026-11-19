@@ -7,11 +7,14 @@ import { useEffect } from "react";
  * the pointer is on and glides to the next one as the pointer moves, instead of each row lighting
  * up on its own. Lists opt in with `data-glide` (each direct child is a row) and rows anywhere
  * with `data-glide-item` (drawn in their list). The shade is the list's own ::before, placed with
- * CSS variables, so nothing is added to the page's markup. Touch screens never see it.
+ * CSS variables, so nothing is added to the page's markup. On a touch screen the same shade shows
+ * under the row being pressed, and goes when the finger lifts or starts to scroll.
  */
 
 const SNAP = "data-glide-snap";
 const ON = "data-glide-on";
+const PRESS = "data-glide-press";
+const SKIP = "[aria-disabled='true'], :disabled, [data-glide-skip]";
 
 function rowOf(t: Element): { box: HTMLElement; item: HTMLElement } | null {
   const item = t.closest<HTMLElement>("[data-glide-item]");
@@ -54,7 +57,7 @@ export function HoverGlide() {
     const over = (e: PointerEvent) => {
       if (e.pointerType !== "mouse" || !fine.matches) return;
       const hit = rowOf(e.target as Element);
-      if (!hit || hit.item.matches("[aria-disabled='true'], :disabled, [data-glide-skip]")) {
+      if (!hit || hit.item.matches(SKIP)) {
         // In the gap between two rows it stays where it is; anywhere else it goes.
         if (box && !box.contains(e.target as Node)) off();
         return;
@@ -92,8 +95,54 @@ export function HoverGlide() {
     document.addEventListener("pointerover", over, { passive: true });
     document.addEventListener("pointermove", move, { passive: true });
     document.addEventListener("pointerout", out, { passive: true });
+    // Touch: the row under the finger darkens while it's pressed.
+    let pressed: HTMLElement | null = null;
+    let px = 0;
+    let py = 0;
+    let later = 0;
+    const unpress = (now: boolean) => {
+      const b = pressed;
+      if (!b) return;
+      pressed = null;
+      const go = () => {
+        if (b === box) return;
+        b.removeAttribute(ON);
+        b.removeAttribute(PRESS);
+      };
+      if (now) go();
+      else later = window.setTimeout(go, 160);
+    };
+    const press = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      const hit = rowOf(e.target as Element);
+      if (!hit || hit.item.matches(SKIP)) return;
+      window.clearTimeout(later);
+      unpress(true);
+      pressed = hit.box;
+      px = e.clientX;
+      py = e.clientY;
+      hit.box.setAttribute(SNAP, "");
+      place(hit.box, hit.item);
+      hit.box.setAttribute(PRESS, "");
+      hit.box.setAttribute(ON, "");
+      const b = hit.box;
+      requestAnimationFrame(() => requestAnimationFrame(() => b.removeAttribute(SNAP)));
+    };
+    const slide = (e: PointerEvent) => {
+      if (pressed && e.pointerType !== "mouse" && Math.hypot(e.clientX - px, e.clientY - py) > 10) unpress(true);
+    };
+    const lift = (e: PointerEvent) => e.pointerType !== "mouse" && unpress(false);
+    document.addEventListener("pointerdown", press, { passive: true });
+    document.addEventListener("pointermove", slide, { passive: true });
+    document.addEventListener("pointerup", lift, { passive: true });
+    document.addEventListener("pointercancel", lift, { passive: true });
     window.addEventListener("blur", off);
     return () => {
+      document.removeEventListener("pointerdown", press);
+      document.removeEventListener("pointermove", slide);
+      document.removeEventListener("pointerup", lift);
+      document.removeEventListener("pointercancel", lift);
+      window.clearTimeout(later);
       document.removeEventListener("pointerover", over);
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerout", out);

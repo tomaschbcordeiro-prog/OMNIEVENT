@@ -13322,32 +13322,42 @@ nav[aria-label="Breadcrumb"] a,
 
 /* ---- The shade that follows the mouse along a list (components/hover-glide.tsx) ----------------
    One soft area under the row being pointed at, gliding to the next row as the mouse moves. Darker
-   on a light page, lighter on a dark one. Computers only: touch screens keep their own press. */
+   on a light page, lighter on a dark one. On a touch screen, the same shade under a row while it's
+   pressed. */
 :root {
   --glide-bg: color-mix(in srgb, var(--text) 6.5%, transparent);
   --glide-r: var(--radius-m);
 }
+[data-glide-on]::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--glide-px, 0px));
+  top: 0;
+  width: calc(var(--gw, 0px) + 2 * var(--glide-px, 0px));
+  height: var(--gh, 0);
+  border-radius: var(--glide-r);
+  background: var(--glide-bg);
+  transform: translate3d(var(--gx, 0), var(--gy, 0), 0);
+  pointer-events: none;
+  animation: glide-in 160ms ease both;
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    width 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    height 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+    opacity 160ms ease;
+}
+/* A press is a touch firmer, and shows at once. */
+[data-glide-press]::before {
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  animation-duration: 70ms;
+}
+[data-glide-snap]::before {
+  transition: none !important;
+}
+html[data-lifting] [data-glide-on]::before {
+  opacity: 0;
+}
 @media (hover: hover) and (pointer: fine) {
-  [data-glide-on]::before {
-    content: "";
-    position: absolute;
-    left: calc(-1 * var(--glide-px, 0px));
-    top: 0;
-    width: calc(var(--gw, 0px) + 2 * var(--glide-px, 0px));
-    height: var(--gh, 0);
-    border-radius: var(--glide-r);
-    background: var(--glide-bg);
-    transform: translate3d(var(--gx, 0), var(--gy, 0), 0);
-    pointer-events: none;
-    animation: glide-in 160ms ease both;
-    transition:
-      transform 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
-      width 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
-      height 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
-  }
-  [data-glide-snap]::before {
-    transition: none !important;
-  }
   /* Rows that had their own hover look now have the shade instead. */
   [data-glide-item].event-row:hover {
     background-color: transparent;
@@ -13357,6 +13367,32 @@ nav[aria-label="Breadcrumb"] a,
   }
   [data-glide] .stop-card:hover {
     transform: none;
+  }
+}
+@keyframes glide-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-glide-on]::before {
+    transition: none !important;
+  }
+}
+/* Cards with a background of their own darken under the finger the same way, beneath their words. */
+@media (hover: none) {
+  .stop-card:active,
+  .nb-row:active,
+  .route-stop:active,
+  .ag-item:active,
+  .dates-row:active,
+  .add-bar-main:active,
+  .trip-start-tile:active,
+  .idea-row:active,
+  .off-row:active,
+  .trip-card:active,
+  .rc-day:active:not(:disabled) {
+    box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--text) 8%, transparent);
   }
 }
 /* Each list's shade, shaped like its rows. */
@@ -13408,4 +13444,221 @@ nav[aria-label="Breadcrumb"] a,
   background:
     radial-gradient(90% 130% at 0% 0%, color-mix(in srgb, var(--cyan) 7%, transparent), transparent 62%),
     color-mix(in srgb, var(--text) 3.5%, transparent);
+}
+
+/* ---- Picking things up (lib/lift.ts): lists that move out of the way, a card that lifts ---- */
+html[data-lifting],
+html[data-lifting] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: grabbing !important;
+}
+.route-item,
+.stop-card,
+.nb-seg,
+.cty-chip,
+.ag-row[data-carry],
+.ag-idea {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* The others slide aside as the held one passes them. */
+[data-reordering] > :not([data-lifted]) {
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.25, 1) !important;
+}
+[data-reordering] > [data-lifted] {
+  position: relative;
+  z-index: 6;
+  transition: none !important;
+}
+.stop-card[data-lifted],
+.nb-seg[data-lifted],
+.cty-item[data-lifted] .cty-chip,
+.route-item[data-lifted] .route-stop {
+  scale: 1.04;
+  rotate: -0.8deg;
+  box-shadow:
+    0 24px 44px -18px rgb(4 10 30 / 0.55),
+    0 2px 6px rgb(4 10 30 / 0.12);
+}
+.stop-card,
+.cty-chip,
+.nb-seg {
+  transition-property: scale, rotate, box-shadow, background-color, filter, flex-grow;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+[data-settling] {
+  z-index: 6;
+}
+/* The bar opens up while a city is carried along it (the handles wait). */
+.nb-track[data-reordering] {
+  overflow: visible;
+}
+.nb-track[data-reordering] .nb-seg {
+  border-radius: 14px;
+}
+.nb-track[data-reordering] ~ .nb-knob {
+  opacity: 0;
+  pointer-events: none;
+}
+.nb-track[data-reordering] .nb-seg:not([data-lifted]) {
+  filter: saturate(0.85) brightness(0.92);
+}
+.lift-hint {
+  margin: -0.2rem 0 0.6rem;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+/* The route's countries: flags in a row, held and slid to change the order of whole countries. */
+.cty {
+  margin: 0.4rem 0 0.9rem;
+}
+.cty-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+.cty-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.cty-hint {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+.cty-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.15rem 0 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cty-row::-webkit-scrollbar {
+  display: none;
+}
+.cty-item {
+  position: relative;
+  flex-shrink: 0;
+}
+/* A little arrow between countries, in the gap. */
+.cty-item + .cty-item::before {
+  content: "";
+  position: absolute;
+  left: -0.42rem;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-top: 1.5px solid var(--text-3);
+  border-right: 1.5px solid var(--text-3);
+  translate: 0 -50%;
+  rotate: 45deg;
+  opacity: 0.7;
+}
+.cty-row[data-reordering] .cty-item::before {
+  opacity: 0;
+}
+.cty-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line), 0 2px 6px -3px rgb(13 27 51 / 0.18);
+  cursor: grab;
+  touch-action: pan-x;
+}
+.cty-chip:hover {
+  background: color-mix(in srgb, var(--text) 4%, var(--panel));
+}
+.cty-chip:active {
+  background: color-mix(in srgb, var(--text) 7%, var(--panel));
+}
+.cty-flag {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.cty-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+.cty-name {
+  font-size: 0.85rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.cty-dots {
+  display: flex;
+  gap: 3px;
+}
+.cty-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+/* A plan carried across the agenda: a card under the finger; its place stays as a faint outline. */
+.lift-ghost {
+  position: fixed;
+  z-index: 90;
+  pointer-events: none;
+  margin: 0;
+  list-style: none;
+  will-change: transform;
+}
+.lift-ghost > * {
+  border-radius: 14px;
+  background: var(--panel);
+  scale: 1.04;
+  rotate: -1.2deg;
+  box-shadow:
+    0 26px 48px -18px rgb(4 10 30 / 0.55),
+    0 2px 8px rgb(4 10 30 / 0.14);
+  animation: lift-up 180ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+@keyframes lift-up {
+  from {
+    scale: 1;
+    rotate: 0deg;
+    box-shadow: 0 0 0 transparent;
+  }
+}
+[data-ghosted] {
+  opacity: 0.35;
+  outline: 1.5px dashed color-mix(in srgb, var(--cyan) 55%, transparent);
+  outline-offset: -1px;
+  border-radius: 12px;
+}
+.ag[data-carrying] .ag-day {
+  transition: background-color 150ms ease, outline-color 150ms ease;
+}
+.ag-tosee[data-drop] {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cyan) 7%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reordering] > :not([data-lifted]) {
+    transition: none !important;
+  }
+  .lift-ghost > * {
+    animation: none;
+  }
 }

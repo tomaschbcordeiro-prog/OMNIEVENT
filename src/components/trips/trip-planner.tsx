@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkl
 import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { getUser, userActions } from "@/lib/user/store";
-import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, rescaleNights, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, bestSlot, countryRuns, midpoint, routeFromEvents, moveBoundary, runOrder, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, rescaleNights, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
 import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
@@ -17,6 +17,7 @@ import { localDateKey } from "@/lib/format";
 import { toast } from "../toast";
 import { LegPlus, lookupTown, MapAddCard, PlaceSearch, placeOfTown, RouteList, type RouteStop } from "./route-edit";
 import { DatesRow, RangeCalendar, shortDay } from "./range-calendar";
+import { listReorder, startLift } from "@/lib/lift";
 
 type Stop = RouteStop;
 /** Two steps, then the trip exists: where, and how long in each place. Everything else (events,
@@ -310,11 +311,24 @@ export function TripPlanner() {
     setActive(undefined);
     toast({ title: `${gone.name} taken off the route`, emoji: "🗺️", action: { label: "Undo", run: () => (setStops(before.stops), setNights(before.nights)) } });
   };
-  const moveTo = (from: number, to: number) =>
-    smoothly(() => {
+  /** A stop moved in the order (carried there by a drag, it settles by itself). */
+  const moveTo = (from: number, to: number, dragged = false) => {
+    const run = () => {
       setStops((s) => moved(s, from, to));
       if (dated2) setNights((n) => moved(n, from, to));
-    });
+    };
+    if (dragged) run();
+    else smoothly(run);
+  };
+  /** A whole country (its cities in a row) moved before or after another. */
+  const moveRun = (from: number, to: number) => {
+    const runs = countryRuns(stops);
+    const order = runOrder(runs, from, to);
+    const before = { stops, nights };
+    setStops(order.map((k) => stops[k]));
+    if (dated2) setNights(order.map((k) => nights[k]));
+    toast({ title: `${runs[from].country ?? "Those cities"} moved`, body: order.map((k) => stops[k].name).join(" → "), emoji: runs[from].flag || "🧭", action: { label: "Undo", run: () => (setStops(before.stops), setNights(before.nights)) } });
+  };
   const rename = (i: number, v: string) => setStops((s) => s.map((x, j) => (j === i ? renamed(x, v) : x)));
 
   // Dragging a city on the globe: the route follows the finger (once a frame), and where it's
@@ -477,7 +491,7 @@ export function TripPlanner() {
           </ol>
         </header>
 
-        <div className="planner-body" key={step}>
+        <div className="planner-body" key={step} data-lift-scroll>
           {step === 0 && (
             <>
               <p className="planner-q">{stops.length ? "Where else?" : "Where are you going?"}</p>
@@ -506,12 +520,13 @@ export function TripPlanner() {
                       </button>
                     )}
                   </div>
+                  <CountryOrder stops={stops} onMove={moveRun} onPick={(a, b) => frame(stops.slice(a, b + 1))} />
                   <RouteList stops={stops} onMove={moveTo} onRemove={remove} onRename={rename} onInsert={(i, p) => insertAt(i, p)} inserting={inserting} setInserting={setInserting} onHover={setActive} onPick={(i) => frame([stops[i]])} />
                   {stops.length > 1 && <p className="t-micro text-text-3 mt-2 tnum">{Math.round(routeKm(stops)).toLocaleString("en-GB")} km from first to last city</p>}
                   {hint && (
                     <div className="planner-hint t-micro">
                       <Hand size={13} aria-hidden className="shrink-0 mt-px" />
-                      <span className="flex-1">On the globe: drag a city to move it, tap <b>+</b> on the line to stop on the way (or drag it), or tap anywhere to add that place. Tap a name to call it what you like.</span>
+                      <span className="flex-1">Hold a city in the list and drag it to change the order. On the globe: drag a city to move it, tap <b>+</b> on the line to stop on the way, or tap anywhere to add that place. Tap a name to call it what you like.</span>
                       <button
                         type="button"
                         className="planner-hint-ok"
@@ -558,8 +573,8 @@ export function TripPlanner() {
               {start && end && stops.length > 0 && (
                 <>
                   <h2 className="planner-sub">{stops.length > 1 ? "Nights in each place" : "Your stay"}</h2>
-                  {stops.length > 1 && <p className="planner-note">Drag the handles to share the nights out.</p>}
-                  <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+                  {stops.length > 1 && <p className="planner-note">Drag the white handles to share the nights out. Hold a city and slide it to change the order.</p>}
+                  <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} onReorder={(from, to) => moveTo(from, to, true)} />
                   <NightsLegend stops={dated as (Stop & { from: string; to: string })[]} nights={nights} interests={interests} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
                 </>
               )}
@@ -644,13 +659,73 @@ function useCounts(stops: (Place & { key: string; from: string; to: string })[],
 }
 
 /**
+ * The route's countries in order, as flags: hold one (or drag it with the mouse) and slide it
+ * before or after another, and all its cities move with it. Shown once the route crosses a
+ * border. Arrow keys move the one in focus; a tap shows its cities on the globe.
+ */
+function CountryOrder({ stops, onMove, onPick }: { stops: Stop[]; onMove: (from: number, to: number) => void; onPick: (from: number, to: number) => void }) {
+  const row = useRef<HTMLOListElement>(null);
+  const [held, setHeld] = useState(false);
+  const runs = countryRuns(stops);
+  if (runs.length < 2) return null;
+  const carry = (e: React.PointerEvent<HTMLElement>, i: number) => {
+    if (!row.current) return;
+    const order = listReorder({ box: row.current, from: i, axis: "x", onDrop: (to) => onMove(i, to) });
+    startLift(e, { lift: (p) => (setHeld(true), order.lift(p)), move: order.move, drop: (p) => (setHeld(false), order.drop(p)), cancel: () => (setHeld(false), order.cancel()) }, { slop: 5 });
+  };
+  return (
+    <section className="cty" aria-labelledby="cty-h">
+      <div className="cty-head">
+        <h3 id="cty-h" className="cty-title">Countries, in order</h3>
+        <span className="cty-hint">Hold one and slide it</span>
+      </div>
+      <ol ref={row} className="cty-row" data-held={held || undefined}>
+        {runs.map((r, i) => {
+          const n = r.to - r.from + 1;
+          return (
+            <li key={stops[r.from].key} className="cty-item">
+              <button
+                type="button"
+                className="cty-chip"
+                onPointerDown={(e) => carry(e, i)}
+                onClick={() => onPick(r.from, r.to)}
+                onKeyDown={(e) => {
+                  const to = e.key === "ArrowLeft" ? i - 1 : e.key === "ArrowRight" ? i + 1 : -1;
+                  if (to < 0 || to >= runs.length) return;
+                  e.preventDefault();
+                  onMove(i, to);
+                }}
+                aria-label={`${r.country ?? r.code}: ${n} ${n === 1 ? "city" : "cities"}, ${stops.slice(r.from, r.to + 1).map((s) => s.name).join(", ")}. Hold and slide, or use the left and right arrow keys, to move it`}
+              >
+                <span className="cty-flag" aria-hidden>{r.flag || "🏳️"}</span>
+                <span className="cty-text">
+                  <span className="cty-name">{r.country ?? r.code}</span>
+                  <span className="cty-dots" aria-hidden>
+                    {Array.from({ length: n }, (_, k) => <i key={k} style={{ background: stopColor(r.from + k) }} />)}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+/**
  * The trip as one bar, a coloured stretch per city as long as its nights, with the days of the
  * trip ticked underneath. Between two cities, a handle to drag (or focus and move with the arrow
  * keys): it snaps night by night, shows the day you'd move on, and gives a little tick on phones
  * that can. Tapping a stretch shows that city on the globe.
  */
-function NightsBar({ stops, nights, onChange, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
+function NightsBar({ stops, nights, onChange, onFocusStop, onPick, onReorder }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; onFocusStop: (i?: number) => void; onPick: (i: number) => void; onReorder: (from: number, to: number) => void }) {
   const track = useRef<HTMLDivElement>(null);
+  /** A city's stretch held and slid along the bar: the cities change order, nights and all. */
+  const carry = (e: React.PointerEvent<HTMLElement>, i: number) => {
+    if (stops.length < 2 || !track.current) return;
+    startLift(e, listReorder({ box: track.current, from: i, axis: "x", onDrop: (to) => onReorder(i, to) }), { slop: 6 });
+  };
   const drag = useRef<{ i: number; base: number[] } | null>(null);
   const [held, setHeld] = useState<number | null>(null);
   const total = Math.max(1, nights.reduce((a, b) => a + b, 0));
@@ -693,9 +768,10 @@ function NightsBar({ stops, nights, onChange, onFocusStop, onPick }: { stops: (S
               data-small={n / total < 0.17 || undefined}
               style={{ "--n": n, "--ink": stopColor(i) } as React.CSSProperties}
               onClick={() => onPick(i)}
+              onPointerDown={(e) => carry(e, i)}
               onMouseEnter={() => onFocusStop(i)}
               onMouseLeave={() => onFocusStop(undefined)}
-              aria-label={`${s.name}: ${n} ${n === 1 ? "night" : "nights"}, ${shortRange(s.from, s.to)}. Show on the globe`}
+              aria-label={`${s.name}: ${n} ${n === 1 ? "night" : "nights"}, ${shortRange(s.from, s.to)}. Show on the globe (hold and slide it to change the order)`}
             >
               <span className="nb-seg-name">{s.name}</span>
               <span className="nb-seg-n tnum">

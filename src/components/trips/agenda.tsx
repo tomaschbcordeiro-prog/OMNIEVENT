@@ -15,6 +15,7 @@ import { KIND_ICON } from "./plan-icons";
 import { type WhenValue } from "./when-picker";
 import { openAdd } from "./add-bus";
 import { AddBar } from "./add-bar";
+import { buzz, startLift } from "@/lib/lift";
 
 /*
  * A trip as an agenda: day by day, your own plans (the flight, the hotel, a meeting) with the
@@ -322,7 +323,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
     [trip.plans, near],
   );
   const schedule = (p: TripPlan, w: Partial<WhenValue> & { day: string }, from?: DOMRect) => {
-    if (!w.day && !p.day) return;
+    if (!w.day && !isScheduled(p)) return;
     flip.capture();
     flip.born(p.id, from);
     const change = "time" in w ? { day: w.day, time: w.time, endTime: w.endTime, endDay: w.endDay, notes: w.notes } : { day: w.day, endDay: p.kind === "stay" && w.day ? addDays(w.day, Math.max(1, nightsOf(p))) : p.endDay };
@@ -350,6 +351,70 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
       schedule(p, { day }, (e.currentTarget as HTMLElement).getBoundingClientRect());
     },
   });
+  /**
+   * A plan held (a moment on a phone, a small drag with a mouse) comes off the agenda as a card
+   * under the finger; the day it's over lights up, and letting go puts it on that day (or back in
+   * "places to see"), gliding from where it was dropped into its place.
+   */
+  const carry = (e: React.PointerEvent<HTMLElement>, p: TripPlan) => {
+    const row = e.currentTarget;
+    let ghost: HTMLElement | null = null;
+    let start = { x: 0, y: 0 };
+    let last: string | null = null;
+    const under = (x: number, y: number): string | null => {
+      const el = document.elementFromPoint(x, y);
+      const day = el?.closest<HTMLElement>(".ag-day")?.dataset.day;
+      if (day) return day;
+      return el?.closest(".ag-tosee") ? "" : null;
+    };
+    const done = () => {
+      ghost?.remove();
+      ghost = null;
+      row.removeAttribute("data-ghosted");
+      box.current?.removeAttribute("data-carrying");
+      setOver(null);
+    };
+    startLift(
+      e,
+      {
+        lift: (pt) => {
+          start = pt;
+          const r = row.getBoundingClientRect();
+          // The card that travels: a copy of the row, in the agenda's own styles.
+          const wrap = document.createElement("div");
+          wrap.className = "ag lift-ghost";
+          wrap.setAttribute("aria-hidden", "true");
+          wrap.style.left = `${r.left}px`;
+          wrap.style.top = `${r.top}px`;
+          wrap.style.width = `${r.width}px`;
+          wrap.appendChild(row.cloneNode(true));
+          document.body.appendChild(wrap);
+          ghost = wrap;
+          row.setAttribute("data-ghosted", "");
+          box.current?.setAttribute("data-carrying", "");
+        },
+        move: (pt) => {
+          if (ghost) ghost.style.transform = `translate3d(${pt.x - start.x}px, ${pt.y - start.y}px, 0)`;
+          const t = under(pt.x, pt.y);
+          const key = t === null ? null : t === "" ? "tosee" : t;
+          if (key !== last) {
+            last = key;
+            if (key && key !== (p.day || "tosee")) buzz(4);
+            setOver(key);
+          }
+        },
+        drop: (pt) => {
+          const t = under(pt.x, pt.y);
+          const rect = ghost?.firstElementChild?.getBoundingClientRect();
+          done();
+          if (t === null || t === (isScheduled(p) ? p.day : "")) return;
+          schedule(p, { day: t }, rect);
+        },
+        cancel: done,
+      },
+      { scroller: box.current?.closest<HTMLElement>("[data-lift-scroll]") },
+    );
+  };
   const sig = toSee.map((p) => p.id).join() + "#" + days.map((d) => d.rows.map((r) => r.key).join()).join("|");
   const flip = useFlip(box, sig);
   // Plans added from elsewhere on the page (a city's search, its sights) glide in too.
@@ -371,7 +436,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
       {compose && <AddBar title="Add to your trip" sub="A place, food, your hotel, a flight, a meeting, a plan of your own" />}
 
       {toSee.length > 0 && (
-        <section className="ag-tosee" aria-labelledby="ag-tosee-h">
+        <section className="ag-tosee" aria-labelledby="ag-tosee-h" data-drop={over === "tosee" || undefined}>
           <h3 id="ag-tosee-h" className="ag-tosee-h">
             <MapPin size={14} aria-hidden /> {near ? `Places to see in ${near.name}` : "Places to see"} <span className="text-text-3 font-normal tnum">{toSee.length}</span>
           </h3>
@@ -382,6 +447,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
                 data-flip={`idea:${p.id}`}
                 data-plan={p.id}
                 className="ag-row ag-idea"
+                onPointerDown={(e) => e.pointerType !== "mouse" && carry(e, p)}
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData(PLAN_DRAG, p.id);
@@ -414,6 +480,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
       )}
 
       {!days.length && <p className="t-small text-text-2 mt-4">Add the route&apos;s dates to see the trip day by day.</p>}
+      {days.length > 0 && (trip.plans ?? []).some((p) => p.kind !== "stay") && <p className="lift-hint mt-3">Hold a plan and drag it to another day.</p>}
       <ol className="ag-days">
         {days.map(({ day, stops: here, rows }) => (
           <li key={day} className="ag-day" data-day={day} data-today={day === today() || undefined} data-drop={over === day || undefined} {...dropOn(day)}>
@@ -440,7 +507,7 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
             </div>
             <ul className="ag-rows">
               {rows.map((r) => (
-                <li key={r.key} data-flip={r.key} data-plan={"plan" in r ? r.plan.id : undefined} className={`ag-row ag-${r.type}`}>
+                <li key={r.key} data-flip={r.key} data-plan={"plan" in r ? r.plan.id : undefined} className={`ag-row ag-${r.type}`} data-carry={r.type === "plan" || undefined} onPointerDown={r.type === "plan" ? (e) => carry(e, r.plan) : undefined}>
                   {r.type === "plan" && (
                     <div className="ag-idea-row">
                       <PlanRow p={r.plan} price={prices.get(r.plan.id)} onEdit={() => openAdd({ edit: r.plan })} />

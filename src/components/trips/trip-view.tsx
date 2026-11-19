@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Copy, Download, ExternalLink, Globe2, LogOut, Pencil, Plane, Play, Plus, Sparkles, Trash2, TriangleAlert, Users, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
-import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
+import { fitSpan, flagOf, midpoint, moved, nightsBetween, placeName, stopColor, withNights, type Fit, type TripStop } from "@/lib/trip";
+import { listReorder, startLift } from "@/lib/lift";
 import { isTravel, kindLabel, planIcs } from "@/lib/trip-plans";
 import { KIND_ICON, TripAgenda } from "./agenda";
 import { PoiCard, type MapPlace } from "./place-to-trip";
@@ -312,6 +313,19 @@ export function TripView({ id }: { id: string }) {
     }
     toast({ title: "Added to your trip", body: c.title, emoji: "📌", action: { label: "Undo", run: () => userActions.setTripEvent(trip.id, tripSnapOf(c), false) } });
   };
+  /** A city carried to another place in the route: each keeps its nights, the dates follow. */
+  const reorderStops = (from: number, to: number) => {
+    if (!trip || from === to) return;
+    const before = trip.stops;
+    const next = withNights(moved(stops, from, to), stops[0].from, moved(stops.map((s) => nightsBetween(s.from, s.to)), from, to));
+    userActions.updateTrip(trip.id, { stops: next });
+    toast({ title: `${stops[from].name} is now stop ${to + 1}`, body: next.map((s) => s.name).join(" → "), emoji: "🧭", action: { label: "Undo", run: () => userActions.updateTrip(trip.id, { stops: before }) } });
+  };
+  const cards = useRef<HTMLDivElement>(null);
+  const carryStop = (e: React.PointerEvent<HTMLElement>, i: number) => {
+    if (!canEdit || stops.length < 2 || !cards.current) return;
+    startLift(e, listReorder({ box: cards.current, from: i, onDrop: (to) => reorderStops(i, to) }), { scroller: cards.current.closest<HTMLElement>("[data-lift-scroll]") });
+  };
   const remove = (e: TripEvent) => {
     if (!trip) return;
     userActions.setTripEvent(trip.id, e, false);
@@ -484,7 +498,7 @@ export function TripView({ id }: { id: string }) {
           </div>
         </header>
 
-        <div className="planner-body" key={sel ?? "all"}>
+        <div className="planner-body" key={sel ?? "all"} data-lift-scroll>
           {!stops.length && (view === "agenda" || view === "cities") && (
             <div className="trip-empty">
               <p className="font-semibold">This trip has no route yet</p>
@@ -519,12 +533,14 @@ export function TripView({ id }: { id: string }) {
           {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
 
           {sel === null && view === "cities" && (
-            <div className="stop-cards" data-glide>
+            <>
+            {canEdit && stops.length > 1 && <p className="lift-hint">Hold a city and drag it to change the order.</p>}
+            <div ref={cards} className="stop-cards" data-glide>
             {stops.map((s, i) => {
               const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === s.id);
               const n = sugg[s.id];
               return (
-                <button key={s.id} type="button" className="stop-card press" style={{ "--ink": stopColor(i) } as React.CSSProperties} onClick={() => pick(i)}>
+                <button key={s.id} type="button" className="stop-card press" style={{ "--ink": stopColor(i) } as React.CSSProperties} onClick={() => pick(i)} onPointerDown={(e) => carryStop(e, i)}>
                   <span className="planner-stop-n" aria-hidden>{i + 1}</span>
                   <span className="min-w-0 flex-1 text-left">
                     <span className="block font-semibold">{s.name} <span aria-hidden>{flagOf(s.countryCode)}</span>{s.place && <span className="t-micro font-normal text-text-3"> · {s.place}</span>}</span>
@@ -538,6 +554,7 @@ export function TripView({ id }: { id: string }) {
               );
             })}
             </div>
+            </>
           )}
 
           {sel === null && view === "cities" && stops.length > 0 && (
