@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, bestOrder, codeOf, daysOf, extendFor, fitOf, fitSpan, flagOf, moveBoundary, nightsBetween, REGIONS, routeKm, splitNights, stopOn, suggestName, withNights, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, codeOf, daysOf, extendFor, fitOf, fitSpan, flagOf, moveBoundary, nightsBetween, rescaleNights, REGIONS, routeKm, splitNights, stopOn, suggestName, withNights, type TripStop } from "@/lib/trip";
 
 const benelux = REGIONS.find((r) => r.id === "benelux")!.places;
 const stops = (start: string, nights: number[]): TripStop[] => withNights(benelux.map((p, i) => ({ ...p, id: `s${i}`, from: "", to: "" })), start, nights);
@@ -208,5 +208,28 @@ describe("trip ideas from saved events", () => {
     const g = ideaGroups([e("a", "2027-03-12"), e("b", "2027-03-14", 38.7, -9.1), e("c", "2027-05-01"), e("d", "2027-05-02", 35.7, 139.7), e("x", "2027-03-13")]);
     expect(g.map((x) => x.map((y) => y.id))).toEqual([["a", "x", "b"]]);
     expect(ideaGroups([e("a", "2027-03-01"), e("b", "2027-03-09")])).toEqual([]);
+  });
+});
+
+describe("new dates for the same trip", () => {
+  it("keeps each city's share when the trip gets longer or shorter", () => {
+    expect(rescaleNights([4, 2], 12)).toEqual([8, 4]);
+    expect(rescaleNights([4, 2], 3)).toEqual([2, 1]);
+    expect(rescaleNights([3, 3, 1], 14)).toEqual([6, 6, 2]);
+  });
+  it("always adds up to the trip's nights", () => {
+    for (const total of [1, 2, 5, 9, 13, 30])
+      for (const shares of [[1], [2, 1], [5, 1, 1], [1, 1, 1, 1], [7, 0, 3]]) expect(rescaleNights(shares, total).reduce((a, b) => a + b, 0)).toBe(total);
+  });
+  it("gives every city a night when there are enough", () => {
+    expect(rescaleNights([10, 1, 1], 3)).toEqual([1, 1, 1]);
+    expect(Math.min(...rescaleNights([9, 1], 4))).toBeGreaterThanOrEqual(1);
+  });
+  it("shares evenly when there's nothing to go by", () => {
+    expect(rescaleNights([0, 0, 0], 7)).toEqual([3, 2, 2]);
+    expect(rescaleNights([], 5)).toEqual([]);
+  });
+  it("leaves day trips when there are fewer nights than cities", () => {
+    expect(rescaleNights([1, 1, 1], 2).reduce((a, b) => a + b, 0)).toBe(2);
   });
 });

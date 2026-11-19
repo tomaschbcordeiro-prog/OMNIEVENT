@@ -123,7 +123,10 @@ export function PlaceSearch({ onPick, id = "trip-place", placeholder = "Add a ci
         <ul id={`${id}-list`} role="listbox" className="planner-results">
           {list.map((p, i) => (
             <li key={`${p.name}-${p.lat}`} id={`${id}-${i}`} role="option" aria-selected={i === hi}>
-              <button type="button" className="planner-result" data-hi={i === hi || undefined} onMouseEnter={() => setHi(i)} onClick={() => pick(p)}>
+              <button type="button" className="planner-result" data-hi={i === hi || undefined} onPointerMove={(e) => {
+                // Only a mouse that really moved picks the row (not the list sliding under a still finger or pointer).
+                if (e.pointerType === "mouse" && (e.movementX || e.movementY) && hi !== i) setHi(i);
+              }} onClick={() => pick(p)}>
                 <span className="text-lg" aria-hidden>{flagOf(p.countryCode) || <MapPin size={16} />}</span>
                 <span className="min-w-0">
                   <span className="block font-semibold truncate">{p.name}</span>

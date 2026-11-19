@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Minus, Plane, Plus, Sparkles, Users, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkles, Users, Wand2, X } from "lucide-react";
 import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
 import { getUser, userActions } from "@/lib/user/store";
-import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
+import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, rescaleNights, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
 import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
@@ -16,6 +16,7 @@ import { bboxOf, CityPin, dayLabel, MapIcons, routeOf, SheetGrab, shortRange, Tr
 import { localDateKey } from "@/lib/format";
 import { toast } from "../toast";
 import { LegPlus, lookupTown, MapAddCard, PlaceSearch, placeOfTown, RouteList, type RouteStop } from "./route-edit";
+import { DatesRow, RangeCalendar, shortDay } from "./range-calendar";
 
 type Stop = RouteStop;
 /** Two steps, then the trip exists: where, and how long in each place. Everything else (events,
@@ -23,14 +24,6 @@ type Stop = RouteStop;
 const STEPS = ["Where", "How long"] as const;
 const LAST = STEPS.length - 1;
 const EMOJIS = ["✈️", "🌍", "🚆", "🚗", "🎒", "🎉", "🌴", "🏔️", "🎭", "🎶"];
-/** The most nights one city can take in the planner (a longer stay is planned as its own trip). */
-const MAX_NIGHTS = 60;
-const LENGTHS = [
-  { label: "Long weekend", nights: 3 },
-  { label: "A week", nights: 7 },
-  { label: "10 days", nights: 10 },
-  { label: "Two weeks", nights: 14 },
-];
 const RADIUS_KM = 30;
 const MAX_STOPS = 10;
 /** Map labels that name a town (tapping one adds it by that name). */
@@ -74,6 +67,8 @@ export function TripPlanner() {
   const [named, setNamed] = useState(false);
   const [emoji, setEmoji] = useState("✈️");
   const [emojiOpen, setEmojiOpen] = useState(false);
+  /** The calendar open to change dates already picked. */
+  const [datesOpen, setDatesOpen] = useState(false);
   const [fly, setFly] = useState<FlyRequest>();
   const [active, setActive] = useState<number | undefined>();
   const [ready, setReady] = useState(false);
@@ -394,17 +389,13 @@ export function TripPlanner() {
     toast({ title: "Shortest route", body: `${saved.toLocaleString("en-GB")} km less on the way`, emoji: "🪄" });
   };
 
-  const setLength = (n: number) => {
-    const s = start || addDays(today(), 21);
+  /** New dates for the whole trip: each city keeps its share of it. */
+  const setRange = (s: string, e: string) => {
     setStart(s);
-    setNights(splitNights(s, addDays(s, Math.max(n, stops.length)), stops.length).map((r) => nightsBetween(r.from, r.to)));
-  };
-  const setEnd = (e: string) => {
-    if (!start || !e || e <= start) return;
-    setNights(splitNights(start, e, stops.length).map((r) => nightsBetween(r.from, r.to)));
+    setNights((n) => rescaleNights(n.length === stops.length ? n : stops.map(() => 0), nightsBetween(s, e)));
+    setDatesOpen(false);
   };
   const goWhen = () => {
-    if (!start) setLength(Math.min(14, Math.max(3, stops.length * 2)));
     setStepState(1);
     // On a phone the whole step shows at once (every city's nights, the dates, the name).
     sheet.setSnap("full");
@@ -557,33 +548,21 @@ export function TripPlanner() {
 
           {step === 1 && (
             <>
-              <p className="planner-q">How long in each place?</p>
-              {start && end && stops.length > 0 && (
-                <NightsEditor stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} interests={interests} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+              <p className="planner-q">When are you going?</p>
+              {start && end && !datesOpen ? (
+                <DatesRow start={start} end={end} onOpen={() => setDatesOpen(true)} />
+              ) : (
+                <RangeCalendar start={start} end={end} min={today()} onChange={setRange} />
               )}
 
-              <h2 className="planner-sub">When</h2>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block">
-                  <span className="label">Arriving</span>
-                  <input type="date" className="field" min={today()} value={start} onChange={(e) => {
-                    const v = e.target.value;
-                    if (!v) return;
-                    setStart(v);
-                    setNights((n) => (n.length === stops.length ? n : splitNights(v, addDays(v, stops.length * 2), stops.length).map((r) => nightsBetween(r.from, r.to))));
-                  }} />
-                </label>
-                <label className="block">
-                  <span className="label">Leaving</span>
-                  <input type="date" className="field" min={start ? addDays(start, Math.max(1, stops.length)) : today()} value={end} onChange={(e) => setEnd(e.target.value)} />
-                </label>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Share the nights out for a trip of">
-                {LENGTHS.map((l) => (
-                  <button key={l.label} type="button" className="chip press" data-active={totalNights === l.nights || undefined} onClick={() => setLength(l.nights)}>{l.label}</button>
-                ))}
-              </div>
-              {start && end && stops.length > 1 && <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />}
+              {start && end && stops.length > 0 && (
+                <>
+                  <h2 className="planner-sub">{stops.length > 1 ? "Nights in each place" : "Your stay"}</h2>
+                  {stops.length > 1 && <p className="planner-note">Drag the handles to share the nights out.</p>}
+                  <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+                  <NightsLegend stops={dated as (Stop & { from: string; to: string })[]} nights={nights} interests={interests} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+                </>
+              )}
 
               <h2 className="planner-sub">Name</h2>
               <div className="planner-name-row">
@@ -665,100 +644,152 @@ function useCounts(stops: (Place & { key: string; from: string; to: string })[],
 }
 
 /**
- * How long in each place: a row per city with its days and what's on there then, and a "−"
- * and "+" for its nights (big enough for a thumb). The trip's end moves with them.
+ * The trip as one bar, a coloured stretch per city as long as its nights, with the days of the
+ * trip ticked underneath. Between two cities, a handle to drag (or focus and move with the arrow
+ * keys): it snaps night by night, shows the day you'd move on, and gives a little tick on phones
+ * that can. Tapping a stretch shows that city on the globe.
  */
-function NightsEditor({ stops, nights, onChange, interests, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; interests: string[]; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
+function NightsBar({ stops, nights, onChange, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
+  const track = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ i: number; base: number[] } | null>(null);
+  const [held, setHeld] = useState<number | null>(null);
+  const total = Math.max(1, nights.reduce((a, b) => a + b, 0));
+  const start = stops[0]?.from ?? "";
+  /** Nights before the handle after stop i (where it sits on the bar). */
+  const upTo = (n: number[], i: number) => n.slice(0, i + 1).reduce((a, b) => a + b, 0);
+  const pct = (k: number) => `${(k / total) * 100}%`;
+  const set = (next: number[]) => {
+    if (next.every((v, j) => v === nights[j])) return;
+    onChange(next);
+    try {
+      navigator.vibrate?.(4);
+    } catch {
+      // no vibration here
+    }
+  };
+  const follow = (e: React.PointerEvent) => {
+    const d = drag.current;
+    const box = track.current?.getBoundingClientRect();
+    if (!d || !box) return;
+    const k = Math.round(((e.clientX - box.left) / box.width) * total);
+    set(moveBoundary(d.base, d.i, k - upTo(d.base, d.i)));
+  };
+  const letGo = () => {
+    drag.current = null;
+    setHeld(null);
+  };
+  // Day ticks: every day on a short trip, fewer on a long one (each label needs room).
+  const every = total <= 10 ? 1 : total <= 21 ? 2 : 7;
+  return (
+    <div className="nb" data-held={held !== null || undefined}>
+      <div ref={track} className="nb-track">
+        {stops.map((s, i) => {
+          const n = nights[i] ?? 0;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              className="nb-seg"
+              data-small={n / total < 0.17 || undefined}
+              style={{ "--n": n, "--ink": stopColor(i) } as React.CSSProperties}
+              onClick={() => onPick(i)}
+              onMouseEnter={() => onFocusStop(i)}
+              onMouseLeave={() => onFocusStop(undefined)}
+              aria-label={`${s.name}: ${n} ${n === 1 ? "night" : "nights"}, ${shortRange(s.from, s.to)}. Show on the globe`}
+            >
+              <span className="nb-seg-name">{s.name}</span>
+              <span className="nb-seg-n tnum">
+                <b key={n}>{n}</b>
+                <span>{n === 1 ? "night" : "nights"}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {stops.slice(0, -1).map((s, i) => {
+        const k = upTo(nights, i);
+        const day = addDays(start, k);
+        const next = stops[i + 1];
+        return (
+          <div
+            key={`h-${s.key}`}
+            className="nb-knob"
+            data-held={held === i || undefined}
+            style={{ "--x": pct(k) } as React.CSSProperties}
+            role="slider"
+            tabIndex={0}
+            aria-label={`Move on from ${s.name} to ${next.name}`}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={k}
+            aria-valuetext={`${s.name} ${nights[i]} ${nights[i] === 1 ? "night" : "nights"}, ${next.name} ${nights[i + 1]} ${nights[i + 1] === 1 ? "night" : "nights"}. Move on ${shortDay(day)}`}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+              drag.current = { i, base: nights };
+              setHeld(i);
+            }}
+            onPointerMove={follow}
+            onPointerUp={letGo}
+            onPointerCancel={letGo}
+            onLostPointerCapture={letGo}
+            onKeyDown={(e) => {
+              const step = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+              if (!step) return;
+              e.preventDefault();
+              set(moveBoundary(nights, i, step));
+            }}
+          >
+            <span className="nb-knob-grip" aria-hidden />
+            <span className="nb-tip tnum" aria-hidden>{shortDay(day)}</span>
+          </div>
+        );
+      })}
+      <div className="nb-days" aria-hidden>
+        {Array.from({ length: total + 1 }, (_, k) => {
+          const d = addDays(start, k);
+          // The first and last days carry the month: their neighbours stay unlabelled to leave room.
+          const label = k === 0 || k === total || (k % every === 0 && k >= 2 && k <= total - 2);
+          return (
+            <span key={k} className="nb-day tnum" data-edge={k === 0 ? "start" : k === total ? "end" : undefined} style={{ "--x": pct(k) } as React.CSSProperties}>
+              <i />
+              {label && <span>{k === 0 || k === total ? fmtDay(d) : Number(d.slice(8))}</span>}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+const fmtDay = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/** Each city's days and nights in words, with what's on there then; a tap shows it on the globe. */
+function NightsLegend({ stops, nights, interests, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; interests: string[]; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
   const counts = useCounts(stops, interests);
-  const total = nights.reduce((a, b) => a + b, 0);
-  const set = (i: number, v: number) => onChange(nights.map((n, j) => (j === i ? v : n)));
   return (
     <>
-      <ul className="nights-list">
+      <ol className="nb-legend">
         {stops.map((s, i) => {
           const n = nights[i] ?? 0;
           const c = counts[s.key];
-          // A city can be a day trip (0 nights) when there are others; the trip itself needs a night.
-          const min = stops.length > 1 && total - n >= 1 ? 0 : 1;
           return (
-            <li key={s.key} className="nights-item" style={{ "--ink": stopColor(i) } as React.CSSProperties} onMouseEnter={() => onFocusStop(i)} onMouseLeave={() => onFocusStop(undefined)}>
-              <span className="planner-stop-n" aria-hidden>{i + 1}</span>
-              <button type="button" className="nights-item-main" onClick={() => onPick(i)} aria-label={`${s.name}: ${dayLabel(s.from)} to ${dayLabel(s.to)}. Show on the globe`}>
-                <span className="nights-item-name">{s.name}</span>
-                <span className="nights-item-when tnum">{n === 0 ? dayLabel(s.from) : shortRange(s.from, s.to)}</span>
-                <span className="nights-item-on tnum">
-                  {c == null ? <Loader2 size={11} className="animate-spin" aria-label="Counting events" /> : c > 0 ? `${c.toLocaleString("en-GB")} ${c === 1 ? "event" : "events"} on` : "Quiet those days"}
+            <li key={s.key} style={{ "--ink": stopColor(i) } as React.CSSProperties}>
+              <button type="button" className="nb-row" onClick={() => onPick(i)} onMouseEnter={() => onFocusStop(i)} onMouseLeave={() => onFocusStop(undefined)}>
+                <span className="planner-stop-n" aria-hidden>{i + 1}</span>
+                <span className="nb-row-main">
+                  <span className="nb-row-name">{s.name}</span>
+                  <span className="nb-row-when tnum">{n === 0 ? `${dayLabel(s.from)}, a day trip` : `${dayLabel(s.from)} → ${dayLabel(s.to)}`}</span>
+                </span>
+                <span className="nb-row-side tnum">
+                  <b>{n} {n === 1 ? "night" : "nights"}</b>
+                  <span>{c == null ? <Loader2 size={11} className="animate-spin" aria-label="Counting events" /> : c > 0 ? `${c.toLocaleString("en-GB")} on` : "quiet"}</span>
                 </span>
               </button>
-              <div className="stepper" role="group" aria-label={`Nights in ${s.name}`}>
-                <button type="button" className="stepper-btn press" aria-label={`One night less in ${s.name}`} disabled={n <= min} onClick={() => set(i, n - 1)}>
-                  <Minus size={16} strokeWidth={2.5} aria-hidden />
-                </button>
-                <span className="stepper-n tnum" aria-live="polite" aria-atomic="true">
-                  {n === 0 ? <span className="stepper-day">Day trip</span> : <><b key={n}>{n}</b><span>{n === 1 ? "night" : "nights"}</span></>}
-                </span>
-                <button type="button" className="stepper-btn press" aria-label={`One night more in ${s.name}`} disabled={n >= MAX_NIGHTS} onClick={() => set(i, n + 1)}>
-                  <Plus size={16} strokeWidth={2.5} aria-hidden />
-                </button>
-              </div>
             </li>
           );
         })}
-      </ul>
+      </ol>
       {stops.length > 1 && nights.some((n) => n === 0) && <p className="t-micro text-text-2 mt-2">A day trip: you pass through on a travel day, without sleeping there.</p>}
     </>
-  );
-}
-
-/**
- * The trip as one bar, a coloured stretch per city as long as its nights. Drag the line
- * between two cities (or focus it and use the arrow keys) to move a night from one to the
- * other.
- */
-function NightsBar({ stops, nights, onChange, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
-  const bar = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ i: number; x: number; base: number[] } | null>(null);
-  const total = Math.max(1, nights.reduce((a, b) => a + b, 0));
-  const onMove = (e: React.PointerEvent) => {
-    const d = drag.current;
-    const w = bar.current?.clientWidth ?? 1;
-    if (!d) return;
-    const delta = Math.round(((e.clientX - d.x) / w) * total);
-    onChange(moveBoundary(d.base, d.i, delta));
-  };
-  return (
-    <div className="mt-4">
-      <div ref={bar} className="nights-bar" onPointerMove={onMove} onPointerUp={() => (drag.current = null)} onPointerCancel={() => (drag.current = null)}>
-        {stops.map((s, i) => (
-          <div key={s.key} className="nights-seg" style={{ flexGrow: Math.max(0.35, nights[i] ?? 0), "--ink": stopColor(i) } as React.CSSProperties} onMouseEnter={() => onFocusStop(i)} onMouseLeave={() => onFocusStop(undefined)}>
-            <button type="button" className="nights-seg-body" onClick={() => onPick(i)} aria-label={`${s.name}: ${nights[i]} ${nights[i] === 1 ? "night" : "nights"}, ${shortRange(s.from, s.to)}. Show on the globe.`}>
-              <span className="nights-seg-name">{s.name}</span>
-              <span className="nights-seg-n tnum">{nights[i]}<span className="sr-only"> nights</span><span aria-hidden>n</span></span>
-            </button>
-            {i < stops.length - 1 && (
-              <button
-                type="button"
-                className="nights-handle"
-                aria-label={`Move a night between ${s.name} and ${stops[i + 1].name}. Left arrow gives ${stops[i + 1].name} a night, right arrow gives ${s.name} one.`}
-                onPointerDown={(e) => {
-                  (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-                  drag.current = { i, x: e.clientX, base: nights };
-                }}
-                onPointerMove={onMove}
-                onPointerUp={() => (drag.current = null)}
-                onKeyDown={(e) => {
-                  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-                  e.preventDefault();
-                  onChange(moveBoundary(nights, i, e.key === "ArrowRight" ? 1 : -1));
-                }}
-              >
-                <span aria-hidden />
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="t-micro text-text-3 mt-1.5">The whole trip at a glance: drag the white lines to move nights between cities.</p>
-    </div>
   );
 }

@@ -175,6 +175,33 @@ export function moveBoundary(nights: number[], i: number, delta: number): number
   return out;
 }
 
+/**
+ * The same shares of a trip over a new number of nights (the trip's dates changed): each stop
+ * keeps its part of the trip as closely as whole nights allow, and every stop keeps at least one
+ * night when there are enough. With no shares yet, the nights are shared out evenly.
+ */
+export function rescaleNights(nights: number[], total: number): number[] {
+  const n = nights.length;
+  if (!n) return [];
+  const t = Math.max(0, Math.round(total));
+  const sum = nights.reduce((a, b) => a + Math.max(0, b), 0);
+  if (!sum) return Array.from({ length: n }, (_, i) => Math.floor(t / n) + (i < t % n ? 1 : 0));
+  const raw = nights.map((x) => (Math.max(0, x) * t) / sum);
+  const out = raw.map(Math.floor);
+  let left = t - out.reduce((a, b) => a + b, 0);
+  // The nights left over go to the stops that lost most in the rounding (the first ones on a tie).
+  const order = raw.map((r, i) => ({ f: r - Math.floor(r), i })).sort((a, b) => b.f - a.f || a.i - b.i);
+  for (let k = 0; left > 0; k = (k + 1) % n, left--) out[order[k].i]++;
+  if (t >= n)
+    for (let i = 0; i < n; i++)
+      while (out[i] < 1) {
+        const j = out.indexOf(Math.max(...out));
+        out[j]--;
+        out[i]++;
+      }
+  return out;
+}
+
 /** Total length of a route in km, in the order given. */
 export function routeKm(stops: { lat: number; lng: number }[]): number {
   let km = 0;
