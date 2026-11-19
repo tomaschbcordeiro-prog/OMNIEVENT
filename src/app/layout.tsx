@@ -10,6 +10,7 @@ import { TiltCards } from "@/components/tilt-cards";
 import { Toaster } from "@/components/toast";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { AppShell } from "@/components/app-shell";
+import { HoverGlide } from "@/components/hover-glide";
 import { NetworkStatus } from "@/components/network-status";
 import { SITE } from "@/lib/site";
 import { Suspense } from "react";
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TrailRecorder />
         <AfterEventNudge />
         <TripDock />
+        <HoverGlide />
       </body>
     </html>
   );

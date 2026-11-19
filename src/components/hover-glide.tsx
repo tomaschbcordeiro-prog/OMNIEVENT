@@ -1,0 +1,105 @@
+"use client";
+
+import { useEffect } from "react";
+
+/*
+ * On a computer, one soft shaded area follows the mouse along a list: it appears under the row
+ * the pointer is on and glides to the next one as the pointer moves, instead of each row lighting
+ * up on its own. Lists opt in with `data-glide` (each direct child is a row) and rows anywhere
+ * with `data-glide-item` (drawn in their list). The shade is the list's own ::before, placed with
+ * CSS variables, so nothing is added to the page's markup. Touch screens never see it.
+ */
+
+const SNAP = "data-glide-snap";
+const ON = "data-glide-on";
+
+function rowOf(t: Element): { box: HTMLElement; item: HTMLElement } | null {
+  const item = t.closest<HTMLElement>("[data-glide-item]");
+  if (item) {
+    const box = item.parentElement?.closest<HTMLElement>("[data-glide]") ?? item.parentElement;
+    return box ? { box, item } : null;
+  }
+  const box = t.closest<HTMLElement>("[data-glide]");
+  if (!box) return null;
+  let el: Element | null = t;
+  while (el && el.parentElement !== box) el = el.parentElement;
+  return el && el !== box ? { box, item: el as HTMLElement } : null;
+}
+
+function place(box: HTMLElement, item: HTMLElement) {
+  if (getComputedStyle(box).position === "static") box.style.position = "relative";
+  const b = box.getBoundingClientRect();
+  const r = item.getBoundingClientRect();
+  const x = r.left - b.left - box.clientLeft + box.scrollLeft;
+  const y = r.top - b.top - box.clientTop + box.scrollTop;
+  const s = box.style;
+  s.setProperty("--gx", `${Math.round(x)}px`);
+  s.setProperty("--gy", `${Math.round(y)}px`);
+  s.setProperty("--gw", `${Math.round(r.width)}px`);
+  s.setProperty("--gh", `${Math.round(r.height)}px`);
+}
+
+export function HoverGlide() {
+  useEffect(() => {
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+    let box: HTMLElement | null = null;
+    let item: HTMLElement | null = null;
+    let frame = 0;
+
+    const off = () => {
+      box?.removeAttribute(ON);
+      box = null;
+      item = null;
+    };
+    const over = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || !fine.matches) return;
+      const hit = rowOf(e.target as Element);
+      if (!hit || hit.item.matches("[aria-disabled='true'], :disabled, [data-glide-skip]")) {
+        // In the gap between two rows it stays where it is; anywhere else it goes.
+        if (box && !box.contains(e.target as Node)) off();
+        return;
+      }
+      if (hit.box === box && hit.item === item) return;
+      const fresh = hit.box !== box;
+      if (fresh) {
+        off();
+        // The first row it lands on: it appears there, without sliding in from the last place.
+        hit.box.setAttribute(SNAP, "");
+      }
+      box = hit.box;
+      item = hit.item;
+      place(box, item);
+      box.setAttribute(ON, "");
+      if (fresh) {
+        const b = box;
+        requestAnimationFrame(() => requestAnimationFrame(() => b.removeAttribute(SNAP)));
+      }
+    };
+    // A row that moved under a still pointer (a list growing, a sheet resizing): the shade follows.
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || !box || !item || frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (box && item && item.isConnected) place(box, item);
+        else off();
+      });
+    };
+    const out = (e: PointerEvent) => {
+      if (!box) return;
+      const to = e.relatedTarget as Node | null;
+      if (!to || !box.contains(to)) off();
+    };
+    document.addEventListener("pointerover", over, { passive: true });
+    document.addEventListener("pointermove", move, { passive: true });
+    document.addEventListener("pointerout", out, { passive: true });
+    window.addEventListener("blur", off);
+    return () => {
+      document.removeEventListener("pointerover", over);
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerout", out);
+      window.removeEventListener("blur", off);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return null;
+}

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Copy, Download, ExternalLink, Globe2, LogOut, Pencil, Plane, Play, Plus, Trash2, TriangleAlert, Users, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Globe2, LogOut, Pencil, Plane, Play, Plus, Sparkles, Trash2, TriangleAlert, Users, X } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { userActions, useUser, type Trip } from "@/lib/user/store";
 import { fitSpan, flagOf, midpoint, nightsBetween, placeName, stopColor, type Fit, type TripStop } from "@/lib/trip";
@@ -121,6 +121,23 @@ export function TripView({ id }: { id: string }) {
   // Planned with others: changes go out and come in while it's open.
   useGroupSync(trip?.id, !!trip?.group);
   const canEdit = !trip?.group || trip.group.role !== "viewer";
+  /** "Later" pressed on the first steps: they don't come back for this trip. */
+  const [startHidden, setStartHidden] = useState(true);
+  useEffect(() => {
+    try {
+      setStartHidden(!!localStorage.getItem(`mundivi:trip-start:${id}`));
+    } catch {
+      setStartHidden(false);
+    }
+  }, [id]);
+  const hideStart = () => {
+    setStartHidden(true);
+    try {
+      localStorage.setItem(`mundivi:trip-start:${id}`, "1");
+    } catch {
+      // storage off: hidden for this visit
+    }
+  };
   useEffect(() => {
     const on = (e: Event) => setAdding((a) => ({ req: (e as CustomEvent<AddRequest>).detail ?? {}, n: (a?.n ?? 0) + 1 }));
     window.addEventListener(ADD_EVENT, on);
@@ -222,7 +239,8 @@ export function TripView({ id }: { id: string }) {
     }
     if (sp.get("hello")) {
       // With the invitation open over it, the note would only be hidden behind.
-      if (!sp.get("invite")) toast({ title: "Your trip is ready", body: "Tap a city to see what's on while you're there.", emoji: trip.emoji ?? "✈️" });
+      // A trip with nothing in it yet shows its first steps in the panel instead.
+      if (!sp.get("invite") && (trip.eventIds?.length ?? 0) > 0) toast({ title: "Your trip is ready", body: "Tap a city to see what's on while you're there.", emoji: trip.emoji ?? "✈️" });
       router.replace(`/trips/${trip.id}`, { scroll: false });
     }
     // Once, when the globe is ready.
@@ -381,6 +399,8 @@ export function TripView({ id }: { id: string }) {
   const nights = trip.start && trip.end ? nightsBetween(trip.start, trip.end) : 0;
   const flags = [...new Set(stops.map((s) => flagOf(s.countryCode)).filter(Boolean))];
   const off = placed.filter((p) => !p.fit.ok);
+  // Just made, nothing in it yet: the first steps, all of them optional.
+  const fresh = stops.length > 0 && canEdit && !startHidden && !events.length && !(trip.plans?.length) && !(trip.checklist?.length) && !(trip.expenses?.length);
 
   return (
     <div className="trip-stage" data-show={showing ? "" : undefined}>
@@ -430,24 +450,28 @@ export function TripView({ id }: { id: string }) {
           </div>
           {trip.group && <TogetherBar trip={trip} onOpen={() => setTogether(true)} onChat={() => setChat(true)} since={sinceAt} />}
           {trip.group?.role === "viewer" && <p className="t-micro text-text-2 mt-1">You can see everything on this trip. To change it, ask {trip.group.members.find((m) => m.role === "owner")?.name ?? "its owner"} to make you an editor.</p>}
-          <div className="trip-head-actions">
-            {stops.length > 0 && canEdit && (
-              <button type="button" className="trip-add press" onClick={() => openAdd({ stopId: stop?.id })}>
-                <span className="trip-add-plus" aria-hidden><Plus size={16} strokeWidth={2.75} /></span>
-                <span>{stop ? `Add to ${stop.name}` : "Add to trip"}</span>
+          {fresh ? (
+            <TripStart stops={stops} onThings={() => pick(0)} onInvite={() => setTogether(true)} onHide={hideStart} />
+          ) : (
+            <div className="trip-head-actions">
+              {stops.length > 0 && canEdit && (
+                <button type="button" className="trip-add press" onClick={() => openAdd({ stopId: stop?.id })}>
+                  <span className="trip-add-plus" aria-hidden><Plus size={16} strokeWidth={2.75} /></span>
+                  <span>{stop ? `Add to ${stop.name}` : "Add to trip"}</span>
+                </button>
+              )}
+              {stops.length > 0 && (
+                <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
+                  <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
+                  <span>Play</span>
+                </button>
+              )}
+              <button type="button" className="trip-share press" onClick={() => setTogether(true)} aria-label={trip.group ? "People on this trip and invitations" : "Plan this trip together: invite people"} data-shared={trip.group ? "" : undefined}>
+                <Users size={16} aria-hidden />
+                <span className="max-sm:sr-only">{trip.group ? "People" : "Invite"}</span>
               </button>
-            )}
-            {stops.length > 0 && (
-              <button type="button" className="view-trip press" onClick={() => play(stop?.id)} disabled={!ready} aria-label={stop ? `View ${stop.name}, as a film on the globe` : "View the trip, as a film on the globe"}>
-                <span className="view-trip-play" aria-hidden><Play size={12} fill="currentColor" /></span>
-                <span>Play</span>
-              </button>
-            )}
-            <button type="button" className="trip-share press" onClick={() => setTogether(true)} aria-label={trip.group ? "People on this trip and invitations" : "Plan this trip together: invite people"} data-shared={trip.group ? "" : undefined}>
-              <Users size={16} aria-hidden />
-              <span className="max-sm:sr-only">{trip.group ? "People" : "Invite"}</span>
-            </button>
-          </div>
+            </div>
+          )}
           <div className="trip-chips" role="tablist" aria-label="Cities on this trip">
             <button type="button" role="tab" aria-selected={sel === null} className="trip-chip" onClick={() => pick(null)}>
               <Globe2 size={14} aria-hidden /> Whole trip
@@ -494,9 +518,9 @@ export function TripView({ id }: { id: string }) {
           {sel === null && view === "info" && <TripInfo trip={trip} canEdit={canEdit} />}
           {sel === null && view === "agenda" && <TripAgenda trip={trip} stops={stops} events={dayEvents} onOpenEvent={showEvent} onPickStop={(i) => pick(i)} onShowPlace={showPlace} />}
 
-          {sel === null &&
-            view === "cities" &&
-            stops.map((s, i) => {
+          {sel === null && view === "cities" && (
+            <div className="stop-cards" data-glide>
+            {stops.map((s, i) => {
               const mine = placed.filter((p) => p.fit.ok && p.fit.stop.id === s.id);
               const n = sugg[s.id];
               return (
@@ -513,6 +537,8 @@ export function TripView({ id }: { id: string }) {
                 </button>
               );
             })}
+            </div>
+          )}
 
           {sel === null && view === "cities" && stops.length > 0 && (
             <p className="trip-tip t-micro text-text-2">
@@ -544,7 +570,7 @@ export function TripView({ id }: { id: string }) {
           {off.length > 0 && sel === null && (
             <section className="mt-5" aria-labelledby="off-h">
               <h2 id="off-h" className="t-small font-semibold flex items-center gap-1.5 text-warn"><TriangleAlert size={15} aria-hidden /> Not on your route</h2>
-              <ul className="mt-2 grid gap-1.5">
+              <ul className="mt-2 grid gap-1.5" data-glide>
                 {off.map(({ e, fit }) => (
                   <li key={e.id} className="off-row">
                     <span className="min-w-0 flex-1">
@@ -588,6 +614,44 @@ export function TripView({ id }: { id: string }) {
         </footer>
       </section>
     </div>
+  );
+}
+
+/**
+ * A trip just made, with only its route: what can come next, every bit of it optional (things
+ * to do, where to sleep, getting there, places to see, friends). Gone once anything is added,
+ * or when "Later" is pressed.
+ */
+function TripStart({ stops, onThings, onInvite, onHide }: { stops: TripStop[]; onThings: () => void; onInvite: () => void; onHide: () => void }) {
+  const first = stops[0];
+  const tiles: { key: string; label: string; Icon: typeof Plane; tint: string; run: () => void }[] = [
+    { key: "do", label: "Things to do", Icon: Sparkles, tint: "#0a94c9", run: onThings },
+    { key: "stay", label: "Where to sleep", Icon: KIND_ICON.stay, tint: "#7b4dff", run: () => openAdd({ kind: "stay", stopId: first.id }) },
+    { key: "go", label: "Getting there", Icon: KIND_ICON.flight, tint: "#1463ff", run: () => openAdd({ kind: "flight", stopId: first.id }) },
+    { key: "see", label: "Places to see", Icon: KIND_ICON.visit, tint: "#d97706", run: () => openAdd({ kind: "place", stopId: first.id }) },
+    { key: "friends", label: "Invite friends", Icon: Users, tint: "#d63384", run: onInvite },
+  ];
+  return (
+    <section className="trip-start" aria-labelledby="trip-start-h">
+      <div className="trip-start-head">
+        <h2 id="trip-start-h" className="trip-start-title">
+          <span className="trip-start-check" aria-hidden><Check size={12} strokeWidth={3.2} /></span>
+          Your route is set
+        </h2>
+        <button type="button" className="trip-start-later" onClick={onHide}>Later</button>
+      </div>
+      <p className="trip-start-sub">Add the rest whenever you like. None of it is needed now.</p>
+      <ul className="trip-start-tiles no-scrollbar">
+        {tiles.map(({ key, label, Icon, tint, run }, i) => (
+          <li key={key} style={{ "--k": tint, "--i": i } as React.CSSProperties}>
+            <button type="button" className="trip-start-tile press" onClick={run}>
+              <span className="trip-start-icon" aria-hidden><Icon size={17} /></span>
+              <span className="trip-start-label">{label}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -21,7 +21,7 @@ export function Footer() {
         <div className="grid gap-6 sm:grid-cols-3 t-small">
           <nav aria-label="Explore">
             <p className="font-semibold mb-1">Explore</p>
-            <ul className="text-text-2">
+            <ul className="foot-links text-text-2" data-glide>
               {[
                 ["/", "Globe"],
                 ["/events", "All events"],
@@ -42,7 +42,7 @@ export function Footer() {
           </nav>
           <nav aria-label="About">
             <p className="font-semibold mb-1">About</p>
-            <ul className="text-text-2">
+            <ul className="foot-links text-text-2" data-glide>
               <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/help">Help: how Mundivi works</Link></li>
               <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about">About Mundivi</Link></li>
               <li><Link className="inline-block py-2.5 md:py-1.5 hover:text-text" href="/about/data">How our data works</Link></li>

@@ -59,13 +59,13 @@ export function Header() {
         <div className={`flex items-center gap-2 ${isHome ? "compact:hidden rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] pl-3 pr-3 lg:pr-1 py-1.5 lg:py-1" : ""}`}>
         <BackButton />
         <Logo />
-        <nav aria-label="Main" className="hidden lg:flex items-center gap-0.5 ml-1 xl:ml-2">
+        <nav aria-label="Main" data-glide className="site-nav hidden lg:flex items-center gap-0.5 ml-1 xl:ml-2">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
-              className={`px-2.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-on-ink" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"}`}
+              className={`px-2.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${isActive(n.href) ? (isHome ? "bg-text text-on-ink" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text"}`}
             >
               {t(n.key)}
             </Link>
@@ -118,14 +118,14 @@ function MoreMenu({ label, path, onHome }: { label: string; path: string; onHome
         aria-expanded={open}
         aria-controls="more-menu"
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1 px-2.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${inside ? (onHome ? "bg-text text-on-ink" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text hover:bg-text/[0.05]"} ${open ? "bg-text/[0.07] text-text" : ""}`}
+        className={`inline-flex items-center gap-1 px-2.5 xl:px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${inside ? (onHome ? "bg-text text-on-ink" : "text-text bg-text/[0.07]") : "text-text-2 hover:text-text"} ${open ? "bg-text/[0.07] text-text" : ""}`}
       >
         {label}
         <ChevronDown size={14} aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div id="more-menu" className="more-menu surface-float panel-in">
-          <ul className="grid grid-cols-2 gap-1">
+          <ul className="grid grid-cols-2 gap-1" data-glide>
             {EXTRA.map(({ href, label: name, note, Icon, fresh }) => (
               <li key={href}>
                 <Link href={href} className="more-item" aria-current={here(href) ? "page" : undefined}>

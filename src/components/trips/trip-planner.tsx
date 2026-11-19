@@ -3,27 +3,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Plane, Sparkles, Users, Wand2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Hand, Loader2, Minus, Plane, Plus, Sparkles, Users, Wand2, X } from "lucide-react";
 import { getDestination } from "@/lib/destinations";
 import { GROUPS } from "@/lib/categories";
-import { userActions, useUser } from "@/lib/user/store";
+import { getUser, userActions } from "@/lib/user/store";
 import { addDays, bestOrder, bestSlot, midpoint, routeFromEvents, moveBoundary, moved, nightsBetween, nightsWithout, nightsWithStop, REGIONS, relocated, renamed, routeKm, splitNights, stopColor, suggestName, withNights, type Place, type TripStop } from "@/lib/trip";
 import type { Town } from "@/lib/town";
 import type { EventCard } from "@/lib/types";
 import type { EarthMapHandle, FlyRequest, MapClick } from "../earth/earth-map";
 import { parseRouteParam } from "@/lib/travel/route-param";
-import { bboxOf, CityPin, dayLabel, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, useSheet, type MapIcon } from "./shared";
+import { bboxOf, CityPin, dayLabel, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, TripPass, tripSnapOf, usePanelPad, useSheet, type MapIcon } from "./shared";
 import { localDateKey } from "@/lib/format";
 import { toast } from "../toast";
 import { LegPlus, lookupTown, MapAddCard, PlaceSearch, placeOfTown, RouteList, type RouteStop } from "./route-edit";
 
 type Stop = RouteStop;
-const STEPS = ["Where", "When", "Vibe", "Name"] as const;
+/** Two steps, then the trip exists: where, and how long in each place. Everything else (events,
+ * hotels, travel, friends) is added on the trip itself, whenever the traveller likes. */
+const STEPS = ["Where", "How long"] as const;
+const LAST = STEPS.length - 1;
 const EMOJIS = ["✈️", "🌍", "🚆", "🚗", "🎒", "🎉", "🌴", "🏔️", "🎭", "🎶"];
-const GROUP_EMOJI: Record<string, string> = {
-  music: "🎶", sports: "⚽", theatre: "🎭", comedy: "😂", festivals: "🎉", cinema: "🎬", conferences: "🎤", technology: "💻",
-  exhibitions: "🎨", attractions: "🎡", "food-drink": "🍷", nightlife: "🪩", family: "🧸", outdoor: "🥾", education: "📚", fashion: "👗", culture: "🏛️",
-};
+/** The most nights one city can take in the planner (a longer stay is planned as its own trip). */
+const MAX_NIGHTS = 60;
 const LENGTHS = [
   { label: "Long weekend", nights: 3 },
   { label: "A week", nights: 7 },
@@ -38,6 +39,8 @@ let keySeq = 0;
 const keyed = (p: Place): Stop => ({ ...p, key: `k${Date.now().toString(36)}${keySeq++}` });
 const today = () => new Date().toISOString().slice(0, 10);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** A trip has at least one night (a city can be a day trip, the whole trip can't). */
+const totalOk = (n: number[]) => n.reduce((a, b) => a + b, 0) >= 1;
 /** Reorders smoothly where the browser can (each stop keeps its place on screen as it moves). */
 const smoothly = (fn: () => void) => {
   const d = document as Document & { startViewTransition?: (cb: () => void) => unknown };
@@ -46,14 +49,14 @@ const smoothly = (fn: () => void) => {
 };
 
 /**
- * Plan a trip: where (any cities, or a ready-made route), when (dates, and the nights in
- * each city on a timeline you drag), what you're into, and a name. The globe answers every
- * choice: cities drop in, the route draws itself, and at the end it flies the whole trip.
+ * Plan a trip in two steps: where (any cities, or a ready-made route), then how long in each
+ * place (and from when). That's a trip: it's created there and then, and everything else is
+ * added on it at the traveller's own pace. The globe answers every choice: cities drop in and
+ * the route draws itself.
  */
 export function TripPlanner() {
   const router = useRouter();
   const sp = useSearchParams();
-  const user = useUser();
   const api = useRef<EarthMapHandle | null>(null);
   const sheet = useSheet("half");
   const pad = usePanelPad(sheet.panel);
@@ -70,6 +73,7 @@ export function TripPlanner() {
   const [name, setName] = useState("");
   const [named, setNamed] = useState(false);
   const [emoji, setEmoji] = useState("✈️");
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [fly, setFly] = useState<FlyRequest>();
   const [active, setActive] = useState<number | undefined>();
   const [ready, setReady] = useState(false);
@@ -115,6 +119,9 @@ export function TripPlanner() {
 
   // Starting points from the address: editing a trip, a city or place, a date, an event, a region.
   useEffect(() => {
+    // The saved data itself (on a page opened straight from its address, the first render
+    // still has the empty server copy).
+    const user = getUser();
     const edit = sp.get("edit");
     const t = edit ? user.trips.find((x) => x.id === edit) : undefined;
     if (t) {
@@ -202,14 +209,13 @@ export function TripPlanner() {
   // "+" being dragged), and each city is a pin that pops in when it's added and can be dragged
   // somewhere else; in the middle of each leg, a "+" adds a stop on the way.
   const route = useMemo(() => routeOf(legDrag ? [...stops.slice(0, legDrag.i + 1), legDrag, ...stops.slice(legDrag.i + 1)] : stops), [stops, legDrag]);
-  const vibeEmojis = interests.slice(0, 3).map((g) => GROUP_EMOJI[g] ?? "✨");
   const icons = useMemo<MapIcon[]>(() => {
     const out: MapIcon[] = dated.map((s, i) => ({
       key: s.key,
       lat: s.lat,
       lng: s.lng,
       anchor: "bottom",
-      node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={active === i} looking={s.looking} hint="Drag to move it" note={s.from && s.to ? `${nightsBetween(s.from, s.to)}n` : undefined} emojis={step >= 2 ? vibeEmojis : undefined} onClick={() => setActive((a) => (a === i ? undefined : i))} />,
+      node: <CityPin n={i + 1} name={s.name} color={stopColor(i)} active={active === i} looking={s.looking} hint="Drag to move it" note={s.from && s.to ? `${nightsBetween(s.from, s.to)}n` : undefined} onClick={() => setActive((a) => (a === i ? undefined : i))} />,
       drag: { onStart: () => (setActive(i), setTap(null), sheet.setSnap("peek")), onMove: (lat, lng) => follow(s.key, lat, lng), onEnd: (lat, lng) => void settle(s.key, lat, lng) },
     }));
     if (step === 0)
@@ -234,7 +240,7 @@ export function TripPlanner() {
     return out;
     // Handlers read the latest plan when they run; the list covers what the icons show.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dated, stops, active, step, interests, legOpen, legBelow, tap]);
+  }, [dated, stops, active, step, legOpen, legBelow, tap]);
   const framed = useRef("");
   useEffect(() => {
     const sig = stops.map((s) => s.key).join();
@@ -258,9 +264,10 @@ export function TripPlanner() {
     });
   }, [stops.length, start]);
 
-  // The name writes itself until it's typed over.
+  // The name writes itself until it's typed over (and only once there's a route: on the first
+  // render of a trip being edited, its own name is still on its way in).
   useEffect(() => {
-    if (!named) setName(suggestName(stops, start || undefined));
+    if (!named && stops.length) setName(suggestName(stops, start || undefined));
   }, [stops, start, named]);
 
   const dated2 = nights.length === stops.length;
@@ -398,11 +405,13 @@ export function TripPlanner() {
   };
   const goWhen = () => {
     if (!start) setLength(Math.min(14, Math.max(3, stops.length * 2)));
-    setStep(1);
+    setStepState(1);
+    // On a phone the whole step shows at once (every city's nights, the dates, the name).
+    sheet.setSnap("full");
   };
 
-  const canNext = step === 0 ? stops.length > 0 && !stops.some((s) => s.looking) : step === 1 ? !!start && !!end && nights.every((n) => n >= 0) : step === 3 ? !!name.trim() : true;
-  const next = () => (step === 0 ? goWhen() : setStep((s) => Math.min(3, s + 1)));
+  const canNext = step === 0 ? stops.length > 0 && !stops.some((s) => s.looking) : !!start && !!end && nights.length === stops.length && nights.every((n) => n >= 0) && totalOk(nights);
+  const next = () => goWhen();
 
   const totalNights = nights.reduce((a, b) => a + b, 0);
   const km = Math.round(routeKm(stops));
@@ -411,15 +420,9 @@ export function TripPlanner() {
       ? stops.length
         ? `${stops.length} ${stops.length === 1 ? "city" : "cities"}${stops.length > 1 ? ` · ${km.toLocaleString("en-GB")} km` : ""}`
         : "No cities yet"
-      : step === 1
-        ? start && end
-          ? `${totalNights} ${totalNights === 1 ? "night" : "nights"} · ${shortRange(start, end)}`
-          : "Pick your dates"
-        : step === 2
-          ? interests.length
-            ? `${interests.length} ${interests.length === 1 ? "thing" : "things"} you like`
-            : "A bit of everything"
-          : name || "Your trip";
+      : start && end
+        ? `${totalNights} ${totalNights === 1 ? "night" : "nights"} · ${shortRange(start, end)}`
+        : "Pick your dates";
 
   const create = async () => {
     const tripStops: TripStop[] = withNights(
@@ -431,11 +434,13 @@ export function TripPlanner() {
       nights,
     );
     let id = editing;
-    if (id) userActions.updateTrip(id, { name: name.trim(), emoji, interests, stops: tripStops, start, end });
+    // A name left empty takes the one the route suggests.
+    const title = name.trim() || suggestName(stops, start || undefined);
+    if (id) userActions.updateTrip(id, { name: title, emoji, interests, stops: tripStops, start, end });
     else {
       // The events the trip was planned around come with it.
       const snaps = Object.fromEntries(withEvents.map((c) => [c.id, { ...tripSnapOf(c), id: undefined }]));
-      id = userActions.createTrip(name.trim(), start, end, withEvents.map((c) => c.id), { stops: tripStops, emoji, interests, snaps: withEvents.length ? snaps : undefined });
+      id = userActions.createTrip(title, start, end, withEvents.map((c) => c.id), { stops: tripStops, emoji, interests, snaps: withEvents.length ? snaps : undefined });
     }
     // The pass gets its stamp, then the trip opens.
     setStamped(true);
@@ -446,7 +451,7 @@ export function TripPlanner() {
     }
     await sleep(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 1100);
     // Planned to go with friends: the invitation opens straight away.
-    router.push(`/trips/${id}?hello=1${sp.get("together") ? "&invite=1" : ""}`);
+    router.push(editing ? `/trips/${id}` : `/trips/${id}?hello=1${sp.get("together") ? "&invite=1" : ""}`);
   };
 
   return (
@@ -473,7 +478,7 @@ export function TripPlanner() {
           <ol className="planner-steps" aria-label="Steps">
             {STEPS.map((s, i) => (
               <li key={s}>
-                <button type="button" className="planner-step" aria-current={i === step ? "step" : undefined} data-done={i < step || undefined} disabled={i > step && !(i === 1 && stops.length) && !(i > 1 && end)} onClick={() => (i === 1 && step === 0 ? goWhen() : setStep(i))} aria-label={`Step ${i + 1}: ${s}${i < step ? ", done" : ""}`}>
+                <button type="button" className="planner-step" aria-current={i === step ? "step" : undefined} data-done={i < step || undefined} disabled={i > step && !stops.length} onClick={() => (i === 1 && step === 0 ? goWhen() : setStep(i))} aria-label={`Step ${i + 1}: ${s}${i < step ? ", done" : ""}`}>
                   <span className="planner-step-n" aria-hidden>{i < step ? <Check size={12} /> : i + 1}</span> <span className="planner-step-label" aria-hidden>{s}</span>
                 </button>
               </li>
@@ -485,6 +490,7 @@ export function TripPlanner() {
           {step === 0 && (
             <>
               <p className="planner-q">{stops.length ? "Where else?" : "Where are you going?"}</p>
+              {!stops.length && !editing && <p className="planner-lede">Just the places and how long in each. Events, hotels, travel and friends come later, whenever you like.</p>}
               <PlaceSearch onPick={add} placeholder={stops.length ? "Add another city…" : undefined} />
               {!stops.length && (
                 <div className="mt-4">
@@ -551,7 +557,12 @@ export function TripPlanner() {
 
           {step === 1 && (
             <>
-              <p className="planner-q">When are you going?</p>
+              <p className="planner-q">How long in each place?</p>
+              {start && end && stops.length > 0 && (
+                <NightsEditor stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} interests={interests} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+              )}
+
+              <h2 className="planner-sub">When</h2>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
                   <span className="label">Arriving</span>
@@ -567,50 +578,29 @@ export function TripPlanner() {
                   <input type="date" className="field" min={start ? addDays(start, Math.max(1, stops.length)) : today()} value={end} onChange={(e) => setEnd(e.target.value)} />
                 </label>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Share the nights out for a trip of">
                 {LENGTHS.map((l) => (
-                  <button key={l.label} type="button" className="chip press" data-active={nights.reduce((a, b) => a + b, 0) === l.nights || undefined} onClick={() => setLength(l.nights)}>{l.label}</button>
+                  <button key={l.label} type="button" className="chip press" data-active={totalNights === l.nights || undefined} onClick={() => setLength(l.nights)}>{l.label}</button>
                 ))}
               </div>
-              {start && end && stops.length > 0 && (
-                <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} interests={interests} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />
+              {start && end && stops.length > 1 && <NightsBar stops={dated as (Stop & { from: string; to: string })[]} nights={nights} onChange={setNights} onFocusStop={setActive} onPick={(i) => frame([stops[i]])} />}
+
+              <h2 className="planner-sub">Name</h2>
+              <div className="planner-name-row">
+                <button type="button" className="emoji-btn press" aria-expanded={emojiOpen} aria-label={`Trip emoji: ${emoji}. Change it`} onClick={() => setEmojiOpen((o) => !o)}>
+                  <span aria-hidden>{emoji}</span>
+                </button>
+                <input className="field" value={name} maxLength={60} placeholder={suggestName(stops, start || undefined)} onChange={(e) => (setName(e.target.value), setNamed(true))} aria-label="Trip name" />
+              </div>
+              {emojiOpen && (
+                <div className="mt-2 flex flex-wrap gap-1" role="radiogroup" aria-label="Trip emoji">
+                  {EMOJIS.map((e) => (
+                    <button key={e} type="button" role="radio" aria-checked={emoji === e} className="emoji-pick press" onClick={() => (setEmoji(e), setEmojiOpen(false))}>{e}</button>
+                  ))}
+                </div>
               )}
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <p className="planner-q">What are you into?</p>
-              <p className="t-small text-text-2 -mt-1 mb-3">Suggestions on your trip follow these. Pick none for a bit of everything.</p>
-              <div className="flex flex-wrap gap-1.5">
-                {GROUPS.filter((g) => g.slug !== "other").map((g) => {
-                  const on = interests.includes(g.slug);
-                  return (
-                    <button key={g.slug} type="button" className="chip press vibe-chip" aria-pressed={on} onClick={() => setInterests((x) => (on ? x.filter((y) => y !== g.slug) : [...x, g.slug]))}>
-                      <span aria-hidden>{GROUP_EMOJI[g.slug] ?? "✨"}</span> {g.name.split(" &")[0]}
-                    </button>
-                  );
-                })}
-              </div>
-              <StopCounts stops={dated as (Stop & { from: string; to: string })[]} interests={interests} />
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <p className="planner-q">Name your trip</p>
-              <input className="field planner-name" value={name} maxLength={60} onChange={(e) => (setName(e.target.value), setNamed(true))} aria-label="Trip name" />
-              <div className="mt-3 flex flex-wrap gap-1" role="radiogroup" aria-label="Trip emoji">
-                {EMOJIS.map((e) => (
-                  <button key={e} type="button" role="radio" aria-checked={emoji === e} className="emoji-pick press" onClick={() => setEmoji(e)}>{e}</button>
-                ))}
-              </div>
-              <div className="mt-5 relative">
-                <TripPass name={name || "My trip"} emoji={emoji} stops={stops} start={start} end={end} events={withEvents.length} />
-                {stamped && <span className="pass-stamp" aria-hidden>Let&apos;s go!</span>}
-              </div>
-              {stamped && <p className="sr-only" role="status">Trip saved. Opening it…</p>}
-              {withEvents.length > 0 && <p className="t-small text-text-2 mt-3"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
+              <p className="t-micro text-text-3 mt-1.5">You can change all of this later.</p>
+              {withEvents.length > 0 && <p className="t-small text-text-2 mt-4"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
               {sp.get("together") && <p className="t-small text-text-2 mt-2"><Users size={14} className="inline text-cyan" aria-hidden /> Next: invite your friends with a link or a PIN, and plan it together.</p>}
             </>
           )}
@@ -621,9 +611,9 @@ export function TripPlanner() {
             <button type="button" className="btn btn-ghost planner-back" onClick={() => setStep((s) => s - 1)} aria-label="Back"><ArrowLeft size={16} aria-hidden /> <span className="max-sm:hidden">Back</span></button>
           ) : <span className="max-sm:hidden" />}
           <p className="planner-sum" aria-live="polite">{summary}</p>
-          {step < 3 ? (
+          {step < LAST ? (
             <button type="button" className="btn btn-primary press" disabled={!canNext} onClick={next}>
-              {step === 0 ? (stops.length ? `Next: when` : "Add a city") : step === 1 ? "Next: what you like" : "Next: name it"} <ArrowRight size={16} aria-hidden />
+              {stops.length ? "Next: how long" : "Add a city"} <ArrowRight size={16} aria-hidden />
             </button>
           ) : (
             <button type="button" className="btn btn-primary press" disabled={!canNext || stamped} onClick={() => void create()}>
@@ -632,6 +622,16 @@ export function TripPlanner() {
           )}
         </footer>
       </section>
+      {stamped && (
+        // Created: the trip's pass, stamped, for a moment; then the trip opens.
+        <div className="planner-stamp" role="status">
+          <div className="planner-stamp-card">
+            <TripPass name={name.trim() || suggestName(stops, start || undefined)} emoji={emoji} stops={stops} start={start} end={end} events={withEvents.length} />
+            <span className="pass-stamp" aria-hidden>{editing ? "Saved" : "Let’s go!"}</span>
+          </div>
+          <p className="sr-only">{editing ? "Trip saved. Opening it…" : "Trip created. Opening it…"}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -665,15 +665,60 @@ function useCounts(stops: (Place & { key: string; from: string; to: string })[],
 }
 
 /**
+ * How long in each place: a row per city with its days and what's on there then, and a "−"
+ * and "+" for its nights (big enough for a thumb). The trip's end moves with them.
+ */
+function NightsEditor({ stops, nights, onChange, interests, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; interests: string[]; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
+  const counts = useCounts(stops, interests);
+  const total = nights.reduce((a, b) => a + b, 0);
+  const set = (i: number, v: number) => onChange(nights.map((n, j) => (j === i ? v : n)));
+  return (
+    <>
+      <ul className="nights-list">
+        {stops.map((s, i) => {
+          const n = nights[i] ?? 0;
+          const c = counts[s.key];
+          // A city can be a day trip (0 nights) when there are others; the trip itself needs a night.
+          const min = stops.length > 1 && total - n >= 1 ? 0 : 1;
+          return (
+            <li key={s.key} className="nights-item" style={{ "--ink": stopColor(i) } as React.CSSProperties} onMouseEnter={() => onFocusStop(i)} onMouseLeave={() => onFocusStop(undefined)}>
+              <span className="planner-stop-n" aria-hidden>{i + 1}</span>
+              <button type="button" className="nights-item-main" onClick={() => onPick(i)} aria-label={`${s.name}: ${dayLabel(s.from)} to ${dayLabel(s.to)}. Show on the globe`}>
+                <span className="nights-item-name">{s.name}</span>
+                <span className="nights-item-when tnum">{n === 0 ? dayLabel(s.from) : shortRange(s.from, s.to)}</span>
+                <span className="nights-item-on tnum">
+                  {c == null ? <Loader2 size={11} className="animate-spin" aria-label="Counting events" /> : c > 0 ? `${c.toLocaleString("en-GB")} ${c === 1 ? "event" : "events"} on` : "Quiet those days"}
+                </span>
+              </button>
+              <div className="stepper" role="group" aria-label={`Nights in ${s.name}`}>
+                <button type="button" className="stepper-btn press" aria-label={`One night less in ${s.name}`} disabled={n <= min} onClick={() => set(i, n - 1)}>
+                  <Minus size={16} strokeWidth={2.5} aria-hidden />
+                </button>
+                <span className="stepper-n tnum" aria-live="polite" aria-atomic="true">
+                  {n === 0 ? <span className="stepper-day">Day trip</span> : <><b key={n}>{n}</b><span>{n === 1 ? "night" : "nights"}</span></>}
+                </span>
+                <button type="button" className="stepper-btn press" aria-label={`One night more in ${s.name}`} disabled={n >= MAX_NIGHTS} onClick={() => set(i, n + 1)}>
+                  <Plus size={16} strokeWidth={2.5} aria-hidden />
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {stops.length > 1 && nights.some((n) => n === 0) && <p className="t-micro text-text-2 mt-2">A day trip: you pass through on a travel day, without sleeping there.</p>}
+    </>
+  );
+}
+
+/**
  * The trip as one bar, a coloured stretch per city as long as its nights. Drag the line
  * between two cities (or focus it and use the arrow keys) to move a night from one to the
- * other; each stretch says how many events are on there on those days.
+ * other.
  */
-function NightsBar({ stops, nights, onChange, interests, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; interests: string[]; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
+function NightsBar({ stops, nights, onChange, onFocusStop, onPick }: { stops: (Stop & { from: string; to: string })[]; nights: number[]; onChange: (n: number[]) => void; onFocusStop: (i?: number) => void; onPick: (i: number) => void }) {
   const bar = useRef<HTMLDivElement>(null);
   const drag = useRef<{ i: number; x: number; base: number[] } | null>(null);
   const total = Math.max(1, nights.reduce((a, b) => a + b, 0));
-  const counts = useCounts(stops, interests);
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     const w = bar.current?.clientWidth ?? 1;
@@ -682,7 +727,7 @@ function NightsBar({ stops, nights, onChange, interests, onFocusStop, onPick }: 
     onChange(moveBoundary(d.base, d.i, delta));
   };
   return (
-    <div className="mt-5">
+    <div className="mt-4">
       <div ref={bar} className="nights-bar" onPointerMove={onMove} onPointerUp={() => (drag.current = null)} onPointerCancel={() => (drag.current = null)}>
         {stops.map((s, i) => (
           <div key={s.key} className="nights-seg" style={{ flexGrow: Math.max(0.35, nights[i] ?? 0), "--ink": stopColor(i) } as React.CSSProperties} onMouseEnter={() => onFocusStop(i)} onMouseLeave={() => onFocusStop(undefined)}>
@@ -713,37 +758,7 @@ function NightsBar({ stops, nights, onChange, interests, onFocusStop, onPick }: 
           </div>
         ))}
       </div>
-      <p className="t-micro text-text-3 mt-1.5">Drag the white lines to move nights between cities.</p>
-      <ul className="mt-3 grid gap-1.5">
-        {stops.map((s, i) => (
-          <li key={s.key} className="nights-row" style={{ "--ink": stopColor(i) } as React.CSSProperties}>
-            <span className="planner-stop-n" aria-hidden>{i + 1}</span>
-            <span className="min-w-0 flex-1">
-              <span className="font-semibold">{s.name}</span>
-              <span className="t-small text-text-2"> {dayLabel(s.from)} → {dayLabel(s.to)}</span>
-            </span>
-            <span className="t-small tnum text-text-2 shrink-0">{counts[s.key] == null ? <Loader2 size={13} className="animate-spin inline" aria-label="Counting events" /> : `${counts[s.key]!.toLocaleString("en-GB")} on`}</span>
-          </li>
-        ))}
-      </ul>
-      {stops.length > 1 && nights.some((n) => n === 0) && <p className="t-small text-warn mt-2">A city with no nights is a day trip: you pass through on a travel day.</p>}
+      <p className="t-micro text-text-3 mt-1.5">The whole trip at a glance: drag the white lines to move nights between cities.</p>
     </div>
-  );
-}
-
-/** The events waiting in each city, for the vibe chosen. */
-function StopCounts({ stops, interests }: { stops: (Stop & { from: string; to: string })[]; interests: string[] }) {
-  const counts = useCounts(stops, interests);
-  const known = stops.filter((s) => typeof counts[s.key] === "number");
-  const sum = known.reduce((n, s) => n + (counts[s.key] ?? 0), 0);
-  if (!stops.length || !stops[0].from) return null;
-  return (
-    <p className="mt-5 t-small text-text-2" aria-live="polite">
-      {known.length < stops.length ? (
-        <><Loader2 size={13} className="animate-spin inline mr-1" aria-hidden />Looking at what&apos;s on…</>
-      ) : (
-        <><b className="text-text tnum">{sum.toLocaleString("en-GB")}</b> events on your route on your dates{interests.length ? " for what you like" : ""}: {longRange(stops[0].from, stops[stops.length - 1].to)}.</>
-      )}
-    </p>
   );
 }

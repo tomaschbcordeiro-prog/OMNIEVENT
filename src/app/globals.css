@@ -5491,6 +5491,184 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
   transform: scale(1.08);
 }
+/* The planner's second step: how long in each place, a row per city with a stepper. */
+.planner-lede {
+  margin: -0.25rem 0 0.9rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.planner-sub {
+  margin: 1.5rem 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.nights-list {
+  display: grid;
+  gap: 0.25rem;
+}
+.nights-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.5rem 0.55rem 0.65rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  transition: background-color 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .nights-item:hover {
+    background: color-mix(in srgb, var(--ink) 13%, transparent);
+  }
+}
+.nights-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.1rem;
+}
+.nights-item-name {
+  max-width: 100%;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nights-item-when {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+.nights-item-on {
+  display: flex;
+  align-items: center;
+  min-height: 1rem;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+/* A "−", the number of nights and a "+": thumb-sized, the number the thing the eye lands on. */
+.stepper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgb(13 27 51 / 0.06);
+}
+.stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  color: var(--text);
+  transition: background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+.stepper-btn:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.stepper-btn:disabled {
+  opacity: 0.3;
+}
+.stepper-n {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.9rem;
+  line-height: 1;
+}
+.stepper-n b {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  animation: stepper-tick 260ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.stepper-n span {
+  margin-top: 0.12rem;
+  font-size: 0.66rem;
+  color: var(--text-3);
+}
+.stepper-n .stepper-day {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--text-2);
+}
+@keyframes stepper-tick {
+  from {
+    opacity: 0.3;
+    translate: 0 -5px;
+  }
+}
+.planner-name-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.planner-name-row .field {
+  height: 2.75rem;
+  font-weight: 600;
+}
+.emoji-btn {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  font-size: 1.3rem;
+  transition: background-color 140ms ease;
+}
+.emoji-btn:hover,
+.emoji-btn[aria-expanded="true"] {
+  background: var(--panel-2);
+}
+/* Created: the trip's pass, stamped, over a dimmed globe for a moment. */
+.planner-stamp {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(3 8 20 / 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: stamp-veil 240ms ease both;
+}
+.planner-stamp-card {
+  position: relative;
+  width: min(26rem, 100%);
+  animation: stamp-rise 480ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes stamp-veil {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes stamp-rise {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+    scale: 0.96;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-stamp,
+  .planner-stamp-card,
+  .stepper-n b {
+    animation: none;
+  }
+}
+
 /* Created: the pass is stamped. */
 .pass-stamp {
   position: absolute;
@@ -9574,6 +9752,133 @@ body:has(.trip-stage[data-show]) .tabbar {
   gap: 0.5rem;
   margin-top: 0.7rem;
 }
+/* A new trip's first steps: optional, tinted tiles in a row (no boxes), "Later" to put them away. */
+.trip-start {
+  margin-top: 0.8rem;
+  animation: trip-start-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.trip-start-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.trip-start-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.trip-start-check {
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: var(--ok);
+  color: #fff;
+  animation: pop 360ms 160ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.trip-start-later {
+  padding: 0.35rem 0.7rem;
+  margin-right: -0.4rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.trip-start-later:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.trip-start-sub {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+.trip-start-tiles {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0.65rem -1.25rem 0;
+  padding: 0 1.25rem 0.15rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 1.25rem;
+}
+.trip-start-tiles > li {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  animation: trip-start-in 420ms calc(120ms + var(--i) * 55ms) cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.trip-start-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  width: 6.4rem;
+  height: 5.6rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--k) 9%, var(--panel));
+  text-align: left;
+  transition: background-color 160ms ease, transform 160ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .trip-start-tile:hover {
+    background: color-mix(in srgb, var(--k) 17%, var(--panel));
+    transform: translateY(-2px);
+  }
+}
+.trip-start-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  background: var(--k);
+  color: #fff;
+  box-shadow: 0 4px 10px -4px var(--k);
+}
+.trip-start-label {
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.2;
+  color: var(--text);
+}
+@keyframes trip-start-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@media (min-width: 1024px) {
+  /* A computer's panel fits all five in a row. */
+  .trip-start-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  .trip-start-tile {
+    width: 100%;
+    height: 5.4rem;
+    padding: 0.55rem;
+  }
+  .trip-start-label {
+    font-size: 0.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip-start,
+  .trip-start-tiles > li,
+  .trip-start-check {
+    animation: none;
+  }
+}
 .trip-head-actions .view-trip {
   width: auto;
   margin-top: 0;
@@ -12714,4 +13019,94 @@ nav[aria-label="Breadcrumb"] a,
     pointer-events: none;
     background: radial-gradient(closest-side, color-mix(in srgb, var(--sky-top) 82%, transparent) 0%, color-mix(in srgb, var(--sky-top) 48%, transparent) 58%, transparent 100%);
   }
+}
+
+/* ---- The shade that follows the mouse along a list (components/hover-glide.tsx) ----------------
+   One soft area under the row being pointed at, gliding to the next row as the mouse moves. Darker
+   on a light page, lighter on a dark one. Computers only: touch screens keep their own press. */
+:root {
+  --glide-bg: color-mix(in srgb, var(--text) 6.5%, transparent);
+  --glide-r: var(--radius-m);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-glide-on]::before {
+    content: "";
+    position: absolute;
+    left: calc(-1 * var(--glide-px, 0px));
+    top: 0;
+    width: calc(var(--gw, 0px) + 2 * var(--glide-px, 0px));
+    height: var(--gh, 0);
+    border-radius: var(--glide-r);
+    background: var(--glide-bg);
+    transform: translate3d(var(--gx, 0), var(--gy, 0), 0);
+    pointer-events: none;
+    animation: glide-in 160ms ease both;
+    transition:
+      transform 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+      width 300ms cubic-bezier(0.2, 0.9, 0.25, 1),
+      height 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  [data-glide-snap]::before {
+    transition: none !important;
+  }
+  /* Rows that had their own hover look now have the shade instead. */
+  [data-glide-item].event-row:hover {
+    background-color: transparent;
+  }
+  [data-glide] .more-item:hover:not([aria-current]) {
+    background: transparent;
+  }
+  [data-glide] .stop-card:hover {
+    transform: none;
+  }
+}
+/* Each list's shade, shaped like its rows. */
+.site-nav {
+  --glide-r: 999px;
+}
+.more-menu {
+  --glide-bg: rgb(15 90 230 / 0.07);
+}
+.foot-links {
+  --glide-px: 0.6rem;
+  --glide-r: 10px;
+}
+.acct-menu {
+  --glide-r: var(--radius-s);
+}
+.stop-cards {
+  --glide-r: 14px;
+}
+@keyframes glide-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-glide-on]::before {
+    transition: none !important;
+  }
+}
+
+/* A trip's invitations to add things sit on a soft tint too, without a dashed outline. */
+.add-bar-main {
+  border: 0;
+  background: color-mix(in srgb, var(--primary) 7%, var(--panel));
+}
+.add-bar-main:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--panel));
+}
+.ag-suggest {
+  border: 0;
+  background: color-mix(in srgb, var(--text) 4%, var(--panel));
+}
+.trip-ready-next {
+  border: 0;
+}
+.money-empty,
+.shared-empty {
+  border: 0 !important;
+  background:
+    radial-gradient(90% 130% at 0% 0%, color-mix(in srgb, var(--cyan) 7%, transparent), transparent 62%),
+    color-mix(in srgb, var(--text) 3.5%, transparent);
 }

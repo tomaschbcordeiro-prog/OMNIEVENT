@@ -191,6 +191,7 @@ export const EventRow = memo(function EventRow({
       ref={swipe.ref}
       data-venue={c.venueSlug}
       data-saved={saved || undefined}
+      data-glide-item
       onTouchStart={swipe.onTouchStart}
       onTouchMove={swipe.onTouchMove}
       onTouchEnd={swipe.onTouchEnd}

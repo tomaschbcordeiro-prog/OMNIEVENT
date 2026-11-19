@@ -324,10 +324,10 @@ function SideList({ icon, title, items, render }: { icon: React.ReactNode; title
     <section className="surface rounded-[var(--radius-l)] p-4" aria-label={title}>
       <h2 className="t-h3 flex items-center gap-2">{icon}{title}</h2>
       {!items && <div className="skeleton h-24 mt-3" aria-hidden />}
-      <ul className="mt-2 grid gap-1">
+      <ul className="mt-2 grid gap-1" data-glide>
         {(items ?? []).slice(0, 8).map((t) => (
           <li key={t.target}>
-            <Link href={t.href} className="press flex items-center gap-3 rounded-[var(--radius-m)] p-1.5 hover:bg-panel-2">
+            <Link href={t.href} className="press flex items-center gap-3 rounded-[var(--radius-m)] p-1.5">
               <Poster title={t.title} imageUrl={t.imageUrl} hue={t.hue} categorySlug={t.categorySlug ?? "other"} size="sm" className="h-11 w-11 rounded-[var(--radius-s)] shrink-0" />
               <span className="min-w-0 flex-1">
                 <span className="block t-small font-semibold truncate">{t.title}</span>

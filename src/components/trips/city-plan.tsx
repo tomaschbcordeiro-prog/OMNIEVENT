@@ -202,7 +202,7 @@ export function CityPlan({
       {ideas === null ? (
         <div className="mt-2 grid gap-2">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>
       ) : ideas.length ? (
-        <ul className="mt-2 grid gap-1.5">
+        <ul className="mt-2 grid gap-1.5" data-glide>
           {ideas.slice(0, 12).map((c) => (
             <li key={c.id} className="idea-row">
               <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} size="sm" className="h-11 w-11 shrink-0 rounded-[var(--radius-s)]" />

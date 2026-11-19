@@ -71,12 +71,12 @@ export function NotificationBell({ className = "" }: { className?: string }) {
           <p className="px-2 pt-1 pb-2 t-small font-semibold">Your activity</p>
           {!data && <div className="skeleton h-16 m-2" aria-hidden />}
           {data && data.items.length === 0 && <p className="px-2 pb-3 t-small text-text-2">Nothing yet. When someone replies, reacts, mentions you, joins your meet-up or follows you, it shows up here.</p>}
-          <ul className="max-h-[60vh] overflow-auto scroll-thin grid gap-0.5">
+          <ul className="max-h-[60vh] overflow-auto scroll-thin grid gap-0.5" data-glide>
             {data?.items.map((n, i) => {
               const by = data.profiles[n.by];
               return (
                 <li key={`${n.post}-${n.at}-${i}`}>
-                  <Link href={n.type === "follow" ? `/community/u/${by?.username ?? n.by}` : n.meta ? `${n.meta.href}#community` : "/community"} onClick={() => setOpen(false)} className={`flex gap-2.5 rounded-[var(--radius-m)] p-2 hover:bg-panel-2 ${i < (data.unread || 0) ? "bg-cyan/5" : ""}`}>
+                  <Link href={n.type === "follow" ? `/community/u/${by?.username ?? n.by}` : n.meta ? `${n.meta.href}#community` : "/community"} onClick={() => setOpen(false)} className={`flex gap-2.5 rounded-[var(--radius-m)] p-2 ${i < (data.unread || 0) ? "bg-cyan/5" : ""}`}>
                     <Avatar p={by} size={32} />
                     <span className="min-w-0 t-small">
                       <span className="block">

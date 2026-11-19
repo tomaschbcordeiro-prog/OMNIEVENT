@@ -550,7 +550,7 @@ export function AddSheet({
                 <p className="addx-empty">{busy ? "Looking…" : q.trim().length < 2 ? (H ? `Type its name${stop ? ` in ${stop.name}` : ""}.` : "Type a place or a plan.") : "Nothing found yet. Keep typing, or add it as your own."}</p>
               )}
               {!q.trim() && hint && (
-                <p className="addx-tip">Tip: put the day and time in too, like “{hint === "food" ? "Ramiro friday 20:30" : hint === "stay" ? "Memmo Alfama" : "Gulbenkian sat 10:00"}”.</p>
+                <p className="addx-tip">{hint === "stay" ? <>Tip: just its name, like “Memmo Alfama”. You pick the check-in day and nights next.</> : <>Tip: put the day and time in too, like “{hint === "food" ? "Ramiro friday 20:30" : "Gulbenkian sat 10:00"}”.</>}</p>
               )}
             </>
           )}

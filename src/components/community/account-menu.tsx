@@ -40,14 +40,14 @@ export function AccountMenu({ floating = false }: { floating?: boolean }) {
       </div>
     );
 
-  const item = "flex items-center gap-2.5 rounded-[var(--radius-s)] px-3 py-2 text-sm hover:bg-text/[0.05] w-full text-left";
+  const item = "flex items-center gap-2.5 rounded-[var(--radius-s)] px-3 py-2 text-sm w-full text-left";
   return (
     <div ref={ref} className="relative">
       <button type="button" className={`press rounded-full p-0.5 ${floating ? "bg-panel/90 shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)]" : ""}`} aria-haspopup="menu" aria-expanded={open} aria-label={`Account: ${profile.name}`} onClick={() => setOpen((o) => !o)}>
         <Avatar p={profile} size={34} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-[calc(100%+8px)] z-50 w-64 rounded-[var(--radius-m)] border border-line bg-panel p-1.5 shadow-xl panel-in">
+        <div role="menu" data-glide className="acct-menu absolute right-0 top-[calc(100%+8px)] z-50 w-64 rounded-[var(--radius-m)] border border-line bg-panel p-1.5 shadow-xl panel-in">
           <div className="flex items-center gap-3 px-3 py-2.5">
             <Avatar p={profile} size={40} />
             <div className="min-w-0">
