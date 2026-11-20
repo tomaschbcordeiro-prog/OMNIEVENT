@@ -6,24 +6,24 @@
 
 /*
  * Mundivi design tokens. Two looks, one system:
- * - "Aurora night" (the default, data-theme="dark"): deep ink, northern-light glows behind the
- *   page, glassy panels, a blue-to-violet accent and sun gold for what's on now.
- * - "Daybreak" (light, for those who pick it): the same glows in pastel on a tinted sky, never
- *   plain white paper.
+ * - "Daybreak" (the day look): a soft sky-blue canvas with pastel glows (blue, violet, a warm
+ *   peach, a little mint) and light cards resting on it. Never plain white paper.
+ * - "Aurora night" (data-theme="dark", or a dark device): deep ink, northern-light glows behind
+ *   the page, glassy panels, a blue-to-violet accent and sun gold for what's on now.
  * Ocean blue is the interactive colour (`--cyan` keeps its historical name), sun yellow marks
  * what is selected or happening now, and category hues appear only on data.
  */
 :root {
-  --bg: #edf1f8;
-  --bg-2: #f6f8fc;
-  --panel: #fbfcfe;
+  --bg: #e8eef8;
+  --bg-2: #f1f5fb;
+  --panel: #f9fbfe;
   --panel-2: #edf1f9;
-  --line: #dde4f0;
-  --line-strong: #c5d1e4;
+  --line: #d8e1ef;
+  --line-strong: #c0cde2;
   --text: #0b1530;
   --text-2: #46597a;
   /* Every text colour reads at 4.5:1 or more on the page, panels and their tints (WCAG AA). */
-  --text-3: #596a84;
+  --text-3: #536380;
   --cyan: #0f5ae6;
   --cyan-strong: #0a49c2;
   --sun: #ffb800;
@@ -62,17 +62,17 @@
   --grad-a: #3557ea;
   --grad-b: #6a3df0;
   --glow: rgb(53 87 234 / 0.35);
-  --aurora-1: rgb(80 128 255 / 0.2);
-  --aurora-2: rgb(150 110 255 / 0.14);
-  --aurora-3: rgb(255 170 120 / 0.14);
-  --aurora-4: rgb(40 200 160 / 0.1);
+  --aurora-1: rgb(90 140 255 / 0.3);
+  --aurora-2: rgb(165 120 255 / 0.2);
+  --aurora-3: rgb(255 172 128 / 0.24);
+  --aurora-4: rgb(50 200 170 / 0.16);
   --stars: 0;
-  --edge: rgb(255 255 255 / 0.7);
+  --edge: rgb(255 255 255 / 0.85);
 }
 
 /*
- * Aurora night: the default look (data-theme="dark" is set before the first paint unless someone
- * picked light, or chose to follow their device).
+ * Aurora night: picked with the moon button (data-theme="dark", set before the first paint), or
+ * the device's own dark setting when nothing was picked.
  */
 :root[data-theme="dark"] {
   --bg: #070b16;
@@ -13861,4 +13861,39 @@ body::after {
   background:
     linear-gradient(120deg, #0b0d18, #24185a) padding-box,
     linear-gradient(120deg, #ffd88a, #ff6fae 50%, #8b7bff) border-box;
+}
+
+/* By day, cards rest on the tinted sky with a soft blue shadow (no hard grey). */
+:root:not([data-theme="dark"]) .surface {
+  box-shadow:
+    inset 0 1px 0 var(--edge),
+    0 18px 40px -30px rgb(40 70 150 / 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .surface {
+    box-shadow:
+      inset 0 1px 0 var(--edge),
+      0 22px 44px -32px rgb(2 6 20 / 0.55);
+  }
+}
+
+/* The same night touches when the night look comes from the device's own setting. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --em-end: var(--sun);
+  }
+  :root:not([data-theme="light"]) .mx-cta-light {
+    color: #fff;
+    border: 1.5px solid transparent;
+    background:
+      linear-gradient(120deg, #0b0d18, #24185a) padding-box,
+      linear-gradient(120deg, #ffd88a, #ff6fae 50%, #8b7bff) border-box;
+  }
+  :root:not([data-theme="light"]) .planner-panel,
+  :root:not([data-theme="light"]) .stop-card,
+  :root:not([data-theme="light"]) .route-stop,
+  :root:not([data-theme="light"]) .dates-row,
+  :root:not([data-theme="light"]) .rc {
+    border-color: color-mix(in srgb, var(--line) 70%, #6f86ff 30%);
+  }
 }

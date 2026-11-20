@@ -49,8 +49,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // The night look is the default: the browser's bars match it (the theme button changes it).
-  themeColor: "#070b16",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#e8eef8" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b16" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

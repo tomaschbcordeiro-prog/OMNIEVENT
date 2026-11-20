@@ -406,8 +406,19 @@ export function TripAgenda({ trip, stops, events, only, near, compose = true, on
         drop: (pt) => {
           const t = under(pt.x, pt.y);
           const rect = ghost?.firstElementChild?.getBoundingClientRect();
+          // Let go nowhere new (outside the days, or on its own day): it flies back to its place.
+          if (t === null || t === (isScheduled(p) ? p.day : "")) {
+            const g = ghost;
+            if (!g) return done();
+            const home = row.getBoundingClientRect();
+            g.style.transition = "transform 220ms cubic-bezier(0.2, 0.9, 0.25, 1), opacity 220ms ease";
+            g.style.transform = `translate3d(${home.left - parseFloat(g.style.left)}px, ${home.top - parseFloat(g.style.top)}px, 0)`;
+            g.style.opacity = "0.6";
+            setOver(null);
+            window.setTimeout(done, 230);
+            return;
+          }
           done();
-          if (t === null || t === (isScheduled(p) ? p.day : "")) return;
           schedule(p, { day: t }, rect);
         },
         cancel: done,
