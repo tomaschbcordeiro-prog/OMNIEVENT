@@ -14381,3 +14381,157 @@ body::before {
     font-size: 106.25%;
   }
 }
+
+/* ── Light that follows the pointer ─────────────────────────────────────────────────────────────
+   (components/pointer-light.tsx) One layer laid over whatever is under the mouse or finger: a
+   spotlight centred on the pointer inside its shape, and on anything with an edge, the edge
+   nearest the pointer catching the light. With a mouse, a soft glow also trails the pointer
+   across the page, behind the content. The pointer's place comes in as --x/--y; only the size
+   (--pl-r) and the fade are animated. */
+@property --pl-r {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+.pl {
+  /* Night: a cool light. */
+  --pl-c1: rgb(178 198 255 / 0.17);
+  --pl-c2: rgb(150 160 255 / 0.07);
+  --pl-flat: rgb(200 215 255 / 0.03);
+  --pl-rim: rgb(186 204 255 / 0.85);
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  opacity: 0;
+  transition:
+    opacity 200ms ease,
+    --pl-r 320ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.pl[data-on] {
+  opacity: 1;
+}
+.pl[data-snap] {
+  transition: none;
+}
+/* On light surfaces it's a soft shade, blue like the sky, darker where the pointer is. */
+.pl[data-tone="dark"] {
+  --pl-c1: rgb(40 64 168 / 0.13);
+  --pl-c2: rgb(70 72 190 / 0.055);
+  --pl-flat: rgb(40 60 150 / 0.03);
+  --pl-rim: rgb(66 96 240 / 0.7);
+}
+/* The edge in the day look: a quieter blue, so a lit edge never reads as "selected". */
+:root[data-look="day"] .pl[data-tone="dark"] {
+  --pl-rim: rgb(66 96 240 / 0.5);
+}
+/* On dark ones in the day look (words over a picture), a white sheen. */
+:root[data-look="day"] .pl[data-tone="light"] {
+  --pl-c1: rgb(255 255 255 / 0.3);
+  --pl-c2: rgb(255 255 255 / 0.1);
+  --pl-flat: rgb(255 255 255 / 0.04);
+  --pl-rim: rgb(255 255 255 / 0.9);
+}
+/* The main buttons, in either look: a bright sheen that rolls across the colour. */
+.pl[data-tone="sheen"] {
+  --pl-c1: rgb(255 255 255 / 0.42);
+  --pl-c2: rgb(255 255 255 / 0.14);
+  --pl-flat: rgb(255 255 255 / 0.03);
+  --pl-rim: rgb(255 255 255 / 0.95);
+}
+.pl-fill,
+.pl-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.pl-fill {
+  opacity: 0.8;
+  background:
+    radial-gradient(circle var(--pl-r) at var(--x, 50%) var(--y, 50%), var(--pl-c1), var(--pl-c2) 48%, transparent 100%),
+    linear-gradient(var(--pl-flat), var(--pl-flat));
+  transition: opacity 160ms ease;
+}
+/* Pressed (the mouse button down, or a finger): stronger. */
+.pl[data-down] .pl-fill,
+.pl[data-touch] .pl-fill {
+  opacity: 1;
+}
+.pl-edge {
+  display: none;
+  padding: var(--pl-bw, 1px);
+  background: radial-gradient(circle var(--pl-reach, 80px) at var(--x, 50%) var(--y, 50%), var(--pl-rim), transparent 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+.pl[data-edge] .pl-edge {
+  display: block;
+}
+/* Something bare, without corners of its own (a tab in the bottom bar, a plain link): no box,
+   just the glow, its edges feathered away. */
+.pl[data-soft] {
+  -webkit-mask:
+    linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent),
+    linear-gradient(transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  -webkit-mask-composite: source-in;
+  mask:
+    linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent),
+    linear-gradient(transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  mask-composite: intersect;
+}
+/* A row of a list that has its own gliding shade: only the light, the shade is the area. */
+.pl[data-row] .pl-fill {
+  background: radial-gradient(circle var(--pl-r) at var(--x, 50%) var(--y, 50%), var(--pl-c1), var(--pl-c2) 48%, transparent 100%);
+}
+.pl[data-soft] .pl-fill {
+  background: radial-gradient(circle var(--pl-r) at var(--x, 50%) var(--y, 50%), var(--pl-c1), var(--pl-c2) 45%, transparent 85%);
+}
+/* The page glow: behind the content, over the sky. */
+.pl-aura {
+  --aura-core: rgb(110 136 255 / 0.2);
+  --aura-halo: rgb(150 100 255 / 0.08);
+  position: fixed;
+  left: -320px;
+  top: -320px;
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(closest-side, var(--aura-core), var(--aura-halo) 48%, transparent 100%);
+  transition: opacity 450ms ease;
+  will-change: transform;
+}
+:root[data-look="day"] .pl-aura {
+  --aura-core: rgb(255 255 255 / 0.8);
+  --aura-halo: rgb(118 140 255 / 0.13);
+}
+.pl-aura[data-on] {
+  opacity: 1;
+}
+/* While something is being carried, it has the light of its own lift. */
+:root[data-lifting] .pl,
+:root[data-lifting] .pl-aura {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pl {
+    transition: opacity 120ms ease;
+  }
+}
+@media (forced-colors: active), print {
+  .pl,
+  .pl-aura {
+    display: none;
+  }
+}
