@@ -78,27 +78,35 @@ export function poiFilter(groups?: PoiGroup[] | null): ExpressionSpecification {
 }
 const POI_FILTER = poiFilter();
 
-/** Daytime sky: a soft blue atmosphere, matching the page's sky, with no white glare at the rim. */
+/** The land by day: warm, quiet greys (the picture underneath while night-lights tiles load is dark). */
+export const LAND_DAY: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 0, "#EEEDE7", 6, "#F1F0EB", 11, "#F3F2EE"];
+export const LAND_NIGHT = "#070B16";
+
+/** Daytime sky: a pale, airy atmosphere like the page around it, a soft light at the rim. */
 export const DAY_SKY: SkySpecification = {
-  "sky-color": "#2A63CF",
-  "horizon-color": "#5F8BDE",
-  "fog-color": "#4F8BDA",
-  "sky-horizon-blend": 0.5,
-  "horizon-fog-blend": 0.35,
-  "fog-ground-blend": 0.1,
-  // A strong glow while the whole planet is in view, fading as you zoom in to a city.
-  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 3, 0.7, 5, 0.35, 8, 0],
+  "sky-color": "#E2E9F3",
+  "horizon-color": "#DCE6F4",
+  // The haze at the planet's edge is the sea's own colour, and only right at the horizon, so
+  // the planet stays crisp to its rim instead of fading into a pale ring.
+  "fog-color": "#9DB4D2",
+  "sky-horizon-blend": 0.55,
+  "horizon-fog-blend": 0.4,
+  "fog-ground-blend": 0.95,
+  // Just a breath of atmosphere at the planet's edge: the page's own light does the rest, so
+  // there's no ring around it.
+  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.16, 5, 0.08, 8, 0],
 };
 
 /** Space view: Earth seen from orbit, a thin blue rim against a starry page. */
 export const SPACE_SKY: SkySpecification = {
-  "sky-color": "#0A1440",
-  "horizon-color": "#2F56B8",
-  "fog-color": "#2A4A9E",
+  "sky-color": "#0B1430",
+  "horizon-color": "#4A6FD0",
+  "fog-color": "#0C1530",
   "sky-horizon-blend": 0.6,
   "horizon-fog-blend": 0.4,
-  "fog-ground-blend": 0.15,
-  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 5, 0.5, 8, 0],
+  "fog-ground-blend": 0.95,
+  // A thin blue rim, not a dark shell around the planet.
+  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.32, 5, 0.25, 8, 0],
 };
 
 /**
@@ -110,11 +118,11 @@ export function labelPaint(space: boolean, dark = false): Record<string, { color
   const fade = (light: string, normal: string): string | ExpressionSpecification => (dark ? light : space ? ["interpolate", ["linear"], ["zoom"], 6, light, 9, normal] : normal);
   const halo = (normal: string) => fade("rgba(6,12,38,0.85)", normal);
   return {
-    "label-country": { color: fade("#F4F6FF", "#2B2350"), halo: halo("rgba(255,255,255,0.9)") },
-    "label-state": { color: fade("#D9DEFF", "#7A6A96"), halo: halo("rgba(255,255,255,0.85)") },
-    "label-city": { color: fade("#FFFFFF", "#0D1B33"), halo: halo("rgba(255,255,255,0.95)") },
-    "label-water": { color: fade("#A9D4FF", "#1F6FA8"), halo: halo("rgba(255,255,255,0.7)") },
-    "label-water-line": { color: fade("#A9D4FF", "#1F6FA8"), halo: halo("rgba(255,255,255,0.7)") },
+    "label-country": { color: fade("rgba(232,238,255,0.82)", "#4A5366"), halo: halo("rgba(255,255,255,0.85)") },
+    "label-state": { color: fade("rgba(214,222,245,0.7)", "#7C8496"), halo: halo("rgba(255,255,255,0.8)") },
+    "label-city": { color: fade("#FFFFFF", "#141B2D"), halo: halo("rgba(255,255,255,0.95)") },
+    "label-water": { color: fade("rgba(170,195,235,0.7)", "#6F87A6"), halo: halo("rgba(255,255,255,0)") },
+    "label-water-line": { color: fade("rgba(170,195,235,0.7)", "#6F87A6"), halo: halo("rgba(255,255,255,0)") },
   };
 }
 
@@ -159,12 +167,12 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
 
   const layers: LayerSpecification[] = [
     // ------------------------------------------------ base: day map (bright, illustrated)
-    L({ id: "bg", type: "background", paint: { "background-color": ["interpolate", ["linear"], ["zoom"], 0, "#CFE6B6", 6, "#E1EDD2", 11, "#EEF1EA"] } }, {}),
-    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#C5E3AE", "grass", "#D8EDC4", ["ice", "glacier"], "#E8F0F6", "sand", "#EFE1B8", "rock", "#E4E2DA", "wetland", "#CDE8D6", "farmland", "#E9F2D6", "#DCEDC8"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 12, 0.6] } }, { base: "map" }),
+    L({ id: "bg", type: "background", paint: { "background-color": LAND_DAY } }, {}),
+    L({ id: "landcover", type: "fill", source: "omt", "source-layer": "landcover", paint: { "fill-color": ["match", ["get", "class"], ["wood", "forest"], "#DCE5D3", "grass", "#E4EADB", ["ice", "glacier"], "#FAFBFC", "sand", "#EFE9DC", "rock", "#E8E6E0", "wetland", "#DFE7E1", "farmland", "#ECEEE4", "#E6EBDF"], "fill-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.85, 12, 0.55] } }, { base: "map" }),
     L({ id: "landuse", type: "fill", source: "omt", "source-layer": "landuse", minzoom: 9, paint: { "fill-color": ["match", ["get", "class"], ["residential", "suburb", "neighbourhood"], "#F1EFEA", ["commercial", "retail"], "#FBEBE3", "industrial", "#ECE8F2", ["school", "university", "college"], "#F8F0D8", "hospital", "#FBE4E6", ["stadium", "pitch"], "#CFEBC0", "#F0EEE8"], "fill-opacity": 0.85 } }, { base: "map" }),
-    L({ id: "park", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": "#BFE3A6", "fill-opacity": 0.85 } }, { base: "map" }),
-    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": ["interpolate", ["linear"], ["zoom"], 0, "#3796DD", 4, "#56ADE8", 8, "#7FC3F0", 12, "#9FD4F4"] } }, { base: "map" }),
-    L({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway", minzoom: 8, paint: { "line-color": "#93D2F6", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 3] } }, { base: "map" }),
+    L({ id: "park", type: "fill", source: "omt", "source-layer": "park", paint: { "fill-color": "#D6E5CC", "fill-opacity": 0.8 } }, { base: "map" }),
+    L({ id: "water", type: "fill", source: "omt", "source-layer": "water", paint: { "fill-color": ["interpolate", ["linear"], ["zoom"], 0, "#8EA9CC", 4, "#A0B9D8", 8, "#B6CBE4", 12, "#C4D6EB"] } }, { base: "map" }),
+    L({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway", minzoom: 8, paint: { "line-color": "#B6CAE2", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 3] } }, { base: "map" }),
     L({ id: "aeroway", type: "fill", source: "omt", "source-layer": "aeroway", minzoom: 11, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#E6E8EE" } }, { base: "map" }),
 
     // ------------------------------------------------ base: satellite
@@ -208,11 +216,11 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     }, { group: "buildings" }),
 
     // ------------------------------------------------ borders
-    L({ id: "border-region", type: "line", source: "omt", "source-layer": "boundary", minzoom: 3, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(120,110,150,0.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.2], "line-dasharray": [3, 2] } }, { group: "borders" }),
-    L({ id: "border-country", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(140,100,170,0.7)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4, 12, 2.5], "line-dasharray": ["case", ["==", ["get", "disputed"], 1], ["literal", [2, 2]], ["literal", [1, 0]]] } }, { group: "borders" }),
+    L({ id: "border-region", type: "line", source: "omt", "source-layer": "boundary", minzoom: 3, filter: ["all", ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(110,118,135,0.28)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.1], "line-dasharray": [3, 2] } }, { group: "borders" }),
+    L({ id: "border-country", type: "line", source: "omt", "source-layer": "boundary", filter: ["all", ["==", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]], paint: { "line-color": "rgba(96,106,128,0.42)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.45, 6, 1.1, 12, 2], "line-dasharray": ["case", ["==", ["get", "disputed"], 1], ["literal", [2, 2]], ["literal", [1, 0]]] } }, { group: "borders" }),
 
     // ------------------------------------------------ labels
-    L({ id: "label-water", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "Point"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 8, 14], "text-letter-spacing": 0.1, "text-max-width": 8 }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
+    L({ id: "label-water", type: "symbol", source: "omt", "source-layer": "water_name", minzoom: 3.5, filter: ["==", ["geometry-type"], "Point"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": ["interpolate", ["linear"], ["zoom"], 3.5, 10, 8, 13], "text-letter-spacing": 0.12, "text-max-width": 8 }, paint: { "text-color": "#6F87A6", "text-halo-color": "rgba(255,255,255,0)", "text-halo-width": 0 } }, { group: "labels" }),
     L({ id: "label-water-line", type: "symbol", source: "omt", "source-layer": "water_name", filter: ["==", ["geometry-type"], "LineString"], layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 12, "symbol-placement": "line", "text-letter-spacing": 0.1 }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
     L({ id: "label-waterway", type: "symbol", source: "omt", "source-layer": "waterway", minzoom: 12, layout: { "text-field": name, "text-font": ["Noto Sans Italic"], "text-size": 11, "symbol-placement": "line" }, paint: { "text-color": "#1F6FA8", "text-halo-color": "rgba(255,255,255,0.7)", "text-halo-width": 1 } }, { group: "labels" }),
     L({ id: "label-road", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13, layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14], "symbol-placement": "line", "text-max-angle": 30 }, paint: { "text-color": "#3A4558", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "roads" }),
@@ -224,8 +232,9 @@ export function buildStyle(initial?: { base: BaseStyle; layers: LayerState; spac
     L({ id: "poi-icon", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 14, filter: POI_FILTER, layout: { "icon-image": ["coalesce", ["image", ["concat", ["get", "subclass"], "_11"]], ["image", ["concat", ["get", "class"], "_11"]], ["image", "circle_11"]] as ExpressionSpecification, "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.8, 17, 1, 19, 1.15], "icon-allow-overlap": true, "icon-ignore-placement": true, "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 14, 10.5, 18, 12.5], "text-anchor": "top", "text-offset": [0, 1.05], "text-max-width": 8, "text-padding": 6, "text-optional": true, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#3B3355", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.3, "icon-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1], "text-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 14.4, 1] } }, { group: "poi" }),
     L({ id: "label-place-minor", type: "symbol", source: "omt", "source-layer": "place", minzoom: 10, filter: ["match", ["get", "class"], ["suburb", "quarter", "neighbourhood", "hamlet", "village", "isolated_dwelling"], true, false], layout: { "text-field": name, "text-font": FONT, "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 15, 13], "text-transform": "none", "text-max-width": 8 }, paint: { "text-color": "#4A5568", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.2 } }, { group: "labels" }),
     L({ id: "label-city", type: "symbol", source: "omt", "source-layer": "place", minzoom: 3, filter: ["match", ["get", "class"], ["city", "town"], true, false], layout: { "text-field": name, "text-font": ["step", ["zoom"], ["literal", FONT], 8, ["literal", FONT_BOLD]] as never, "text-size": ["interpolate", ["linear"], ["zoom"], 3, ["case", ["<=", ["coalesce", ["get", "rank"], 10], 3], 12, 10], 8, 14, 13, 18], "text-max-width": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99] }, paint: { "text-color": "#0D1B33", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 1.4 } }, { group: "labels" }),
-    L({ id: "label-state", type: "symbol", source: "omt", "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-letter-spacing": 0.08, "text-max-width": 7 }, paint: { "text-color": "#7A6A96", "text-halo-color": "rgba(255,255,255,0.85)", "text-halo-width": 1 } }, { group: "labels" }),
-    L({ id: "label-country", type: "symbol", source: "omt", "source-layer": "place", minzoom: 1.5, maxzoom: 9, filter: ["==", ["get", "class"], "country"], layout: { "text-field": name, "text-font": FONT_BOLD, "text-size": ["interpolate", ["linear"], ["zoom"], 2, 11, 6, 16], "text-max-width": 7 }, paint: { "text-color": "#2B2350", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1.4 } }, { group: "labels" }),
+    L({ id: "label-state", type: "symbol", source: "omt", "source-layer": "place", minzoom: 4, maxzoom: 8, filter: ["==", ["get", "class"], "state"], layout: { "text-field": name, "text-font": FONT, "text-size": 11, "text-letter-spacing": 0.08, "text-max-width": 7 }, paint: { "text-color": "#7C8496", "text-halo-color": "rgba(255,255,255,0.8)", "text-halo-width": 1 } }, { group: "labels" }),
+    // Countries named quietly, in small capitals, once the planet is close enough to read them.
+    L({ id: "label-country", type: "symbol", source: "omt", "source-layer": "place", minzoom: 2.6, maxzoom: 9, filter: ["==", ["get", "class"], "country"], layout: { "text-field": name, "text-font": FONT, "text-transform": "uppercase", "text-letter-spacing": 0.14, "text-size": ["interpolate", ["linear"], ["zoom"], 2.6, 9.5, 6, 13], "text-max-width": 7 }, paint: { "text-color": "#4A5366", "text-halo-color": "rgba(255,255,255,0.85)", "text-halo-width": 1.2 } }, { group: "labels" }),
   ];
 
   if (initial) {

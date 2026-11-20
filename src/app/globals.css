@@ -14535,3 +14535,317 @@ body::before {
     display: none;
   }
 }
+
+/* ==== The globe's page, premium ============================================================
+   Calm like the best product sites (Revolut, Apple): one ink colour for what matters, quiet
+   neutrals for everything else, no confetti of colours. By day the planet floats in pale,
+   airy light; by night in deep space. The map's own colours are muted to match
+   (lib/map/style.ts), and its markers are plain white discs (earth/marker-art.ts). */
+.globe-stage.sky {
+  --stage-ink: #0e1424;
+  --stage-ink-2: #4a5468;
+  --stage-glass: rgb(255 255 255 / 0.66);
+  --stage-glass-strong: rgb(255 255 255 / 0.86);
+  --stage-line: rgb(255 255 255 / 0.95);
+  --stage-hair: rgb(16 23 42 / 0.08);
+  --stage-shadow: 0 1px 2px rgb(16 23 42 / 0.05), 0 10px 26px -14px rgb(16 23 42 / 0.3);
+  --stage-on: #0e1424;
+  --stage-on-text: #ffffff;
+  background:
+    radial-gradient(62% 48% at 50% 47%, #ffffff 0%, rgb(255 255 255 / 0) 72%),
+    radial-gradient(90% 60% at 50% 115%, rgb(196 210 236 / 0.55) 0%, transparent 70%),
+    linear-gradient(180deg, #e8edf5 0%, #eef2f8 46%, #e6ebf3 100%);
+}
+.globe-stage.sky.space {
+  --stage-ink: #f3f5fa;
+  --stage-ink-2: rgb(214 222 240 / 0.78);
+  --stage-glass: rgb(255 255 255 / 0.07);
+  --stage-glass-strong: rgb(22 28 46 / 0.86);
+  --stage-line: rgb(255 255 255 / 0.12);
+  --stage-hair: rgb(255 255 255 / 0.1);
+  --stage-shadow: 0 12px 30px -16px rgb(0 0 0 / 0.8);
+  --stage-on: #f3f5fa;
+  --stage-on-text: #0e1424;
+  background:
+    radial-gradient(56% 44% at 50% 48%, rgb(58 92 200 / 0.18) 0%, transparent 72%),
+    linear-gradient(180deg, #02040a 0%, #050913 50%, #0a1124 100%);
+}
+.globe-stage.sky.space::before {
+  opacity: 0.55;
+}
+.globe-stage.sky.space::after {
+  animation-duration: 9s;
+  opacity: 0.5;
+}
+/* The planet's light: a soft rim of sky, no shadow on a floor that isn't there. */
+.globe-stage .globe-halo {
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.9) 0%, rgb(225 234 248 / 0.55) 46%, rgb(210 222 244 / 0.18) 70%, transparent 100%);
+  animation: none;
+}
+.globe-stage .globe-halo--space {
+  background: radial-gradient(closest-side, rgb(70 110 230 / 0.26) 0%, rgb(50 80 190 / 0.1) 50%, transparent 100%);
+}
+.globe-stage .maplibregl-ctrl-attrib-button {
+  opacity: 0.5;
+}
+/* The quick choices of when: they fade out at the bar's end where there are more to scroll to. */
+.tb-scroll {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  padding-right: 18px;
+}
+.globe-stage .globe-placeholder {
+  background:
+    radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.6), transparent 34%),
+    radial-gradient(circle at 50% 50%, #b8cbe3 0%, #a3bad8 64%, #8fa9cc 100%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.5) inset, 0 0 120px 30px rgb(255 255 255 / 0.7);
+}
+.globe-stage.space .globe-placeholder {
+  background:
+    radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.12), transparent 32%),
+    radial-gradient(circle at 50% 50%, #141c33 0%, #0a1024 70%, #050814 100%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06) inset, 0 0 120px 20px rgb(60 90 200 / 0.18);
+}
+
+/* Words on the stage: ink by day, white by night, no glow behind them. */
+.globe-stage .on-sky {
+  color: var(--stage-ink);
+  text-shadow: none;
+}
+.globe-stage .on-sky-2 {
+  color: var(--stage-ink-2);
+  text-shadow: none;
+}
+.globe-stage .t-hero {
+  letter-spacing: -0.035em;
+}
+.globe-stage .home-hero .t-hero em,
+.globe-stage.sky .t-hero em {
+  background: linear-gradient(100deg, #2b3a8f 0%, #4b57e3 55%, #7a5cf0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: none;
+}
+.globe-stage.space .home-hero .t-hero em,
+.globe-stage.sky.space .t-hero em {
+  background: linear-gradient(100deg, #ffffff 0%, #c4cfff 55%, #d5c4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* The map's labels are quiet now: no pool of haze behind the title washing out the markers. */
+.globe-stage .home-hero::before {
+  display: none;
+}
+
+/* The search: one calm field, frosted, a hairline and a soft lift. */
+.globe-stage .search-lg {
+  height: 3rem;
+  border-color: var(--stage-line);
+  background: var(--stage-glass-strong);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--stage-shadow);
+}
+.globe-stage .search-lg input {
+  font-size: 1rem;
+  color: var(--stage-ink);
+}
+.globe-stage .search-lg > svg {
+  color: var(--stage-ink-2);
+}
+@media (min-width: 640px) {
+  .globe-stage .search-lg {
+    height: 3.25rem;
+  }
+}
+
+/* Chips: the same frosted glass, words only; the chosen one in ink. */
+.globe-stage .chip.sky-chip {
+  height: 2.25rem;
+  padding: 0 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--stage-ink);
+  background: var(--stage-glass);
+  border: 1px solid var(--stage-line);
+  box-shadow: var(--stage-shadow);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+.globe-stage .chip.sky-chip:hover {
+  background: var(--stage-glass-strong);
+  border-color: var(--stage-line);
+  transform: none;
+}
+.globe-stage .chip.sky-chip[aria-pressed="true"],
+.globe-stage .chip.sky-chip[data-active="true"] {
+  background: var(--stage-on);
+  border-color: var(--stage-on);
+  color: var(--stage-on-text);
+  box-shadow: 0 8px 20px -12px rgb(16 23 42 / 0.6);
+}
+@media (pointer: coarse) {
+  .globe-stage .chip.sky-chip {
+    min-height: 2.5rem;
+    height: 2.5rem;
+  }
+}
+/* Filters that are on, over the planet: the same ink as the chosen chip. */
+.globe-stage .chip[data-active="true"]:not(.sky-chip) {
+  background: var(--stage-on);
+  background-image: none;
+  border-color: var(--stage-on);
+  color: var(--stage-on-text);
+  box-shadow: 0 8px 20px -12px rgb(16 23 42 / 0.6);
+}
+.sky-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.25rem;
+  background: var(--stage-hair, rgb(16 23 42 / 0.12));
+}
+.globe-stage.space .sky-sep {
+  background: rgb(255 255 255 / 0.18);
+}
+
+/* Secondary ideas on a computer: quiet glass with a line icon, all alike. */
+.hero-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.9rem 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--stage-ink, var(--text));
+  background: var(--stage-glass, var(--panel));
+  border: 1px solid var(--stage-line, var(--line));
+  box-shadow: var(--stage-shadow, none);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+.hero-act:hover {
+  background: var(--stage-glass-strong, var(--panel));
+}
+.hero-act svg {
+  color: var(--stage-ink-2, var(--text-2));
+}
+
+/* Everything that floats over the planet: the same glass. */
+.globe-stage .glass-dock {
+  background: var(--stage-glass-strong);
+  border-color: var(--stage-line);
+  box-shadow: var(--stage-shadow);
+}
+.globe-stage .dock-btn--spin,
+.globe-stage .dock-btn--spin:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text-2);
+  filter: none;
+}
+.globe-stage .dock-btn--spin:hover:not(:disabled) {
+  background: rgb(15 90 230 / 0.1);
+  color: var(--text);
+}
+.globe-stage .phone-tool,
+.globe-stage .phone-tool--spin {
+  width: 2.75rem;
+  padding: 0;
+  color: var(--stage-ink);
+  background: var(--stage-glass-strong);
+  border: 1px solid var(--stage-line);
+  box-shadow: var(--stage-shadow);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* The tools sheet on phones: line icons in the text's own colour. */
+.phone-tile svg {
+  color: var(--text-2);
+}
+
+/* How to handle it: a small caption in glass, once, then it's gone. */
+.globe-stage .globe-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--stage-ink-2);
+  background: var(--stage-glass-strong);
+  border: 1px solid var(--stage-line);
+  box-shadow: var(--stage-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation:
+    hint-in 600ms 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) both,
+    hint-out 500ms 9s ease forwards;
+}
+.globe-hint-dot {
+  opacity: 0.45;
+}
+@keyframes hint-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* The map's credits (they must show): a small glass button, not a black dot. */
+.globe-stage .maplibregl-ctrl-attrib.maplibregl-compact {
+  background: var(--stage-glass-strong);
+  border: 1px solid var(--stage-line);
+  box-shadow: var(--stage-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* On the globe's page, the header's main button is ink, like everything that matters here. */
+.site-header[data-home] .btn-primary {
+  background: #0e1424;
+  border-color: #0e1424;
+  color: #fff;
+  box-shadow: 0 8px 20px -12px rgb(16 23 42 / 0.7);
+}
+:root[data-look="night"] .site-header[data-home] .btn-primary {
+  background: #f3f5fa;
+  border-color: #f3f5fa;
+  color: #0e1424;
+}
+
+/* The globe in the bottom bar: a calm orb with a hairline, no rainbow, no spinning ring. */
+.tab-globe-disc {
+  border: 1px solid rgb(16 23 42 / 0.08);
+  background: radial-gradient(circle at 35% 28%, #ffffff, #f2f5fa 70%, #e8edf5);
+  box-shadow:
+    0 0 0 4px rgb(255 255 255 / 0.95),
+    0 12px 26px -12px rgb(16 23 42 / 0.45);
+}
+:root[data-look="night"] .tab-globe-disc {
+  border-color: rgb(255 255 255 / 0.1);
+  background: radial-gradient(circle at 35% 28%, #222a40, #121829 72%);
+  box-shadow:
+    0 0 0 4px rgb(10 14 26 / 0.96),
+    0 12px 28px -12px rgb(0 0 0 / 0.8);
+}
+.tab-globe[aria-current="page"] .tab-globe-disc {
+  animation: none;
+  box-shadow:
+    0 0 0 4px rgb(255 255 255 / 0.95),
+    0 0 0 5.5px rgb(16 23 42 / 0.9),
+    0 14px 28px -12px rgb(16 23 42 / 0.5);
+}
+:root[data-look="night"] .tab-globe[aria-current="page"] .tab-globe-disc {
+  box-shadow:
+    0 0 0 4px rgb(10 14 26 / 0.96),
+    0 0 0 5.5px rgb(243 245 250 / 0.85),
+    0 14px 28px -12px rgb(0 0 0 / 0.8);
+}

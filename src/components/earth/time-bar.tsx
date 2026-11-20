@@ -173,16 +173,18 @@ export function TimeBar({
 
   if (!open)
     return (
-      <div className="glass-dock rounded-full p-1 flex items-center gap-0.5 max-w-[calc(100vw-2rem)] overflow-x-auto no-scrollbar" role="group" aria-label="When">
+      <div className="glass-dock tb-bar rounded-full p-1 flex items-center gap-0.5 max-w-[calc(100vw-2rem)] overflow-hidden" role="group" aria-label="When">
         <button
           type="button"
           onClick={() => openTimeline(true)}
           aria-label="Open the timeline and play the next two weeks on the globe"
           title="Travel in time"
-          className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full pl-2.5 pr-3 bg-text text-on-ink hover:bg-cyan transition-colors text-[13px] font-semibold"
+          className="shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full pl-2.5 pr-3 bg-text text-on-ink hover:opacity-90 transition-opacity text-[13px] font-semibold"
         >
           <Play size={13} aria-hidden className="translate-x-[1px]" /> Day by day
         </button>
+        {/* The quick choices scroll inside the bar, fading out at its end where there are more. */}
+        <div className="tb-scroll flex items-center gap-0.5 min-w-0 overflow-x-auto no-scrollbar">
         {items.map((i) => {
           const on = active === i.id;
           return (
@@ -192,7 +194,7 @@ export function TimeBar({
               aria-pressed={on}
               onClick={() => pick(i)}
               className={`shrink-0 inline-flex items-center gap-1.5 h-8 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                on ? (i.live ? "bg-live text-white" : "bg-cyan text-white") : "text-text-2 hover:text-text hover:bg-panel-2"
+                on ? (i.live ? "bg-live text-white" : "bg-text text-on-ink") : "text-text-2 hover:text-text hover:bg-panel-2"
               }`}
             >
               {i.live && <span className={`live-dot ${on ? "live-dot--on" : ""}`} aria-hidden />}
@@ -202,6 +204,7 @@ export function TimeBar({
             </button>
           );
         })}
+        </div>
       </div>
     );
 

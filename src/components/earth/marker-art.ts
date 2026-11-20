@@ -7,11 +7,12 @@ import { CircleDot } from "lucide-react";
  * Marker artwork for the map, drawn once per category on a canvas and handed to MapLibre
  * as images, so thousands of markers render on the GPU instead of as DOM elements.
  *
- * Visual language (shared with the legend and category chips):
- * - single event: a white rim around a disc in the category colour, with the category's
- *   Lucide icon in white;
- * - cluster: a white disc that carries the count, a ring whose coloured arc shows how much
- *   of the cluster is the dominant category, and a small icon badge for that category;
+ * Visual language (shared with the legend and category chips), kept quiet, like the pins of a
+ * good map app:
+ * - single event: a thin white rim around a small disc in the category colour, with the
+ *   category's Lucide icon in white;
+ * - cluster: a clean white disc that carries the count, in a frosted ring, softly lifted off
+ *   the planet by its shadow;
  * - selected: a dark pill badge that stretches to fit the place name and count.
  */
 
@@ -82,24 +83,24 @@ function tint(hex: string, amount: number): string {
 
 function rimmedDisc(g: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
   g.save();
-  g.shadowColor = "rgba(13,27,51,0.30)";
-  g.shadowBlur = 7;
-  g.shadowOffsetY = 2;
+  g.shadowColor = "rgba(16,23,42,0.26)";
+  g.shadowBlur = 9;
+  g.shadowOffsetY = 2.5;
   g.beginPath();
   g.arc(cx, cy, r, 0, Math.PI * 2);
-  g.fillStyle = "rgba(255,255,255,0.97)";
+  g.fillStyle = "#FFFFFF";
   g.fill();
   g.restore();
   g.beginPath();
   g.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
-  g.strokeStyle = "rgba(13,27,51,0.08)";
+  g.strokeStyle = "rgba(16,23,42,0.07)";
   g.lineWidth = 1;
   g.stroke();
 }
 
 function colourDisc(g: CanvasRenderingContext2D, cx: number, cy: number, r: number, hex: string) {
   const grad = g.createLinearGradient(cx, cy - r, cx, cy + r);
-  grad.addColorStop(0, tint(hex, 0.22));
+  grad.addColorStop(0, tint(hex, 0.14));
   grad.addColorStop(1, hex);
   g.beginPath();
   g.arc(cx, cy, r, 0, Math.PI * 2);
@@ -108,51 +109,46 @@ function colourDisc(g: CanvasRenderingContext2D, cx: number, cy: number, r: numb
 }
 
 export const SINGLE_SIZE = 40;
-/** One event: white rim, category-colour disc, white icon. 40×40 px with room for the shadow. */
+/** One event: thin white rim, category-colour disc, white icon. 40×40 px with room for the shadow. */
 export function singleMarker(group: string) {
   const hex = GROUP_HEX[group] ?? GROUP_HEX.other;
   const S = SINGLE_SIZE;
   const { g } = canvas(S, S);
-  rimmedDisc(g, S / 2, S / 2, 14);
-  colourDisc(g, S / 2, S / 2, 11.5, hex);
-  drawIcon(g, iconNode(groupIcon(group)), S / 2, S / 2, 13, "#FFFFFF", 2.4);
+  rimmedDisc(g, S / 2, S / 2, 12.5);
+  colourDisc(g, S / 2, S / 2, 10.5, hex);
+  drawIcon(g, iconNode(groupIcon(group)), S / 2, S / 2, 11.5, "#FFFFFF", 2.3);
   return image(g, S, S);
 }
 
 export const CLUSTER_SIZE = 52;
 export const SHARE_BUCKETS = [25, 50, 75, 100];
-/** Several events: count disc, share ring for the dominant category, icon badge. */
+/**
+ * Several events: a white disc for the count in a frosted ring. (The category and share are
+ * kept in the image's name, so markers can still be told apart by them, but no longer drawn:
+ * a calm planet reads better than a confetti of colours.)
+ */
 export function clusterMarker(group: string, sharePct: number) {
-  const hex = GROUP_HEX[group] ?? GROUP_HEX.other;
+  void group;
+  void sharePct;
   const S = CLUSTER_SIZE;
-  const c = S / 2 + 2;
+  const c = S / 2;
   const { g } = canvas(S, S);
-  rimmedDisc(g, S / 2, c, 18);
-  // Ring: neutral track, then the dominant category's share from 12 o'clock.
-  g.lineWidth = 3;
-  g.lineCap = "round";
-  g.beginPath();
-  g.arc(S / 2, c, 14.5, 0, Math.PI * 2);
-  g.strokeStyle = "#E3E9F1";
-  g.stroke();
-  g.beginPath();
-  const start = -Math.PI / 2;
-  g.arc(S / 2, c, 14.5, start, start + (Math.PI * 2 * Math.min(sharePct, 99.9)) / 100);
-  g.strokeStyle = hex;
-  g.stroke();
-  // Icon badge at the top right.
-  const bx = S / 2 + 13;
-  const by = c - 13;
+  // The frosted ring: a little of the planet shows through it.
   g.save();
-  g.shadowColor = "rgba(13,27,51,0.25)";
-  g.shadowBlur = 3;
+  g.shadowColor = "rgba(16,23,42,0.18)";
+  g.shadowBlur = 12;
+  g.shadowOffsetY = 3;
   g.beginPath();
-  g.arc(bx, by, 7.5, 0, Math.PI * 2);
-  g.fillStyle = "#FFFFFF";
+  g.arc(S / 2, c, 21, 0, Math.PI * 2);
+  g.fillStyle = "rgba(255,255,255,0.42)";
   g.fill();
   g.restore();
-  colourDisc(g, bx, by, 6.25, hex);
-  drawIcon(g, iconNode(groupIcon(group)), bx, by, 8, "#FFFFFF", 2.6);
+  g.beginPath();
+  g.arc(S / 2, c, 20.5, 0, Math.PI * 2);
+  g.strokeStyle = "rgba(255,255,255,0.75)";
+  g.lineWidth = 1;
+  g.stroke();
+  rimmedDisc(g, S / 2, c, 16.5);
   return image(g, S, S);
 }
 

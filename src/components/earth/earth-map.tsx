@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { maplibregl } from "@/lib/map/maplibre";
 import type { Map as MLMap, GeoJSONSource, MapGeoJSONFeature, ExpressionSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { DAY_SKY, SPACE_SKY, buildStyle, labelPaint, layerVisibility, poiFilter, type BaseStyle, type LayerState } from "@/lib/map/style";
+import { DAY_SKY, LAND_DAY, LAND_NIGHT, SPACE_SKY, buildStyle, labelPaint, layerVisibility, poiFilter, type BaseStyle, type LayerState } from "@/lib/map/style";
 import type { PoiGroup } from "@/lib/pois";
 import { nightGeoJSON } from "@/lib/map/night";
 import { zoomForKind, type CameraState, type ViewState } from "@/lib/map/view";
@@ -474,24 +474,24 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
       map.addLayer({ id: "search-area-fill", type: "fill", source: "search-area", paint: { "fill-color": "#1463FF", "fill-opacity": 0.08 } });
       map.addLayer({ id: "search-area-line", type: "line", source: "search-area", paint: { "line-color": "#1463FF", "line-width": 2, "line-opacity": 0.9, "line-dasharray": [2, 1.5] } });
       map.addLayer({ id: "event-density", type: "heatmap", source: "events", maxzoom: 12, paint: { "heatmap-weight": ["/", ["ln", ["+", ["get", "count"], 1]], 6], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 9, 2], "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 14, 6, 30, 11, 50], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "rgba(123,77,255,0.35)", 0.5, "rgba(240,71,90,0.7)", 0.8, "rgba(255,184,0,0.9)", 1, "#FFF6CC"] }, metadata: { omni: { group: "density" } } });
-      // Soft category glow: present under busy clusters, brighter under the hovered marker.
+      // A soft light under busy clusters (like a city's glow), brighter under the hovered marker.
       map.addLayer({
         id: "event-halo",
         type: "circle",
         source: "events",
         paint: {
-          "circle-color": groupColor,
-          "circle-blur": 0.85,
-          "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 18, 9, 40],
-          "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.5, ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0, 2, 0.1, 9, 0.28]],
+          "circle-color": "#FFFFFF",
+          "circle-blur": 0.9,
+          "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 18, 9, 42],
+          "circle-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.55, ["interpolate", ["linear"], ["ln", ["+", ["get", "count"], 1]], 0, 0, 2, 0.12, 9, 0.32]],
           "circle-pitch-alignment": "viewport",
         },
         metadata: { omni: { group: "events" } },
       });
       // Events on right now: a red glow and two rings rippling out from the marker.
-      map.addLayer({ id: "event-live-glow", type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": LIVE, "circle-blur": 0.9, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "live"], 1]], 0, 18, 6, 34], "circle-opacity": 0.4, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
+      map.addLayer({ id: "event-live-glow", type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": LIVE, "circle-blur": 0.9, "circle-radius": ["interpolate", ["linear"], ["ln", ["+", ["get", "live"], 1]], 0, 16, 6, 28], "circle-opacity": 0.22, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
       for (const id of ["event-live", "event-live-2"])
-        map.addLayer({ id, type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": "rgba(0,0,0,0)", "circle-radius": 16, "circle-stroke-color": LIVE, "circle-stroke-width": 2.2, "circle-stroke-opacity": 0.7, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
+        map.addLayer({ id, type: "circle", source: "events", filter: [">", ["get", "live"], 0], paint: { "circle-color": "rgba(0,0,0,0)", "circle-radius": 16, "circle-stroke-color": LIVE, "circle-stroke-width": 1.4, "circle-stroke-opacity": 0.55, "circle-pitch-alignment": "viewport" }, metadata: { omni: { group: "events" } } });
       // Hover from the results list: a dark ring with a soft glow.
       map.addLayer({ id: "highlight-glow", type: "circle", source: "highlight", paint: { "circle-radius": 30, "circle-color": "#1463FF", "circle-opacity": 0.18, "circle-blur": 0.8, "circle-pitch-alignment": "viewport" } });
       map.addLayer({ id: "highlight-ring", type: "circle", source: "highlight", paint: { "circle-radius": 21, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#0D1B33", "circle-stroke-width": 2.5, "circle-pitch-alignment": "viewport" } });
@@ -504,8 +504,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
           "text-field": countText,
           "text-font": ["Noto Sans Bold"],
           "text-size": ["*", k, countSize],
-          // The cluster disc is drawn 2px below centre to leave room for the badge.
-          "text-offset": [0, 0.12],
+          "text-offset": [0, 0.04],
           "text-allow-overlap": true,
           "text-ignore-placement": true,
         }) as maplibregl.SymbolLayerSpecification["layout"];
@@ -514,7 +513,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
         type: "symbol",
         source: "events",
         layout: { ...markerLayout(1), "symbol-sort-key": ["-", 0, ["get", "count"]] },
-        paint: { "text-color": "#0D1B33", "icon-opacity": 1, "icon-opacity-transition": { duration: 250 }, "text-opacity": 1, "text-opacity-transition": { duration: 250 } },
+        paint: { "text-color": "#10172A", "icon-opacity": 1, "icon-opacity-transition": { duration: 250 }, "text-opacity": 1, "text-opacity-transition": { duration: 250 } },
         metadata: { omni: { group: "events" } },
       });
       // Names appear once there is room for them.
@@ -744,7 +743,7 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
           const p = ((t / 2000 + phase) % 1 + 1) % 1;
           const e = 1 - Math.pow(1 - p, 2);
           map.setPaintProperty(id, "circle-radius", 13 + e * 26);
-          map.setPaintProperty(id, "circle-stroke-opacity", 0.85 * (1 - p));
+          map.setPaintProperty(id, "circle-stroke-opacity", 0.6 * (1 - p));
         }
       }
       liveFrame = requestAnimationFrame(ripple2);
@@ -818,11 +817,13 @@ export const EarthMap = forwardRef<EarthMapHandle, EarthMapProps>(function Earth
     for (const [id, on] of Object.entries(vis)) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     map.setProjection({ type: projection });
     map.setSky(orbit || dark ? SPACE_SKY : DAY_SKY);
+    // Under the night-lights pictures, while they load, the ground is dark, not a flash of day.
+    if (map.getLayer("bg")) map.setPaintProperty("bg", "background-color", dark ? LAND_NIGHT : LAND_DAY);
     if (map.getLayer("night")) {
-      map.setPaintProperty("night", "fill-color", orbit ? "#050B26" : "#1B2A5C");
+      map.setPaintProperty("night", "fill-color", orbit ? "#050B26" : "#26314F");
       // Ten nested twilight bands stack up (lib/map/night.ts), each light, so the shade deepens
-      // smoothly: deep night ends up about 80% shaded in space view, as with the four before.
-      map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.153 : 0.094, 7, orbit ? 0.094 : 0.05, 10, 0]);
+      // smoothly: deep night ends up about 80% shaded in space view; by day, a gentle shade.
+      map.setPaintProperty("night", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 0, orbit ? 0.153 : 0.05, 7, orbit ? 0.094 : 0.03, 10, 0]);
     }
     for (const [id, p] of Object.entries(labelPaint(orbit, dark))) {
       if (!map.getLayer(id)) continue;

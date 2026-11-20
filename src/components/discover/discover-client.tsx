@@ -3,11 +3,11 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play, ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane, Ellipsis } from "lucide-react";
+import { Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play, ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane, Ellipsis, ListMusic } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
 import { CommunityPulse } from "../community/pulse";
-import { GLOBE_MODES, GROUPS, GROUP_HEX } from "@/lib/categories";
+import { GLOBE_MODES, GROUPS } from "@/lib/categories";
 import { getDestination } from "@/lib/destinations";
 import { filtersToParams, parseFilterParams, activeFilterCount } from "@/lib/search/params";
 import { cardWhen, formatEventDate, formatEventTime, tzAbbrev, relativeTime, formatMoney } from "@/lib/format";
@@ -776,14 +776,15 @@ export function DiscoverClient() {
         <div ref={topBox} className="home-hero relative max-w-[min(34rem,100%)]">
           <div className="pointer-events-auto">
             <h1 className={`text-balance on-sky compact:sr-only ${view.zoom > 4 || place || mode === "list" ? "sr-only" : ""}`}>
-              <span className="block t-hero">One planet. <em className="text-white/85">Every experience.</em></span>
-              <span className="max-sm:sr-only block font-medium text-[0.9375rem] leading-snug mt-1.5 text-white/90">
+              <span className="block t-hero">One planet. <em>Every experience.</em></span>
+              <span className="max-sm:sr-only block font-medium text-[0.9375rem] leading-snug mt-1.5 on-sky-2">
                 Spin it, tap a glowing marker, or ask for anything.
               </span>
             </h1>
             <SearchBox
               className="mt-3 compact:mt-0 compact:mr-[5.75rem]"
               size="lg"
+              placeholder="Search events and places"
               mapCenter={{ lat: view.lat, lng: view.lng }}
               onQuery={(p) => applyParsed(p)}
               onPlace={(d) => (setSelection(null), fly({ lat: d.lat, lng: d.lng, zoom: d.kind === "city" ? 10.5 : d.kind === "country" ? 5 : 2.8 }))}
@@ -822,17 +823,14 @@ export function DiscoverClient() {
             )}
             {GLOBE_MODES.map((m) => {
               const on = modeId === m.id;
-              const hue = m.groups[0] ? GROUP_HEX[m.groups[0]] : undefined;
               return (
                 <button
                   key={m.id}
                   type="button"
                   className="chip sky-chip"
                   aria-pressed={on}
-                  style={on && hue ? { background: hue, borderColor: hue } : undefined}
                   onClick={() => setFilters((f) => ({ ...f, categories: m.groups.length ? m.groups : undefined }))}
                 >
-                  {m.groups[0] && !on && <ShapeGlyph group={m.groups[0]} size={16} />}
                   {m.label}
                 </button>
               );
@@ -840,7 +838,7 @@ export function DiscoverClient() {
             {modeId === "custom" && (
               <span className="chip sky-chip" data-active="true">Custom mix</span>
             )}
-            <span className="w-px h-5 bg-white/60 mx-1 shrink-0" aria-hidden />
+            <span className="sky-sep" aria-hidden />
             <button type="button" className="chip sky-chip" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
               <SlidersHorizontal size={14} aria-hidden />
               Filters{nFilters ? <span className="tnum rounded-full bg-cyan text-white px-1.5 text-[11px] leading-[18px]">{nFilters}</span> : null}
@@ -853,7 +851,7 @@ export function DiscoverClient() {
           )}
           {!(view.zoom > 4 || place || mode === "list") && (
             <div className="hero-ctas pointer-events-auto mt-2.5 flex items-center gap-2 compact:hidden sm:flex-wrap">
-              <span className="t-micro font-semibold text-white/85 on-sky max-lg:hidden">Or try</span>
+              <span className="t-micro font-semibold on-sky-2 max-lg:hidden">Or try</span>
               {here && (
                 <div className="lg:hidden shrink-0">
                   <HerePill here={here} tone="glass" onChange={(h) => {
@@ -862,14 +860,14 @@ export function DiscoverClient() {
                   }} />
                 </div>
               )}
-              <button type="button" onClick={startSpin} className="spin-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold text-on-sun hover:brightness-105">
-                <span className="spin-cta-die text-lg leading-none" aria-hidden>🎲</span> Spin the globe
+              <button type="button" onClick={startSpin} className="hero-act press">
+                <Dices size={15} aria-hidden /> Spin the globe
               </button>
-              <button type="button" onClick={startFlight} title="A guided flight over tonight's events around the world" className="nf-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
-                <Plane size={15} className="text-[var(--gold-light)]" aria-hidden /> Night Flight
+              <button type="button" onClick={startFlight} title="A guided flight over tonight's events around the world" className="hero-act press">
+                <Plane size={15} aria-hidden /> Night Flight
               </button>
-              <Link href="/mixtape" title="A weekend plan made for you, from real events" className="mx-cta press inline-flex items-center gap-2 rounded-full px-3 py-1.5 t-small font-bold">
-                <span className="mx-cta-tape" aria-hidden>📼</span> Mixtape <span className="nf-cta-new" aria-label="new">NEW</span>
+              <Link href="/mixtape" title="A weekend plan made for you, from real events" className="hero-act press">
+                <ListMusic size={15} aria-hidden /> Mixtape
               </Link>
             </div>
           )}
@@ -925,7 +923,7 @@ export function DiscoverClient() {
         )}
         {mode !== "list" && layers.poi && !selection && <PlacesBar zoom={view.zoom} groups={poiGroups} onGroups={setPoiGroups} onZoomIn={() => fly({ lat: view.lat, lng: view.lng, zoom: 14.8 })} />}
         {mode !== "list" && (
-          // Phones: the timeline and two round buttons share one row (spin, and the other tools).
+          // Phones: the timeline and the tools button share one row (spinning the globe is among the tools).
           <div className="flex items-end gap-2 compact:w-full">
           <div className="min-w-0 compact:flex-1">
           <TimeBar
@@ -941,9 +939,6 @@ export function DiscoverClient() {
           />
           </div>
           <div className="hidden compact:flex items-center gap-1.5 shrink-0 pb-px">
-            <button type="button" className="phone-tool phone-tool--spin press" aria-label="Surprise me: spin the globe and land on a random event" onClick={startSpin}>
-              <Dices size={18} aria-hidden /> <span>Surprise</span>
-            </button>
             <button type="button" className="phone-tool press" aria-label="Map tools" aria-expanded={tools} onClick={() => setTools((t) => !t)}>
               <Ellipsis size={19} aria-hidden />
             </button>
@@ -1055,6 +1050,7 @@ export function DiscoverClient() {
               ))}
             </div>
             <ul className="grid grid-cols-2 gap-2">
+              <li><button type="button" className="phone-tile" onClick={() => (setTools(false), startSpin())}><Dices size={18} aria-hidden /> Surprise me</button></li>
               {mode === "globe" && (
                 <li><button type="button" className="phone-tile" disabled={reduced} onClick={() => (setAutoRotate((a) => !a), setTools(false))}>{autoRotate && !reduced ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}{autoRotate && !reduced ? "Stop turning" : "Let it turn"}</button></li>
               )}
@@ -1063,18 +1059,17 @@ export function DiscoverClient() {
               <li><button type="button" className="phone-tile" onClick={() => (setPickMode(true), setTools(false))}><Crosshair size={18} aria-hidden /> Explore an area</button></li>
               <li><button type="button" className="phone-tile" onClick={() => (setShowLegend(false), setShowLayers(true), setTools(false))}><Layers size={18} aria-hidden /> Map layers</button></li>
               <li><button type="button" className="phone-tile" onClick={() => (setTools(false), startFlight())}><Plane size={18} aria-hidden /> Night Flight</button></li>
-              <li><Link href="/mixtape" className="phone-tile" onClick={() => setTools(false)}><span aria-hidden>📼</span> Mixtape</Link></li>
-              <li><button type="button" className="phone-tile" onClick={() => (setTools(false), startSpin())}><Dices size={18} aria-hidden /> Spin the globe</button></li>
+              <li><Link href="/mixtape" className="phone-tile" onClick={() => setTools(false)}><ListMusic size={18} aria-hidden /> Mixtape</Link></li>
             </ul>
           </section>
         </>
       )}
 
       {/* ---------- Status line ---------- */}
-      <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro text-white/85 [text-shadow:0_1px_2px_rgb(10_30_80_/_0.45)] tnum pointer-events-none ${mode === "list" || flightOn ? "hidden" : "hidden lg:block"}`} aria-live="polite">
+      <div className={`absolute z-10 right-4 sm:right-6 bottom-8 text-right t-micro on-sky-2 tnum pointer-events-none ${mode === "list" || flightOn ? "hidden" : "hidden lg:block"}`} aria-live="polite">
         {loading ? "Loading events" : counts ? `${counts.inView.toLocaleString()} of ${counts.total.toLocaleString()} matching events in view` : ""}
         {!loading && liveInView > 0 && !filters.live && (
-          <div className="mt-0.5 flex items-center justify-end gap-1.5 font-semibold text-white">
+          <div className="mt-0.5 flex items-center justify-end gap-1.5 font-semibold on-sky">
             <span className="live-dot" aria-hidden /> {liveInView.toLocaleString()} on right now
           </div>
         )}
@@ -1192,8 +1187,7 @@ function GlobeAura({ zoom, lat, space, shift, room }: { zoom: number; lat: numbe
   if (zoom > 3.2 || !Number.isFinite(r)) return null;
   return (
     <div className="pointer-events-none absolute left-0 overflow-visible" style={{ right: shift, top: room.top, bottom: room.bottom }} aria-hidden>
-      <div className={`globe-halo ${space ? "globe-halo--space" : ""}`} style={{ width: r * 2.9, height: r * 2.9 }} />
-      <div className="globe-shadow" style={{ width: r * 1.5, height: r * 0.2, transform: `translate(-50%, ${r * 1.04}px)` }} />
+      <div className={`globe-halo ${space ? "globe-halo--space" : ""}`} style={{ width: r * 2.6, height: r * 2.6 }} />
     </div>
   );
 }
@@ -1205,8 +1199,8 @@ function GlobeHint({ zoom, lat, shift, room }: { zoom: number; lat: number; shif
   const r = globeRadiusPx(zoom, lat);
   if (zoom > 3.2 || !Number.isFinite(r)) return null;
   return (
-    <p className="globe-hint pointer-events-none absolute z-10 left-1/2 glass-dock rounded-full px-3.5 py-1.5 t-micro font-semibold text-text whitespace-nowrap" style={{ top: `calc(${room.top}px + (100% - ${room.top + room.bottom}px) / 2 + ${Math.round(r * 0.66)}px)`, left: `calc(50% - ${shift / 2}px)` }} role="note">
-      <span aria-hidden>👆</span> Drag to spin · {touch ? "Pinch" : "Scroll"} to zoom · Tap a glowing marker
+    <p className="globe-hint pointer-events-none absolute z-10 left-1/2 whitespace-nowrap" style={{ top: `calc(${room.top}px + (100% - ${room.top + room.bottom}px) / 2 + ${Math.round(r * 0.66)}px)`, left: `calc(50% - ${shift / 2}px)` }} role="note">
+      Drag to spin <span className="globe-hint-dot" aria-hidden>·</span> {touch ? "Pinch" : "Scroll"} to zoom <span className="globe-hint-dot" aria-hidden>·</span> Tap a marker
     </p>
   );
 }
@@ -1249,7 +1243,7 @@ function LegendPanel({ onClose }: { onClose: () => void }) {
             {GROUPS.find((x) => x.slug === g)?.name.split(" &")[0]}
           </li>
         ))}
-        <li className="col-span-2 t-micro text-text-3 mt-1">Numbered markers group several events; the coloured ring shows how much of the group is its main category. Zoom in to separate them.</li>
+        <li className="col-span-2 t-micro text-text-3 mt-1">Numbered markers group several events. Zoom in to separate them.</li>
       </ul>
     </div>
   );
