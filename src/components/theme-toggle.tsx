@@ -9,9 +9,10 @@ export type ThemePref = "light" | "dark" | "system";
 export function themePref(): ThemePref {
   try {
     const t = localStorage.getItem(KEY);
-    return t === "dark" || t === "light" ? t : "system";
+    // Nothing chosen yet: the night look, Mundivi's own.
+    return t === "light" || t === "system" ? t : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 
@@ -27,11 +28,13 @@ function apply(pref: ThemePref) {
   if (pref === "system") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", pref);
   try {
-    if (pref === "system") localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, pref);
+    localStorage.setItem(KEY, pref);
   } catch {
     // private mode: this page only
   }
+  // The browser's own bars follow the page.
+  const dark = pref === "dark" || (pref === "system" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => (m.content = dark ? "#070b16" : "#edf1f8"));
   window.dispatchEvent(new Event("omni:theme"));
 }
 

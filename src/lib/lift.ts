@@ -87,6 +87,7 @@ export function startLift(e: React.PointerEvent<HTMLElement> | PointerEvent, h: 
   const lift = () => {
     if (up) return;
     up = true;
+    target.removeAttribute("data-pressing");
     try {
       target.setPointerCapture(id);
     } catch {
@@ -130,6 +131,7 @@ export function startLift(e: React.PointerEvent<HTMLElement> | PointerEvent, h: 
     document.removeEventListener("touchmove", noScroll);
     document.removeEventListener("contextmenu", noMenu, true);
     document.documentElement.removeAttribute("data-lifting");
+    target.removeAttribute("data-pressing");
     busy = false;
     if (!up) return;
     window.addEventListener("click", noClick, { capture: true, once: true });
@@ -144,7 +146,11 @@ export function startLift(e: React.PointerEvent<HTMLElement> | PointerEvent, h: 
   document.addEventListener("touchmove", noScroll, { passive: false });
   if (touch) document.addEventListener("contextmenu", noMenu, true);
   if (touch && o.instant) lift();
-  else if (touch) timer = window.setTimeout(lift, o.hold ?? 260);
+  else if (touch) {
+    // While the finger holds, the thing sinks a little: it's about to come up.
+    target.setAttribute("data-pressing", "");
+    timer = window.setTimeout(lift, o.hold ?? 190);
+  }
   return true;
 }
 
@@ -231,12 +237,12 @@ export function listReorder({ box, from, axis = "y", onDrop, onTarget }: { box: 
           el.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
           el.setAttribute("data-settling", "");
           void el.offsetWidth;
-          el.style.transition = "transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1)";
+          el.style.transition = "transform 200ms cubic-bezier(0.2, 0.9, 0.25, 1)";
           el.style.transform = "";
           window.setTimeout(() => {
             el.style.transition = "";
             el.removeAttribute("data-settling");
-          }, 280);
+          }, 220);
         });
       }
     },

@@ -9,7 +9,7 @@ export function Footer() {
   const s = dataSummary();
   const active = providers.filter((p) => p.enabled);
   return (
-    <footer className="border-t border-line mt-20">
+    <footer className="site-footer border-t border-line mt-20">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-10 grid gap-8 md:grid-cols-[1.2fr_2fr]">
         <div>
           <Logo />
