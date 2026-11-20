@@ -13897,3 +13897,146 @@ body::after {
     border-color: color-mix(in srgb, var(--line) 70%, #6f86ff 30%);
   }
 }
+
+/* ==== The day look, premium (data-look="day") =============================================
+   A bright sky that moves slowly (periwinkle, lilac, a warm peach and mint over a pale sky that
+   warms towards the bottom), the brand's atlas lines (a wireframe globe with flight arcs) high
+   on the page, glass cards, chips and buttons that let the colour through, frosted bars, and a
+   night-blue footer to close each page. The colours drift on one layer the graphics card moves,
+   so nothing is repainted as it does. */
+:root[data-look="day"] {
+  --bg: #eaf0fb;
+  --aurora-1: rgb(88 132 255 / 0.42);
+  --aurora-2: rgb(176 124 255 / 0.32);
+  --aurora-3: rgb(255 168 120 / 0.34);
+  --aurora-4: rgb(56 210 178 / 0.24);
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-strong: rgb(255 255 255 / 0.88);
+  --glass-line: rgb(255 255 255 / 0.95);
+  --day-shadow: 0 1px 2px rgb(40 60 140 / 0.06), 0 24px 50px -30px rgb(48 72 170 / 0.42);
+}
+:root[data-look="day"] body::before {
+  inset: -14vmax;
+  background:
+    radial-gradient(52vmax 38vmax at 14% 10%, var(--aurora-1), transparent 64%),
+    radial-gradient(44vmax 34vmax at 88% 12%, var(--aurora-2), transparent 64%),
+    radial-gradient(46vmax 36vmax at 94% 66%, var(--aurora-3), transparent 64%),
+    radial-gradient(48vmax 38vmax at 8% 86%, var(--aurora-4), transparent 64%),
+    linear-gradient(180deg, #e2eafb 0%, #efeafa 52%, #f8eee8 100%);
+}
+body::before {
+  will-change: transform;
+  animation: aurora-drift 40s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-3vmax, 2.2vmax, 0) scale(1.07);
+  }
+}
+:root[data-look="day"] body::after {
+  opacity: 1;
+  background: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1000 1000%22%3E%3Cg fill=%22none%22 stroke=%22rgb(60 90 210 / 0.13)%22 stroke-width=%221.4%22 transform=%22rotate(-18 500 500)%22%3E%3Ccircle cx=%22500%22 cy=%22500%22 r=%22480%22/%3E%3Cellipse cx=%22500%22 cy=%22500%22 rx=%22463.6%22 ry=%22480%22/%3E%3Cellipse cx=%22500%22 cy=%22500%22 rx=%22415.7%22 ry=%22480%22/%3E%3Cellipse cx=%22500%22 cy=%22500%22 rx=%22339.4%22 ry=%22480%22/%3E%3Cellipse cx=%22500%22 cy=%22500%22 rx=%22240.0%22 ry=%22480%22/%3E%3Cellipse cx=%22500%22 cy=%22500%22 rx=%22124.2%22 ry=%22480%22/%3E%3Cline x1=%22500%22 y1=%2220%22 x2=%22500%22 y2=%22980%22/%3E%3Cline x1=%22260.0%22 y1=%22915.7%22 x2=%22740.0%22 y2=%22915.7%22/%3E%3Cline x1=%22132.3%22 y1=%22808.5%22 x2=%22867.7%22 y2=%22808.5%22/%3E%3Cline x1=%2248.9%22 y1=%22664.2%22 x2=%22951.1%22 y2=%22664.2%22/%3E%3Cline x1=%2220.0%22 y1=%22500.0%22 x2=%22980.0%22 y2=%22500.0%22/%3E%3Cline x1=%2248.9%22 y1=%22335.8%22 x2=%22951.1%22 y2=%22335.8%22/%3E%3Cline x1=%22132.3%22 y1=%22191.5%22 x2=%22867.7%22 y2=%22191.5%22/%3E%3Cline x1=%22260.0%22 y1=%2284.3%22 x2=%22740.0%22 y2=%2284.3%22/%3E%3C/g%3E%3Cg fill=%22none%22%3E%3Cpath d=%22M210 610 Q430 260 760 380%22 stroke=%22rgb(124 77 255 / 0.32)%22 stroke-dasharray=%222 9%22 stroke-width=%222.4%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M300 300 Q560 120 820 560%22 stroke=%22rgb(53 87 234 / 0.28)%22 stroke-dasharray=%222 9%22 stroke-width=%222.4%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%22210%22 cy=%22610%22 r=%226%22 fill=%22rgb(124 77 255 / 0.45)%22/%3E%3Ccircle cx=%22760%22 cy=%22380%22 r=%226%22 fill=%22rgb(255 140 110 / 0.55)%22/%3E%3Ccircle cx=%22300%22 cy=%22300%22 r=%225%22 fill=%22rgb(53 87 234 / 0.45)%22/%3E%3Ccircle cx=%22820%22 cy=%22560%22 r=%225%22 fill=%22rgb(40 190 160 / 0.55)%22/%3E%3C/g%3E%3C/svg%3E") no-repeat;
+  background-size: min(1150px, 125vmax) auto;
+  background-position: right -26vmax top -30vmax;
+  -webkit-mask-image: linear-gradient(200deg, #000 20%, transparent 70%);
+  mask-image: linear-gradient(200deg, #000 20%, transparent 70%);
+}
+/* On a phone the globe sits in the top corner, clear of the headline. */
+@media (max-width: 640px) {
+  :root[data-look="day"] body::after {
+    opacity: 0.75;
+    background-size: 112vmax auto;
+    background-position: right -66vmax top -58vmax;
+  }
+}
+/* Phones keep the sky still: the same picture, no work for the battery. */
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  body::before {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* Glass: cards, chips and the quieter buttons let the sky through, edged in white. */
+:root[data-look="day"] .surface {
+  background: var(--glass);
+  border-color: var(--glass-line);
+  box-shadow: inset 0 1px 0 #fff, var(--day-shadow);
+}
+:root[data-look="day"] .surface-float {
+  background: var(--glass-strong);
+  border-color: var(--glass-line);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+}
+:root[data-look="day"] .btn-secondary {
+  background: var(--glass-strong);
+  border-color: var(--glass-line);
+  box-shadow: 0 1px 2px rgb(40 60 140 / 0.08), 0 8px 18px -12px rgb(48 72 170 / 0.45);
+}
+:root[data-look="day"] .btn-secondary:hover:not(:disabled) {
+  background: #fff;
+  border-color: color-mix(in srgb, var(--cyan) 35%, #fff);
+}
+:root[data-look="day"] .chip:not([aria-pressed="true"]):not([data-active="true"]) {
+  background: var(--glass);
+  border-color: var(--glass-line);
+  box-shadow: 0 1px 2px rgb(40 60 140 / 0.07);
+}
+:root[data-look="day"] .chip:not([aria-pressed="true"]):not([data-active="true"]):hover {
+  background: #fff;
+  border-color: color-mix(in srgb, var(--cyan) 35%, #fff);
+}
+:root[data-look="day"] .field {
+  background: rgb(255 255 255 / 0.92);
+  border-color: #d2dbef;
+  box-shadow: inset 0 1px 2px rgb(40 60 140 / 0.05);
+}
+:root[data-look="day"] .seg {
+  background: rgb(255 255 255 / 0.5);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.9);
+}
+/* Pictures stand off the page with a soft blue shadow. */
+:root[data-look="day"] .event-row img,
+:root[data-look="day"] .poster-frame {
+  box-shadow: 0 8px 18px -10px rgb(40 60 140 / 0.45);
+}
+
+/* Frosted bars. */
+:root[data-look="day"] .site-header:not([data-home]) {
+  background-color: rgb(255 255 255 / 0.55) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+:root[data-look="day"] .tabbar {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Each page closes on a band of night: the footer in the night look's own colours. */
+:root[data-look="day"] .site-footer {
+  --text: #eef2fb;
+  --text-2: #c3cde3;
+  --text-3: #a3afca;
+  --line: #2a3b60;
+  --line-strong: #3a4d78;
+  --panel: #121c33;
+  --panel-2: #1a2643;
+  --cyan: #9dbcff;
+  --cyan-strong: #b9cfff;
+  color: var(--text);
+  background:
+    radial-gradient(60% 140% at 8% 0%, rgb(90 120 255 / 0.4), transparent 60%),
+    radial-gradient(50% 140% at 96% 0%, rgb(170 110 255 / 0.34), transparent 60%),
+    linear-gradient(180deg, #111a38, #0a1024);
+}
+:root[data-look="day"] .site-footer .btn-secondary {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.2);
+  color: var(--text);
+  box-shadow: none;
+}
