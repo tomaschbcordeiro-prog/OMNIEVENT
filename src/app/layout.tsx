@@ -25,15 +25,26 @@ import { CommandMenu } from "@/components/command-menu";
 // Background data syncs keep running after the response, up to this many seconds.
 export const maxDuration = 300;
 
-/** Instrument Serif (SIL Open Font License, see src/fonts): the big headlines. */
-const display = localFont({
+/**
+ * Figtree (SIL Open Font License, see src/fonts): the site's typeface, headlines and text alike.
+ * A friendly geometric sans in the family of the much-loved brand faces (Airbnb's Cereal,
+ * Spotify's Circular), as one variable font for every weight, upright and italic.
+ */
+const figtree = localFont({
   src: [
-    { path: "../fonts/instrument-serif-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/instrument-serif-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "../fonts/figtree-latin-normal.woff2", weight: "300 900", style: "normal" },
+    { path: "../fonts/figtree-latin-italic.woff2", weight: "300 900", style: "italic" },
   ],
-  variable: "--font-display",
+  variable: "--font-figtree",
   display: "swap",
-  fallback: ["Georgia", "Times New Roman", "serif"],
+  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
+});
+/** Its extended Latin letters (ł, č, ş…), fetched only when a page uses them. */
+const figtreeExt = localFont({
+  src: [{ path: "../fonts/figtree-latin-ext-normal.woff2", weight: "300 900", style: "normal" }],
+  variable: "--font-figtree-ext",
+  display: "swap",
+  preload: false,
 });
 
 
@@ -66,7 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     // data-theme is set by the script below before React starts, hence the warning switched off.
-    <html lang="en" className={`${GeistSans.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${GeistSans.variable} ${figtree.variable} ${figtreeExt.variable}`} suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>

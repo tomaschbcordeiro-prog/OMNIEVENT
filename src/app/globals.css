@@ -58,6 +58,7 @@
   --primary: #3557ea;
   --primary-top: #4467f2;
   --primary-hover: #2a49d6;
+  --font-display: var(--font-figtree), var(--font-figtree-ext);
   /* The accent's two ends (buttons, highlights), the glow they cast, and the page's aurora. */
   --grad-a: #3557ea;
   --grad-b: #6a3df0;
@@ -185,7 +186,9 @@
   --color-live: var(--live);
   --color-on-ink: var(--on-ink);
   --color-on-sun: var(--on-sun);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), var(--font-figtree-ext), ui-sans-serif, system-ui, sans-serif;
+  /* Headlines are Figtree too, heavy and tightly set (see "Headlines" at the end). */
+  --font-display: var(--font-figtree), var(--font-figtree-ext);
   --radius-s: var(--radius-s);
   --radius-m: var(--radius-m);
   --radius-l: var(--radius-l);
@@ -228,10 +231,10 @@ body {
 
 @layer components {
 /* Type scale (1.25 ratio) */
-/* Big headlines are set in Instrument Serif, a display serif with a lively italic used for
+/* Big headlines are set in Figtree, heavy and tight, with its italic (in colour) used for
    the words that matter ("What's on in <em>Lisbon</em>"); everything else stays in Geist. */
 .t-display {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   /* Phones: big but not a screenful (34 px on a small phone). */
   font-size: clamp(2.125rem, 1.1rem + 4.4vw, 4.75rem);
   line-height: 0.98;
@@ -241,7 +244,7 @@ body {
 }
 /* The globe page's headline: big enough to greet, small enough to leave the planet in view. */
 .t-hero {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2.25rem, 1.3rem + 2.6vw, 3.5rem);
   line-height: 1;
   letter-spacing: -0.01em;
@@ -257,7 +260,7 @@ body {
   padding-right: 0.06em;
 }
 .t-h1 {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2.125rem, 1.5rem + 2vw, 3.125rem);
   line-height: 1.02;
   letter-spacing: -0.01em;
@@ -3143,7 +3146,7 @@ body.nf-on .maplibregl-ctrl-bottom-right {
   box-shadow: 0 18px 40px -28px rgb(10 50 120 / 0.5);
 }
 .near-card-city {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 2.25rem;
   line-height: 1.05;
   letter-spacing: -0.01em;
@@ -3361,7 +3364,7 @@ a[data-pending] {
   transform: scale(1.08) rotate(-4deg);
 }
 .cat-lead-title {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 2rem;
   line-height: 1.05;
   letter-spacing: -0.01em;
@@ -3670,7 +3673,7 @@ a[data-pending] {
   gap: 4px;
 }
 .next-up-title {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(1.5rem, 2.4vw, 1.9rem);
   line-height: 1.08;
   letter-spacing: -0.01em;
@@ -3715,7 +3718,7 @@ a[data-pending] {
   align-items: baseline;
   gap: 8px;
   padding: 8px 0 6px;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.35rem;
   background: linear-gradient(var(--bg) 75%, transparent);
 }
@@ -3757,7 +3760,7 @@ a.city-chip:hover {
 }
 /* A run's dates on an event page: a small calendar, one row of days per month. */
 .sched-month-name {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.2rem;
 }
 .sched-month-name span {
@@ -3906,7 +3909,7 @@ html.theme-vt::view-transition-new(root) {
   opacity: 0.85;
 }
 .event-poster-day {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(4.5rem, 3rem + 7vw, 8.5rem);
   line-height: 0.88;
   letter-spacing: -0.02em;
@@ -3947,7 +3950,7 @@ html.theme-vt::view-transition-new(root) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.65rem;
   line-height: 1.05;
   transition: color 150ms;
@@ -4874,7 +4877,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   display: grid;
   justify-items: center;
   min-width: 2.75rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   color: var(--ink-text);
   line-height: 1;
 }
@@ -4904,7 +4907,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
     inset 0 0 0 2px var(--stub-bg),
     inset 0 0 0 3.5px currentColor;
   color: var(--ink-text);
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.625rem;
   line-height: 1;
   opacity: 0.88;
@@ -5007,7 +5010,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   background: radial-gradient(circle, color-mix(in srgb, var(--ink) 55%, var(--panel)) 0.9px, transparent 1.3px) 0 0 / 2px 5px repeat-y;
 }
 .date-stub-day {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.625rem;
   line-height: 0.95;
   color: color-mix(in oklab, var(--ink) 55%, var(--text));
@@ -5266,7 +5269,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
 }
 .planner-head h1,
 .trip-title {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
   font-size: 1.9rem;
   line-height: 1.05;
@@ -5339,7 +5342,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   border-top: 1px solid var(--line);
 }
 .planner-q {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.6rem;
   line-height: 1.1;
   margin-bottom: 0.75rem;
@@ -5430,7 +5433,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   animation: pop 300ms ease;
 }
 .planner-name {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.5rem !important;
   height: 3.25rem !important;
 }
@@ -5761,7 +5764,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   line-height: 1;
 }
 .nb-seg-n b {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.6rem;
   font-weight: 400;
   animation: stepper-tick 240ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
@@ -6010,7 +6013,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   border-radius: 10px;
   box-shadow: inset 0 0 0 2px var(--panel), inset 0 0 0 3.5px var(--ok);
   color: var(--ok);
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.6rem;
   line-height: 1;
   animation: stamp-press 460ms cubic-bezier(0.2, 1.5, 0.35, 1) both;
@@ -6029,7 +6032,7 @@ html[data-intro] .globe-stage .maplibregl-ctrl-bottom-left {
   padding: 1rem 1.15rem 0.85rem;
 }
 .trip-pass-name {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.65rem;
   line-height: 1.05;
 }
@@ -7436,7 +7439,7 @@ button.planner-stop-n {
 }
 .ag-day-n {
   grid-row: 1 / span 2;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.6rem;
   line-height: 1;
 }
@@ -9345,7 +9348,7 @@ body:has(.trip-stage[data-show]) .tabbar {
 }
 .show-title {
   margin-top: 0.4rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
   font-size: clamp(2rem, 7vw, 3.1rem);
   line-height: 1.02;
@@ -9573,7 +9576,7 @@ body:has(.trip-stage[data-show]) .tabbar {
 }
 .show-note {
   margin-top: 0.6rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-style: italic;
   font-size: 1.05rem;
   color: rgb(255 255 255 / 0.92);
@@ -9613,7 +9616,7 @@ body:has(.trip-stage[data-show]) .tabbar {
   margin-top: 1.1rem;
 }
 .show-numbers dt {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(1.8rem, 6vw, 2.4rem);
   line-height: 1;
 }
@@ -11263,7 +11266,7 @@ body:has(.addx) {
   padding: 0.9rem 1.1rem 1rem;
 }
 .idea-title {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 1.35rem;
   line-height: 1.15;
   text-wrap: balance;
@@ -13128,7 +13131,7 @@ nav[aria-label="Breadcrumb"] a,
 }
 .opening-title {
   margin-top: 0.35rem;
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
   font-size: clamp(2.5rem, 11.5vw, 3.6rem);
   line-height: 0.96;
@@ -14261,4 +14264,81 @@ body::before {
   .btn-secondary:hover:not(:disabled) {
     transform: none;
   }
+}
+
+/* ==== Headlines in Figtree ================================================================
+   The same friendly face as the text, set heavy and tight: big titles at 750 with the letters
+   drawn a little closer, numbers on dates and tickets at 700 in even widths, stamps at 800. */
+.t-display,
+.t-hero,
+.t-h1,
+.opening-title,
+.show-title,
+.planner-head h1,
+.trip-title,
+.planner-q,
+.planner-name,
+.cat-lead-title,
+.city-card-name,
+.near-card-city,
+.next-up-title,
+.idea-title,
+.month-head,
+.sched-month-name,
+.trip-pass-name {
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  font-synthesis: none;
+}
+.t-display {
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+.t-hero,
+.opening-title {
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+}
+.t-h1 {
+  line-height: 1.05;
+}
+.planner-q,
+.planner-head h1,
+.trip-title {
+  letter-spacing: -0.025em;
+}
+.date-stub-day,
+.event-poster-day,
+.ag-day-n,
+.nb-seg-n b,
+.ticket-date,
+.show-numbers dt {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.ticket-stamp,
+.pass-stamp {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.show-note {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+/* The words in italics keep their sweep of colour, now in Figtree's own italic. */
+.t-display em,
+.t-hero em,
+.t-h1 em {
+  font-weight: 800;
+  padding-right: 0.04em;
+}
+/* Over the globe's sky, the italic words are light: white into a pale gold. */
+.home-hero .t-hero em,
+.sky .t-hero em {
+  background: linear-gradient(100deg, #ffffff 0%, #e4ecff 45%, #ffd27a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 10px rgb(10 30 90 / 0.45));
 }
