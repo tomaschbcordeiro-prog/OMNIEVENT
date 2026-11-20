@@ -56,7 +56,8 @@ export const metadata: Metadata = {
   openGraph: { type: "website", siteName: "Mundivi" },
   twitter: { card: "summary_large_image" },
   icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Mundivi", statusBarStyle: "default" },
+  // Installed on an iPhone, the app runs edge to edge: drawn under the status bar too.
+  appleWebApp: { capable: true, title: "Mundivi", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {

@@ -770,7 +770,7 @@ export function DiscoverClient() {
       </div>
 
       {/* ---------- Top: purpose + search + modes ---------- */}
-      <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] compact:top-[calc((var(--header-h)-3rem)/2)] z-20 px-4 compact:px-3 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
+      <div className={`pointer-events-none absolute inset-x-0 top-[var(--header-h)] compact:top-[calc(var(--safe-top,0px)+(56px-3rem)/2)] z-20 px-4 compact:px-3 sm:px-6 lg:pr-[400px] ${flightOn ? "hidden" : ""}`}>
         {/* A compact column in the corner: the globe is the page. On phones, the search shares
             the top row with the account button and one row of chips follows: nothing else. */}
         <div ref={topBox} className="home-hero relative max-w-[min(34rem,100%)]">

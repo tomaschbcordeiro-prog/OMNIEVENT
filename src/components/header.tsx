@@ -54,7 +54,7 @@ export function Header() {
       <a href="#main" className="sr-only-focusable absolute left-2 top-2 z-50 btn btn-primary">
         Skip to content
       </a>
-      <div className="mx-auto flex h-[var(--header-h)] max-w-[1600px] items-center gap-4 px-4 sm:px-6">
+      <div className="site-header-bar mx-auto flex h-[var(--header-h)] max-w-[1600px] items-center gap-4 px-4 sm:px-6">
         {/* On the globe page on phones, the search takes this place (the bottom bar has the globe). */}
         <div className={`flex items-center gap-2 ${isHome ? "compact:hidden rounded-full bg-panel/90 backdrop-blur-md shadow-[0_8px_24px_-12px_rgb(10_50_120_/_0.45)] pl-3 pr-3 lg:pr-1 py-1.5 lg:py-1" : ""}`}>
         <BackButton />

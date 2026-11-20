@@ -46,7 +46,11 @@
   --radius-s: 6px;
   --radius-m: 10px;
   --radius-l: 16px;
-  --header-h: 56px;
+  /* What the screen keeps for itself at the top (status bar, Dynamic Island) when the app runs
+     edge to edge (installed on an iPhone); 0 elsewhere. The header grows by it, so everything
+     placed under the header moves with it. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --header-h: calc(56px + var(--safe-top));
   /* The bottom bar on phones and tablets (0 where there is none). */
   --tabbar-h: 0px;
   /* Events on right now. */
@@ -14341,4 +14345,39 @@ body::before {
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 2px 10px rgb(10 30 90 / 0.45));
+}
+
+/* ==== Edge to edge, like an app on the phone ==============================================
+   Apple's own apps fill the whole screen: the top bar runs up under the status bar, and the tab
+   bar sits on the bottom edge with its buttons above the home indicator (49 pt of bar plus the
+   34 pt the indicator keeps on Face ID iPhones). The same here, and text at the iPhone's own
+   reading size (17 pt) on phones. */
+.site-header-bar {
+  padding-top: var(--safe-top);
+}
+@media (max-width: 1023px) {
+  :root {
+    --tabbar-h: calc(56px + env(safe-area-inset-bottom));
+  }
+  .tabbar {
+    inset: auto 0 0 0;
+    height: var(--tabbar-h);
+    padding: 0 6px env(safe-area-inset-bottom);
+    border-radius: 22px 22px 0 0;
+    border-width: 1px 0 0;
+  }
+  .tab:not(.tab-globe)::before {
+    top: 6px;
+  }
+  .tab-globe {
+    padding-bottom: 6px;
+  }
+  .tab-globe-disc {
+    top: -27px;
+  }
+}
+@media (max-width: 640px) {
+  html {
+    font-size: 106.25%;
+  }
 }
