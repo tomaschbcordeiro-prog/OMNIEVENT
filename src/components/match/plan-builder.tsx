@@ -163,7 +163,7 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
   return (
     <div className="surface rounded-[24px] p-4 sm:p-5 shadow-[0_24px_60px_-30px_rgb(20_50_110_/_0.45)] panel-in">
       <label htmlFor="plan-input" className="t-h3 flex items-center gap-2">
-        <Sparkles size={17} className="text-sun" aria-hidden /> What are you in the mood for?
+        <Sparkles size={17} className="text-text-2" aria-hidden /> What are you in the mood for?
       </label>
       <p className="t-small text-text-2 mt-0.5">Add places, vibes or any word: an artist, a team, “fado”. Places are alternatives, and so are vibes.</p>
 
@@ -175,22 +175,22 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
         >
           <Search size={17} className="text-text-3 ml-0.5 shrink-0" aria-hidden />
           {plan.places.map((p) => (
-            <Chip key={p.id} tone="place" pop={pop === `p:${p.id}`} label={p.label} icon={<MapPin size={13} aria-hidden />} onRemove={() => onChange({ ...plan, places: plan.places.filter((x) => x.id !== p.id) })} />
+            <Chip key={p.id} pop={pop === `p:${p.id}`} label={p.label} icon={<MapPin size={13} aria-hidden />} onRemove={() => onChange({ ...plan, places: plan.places.filter((x) => x.id !== p.id) })} />
           ))}
           {plan.places.length > 1 && <span className="sr-only">(any of these places)</span>}
           {plan.what.map((w) => (
             <Chip
               key={w.cat ?? w.text}
-              tone="what"
+             
               pop={pop === `w:${w.cat ?? w.text.toLowerCase()}`}
               label={w.label}
               icon={w.cat ? <CategoryIcon slug={w.cat} size={13} /> : <Search size={12} aria-hidden />}
               onRemove={() => onChange({ ...plan, what: plan.what.filter((x) => x !== w) })}
             />
           ))}
-          {plan.near && <Chip tone="place" label="Near me" icon={<LocateFixed size={13} aria-hidden />} onRemove={() => onChange({ ...plan, near: undefined })} />}
-          {plan.free && <Chip tone="free" label="Free" icon={<Ticket size={13} aria-hidden />} onRemove={() => onChange({ ...plan, free: undefined })} />}
-          {plan.maxPrice && <Chip tone="free" label={`Under ${plan.maxPrice.amount}${plan.maxPrice.currency ? ` ${plan.maxPrice.currency}` : ""}`} icon={<Coins size={13} aria-hidden />} onRemove={() => onChange({ ...plan, maxPrice: undefined })} />}
+          {plan.near && <Chip label="Near me" icon={<LocateFixed size={13} aria-hidden />} onRemove={() => onChange({ ...plan, near: undefined })} />}
+          {plan.free && <Chip label="Free" icon={<Ticket size={13} aria-hidden />} onRemove={() => onChange({ ...plan, free: undefined })} />}
+          {plan.maxPrice && <Chip label={`Under ${plan.maxPrice.amount}${plan.maxPrice.currency ? ` ${plan.maxPrice.currency}` : ""}`} icon={<Coins size={13} aria-hidden />} onRemove={() => onChange({ ...plan, maxPrice: undefined })} />}
           <input
             ref={input}
             id="plan-input"
@@ -256,7 +256,7 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
                   onClick={() => pick(i)}
                   className={`w-full flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left ${i === active ? "bg-cyan/10" : ""}`}
                 >
-                  <span className={`grid place-items-center h-7 w-7 rounded-full shrink-0 ${s.kind === "place" ? "bg-cyan/12 text-cyan" : s.kind === "cat" ? "bg-violet/12 text-violet" : "bg-sun/20 text-text"}`}>
+                  <span className={`grid place-items-center h-7 w-7 rounded-full shrink-0 bg-text/[0.06] text-text-2`}>
                     {s.kind === "place" ? <MapPin size={14} aria-hidden /> : s.kind === "cat" ? <Sparkles size={14} aria-hidden /> : s.kind === "parsed" ? <Plus size={14} aria-hidden /> : <Search size={13} aria-hidden />}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -296,7 +296,7 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
         <button type="button" aria-pressed={!!plan.free} onClick={() => onChange({ ...plan, free: plan.free ? undefined : true })} className={`chip press shrink-0 ${plan.free ? "bg-ok text-white border-ok" : ""}`}>
           🆓 Free
         </button>
-        <button type="button" aria-pressed={!!plan.near} onClick={locate} className={`chip press shrink-0 ${plan.near ? "bg-cyan text-white border-cyan" : ""}`}>
+        <button type="button" aria-pressed={!!plan.near} onClick={locate} className={`chip press shrink-0 ${plan.near ? "!bg-text !text-on-ink !border-text" : ""}`}>
           <LocateFixed size={14} aria-hidden /> Near me
         </button>
       </div>
@@ -368,8 +368,9 @@ function IdeaRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function Chip({ label, icon, tone, pop, onRemove }: { label: string; icon: React.ReactNode; tone: "place" | "what" | "free"; pop?: boolean; onRemove: () => void }) {
-  const cls = tone === "place" ? "bg-cyan/12 text-cyan border-cyan/30" : tone === "what" ? "bg-violet/12 text-violet border-violet/30" : "bg-ok/12 text-ok border-ok/30";
+function Chip({ label, icon, pop, onRemove }: { label: string; icon: React.ReactNode; pop?: boolean; onRemove: () => void }) {
+  // One quiet style for every kind of choice: the icon says what it is.
+  const cls = "bg-panel text-text border-line-strong";
   return (
     <span className={`inline-flex items-center gap-1.5 h-8 rounded-full border pl-2.5 pr-1 text-[13.5px] font-semibold ${cls} ${pop ? "chip-pop" : ""}`}>
       {icon}

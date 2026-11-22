@@ -113,7 +113,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
           </div>
           <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1" role="tablist" aria-label="Filter posts">
             {profile?.username && (
-              <button role="tab" aria-selected={filter === "following"} onClick={() => setFilter("following")} className={`chip press shrink-0 ${filter === "following" ? "!bg-cyan !text-white !border-cyan" : ""}`}>
+              <button role="tab" aria-selected={filter === "following"} onClick={() => setFilter("following")} className={`chip press shrink-0 ${filter === "following" ? "!bg-text !text-on-ink !border-text" : ""}`}>
                 <Users size={14} aria-hidden /> Following
               </button>
             )}
@@ -133,7 +133,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
           )}
           {quiet && (
             <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6">
-              <Sparkles size={24} className="text-sun" aria-hidden />
+              <Sparkles size={24} className="text-text-2" aria-hidden />
               <p className="t-h3 mt-2">It&apos;s quiet here. Start something!</p>
               <p className="t-small text-text-2 mt-1">Open an event you&apos;re curious about and say you&apos;re going, ask a question, or rate a venue you know.</p>
               {starters.length > 0 && (
@@ -194,7 +194,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
           {home?.newcomers && home.newcomers.length > 0 && (
             // Everyone who joins is welcomed in public: a hello costs one tap.
             <section aria-labelledby="new-h" className="surface rounded-[var(--radius-l)] p-4">
-              <h2 id="new-h" className="t-h3 flex items-center gap-2"><Sparkles size={18} className="text-violet" aria-hidden />Just joined</h2>
+              <h2 id="new-h" className="t-h3 flex items-center gap-2"><Sparkles size={18} className="text-text-2" aria-hidden />Just joined</h2>
               <p className="t-small text-text-2 mt-0.5">Say hello and follow them: the first days decide whether people stay.</p>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {home.newcomers.slice(0, 8).map((p) => (
@@ -208,7 +208,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
               </ul>
             </section>
           )}
-          <SideList icon={<Flame size={18} className="text-coral" aria-hidden />} title="Trending this week" empty="Plans and posts this week will show up here." items={home?.trending} render={(t) => (
+          <SideList icon={<Flame size={18} className="text-text-2" aria-hidden />} title="Trending this week" empty="Plans and posts this week will show up here." items={home?.trending} render={(t) => (
             <>
               <span className="t-micro text-text-3 tnum flex gap-2">
                 {t.going > 0 && <span className="inline-flex items-center gap-1"><Ticket size={12} aria-hidden /> {t.going} going</span>}
@@ -217,12 +217,12 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
               </span>
             </>
           )} />
-          <SideList icon={<Star size={18} className="text-sun" fill="currentColor" strokeWidth={0} aria-hidden />} title="Best rated" empty="Rate a venue or a show to start the ranking." items={home?.topRated} render={(t) => (
+          <SideList icon={<Star size={18} className="text-text-2" fill="currentColor" strokeWidth={0} aria-hidden />} title="Best rated" empty="Rate a venue or a show to start the ranking." items={home?.topRated} render={(t) => (
             <span className="flex items-center gap-1.5 t-micro text-text-3 tnum"><Stars value={t.ratingAvg} size={12} /> {t.ratingAvg.toFixed(1)} · {t.ratingCount} {t.ratingCount === 1 ? "rating" : "ratings"}</span>
           )} />
           {home && home.leaders.length > 0 && (
           <section aria-labelledby="lead-h" className="surface rounded-[var(--radius-l)] p-4">
-            <h2 id="lead-h" className="t-h3 flex items-center gap-2"><Trophy size={18} className="text-amber" aria-hidden />Top members</h2>
+            <h2 id="lead-h" className="t-h3 flex items-center gap-2"><Trophy size={18} className="text-text-2" aria-hidden />Top members</h2>
             <ol className="mt-2 grid gap-1">
               {(home?.leaders ?? []).map((p, i) => (
                 <li key={p.id} className={`flex items-center gap-2.5 rounded-[var(--radius-s)] px-1.5 py-1.5 ${p.id === profile?.id ? "bg-text/[0.06]" : ""}`}>
@@ -277,7 +277,7 @@ function MemberCard({ profile }: { profile: PublicProfile | null }) {
     return (
       <div className="surface-float rounded-[var(--radius-l)] p-5 panel-in">
         <div className="flex -space-x-2" aria-hidden>
-          {["🦊", "🐙", "🎸", "⚽", "🎭"].map((a, i) => <Avatar key={a} p={{ avatar: a, hue: [210, 330, 28, 95, 265][i], name: "" }} size={40} />)}
+          {["Ana", "Miguel", "Jade", "Sam", "Leo"].map((n, i) => <Avatar key={n} p={{ hue: [215, 250, 200, 230, 265][i], name: n }} size={40} />)}
         </div>
         <p className="t-h3 mt-3">{profile ? "Finish your account" : "Join in a minute"}</p>
         <p className="t-small text-text-2 mt-1">Your name, a username and your email. Sign in on any device.</p>

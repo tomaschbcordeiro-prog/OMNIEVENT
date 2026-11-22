@@ -58,7 +58,7 @@ export function TripIdeas() {
   if (!ideas.length) return null;
   return (
     <section className="mt-8" aria-labelledby="ideas-h">
-      <h2 id="ideas-h" className="t-small font-semibold flex items-center gap-1.5"><Sparkles size={15} className="text-sun" aria-hidden /> Trips in your saved events</h2>
+      <h2 id="ideas-h" className="t-small font-semibold flex items-center gap-1.5"><Sparkles size={15} className="text-text-2" aria-hidden /> Trips in your saved events</h2>
       <ul className="mt-3 grid gap-3 sm:grid-cols-2">
         {ideas.map((d) => (
           <li key={d.ids.join()}>
@@ -130,7 +130,7 @@ export function TripsHome({ ideas = [], from }: { ideas?: IdeaCardData[]; from?:
             </>
           )}
           <p className="t-micro text-text-2 flex gap-2">
-            <Sparkles size={14} className="shrink-0 text-sun mt-px" aria-hidden />
+            <Sparkles size={14} className="shrink-0 text-text-2 mt-px" aria-hidden />
             <span>On any event, press <kbd className="kbd">T</kbd> or the suitcase to put it in a trip. It lands on the right day and city.</span>
           </p>
           <p className="t-micro text-text-3 mt-4">Trips are kept in this browser.</p>

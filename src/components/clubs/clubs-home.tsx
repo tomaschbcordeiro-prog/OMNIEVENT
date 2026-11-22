@@ -119,7 +119,7 @@ export function ClubsHome() {
 
         {empty && (
           <div className="mt-6 rounded-[var(--radius-l)] soft-panel p-6 sm:p-8">
-            <Sparkles size={24} className="text-sun" aria-hidden />
+            <Sparkles size={24} className="text-text-2" aria-hidden />
             <p className="t-h3 mt-2">No clubs yet. Found the first one!</p>
             <p className="t-small text-text-2 mt-1">Start from an idea, or make your own.</p>
             <ul className="mt-4 flex flex-wrap gap-2">

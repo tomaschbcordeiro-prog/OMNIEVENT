@@ -198,7 +198,7 @@ export function CommunityPanel({
         )}
         {thread && posts.length === 0 && (
           <div className="rounded-[var(--radius-l)] soft-panel p-6 text-center">
-            <Sparkles size={22} className="mx-auto text-sun" aria-hidden />
+            <Sparkles size={22} className="mx-auto text-text-2" aria-hidden />
             <p className="font-semibold mt-2">Be the first to say something</p>
             <p className="t-small text-text-2 mt-1">{mode === "club" ? "Say hi to the club, or suggest something to go to together." : mode === "event-upcoming" ? "Ask a question, share a tip, or find people to go with." : "Your review helps the next person decide."}</p>
           </div>
@@ -275,7 +275,7 @@ function PlanCard({ thread, past, onPlan }: { thread: Thread | null; past: boole
           </button>
         )}
         {!past && !me?.going && (
-          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.interested} onClick={() => click("interested")} className={`btn ${me?.interested ? "bg-cyan/10 text-cyan border-cyan/40" : "btn-secondary"} press`}>
+          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.interested} onClick={() => click("interested")} className={`btn ${me?.interested ? "btn-primary" : "btn-secondary"} press`}>
             <Star size={15} fill={me?.interested ? "currentColor" : "none"} aria-hidden />
             Interested
           </button>
@@ -322,7 +322,7 @@ function RatingCard({ thread, title, onRate }: { thread: Thread | null; title: s
           <li key={n} className="flex items-center gap-2 t-micro text-text-3 tnum">
             <span className="w-3 text-right">{n}</span>
             <span className="h-2 flex-1 rounded-full bg-panel-2 overflow-hidden">
-              <span className="block h-full rounded-full bg-sun transition-[width] duration-700 ease-out" style={{ width: `${(dist[n - 1] / max) * 100}%` }} />
+              <span className="block h-full rounded-full bg-text transition-[width] duration-700 ease-out" style={{ width: `${(dist[n - 1] / max) * 100}%` }} />
             </span>
             <span className="w-5">{dist[n - 1]}</span>
           </li>

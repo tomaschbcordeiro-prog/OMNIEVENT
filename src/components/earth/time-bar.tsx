@@ -282,11 +282,11 @@ export function TimeBar({
               <div key={d} className="flex-1 min-w-0 flex flex-col items-center" title={`${fmt(d, { weekday: "short", day: "numeric", month: "short" })}${n != null ? `: ${n.toLocaleString()} events` : ""}`}>
                 <div className="h-[42px] w-full flex items-end">
                   <div
-                    className={`w-full rounded-t-[5px] rounded-b-[2px] transition-[height,background-color] duration-300 ${n == null ? "skeleton" : on ? "bg-cyan" : i < sel ? "bg-cyan/35" : isWeekend(d) ? "bg-violet/35" : "bg-text/15"}`}
+                    className={`w-full rounded-t-[5px] rounded-b-[2px] transition-[height,background-color] duration-300 ${n == null ? "skeleton" : on ? "bg-text" : i < sel ? "bg-text/35" : isWeekend(d) ? "bg-text/25" : "bg-text/15"}`}
                     style={{ height: h }}
                   />
                 </div>
-                <span className={`mt-1 text-[10px] leading-none font-semibold ${on ? "text-cyan" : isWeekend(d) ? "text-violet" : "text-text-3"}`}>{fmt(d, { weekday: "narrow" })}</span>
+                <span className={`mt-1 text-[10px] leading-none font-semibold ${on ? "text-text" : isWeekend(d) ? "text-text-2" : "text-text-3"}`}>{fmt(d, { weekday: "narrow" })}</span>
                 <span className={`mt-0.5 text-[11px] leading-none tnum ${on ? "text-text font-bold" : "text-text-2"}`}>{fmt(d, { day: "numeric" })}</span>
               </div>
             );

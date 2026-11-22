@@ -399,7 +399,7 @@ function Calendar({ cards }: { cards: Map<string, EventCard> }) {
           const plans = d ? [...(plansByDay.get(key(d)) ?? [])].sort((a, b) => (a.plan.time ?? "99").localeCompare(b.plan.time ?? "99")) : [];
           return (
             <div key={i} aria-label={d ? new Date(`${key(d)}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) : undefined} role={d ? "group" : undefined} className={`min-h-20 sm:min-h-24 bg-bg-2 p-1.5 ${d ? "" : "opacity-40"}`}>
-              {d && <span className={`t-micro tnum ${key(d) === todayKey ? "inline-grid place-items-center h-5 w-5 rounded-full bg-cyan text-[#021018] font-semibold" : "text-text-3"}`}>{d}</span>}
+              {d && <span className={`t-micro tnum ${key(d) === todayKey ? "inline-grid place-items-center h-5 w-5 rounded-full bg-text text-on-ink font-semibold" : "text-text-3"}`}>{d}</span>}
               {onTrip && (
                 <Link href={`/trips/${onTrip.trip.id}`} className="cal-trip" style={{ "--ink": onTrip.color } as React.CSSProperties} title={`${onTrip.trip.name}: ${onTrip.stop}`}>
                   <span aria-hidden>{onTrip.trip.emoji ?? "✈️"}</span> <span className="truncate">{onTrip.stop}</span>

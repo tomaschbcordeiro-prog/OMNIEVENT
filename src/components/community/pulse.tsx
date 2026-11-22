@@ -20,8 +20,8 @@ export function CommunityPulse({ target, href = "#community" }: { target: string
     <a href={href} className="press flex items-center gap-3 rounded-[var(--radius-m)] border border-line bg-panel-2/60 px-3 py-2.5 t-small hover:border-cyan/40 hover:bg-cyan/5">
       {any ? (
         <>
-          <span className="flex items-center gap-1 font-semibold"><Ticket size={14} className="text-sun" aria-hidden />{s.going} going</span>
-          {s.ratingCount > 0 && <span className="flex items-center gap-1"><Star size={14} className="text-sun" fill="currentColor" strokeWidth={0} aria-hidden />{s.ratingAvg.toFixed(1)}</span>}
+          <span className="flex items-center gap-1 font-semibold"><Ticket size={14} className="text-text-2" aria-hidden />{s.going} going</span>
+          {s.ratingCount > 0 && <span className="flex items-center gap-1"><Star size={14} className="text-text-2" fill="currentColor" strokeWidth={0} aria-hidden />{s.ratingAvg.toFixed(1)}</span>}
           <span className="flex items-center gap-1 text-text-2"><MessageCircle size={14} aria-hidden />{s.posts}</span>
           <span className="ml-auto text-cyan font-medium">Join in</span>
         </>

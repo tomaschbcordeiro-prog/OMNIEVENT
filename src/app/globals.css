@@ -15039,3 +15039,197 @@ body::before {
 .mx-fader input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 3px 8px rgb(13 27 51 / 0.25);
 }
+
+/* ==== Sophisticated, everywhere (third pass) ==============================================
+   No colour as decoration: kinds of event are told by their line icon and name, routes are
+   drawn in ink, charts in shades of ink, and cards keep one quiet surface. Titles are set a
+   little lighter and tighter, like the best product sites, and the bars and badges speak in
+   the same ink as the buttons. */
+.route-sketch-dot,
+.route-sketch-pulse {
+  fill: var(--text) !important;
+}
+.route-sketch-arc {
+  stroke: var(--text);
+  opacity: 0.55;
+}
+.route-sketch {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-3) 26%, transparent) 0.7px, transparent 1.2px);
+}
+.idea-top {
+  background: color-mix(in srgb, var(--text) 3%, var(--panel));
+}
+.city-card,
+.city-card:hover {
+  background: var(--panel);
+  border-color: var(--line);
+}
+.city-card:hover {
+  box-shadow: 0 18px 36px -24px rgb(16 23 42 / 0.45);
+}
+/* Avatars: a quiet tint of the member's colour, not candy pastels; initials when there's no pick. */
+.avatar {
+  background: hsl(var(--h, 210) 28% 90%);
+  box-shadow: inset 0 0 0 1px hsl(var(--h, 210) 22% 80%);
+}
+:root[data-look="night"] .avatar {
+  background: hsl(var(--h, 210) 22% 22%);
+  box-shadow: inset 0 0 0 1px hsl(var(--h, 210) 20% 32%);
+}
+.avatar--initials {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: hsl(var(--h, 210) 30% 32%);
+}
+:root[data-look="night"] .avatar--initials {
+  color: hsl(var(--h, 210) 30% 82%);
+}
+.avatar-stack > * + * {
+  box-shadow: 0 0 0 2px var(--panel), inset 0 0 0 1px hsl(var(--h, 210) 22% 80%);
+}
+/* Titles a touch lighter and tighter: confident, not shouting. */
+.t-display,
+.t-hero,
+.t-h1,
+.opening-title,
+.show-title,
+.planner-head h1,
+.trip-title,
+.planner-q,
+.planner-name,
+.cat-lead-title,
+.idea-title,
+.trip-pass-name {
+  font-weight: 680;
+}
+.t-display {
+  letter-spacing: -0.045em;
+}
+.t-hero,
+.opening-title {
+  letter-spacing: -0.04em;
+}
+.t-h1 {
+  letter-spacing: -0.035em;
+}
+.t-h2 {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.t-h3 {
+  font-weight: 640;
+  letter-spacing: -0.012em;
+}
+/* Small capitals labels (section kickers): wider, quieter. */
+.mx-label,
+.mx-mark,
+.studio-mark {
+  letter-spacing: 0.14em;
+}
+/* The bottom bar's current page: ink, like everything chosen. */
+.tab[aria-current="page"]:not(.tab-globe) {
+  color: var(--text);
+}
+.tab[aria-current="page"]:not(.tab-globe)::before {
+  background: color-mix(in srgb, var(--text) 8%, transparent) !important;
+  box-shadow: none !important;
+}
+.tab-globe[aria-current="page"] {
+  color: var(--text);
+}
+/* Mixtape: the tape's own colour stays on the cassette; the list around it is ink. */
+.mx-side-letter {
+  background: var(--text);
+  color: var(--bg);
+}
+.mx-track {
+  --accent: color-mix(in srgb, var(--text) 18%, transparent);
+}
+.mx-track[data-active] {
+  border-color: var(--text);
+}
+.mx-track[data-locked] {
+  background: color-mix(in srgb, var(--text) 3%, var(--panel));
+  border-color: var(--line-strong);
+}
+.mx-cta-light,
+.mx-cta-light:hover:not(:disabled) {
+  background: var(--panel);
+  border-color: var(--line-strong);
+}
+/* Icon wells (help steps, category heads): a quiet tint of ink, the icon in ink. */
+.help-step,
+.cat-lead-icon,
+.cat-row-icon {
+  background: color-mix(in srgb, var(--text) 6%, var(--panel)) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent) !important;
+  color: var(--text) !important;
+}
+.help-step svg,
+.cat-lead-icon svg,
+.cat-row-icon svg {
+  color: var(--text) !important;
+}
+/* Steps, small icon tiles and the tape: the same ink. */
+.planner-step[aria-current="step"] .planner-step-n {
+  background: var(--ink-btn);
+  border-color: var(--ink-btn);
+  color: var(--ink-btn-text);
+}
+.planner-step[data-done] .planner-step-n {
+  background: color-mix(in srgb, var(--text) 12%, var(--panel));
+  border-color: transparent;
+  color: var(--text);
+}
+.shared-card-cta-icon {
+  background: color-mix(in srgb, var(--text) 8%, var(--panel));
+  color: var(--text);
+}
+.cassette-band {
+  fill: #141a2c !important;
+}
+.mx-mark {
+  color: rgb(214 222 240 / 0.8);
+}
+.mx-icon[aria-pressed="true"] {
+  background: var(--ink-btn);
+  color: var(--ink-btn-text);
+}
+.mx-banner {
+  background: color-mix(in srgb, var(--text) 4%, var(--panel));
+  border-color: var(--line);
+}
+:root[data-look] .mx-cta-light,
+:root[data-look] .mx-cta-light:hover:not(:disabled) {
+  background: var(--panel);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+/* Where a kind's colour used to tint a surface (category cards and heads, the event page's
+   glow and ticket, a city's card), the tint is now the text's own ink: the same calm grey on
+   every page, whatever the kind. (The trip's per-city colours stay: there they tell cities apart.) */
+.cat-lead,
+.cat-row-icon,
+.cat-hero,
+.city-card,
+.event-ambient,
+.ticket-wrap,
+.date-stub,
+.member-pass {
+  --cat: var(--text) !important;
+  --ink: var(--text) !important;
+}
+.cat-lead,
+.cat-lead:hover {
+  background: var(--panel);
+  border-color: var(--line);
+}
+.cat-lead:hover {
+  box-shadow: 0 18px 36px -24px rgb(16 23 42 / 0.4);
+}
+.cat-lead:hover .cat-lead-title {
+  color: var(--text);
+}
+.cat-hero::before {
+  opacity: 0.5;
+}

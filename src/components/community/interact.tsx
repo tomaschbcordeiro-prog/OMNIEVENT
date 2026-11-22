@@ -112,7 +112,7 @@ export function Reactions({ post, me, size = "md" }: { post: Post; me: PublicPro
           onClick={() => void pick(e)}
           aria-pressed={mine === e}
           aria-label={`${REACTION_NAMES[e]}: ${counts[e]}${mine === e ? ", yours. Tap to remove" : ""}`}
-          className={`press inline-flex items-center gap-1 ${h} rounded-full border px-2 text-[13px] tnum transition-colors ${mine === e ? "border-cyan/50 bg-cyan/10 text-cyan font-semibold" : "border-line bg-panel hover:border-line-strong text-text-2"}`}
+          className={`press inline-flex items-center gap-1 ${h} rounded-full border px-2 text-[13px] tnum transition-colors ${mine === e ? "border-text/40 bg-text/[0.07] text-text font-semibold" : "border-line bg-panel hover:border-line-strong text-text-2"}`}
         >
           <span key={popped === e ? `p-${counts[e]}` : e} className={popped === e ? "pop" : ""} aria-hidden>{e}</span>
           {counts[e]}
@@ -166,7 +166,7 @@ export function MeetupJoin({ post, profiles, me }: { post: Post; profiles: Recor
     }
   };
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-m)] bg-sun/10 border border-sun/40 px-3 py-2">
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-m)] bg-text/[0.04] border border-line px-3 py-2">
       {!mine && (
         <button type="button" disabled={busy} onClick={() => void toggle()} aria-pressed={joined} className={`btn btn-sm press ${joined ? "btn-primary" : "btn-secondary"}`}>
           {joined ? <><Check size={14} aria-hidden /> You&apos;re in</> : <><Hand size={14} aria-hidden /> I&apos;m in</>}

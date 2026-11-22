@@ -41,7 +41,7 @@ export function ClubCrest({ club, size = 64, className = "" }: { club: Pick<Club
 export function RoleBadge({ role, className = "" }: { role: ClubRole; className?: string }) {
   const r = ROLE_LABEL[role];
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 t-micro font-bold ${role === "owner" ? "bg-[var(--club-deep)] text-[var(--gold-light)]" : role === "admin" ? "bg-sun/20 text-text" : "bg-ok/10 text-ok"} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 t-micro font-bold ${role === "owner" ? "bg-text text-on-ink" : "bg-text/[0.07] text-text"} ${className}`}>
       <Glyph e={r.emoji} size={12} fallback={Check} /> {role === "member" ? "Member" : r.label}
     </span>
   );

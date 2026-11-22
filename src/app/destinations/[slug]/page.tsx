@@ -163,7 +163,7 @@ export default async function DestinationPage({ params, searchParams }: { params
                   <Link href={picked ? `/destinations/${d.slug}#all` : `/destinations/${d.slug}?${filtersToParams({ ...user, from: p.key, to: p.key }).toString()}#all`} aria-current={picked ? "date" : undefined} className="group day-bar flex flex-col items-center gap-1" aria-label={`${p.n} events on ${dt.toDateString()}${picked ? " (showing; tap again for all days)" : ""}`}>
                     <span className="relative flex h-16 w-full items-end justify-center rounded-[4px] bg-panel">
                       <span className="day-bar-count tnum" aria-hidden>{p.n}</span>
-                      <span className={`day-bar-fill w-full rounded-[4px] transition-colors ${picked ? "bg-cyan" : "bg-cyan/60 group-hover:bg-cyan"}`} style={{ height: `${Math.max(4, (p.n / maxDay) * 100)}%` }} />
+                      <span className={`day-bar-fill w-full rounded-[4px] transition-colors ${picked ? "bg-text" : "bg-text/25 group-hover:bg-text/60"}`} style={{ height: `${Math.max(4, (p.n / maxDay) * 100)}%` }} />
                     </span>
                     <span className="t-micro text-text-3 tnum leading-tight text-center">
                       {dt.toLocaleDateString("en-GB", { weekday: "narrow", timeZone: "UTC" })}

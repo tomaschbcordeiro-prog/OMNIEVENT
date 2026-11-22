@@ -427,7 +427,7 @@ function About({ page }: { page: ClubPage }) {
             ))}
           </ul>
         )}
-        {club.tags.length > 0 && <div className="mt-4 flex flex-wrap gap-1">{club.tags.map((t) => <span key={t} className="rounded-full bg-sun/20 px-2 py-0.5 t-micro">#{t}</span>)}</div>}
+        {club.tags.length > 0 && <div className="mt-4 flex flex-wrap gap-1">{club.tags.map((t) => <span key={t} className="rounded-full bg-text/[0.06] px-2 py-0.5 t-micro">#{t}</span>)}</div>}
       </section>
     </div>
   );

@@ -86,10 +86,10 @@ export default async function DestinationsPage() {
                     <span className="mt-4 block t-small tnum">
                       <strong className="text-text">{s.total.toLocaleString("en-GB")}</strong> <span className="text-text-3">upcoming</span>
                     </span>
-                    {/* What's on there, by share: a bar of category colours. */}
+                    {/* What's on there, by share: a bar in shades of ink, the biggest share darkest. */}
                     <span className="city-card-bar" aria-hidden>
-                      {top.map(([g, n]) => (
-                        <span key={g} style={{ flexGrow: n, background: GROUP_HEX[g] ?? GROUP_HEX.other }} />
+                      {top.map(([g, n], i) => (
+                        <span key={g} style={{ flexGrow: n, background: `color-mix(in srgb, var(--text) ${Math.max(14, 72 - i * 16)}%, transparent)` }} />
                       ))}
                     </span>
                     <span className="mt-1.5 block t-micro text-text-3 truncate">{top.slice(0, 2).map(([g]) => getCategory(g)?.name ?? g).join(" · ")}</span>

@@ -594,7 +594,7 @@ export function TripPlanner() {
                 </div>
               )}
               <p className="t-micro text-text-3 mt-1.5">You can change all of this later.</p>
-              {withEvents.length > 0 && <p className="t-small text-text-2 mt-4"><Sparkles size={14} className="inline text-sun" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
+              {withEvents.length > 0 && <p className="t-small text-text-2 mt-4"><Sparkles size={14} className="inline text-text-2" aria-hidden /> {withEvents.length === 1 ? `${withEvents[0].title} comes with it.` : `${withEvents.length} events you saved come with it.`}</p>}
               {sp.get("together") && <p className="t-small text-text-2 mt-2"><Users size={14} className="inline text-cyan" aria-hidden /> Next: invite your friends with a link or a PIN, and plan it together.</p>}
             </>
           )}

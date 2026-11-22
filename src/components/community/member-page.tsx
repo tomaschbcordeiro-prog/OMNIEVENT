@@ -103,7 +103,7 @@ export function MemberPage({ id }: { id: string }) {
           </ul>
         </section>
         <section aria-labelledby="plans-h">
-          <h2 id="plans-h" className="t-h3 flex items-center gap-2"><CalendarHeart size={18} className="text-sun" aria-hidden />Going to</h2>
+          <h2 id="plans-h" className="t-h3 flex items-center gap-2"><CalendarHeart size={18} className="text-text-2" aria-hidden />Going to</h2>
           {upcoming.length === 0 && <p className="t-small text-text-2 mt-2">No plans shared yet.</p>}
           <ul className="mt-2 grid gap-1">
             {upcoming.map((t) => (

@@ -86,7 +86,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a className="btn btn-secondary" href="/events">All events</a>
       </div>
-      <p className="t-micro text-text-3 mt-8">Technical details: {error.message || "unknown error"}{error.digest ? ` (${error.digest})` : ""}</p>
+      <details className="mt-8 t-micro text-text-3">
+        <summary className="cursor-pointer w-fit hover:text-text-2">Details for support</summary>
+        <p className="mt-1.5">{error.message || "unknown error"}{error.digest ? ` (${error.digest})` : ""}</p>
+      </details>
     </main>
   );
 }

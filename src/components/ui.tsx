@@ -30,16 +30,19 @@ export function categoryLabel(slug: string): string {
 export function CategoryIcon({ slug, size = 16, className = "" }: { slug: string; size?: number; className?: string }) {
   const group = groupOf(slug);
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
-  return <Icon aria-hidden size={size} className={className} style={{ color: GROUP_HEX[group] }} strokeWidth={1.75} />;
+  // Quiet, in the text's own grey: the kind is said by its icon and its name, not by a colour.
+  return <Icon aria-hidden size={size} className={className || "text-text-3"} strokeWidth={1.75} />;
 }
 
 /**
  * Category glyph matching the map markers: a disc in the category colour. From 13 px up it
  * carries the category icon in white, so colour is never the only cue.
  */
-export function ShapeGlyph({ group, size = 10 }: { group: string; size?: number }) {
+export function ShapeGlyph({ group, size = 10, vivid = false }: { group: string; size?: number; /** In the map's legend: the colour of the markers it explains. */ vivid?: boolean }) {
   const c = GROUP_HEX[group] ?? GROUP_HEX.other;
   const Icon = ICONS[getCategory(group)?.icon ?? "circle-dot"] ?? CircleDot;
+  // Everywhere else, the kind's line icon in grey: calm lists and chips, no confetti of dots.
+  if (!vivid) return <Icon aria-hidden size={Math.max(13, size + 3)} strokeWidth={1.8} className="shrink-0 text-text-3" />;
   return (
     <span aria-hidden className="inline-grid place-items-center shrink-0 rounded-full" style={{ width: size, height: size, background: c, boxShadow: size >= 13 ? "0 0 0 1.5px #fff, 0 1px 3px rgb(13 27 51 / 0.3)" : undefined }}>
       {size >= 13 && <Icon size={Math.round(size * 0.6)} color="#fff" strokeWidth={2.4} />}
@@ -192,13 +195,12 @@ function PictureViewer({ src, preview, title, onClose }: { src: string; preview:
 const SHOWN_PX = { sm: 64, md: 280, lg: 560 } as const;
 
 export function Poster({
-  imageUrl, hue = 210, categorySlug, className = "", size = "md", priority = false,
+  imageUrl, categorySlug, className = "", size = "md", priority = false,
 }: { title: string; imageUrl?: string; hue?: number; categorySlug: string; className?: string; size?: "sm" | "md" | "lg"; /** The page's main picture: loaded first, not lazily. */ priority?: boolean }) {
   // The picture at the size it's shown; if that fails, the original; if that fails too (moved
   // or blocked by its source), the drawn poster.
   const [stage, setStage] = useState(0);
   const group = groupOf(categorySlug);
-  const accent = GROUP_HEX[group] ?? "#9AA8BA";
   const src = stage === 0 ? thumb(imageUrl, SHOWN_PX[size]) : imageUrl;
   const failed = () => setStage((n) => (n === 0 && src !== imageUrl ? 1 : 2));
   // A picture that failed before the page's script was running sent its error to nobody:
@@ -219,15 +221,14 @@ export function Poster({
       aria-hidden
       className={`poster-art relative overflow-hidden ${className}`}
       style={{
-        background: `radial-gradient(120% 90% at 85% 10%, ${accent}55 0%, transparent 60%), linear-gradient(160deg, hsl(${hue} 85% 94%) 0%, hsl(${(hue + 40) % 360} 75% 86%) 100%)`,
+        background: "linear-gradient(160deg, color-mix(in srgb, var(--text) 4%, var(--panel)) 0%, color-mix(in srgb, var(--text) 10%, var(--panel)) 100%)",
       }}
     >
       <Icon
-        className="absolute"
+        className="absolute text-text-3"
         strokeWidth={1}
         style={{
-          color: accent,
-          opacity: 0.8,
+          opacity: 0.55,
           width: size === "lg" ? 120 : size === "sm" ? 28 : 56,
           height: size === "lg" ? 120 : size === "sm" ? 28 : 56,
           right: size === "sm" ? 6 : 14,

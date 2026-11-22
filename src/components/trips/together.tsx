@@ -378,7 +378,7 @@ function SharedBody({ trip, g, busy, copied, copy, run, onClose }: { trip: Trip;
                   </button>
                 </>
               ) : m.role === "owner" ? (
-                <Crown size={15} className="text-amber shrink-0" aria-label="Owner" />
+                <Crown size={15} className="text-text-2 shrink-0" aria-label="Owner" />
               ) : m.id === g.me ? (
                 <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Change your name" onClick={() => {
                   const n = window.prompt("Your name in this trip", m.name)?.trim();

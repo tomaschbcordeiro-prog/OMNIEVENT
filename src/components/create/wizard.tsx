@@ -331,7 +331,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
             </div>
           )}
           {restored && at === 0 && (
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-m)] border border-cyan/30 bg-cyan/5 px-4 py-2.5 t-small panel-in">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-m)] border border-line bg-text/[0.03] px-4 py-2.5 t-small panel-in">
               <span>We kept your draft from last time.</span>
               <button type="button" className="btn btn-ghost btn-sm" onClick={startOver}>Start fresh</button>
             </div>

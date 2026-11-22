@@ -172,9 +172,9 @@ export function DailyDuel() {
   const revealed = !!r.mine;
 
   return (
-    <section id="duel" aria-labelledby="duel-h" className="relative overflow-hidden rounded-[var(--radius-l)] border border-violet/25 bg-gradient-to-br from-violet/10 via-panel to-cyan/10 p-4 sm:p-5 scroll-mt-24">
+    <section id="duel" aria-labelledby="duel-h" className="relative overflow-hidden rounded-[var(--radius-l)] border border-line bg-panel p-4 sm:p-5 scroll-mt-24">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 id="duel-h" className="t-h2 flex items-center gap-2"><Swords size={20} className="text-violet" aria-hidden /> Daily duel</h2>
+        <h2 id="duel-h" className="t-h2 flex items-center gap-2"><Swords size={20} className="text-text-2" aria-hidden /> Daily duel</h2>
         <span className="inline-flex items-center gap-1 rounded-full bg-text px-2.5 py-0.5 t-micro font-semibold text-on-ink"><MapPin size={11} aria-hidden /> {duel.city}</span>
         {duel.streak.days > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2.5 py-0.5 t-micro font-semibold" title={`Best: ${duel.streak.best} days`}>
@@ -192,7 +192,7 @@ export function DailyDuel() {
             </p>
             <ol className="flex gap-1.5" aria-hidden>
               {duel.rounds.map((x, i) => (
-                <li key={i} className={`h-2 rounded-full transition-all ${i === round ? "w-6 bg-violet" : x.mine ? "w-2 bg-violet/60" : "w-2 bg-line-strong"}`} />
+                <li key={i} className={`h-2 rounded-full transition-all ${i === round ? "w-6 bg-text" : x.mine ? "w-2 bg-text/50" : "w-2 bg-line-strong"}`} />
               ))}
             </ol>
           </div>
@@ -230,7 +230,7 @@ export function DailyDuel() {
                   </span>
                   {state === "won" && (
                     <>
-                      <span className="absolute right-2 top-2 rounded-full bg-sun px-2 py-0.5 t-micro font-bold text-on-sun shadow pop">Your pick</span>
+                      <span className="absolute right-2 top-2 rounded-full bg-white px-2 py-0.5 t-micro font-bold text-[#0e1424] shadow pop">Your pick</span>
                       <Burst key={burst} />
                     </>
                   )}
@@ -271,7 +271,7 @@ export function DailyDuel() {
 
       {duel.yesterday && (
         <div className="mt-4 border-t border-line pt-3">
-          <p className="t-micro font-semibold text-text-2 flex items-center gap-1.5"><Trophy size={13} className="text-amber" aria-hidden /> Yesterday&apos;s winners in {duel.yesterday.city}</p>
+          <p className="t-micro font-semibold text-text-2 flex items-center gap-1.5"><Trophy size={13} className="text-text-2" aria-hidden /> Yesterday&apos;s winners in {duel.yesterday.city}</p>
           <ul className="mt-1.5 flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {duel.yesterday.winners.map((w) => (
               <li key={w.id} className="shrink-0">
@@ -298,11 +298,11 @@ function Result({ round }: { round: DuelRound }) {
   return (
     <div className="mt-3 duel-in">
       <div className="duel-bar flex h-3 overflow-hidden rounded-full bg-panel-2" role="img" aria-label={shown ? `${a}% picked ${round.a.title}, ${100 - a}% picked ${round.b.title}` : "Counting the votes"}>
-        <span className={`h-full ${round.mine === "a" ? "bg-violet" : "bg-violet/35"}`} style={{ width: shown ? `${a}%` : "50%" }} />
-        <span className={`h-full ${round.mine === "b" ? "bg-cyan" : "bg-cyan/35"}`} style={{ width: shown ? `${100 - a}%` : "50%" }} />
+        <span className={`h-full ${round.mine === "a" ? "bg-text" : "bg-text/30"}`} style={{ width: shown ? `${a}%` : "50%" }} />
+        <span className={`h-full ${round.mine === "b" ? "bg-text" : "bg-text/30"}`} style={{ width: shown ? `${100 - a}%` : "50%" }} />
       </div>
       <div className="mt-1 flex justify-between t-small font-bold tnum">
-        <span className={round.mine === "a" ? "text-violet" : "text-text-3"}>{shown ? `${pa}%` : "…"}</span>
+        <span className={round.mine === "a" ? "text-text font-bold" : "text-text-3"}>{shown ? `${pa}%` : "…"}</span>
         <span className={round.mine === "b" ? "text-cyan" : "text-text-3"}>{shown ? `${pb}%` : "…"}</span>
       </div>
       {shown && <p className="t-small font-medium text-center mt-1">{quip(round)}</p>}

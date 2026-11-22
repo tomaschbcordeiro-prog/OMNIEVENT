@@ -222,7 +222,7 @@ export function GlobeSpin({
 
       <div className="relative px-4 pb-4 pt-2" aria-live="polite">
         {(phase === "spinning" || phase === "idle") && (
-          <div className="grid place-items-center rounded-[var(--radius-m)] bg-gradient-to-br from-violet/15 via-panel-2 to-cyan/15 h-36 sm:h-44">
+          <div className="grid place-items-center rounded-[var(--radius-m)] bg-panel-2 h-36 sm:h-44">
             <div className="text-center">
               <p key={reel.n} className="spin-reel text-2xl font-bold">{reel.text}</p>
               <p className="t-micro text-text-3 mt-2 flex items-center justify-center gap-1.5">

@@ -9,13 +9,17 @@ import { toast } from "../toast";
 import { PASSWORD_MAX, PASSWORD_MIN, passwordLength, passwordProblem } from "@/lib/community/password-rules";
 import { Glyph } from "../glyph";
 
-export function Avatar({ p, size = 36, className = "" }: { p?: Pick<Profile, "avatar" | "hue" | "name"> | null; size?: number; className?: string }) {
+export function Avatar({ p, size = 36, className = "" }: { p?: (Partial<Pick<Profile, "avatar">> & Pick<Profile, "hue" | "name">) | null; size?: number; className?: string }) {
   return (
-    <span className={`avatar ${className}`} style={{ width: size, height: size, fontSize: size * 0.52, ["--h" as string]: p?.hue ?? 210 }} aria-hidden>
-      {p?.avatar ?? "🙂"}
+    <span className={`avatar ${p?.avatar ? "" : "avatar--initials"} ${className}`} style={{ width: size, height: size, fontSize: p?.avatar ? size * 0.52 : size * 0.38, ["--h" as string]: p?.hue ?? 210 }} aria-hidden>
+      {p?.avatar ?? initials(p?.name)}
     </span>
   );
 }
+
+/** One or two letters for someone who hasn't picked an avatar. */
+const initials = (name?: string) =>
+  (name ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "·";
 
 /** Name linked to the member's profile, with their highest badge. */
 export function MemberName({ p, className = "" }: { p?: PublicProfile; className?: string }) {
@@ -42,7 +46,7 @@ export function Stars({ value, size = 14, className = "" }: { value: number; siz
           <span key={i} className="relative inline-block" style={{ width: size, height: size }}>
             <Star size={size} className="absolute inset-0 text-line-strong" fill="currentColor" strokeWidth={0} aria-hidden />
             <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
-              <Star size={size} className="text-sun" fill="currentColor" strokeWidth={0} aria-hidden />
+              <Star size={size} className="text-text-2" fill="currentColor" strokeWidth={0} aria-hidden />
             </span>
           </span>
         );
@@ -72,7 +76,7 @@ export function StarInput({ value, onChange, size = 28, label = "Your rating" }:
             onBlur={() => setHover(0)}
             onClick={() => onChange(i)}
           >
-            <Star size={size} className={i <= shown ? "text-sun drop-shadow-[0_2px_4px_rgb(255_184_0_/_0.45)]" : "text-line-strong"} fill="currentColor" strokeWidth={0} aria-hidden />
+            <Star size={size} className={i <= shown ? "text-text" : "text-line-strong"} fill="currentColor" strokeWidth={0} aria-hidden />
           </button>
         ))}
       </div>

@@ -310,7 +310,7 @@ export default async function EventPage({ params }: { params: P }) {
                 <ol className="mt-3 relative grid gap-3 border-l-2 border-line pl-5 ml-1.5">
                   {e.programme.map((p) => (
                     <li key={`${p.time}-${p.title}`} className="relative">
-                      <span className="absolute -left-[27px] top-1.5 h-3 w-3 rounded-full border-2 border-panel bg-cyan" aria-hidden />
+                      <span className="absolute -left-[27px] top-1.5 h-3 w-3 rounded-full border-2 border-panel bg-text" aria-hidden />
                       <span className="tnum font-semibold">{p.time}</span>
                       <span className="text-text-2"> · {p.title}</span>
                     </li>

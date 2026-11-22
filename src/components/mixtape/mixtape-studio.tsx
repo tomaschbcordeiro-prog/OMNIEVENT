@@ -681,7 +681,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                             className="mx-track"
                             data-locked={t.locked || undefined}
                             data-active={active === i || undefined}
-                            style={{ "--accent": GROUP_HEX[c.group] ?? GROUP_HEX.other, animationDelay: `${Math.min(k, 6) * 70}ms` } as CSSProperties}
+                            style={{ animationDelay: `${Math.min(k, 6) * 70}ms` } as CSSProperties}
                             onMouseEnter={() => setPointed(i)}
                             onMouseLeave={() => setPointed((p) => (p === i ? null : p))}
                           >

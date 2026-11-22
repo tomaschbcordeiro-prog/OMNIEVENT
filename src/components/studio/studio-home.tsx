@@ -96,7 +96,7 @@ export function StudioHome() {
         <section id="magic" aria-labelledby="start-h" className="-mt-8 relative z-10 grid gap-4 lg:grid-cols-[1.6fr_1fr] scroll-mt-24">
           <div className="surface rounded-[var(--radius-l)] p-5 sm:p-6 studio-glow">
             <h2 id="start-h" className="t-h3 flex items-center gap-2">
-              <Wand2 size={19} className="text-[var(--studio)]" aria-hidden /> Magic paste
+              <Wand2 size={19} className="text-text-2" aria-hidden /> Magic paste
             </h2>
             <p className="t-small text-text-2 mt-1">
               Paste your Instagram caption, WhatsApp message or flyer text. The Studio picks out the name, date, time, place, prices, links and line-up, in Portuguese, English, Spanish or French.

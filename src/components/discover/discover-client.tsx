@@ -841,7 +841,7 @@ export function DiscoverClient() {
             <span className="sky-sep" aria-hidden />
             <button type="button" className="chip sky-chip" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
               <SlidersHorizontal size={14} aria-hidden />
-              Filters{nFilters ? <span className="tnum rounded-full bg-cyan text-white px-1.5 text-[11px] leading-[18px]">{nFilters}</span> : null}
+              Filters{nFilters ? <span className="tnum rounded-full bg-text text-on-ink px-1.5 text-[11px] leading-[18px]">{nFilters}</span> : null}
             </button>
           </div>
           {nFilters + (filters.q ? 1 : 0) > 0 && (
@@ -1239,7 +1239,7 @@ function LegendPanel({ onClose }: { onClose: () => void }) {
       <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
         {groups.map((g) => (
           <li key={g} className="flex items-center gap-2 t-micro text-text-2">
-            <ShapeGlyph group={g} size={18} />
+            <ShapeGlyph group={g} size={18} vivid />
             {GROUPS.find((x) => x.slug === g)?.name.split(" &")[0]}
           </li>
         ))}

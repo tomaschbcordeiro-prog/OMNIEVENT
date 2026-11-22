@@ -195,7 +195,7 @@ export function MatchDeck() {
     return (
       <div className="mx-auto max-w-[620px] px-4 pt-6 pb-10">
         <div className="text-center">
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-text/[0.06] px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-text-2" aria-hidden /> Event Match</p>
           <h1 className="t-h1 mt-3">Swipe your <em>next plan</em></h1>
           <p className="t-body text-text-2 mt-2">Tell us what you fancy, then swipe: right to save, left to pass, up to open. The plane adds it to a trip.</p>
         </div>
@@ -208,7 +208,7 @@ export function MatchDeck() {
   return (
     <div className="mx-auto max-w-[520px] px-4 pt-6 pb-10">
       <div className="text-center">
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-sun/15 px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-sun" aria-hidden /> Event Match</p>
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-text/[0.06] px-3 py-1 t-small font-semibold"><Sparkles size={14} className="text-text-2" aria-hidden /> Event Match</p>
         <h1 className="t-h1 mt-3">Swipe your <em>next plan</em></h1>
         <p className="t-small text-text-2 mt-1">Right to save it, left to pass, up to open. Arrow keys work too.</p>
       </div>

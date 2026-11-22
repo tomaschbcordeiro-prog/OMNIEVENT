@@ -138,7 +138,7 @@ export function ClubForm({ club, onSaved, onCancel }: { club?: Club; onSaved?: (
           </span>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-[var(--radius-m)] border border-line bg-panel px-2 py-1.5 focus-within:border-cyan">
             {f.tags.map((t) => (
-              <span key={t} className="chip-pop inline-flex items-center gap-1 rounded-full bg-sun/20 px-2 py-0.5 t-small">
+              <span key={t} className="chip-pop inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2 py-0.5 t-small">
                 #{t}
                 <button type="button" aria-label={`Remove ${t}`} className="rounded-full p-0.5 hover:bg-black/10" onClick={() => set({ tags: f.tags.filter((x) => x !== t) })}><X size={12} aria-hidden /></button>
               </span>
@@ -212,7 +212,7 @@ export function ClubForm({ club, onSaved, onCancel }: { club?: Club; onSaved?: (
             <p className="t-small text-text-2 mt-0.5 break-words">{preview.tagline}</p>
             <div className="mt-2.5 flex flex-wrap gap-1">
               {preview.vibes.map((v) => <span key={v} className="rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><VibeIcon g={v} size={11} /> {vibeLabel(v)}</span>)}
-              {preview.tags.map((t) => <span key={t} className="rounded-full bg-sun/20 px-2 py-0.5 t-micro">#{t}</span>)}
+              {preview.tags.map((t) => <span key={t} className="rounded-full bg-text/[0.06] px-2 py-0.5 t-micro">#{t}</span>)}
               {preview.city && <span className="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><MapPin size={11} aria-hidden /> {preview.city}</span>}
               {preview.privacy === "request" && <span className="rounded-full bg-[var(--club-deep)]/10 px-2 py-0.5 t-micro text-[var(--club-deep)] inline-flex items-center gap-1"><Lock size={11} aria-hidden /> By request</span>}
             </div>
