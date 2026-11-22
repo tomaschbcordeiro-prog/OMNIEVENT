@@ -503,10 +503,10 @@ export function TripPlanner() {
                   <div className="flex flex-wrap gap-1.5">
                     {REGIONS.map((r) => (
                       <button key={r.id} type="button" className="chip press" onClick={() => void addRegion(r)}>
-                        <span aria-hidden>{r.emoji}</span> {r.name}
+                        {r.name}
                       </button>
                     ))}
-                    <Link href="/trips/ideas" className="chip chip-link press font-semibold">✨ Endless ideas <ArrowRight size={13} aria-hidden /></Link>
+                    <Link href="/trips/ideas" className="chip chip-link press font-semibold">Endless ideas <ArrowRight size={13} aria-hidden /></Link>
                   </div>
                 </div>
               )}
@@ -550,10 +550,10 @@ export function TripPlanner() {
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {REGIONS.map((r) => (
                         <button key={r.id} type="button" className="chip press" onClick={() => void addRegion(r)}>
-                          <span aria-hidden>{r.emoji}</span> {r.name}
+                          {r.name}
                         </button>
                       ))}
-                      <Link href="/trips/ideas" className="chip chip-link press font-semibold">✨ More ideas <ArrowRight size={13} aria-hidden /></Link>
+                      <Link href="/trips/ideas" className="chip chip-link press font-semibold">More ideas <ArrowRight size={13} aria-hidden /></Link>
                     </div>
                   </details>
                 </div>

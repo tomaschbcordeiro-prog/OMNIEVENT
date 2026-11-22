@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Lock, MapPin, Users } from "lucide-react";
+import { Check, Lock, MapPin, Users } from "lucide-react";
 import type { Club, ClubCard, ClubRole } from "@/lib/community/types";
 import { GROUPS } from "@/lib/categories";
 import { Avatar } from "../community/bits";
+import { Glyph } from "../glyph";
 
 /** A club's two colours: deep enough for white text, from its hue. */
 export const clubGradient = (hue: number, angle = 135) => `linear-gradient(${angle}deg, hsl(${hue} 72% 34%), hsl(${(hue + 45) % 360} 78% 46%))`;
@@ -20,6 +21,8 @@ const GROUP_EMOJI: Record<string, string> = {
   exhibitions: "🎨", attractions: "🎡", "food-drink": "🍷", nightlife: "🪩", family: "🧸", outdoor: "🥾", education: "📚", fashion: "👗", culture: "🏛️", other: "✨",
 };
 export const vibeEmoji = (g: string) => GROUP_EMOJI[g] ?? "✨";
+/** A kind of thing a club loves, as a line icon. */
+export const VibeIcon = ({ g, size = 13 }: { g: string; size?: number }) => <Glyph e={vibeEmoji(g)} size={size} />;
 export const vibeLabel = (g: string) => GROUPS.find((x) => x.slug === g)?.name.split(" & ")[0] ?? g;
 
 /** The club's crest: its emoji on its colours, with a gold rim. */
@@ -39,7 +42,7 @@ export function RoleBadge({ role, className = "" }: { role: ClubRole; className?
   const r = ROLE_LABEL[role];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 t-micro font-bold ${role === "owner" ? "bg-[var(--club-deep)] text-[var(--gold-light)]" : role === "admin" ? "bg-sun/20 text-text" : "bg-ok/10 text-ok"} ${className}`}>
-      <span aria-hidden>{r.emoji}</span> {role === "member" ? "Member" : r.label}
+      <Glyph e={r.emoji} size={12} fallback={Check} /> {role === "member" ? "Member" : r.label}
     </span>
   );
 }
@@ -59,7 +62,7 @@ export function ClubTile({ club }: { club: ClubCard }) {
           <p className="t-small text-text-2 mt-0.5 line-clamp-2 min-h-[2.6em]">{club.tagline}</p>
           <div className="mt-2.5 flex flex-wrap gap-1">
             {club.vibes.slice(0, 3).map((v) => (
-              <span key={v} className="rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2">{vibeEmoji(v)} {vibeLabel(v)}</span>
+              <span key={v} className="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><VibeIcon g={v} size={11} /> {vibeLabel(v)}</span>
             ))}
             {club.city && <span className="inline-flex items-center gap-0.5 rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><MapPin size={11} aria-hidden /> {club.city}</span>}
             {club.privacy === "request" && <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--club-deep)]/10 px-2 py-0.5 t-micro text-[var(--club-deep)]"><Lock size={11} aria-hidden /> By request</span>}

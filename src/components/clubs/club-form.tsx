@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Crown, Lock, Users, X } from "lucide-react";
+import { Crown, Lock, Users, X, MapPin } from "lucide-react";
 import { CLUB_EMOJIS, type Club, type ClubCard, type ClubPrivacy } from "@/lib/community/types";
 import { safetyProblem } from "@/lib/community/safety";
 import { GROUPS } from "@/lib/categories";
@@ -10,7 +10,7 @@ import { CITIES } from "@/lib/destinations";
 import { clubsPost, refreshMe, useMe } from "@/lib/community/client";
 import { toast } from "../toast";
 import { Burst, requireMember } from "../community/bits";
-import { ClubCrest, clubGradient, vibeEmoji, vibeLabel } from "./bits";
+import { ClubCrest, clubGradient, VibeIcon, vibeLabel } from "./bits";
 
 const VIBES = GROUPS.filter((g) => g.slug !== "other").map((g) => g.slug);
 const SWATCHES = [270, 320, 350, 20, 40, 140, 175, 200, 225];
@@ -123,7 +123,7 @@ export function ClubForm({ club, onSaved, onCancel }: { club?: Club; onSaved?: (
               const on = f.vibes.includes(v);
               return (
                 <button key={v} type="button" aria-pressed={on} disabled={!on && f.vibes.length >= 5} onClick={() => set({ vibes: on ? f.vibes.filter((x) => x !== v) : [...f.vibes, v] })} className={`chip press ${on ? "!bg-[var(--club-deep)] !text-white !border-[var(--club-deep)]" : ""}`}>
-                  <span aria-hidden>{vibeEmoji(v)}</span> {vibeLabel(v)}
+                  <VibeIcon g={v} /> {vibeLabel(v)}
                 </button>
               );
             })}
@@ -211,10 +211,10 @@ export function ClubForm({ club, onSaved, onCancel }: { club?: Club; onSaved?: (
             <p className="mt-2 font-bold text-lg leading-tight break-words">{preview.name}</p>
             <p className="t-small text-text-2 mt-0.5 break-words">{preview.tagline}</p>
             <div className="mt-2.5 flex flex-wrap gap-1">
-              {preview.vibes.map((v) => <span key={v} className="rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2">{vibeEmoji(v)} {vibeLabel(v)}</span>)}
+              {preview.vibes.map((v) => <span key={v} className="rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><VibeIcon g={v} size={11} /> {vibeLabel(v)}</span>)}
               {preview.tags.map((t) => <span key={t} className="rounded-full bg-sun/20 px-2 py-0.5 t-micro">#{t}</span>)}
-              {preview.city && <span className="rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2">📍 {preview.city}</span>}
-              {preview.privacy === "request" && <span className="rounded-full bg-[var(--club-deep)]/10 px-2 py-0.5 t-micro text-[var(--club-deep)]">🔒 By request</span>}
+              {preview.city && <span className="inline-flex items-center gap-1 rounded-full bg-panel-2 px-2 py-0.5 t-micro text-text-2"><MapPin size={11} aria-hidden /> {preview.city}</span>}
+              {preview.privacy === "request" && <span className="rounded-full bg-[var(--club-deep)]/10 px-2 py-0.5 t-micro text-[var(--club-deep)] inline-flex items-center gap-1"><Lock size={11} aria-hidden /> By request</span>}
             </div>
           </div>
         </div>

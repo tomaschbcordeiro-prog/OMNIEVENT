@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Flame, MessageCircle, ShieldCheck, Sparkles, Star, Trophy, Users } from "lucide-react";
+import { Flame, MessageCircle, ShieldCheck, Sparkles, Star, Trophy, Users, Award, Ticket, PhoneOff, Handshake, Ban } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { BADGES, KIND_META, type CommunityHome as Home, type FeedItem, type FollowingFeed, type PostKind, type PublicProfile, type TargetMeta } from "@/lib/community/types";
 import { ago, communityGet, CommunityRequestError, useMe } from "@/lib/community/client";
@@ -11,6 +11,7 @@ import { Notice, Poster } from "../ui";
 import { Avatar, MemberName, openAccount, requireMember, Stars } from "./bits";
 import { MeetupJoin, NewPostsPill, Reactions, RichText, useNewPosts } from "./interact";
 import { DailyDuel } from "./duel";
+import { Glyph } from "../glyph";
 
 type Filter = "all" | "following" | PostKind;
 const FILTERS: ("all" | PostKind)[] = ["all", "review", "question", "tip", "meetup", "comment"];
@@ -67,11 +68,11 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
 
   return (
     <main>
-      <section className="sky relative overflow-hidden">
+      <section className="ink-hero relative overflow-hidden">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-10 pb-12 grid gap-8 lg:grid-cols-[1.3fr_1fr] items-center">
-          <div className="on-sky">
-            <h1 className="t-display text-white text-balance drop-shadow-[0_2px_12px_rgb(10_50_120_/_0.35)]">The people behind <em>every pin</em> on the map</h1>
-            <p className="t-body text-white/95 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
+          <div>
+            <h1 className="t-display text-white text-balance">The people behind <em>every pin</em> on the map</h1>
+            <p className="t-body text-white/85 font-medium mt-3 measure">Rate venues and shows, ask before you go, share tips, and find people heading to the same event.</p>
             {/* Numbers once there's something to count; until then an invitation in the same room
                 (nothing below moves when the numbers arrive). */}
             {home && !Object.values(home.stats).some((n) => n > 0) ? (
@@ -118,7 +119,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
             )}
             {FILTERS.map((f) => (
               <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)} className={`chip press shrink-0 ${filter === f ? "!bg-text !text-on-ink !border-text" : ""}`}>
-                {f === "all" ? "Everything" : `${KIND_META[f].emoji} ${KIND_META[f].label}`}
+                {f === "all" ? "Everything" : <><Glyph e={KIND_META[f].emoji} /> {KIND_META[f].label}</>}
               </button>
             ))}
           </div>
@@ -172,7 +173,7 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
                       <span className="block truncate"><strong>{follow.profiles[pl.by]?.name ?? "Someone"}</strong> is going to <strong>{pl.meta.title}</strong></span>
                       <span className="block t-micro text-text-3 truncate">{pl.meta.sub ?? ""}{pl.meta.start ? ` · ${formatEventDate(pl.meta.start, pl.meta.timeZone ?? "UTC")}` : ""} · {ago(pl.at)}</span>
                     </span>
-                    <span aria-hidden>🎟️</span>
+                    <Ticket size={16} aria-hidden className="text-text-3 shrink-0" />
                   </Link>
                 </li>
               ))}
@@ -210,9 +211,9 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
           <SideList icon={<Flame size={18} className="text-coral" aria-hidden />} title="Trending this week" empty="Plans and posts this week will show up here." items={home?.trending} render={(t) => (
             <>
               <span className="t-micro text-text-3 tnum flex gap-2">
-                {t.going > 0 && <span>🎟️ {t.going} going</span>}
-                {t.interested > 0 && <span>⭐ {t.interested} interested</span>}
-                {t.posts > 0 && <span>💬 {t.posts}</span>}
+                {t.going > 0 && <span className="inline-flex items-center gap-1"><Ticket size={12} aria-hidden /> {t.going} going</span>}
+                {t.interested > 0 && <span className="inline-flex items-center gap-1"><Star size={12} aria-hidden /> {t.interested} interested</span>}
+                {t.posts > 0 && <span className="inline-flex items-center gap-1"><MessageCircle size={12} aria-hidden /> {t.posts}</span>}
               </span>
             </>
           )} />
@@ -224,8 +225,8 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
             <h2 id="lead-h" className="t-h3 flex items-center gap-2"><Trophy size={18} className="text-amber" aria-hidden />Top members</h2>
             <ol className="mt-2 grid gap-1">
               {(home?.leaders ?? []).map((p, i) => (
-                <li key={p.id} className={`flex items-center gap-2.5 rounded-[var(--radius-s)] px-1.5 py-1.5 ${p.id === profile?.id ? "bg-sun/15" : ""}`}>
-                  <span className={`w-5 text-center t-small font-bold tnum ${i < 3 ? "text-amber" : "text-text-3"}`}>{i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</span>
+                <li key={p.id} className={`flex items-center gap-2.5 rounded-[var(--radius-s)] px-1.5 py-1.5 ${p.id === profile?.id ? "bg-text/[0.06]" : ""}`}>
+                  <span className={`w-5 text-center t-small font-bold tnum ${i < 3 ? "text-text" : "text-text-3"}`}>{i + 1}</span>
                   <Avatar p={p} size={28} />
                   <MemberName p={p} className="t-small truncate" />
                   <span className="ml-auto t-micro text-text-3 tnum">{p.karma} pts</span>
@@ -237,15 +238,15 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
           <section aria-labelledby="rules-h" className="rounded-[var(--radius-l)] border border-ok/30 bg-ok/5 p-4">
             <h2 id="rules-h" className="t-h3 flex items-center gap-2"><ShieldCheck size={18} className="text-ok" aria-hidden />Keeping it friendly and safe</h2>
             <ul className="mt-2 grid gap-1.5 t-small text-text-2">
-              <li>🎟️ No selling or swapping tickets: buy and resell only through official sellers.</li>
-              <li>📵 No phone numbers, emails or messaging handles in posts. Meet somewhere busy and public.</li>
-              <li>🤝 Be kind. Report anything that isn&apos;t, from the ⋯ menu on each post.</li>
-              <li>🚫 Block anyone you&apos;d rather not hear from: they can&apos;t reply to, mention or follow you.</li>
+              <li className="flex gap-2"><Ticket size={15} aria-hidden className="mt-0.5 shrink-0 text-text-3" /> No selling or swapping tickets: buy and resell only through official sellers.</li>
+              <li className="flex gap-2"><PhoneOff size={15} aria-hidden className="mt-0.5 shrink-0 text-text-3" /> No phone numbers, emails or messaging handles in posts. Meet somewhere busy and public.</li>
+              <li className="flex gap-2"><Handshake size={15} aria-hidden className="mt-0.5 shrink-0 text-text-3" /> Be kind. Report anything that isn&apos;t, from the ⋯ menu on each post.</li>
+              <li className="flex gap-2"><Ban size={15} aria-hidden className="mt-0.5 shrink-0 text-text-3" /> Block anyone you&apos;d rather not hear from: they can&apos;t reply to, mention or follow you.</li>
             </ul>
           </section>
           <details className="group rounded-[var(--radius-l)] border border-line p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 t-h3 [&::-webkit-details-marker]:hidden">
-              <span>🏅 Badges to earn</span>
+              <span className="flex items-center gap-2"><Award size={18} aria-hidden /> Badges to earn</span>
               <span className="t-micro font-normal text-text-3 tnum">
                 {profile?.badges.length ? `${profile.badges.length} of ${Object.keys(BADGES).length}` : `${Object.keys(BADGES).length} to collect`}
                 <span className="ml-1.5 inline-block transition-transform group-open:rotate-180" aria-hidden>⌄</span>
@@ -255,8 +256,8 @@ export function CommunityHome({ starters, persistent = true }: { starters: Event
               {Object.entries(BADGES).map(([id, b]) => {
                 const have = profile?.badges.includes(id);
                 return (
-                  <li key={id} className={`rounded-[var(--radius-m)] border p-2 ${have ? "border-sun/50 bg-sun/10" : "border-dashed border-line-strong"}`} title={b.hint}>
-                    <span className={`text-lg ${have ? "" : "grayscale"}`} aria-hidden>{b.emoji}</span>
+                  <li key={id} className={`rounded-[var(--radius-m)] border p-2 ${have ? "border-text/20 bg-text/[0.04]" : "border-dashed border-line-strong"}`} title={b.hint}>
+                    <span className={have ? "text-text" : "text-text-3"}><Glyph e={b.emoji} size={18} fallback={Award} /></span>
                     <p className="t-small font-semibold leading-tight">{b.label}</p>
                     <p className="t-micro text-text-3 leading-tight">{b.hint}</p>
                   </li>
@@ -302,13 +303,13 @@ function MemberCard({ profile }: { profile: PublicProfile | null }) {
         <button type="button" className="btn btn-ghost btn-sm ml-auto" onClick={() => void requireMember(true, true)}>Edit</button>
       </div>
       <div className="mt-3 flex flex-wrap gap-1">
-        {profile.badges.map((b) => <span key={b} title={BADGES[b]?.hint} className="rounded-full bg-sun/15 px-2 py-0.5 t-micro font-semibold">{BADGES[b]?.emoji} {BADGES[b]?.label}</span>)}
+        {profile.badges.map((b) => <span key={b} title={BADGES[b]?.hint} className="inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2 py-0.5 t-micro font-semibold"><Glyph e={BADGES[b]?.emoji} size={12} fallback={Award} /> {BADGES[b]?.label}</span>)}
       </div>
       {next && (
         <div className="mt-4">
-          <p className="t-micro text-text-3">Next badge: {BADGES[next.badge].emoji} {BADGES[next.badge].label} ({BADGES[next.badge].hint.toLowerCase()})</p>
+          <p className="t-micro text-text-3">Next badge: {BADGES[next.badge].label} ({BADGES[next.badge].hint.toLowerCase()})</p>
           <div className="mt-1 h-2 rounded-full bg-panel-2 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-cyan to-sun transition-[width] duration-700" style={{ width: `${Math.min(100, (have / need) * 100)}%` }} />
+            <div className="h-full rounded-full bg-text transition-[width] duration-700" style={{ width: `${Math.min(100, (have / need) * 100)}%` }} />
           </div>
         </div>
       )}

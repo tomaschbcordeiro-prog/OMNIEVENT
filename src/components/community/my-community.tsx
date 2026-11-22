@@ -4,6 +4,8 @@ import Link from "next/link";
 import { BADGES } from "@/lib/community/types";
 import { useMe } from "@/lib/community/client";
 import { Avatar, openAccount, requireMember } from "./bits";
+import { Glyph } from "../glyph";
+import { Award } from "lucide-react";
 
 /** My World: the member's community profile at a glance. */
 export function MyCommunity() {
@@ -29,7 +31,7 @@ export function MyCommunity() {
           <p className="t-small text-text-2">@{profile.username}</p>
           <p className="t-small text-text-2 tnum">{profile.karma} {profile.karma === 1 ? "point" : "points"} · {profile.counts.posts} posts · {profile.counts.reviews} ratings · {profile.counts.going} plans</p>
           <div className="mt-2 flex flex-wrap gap-1">
-            {profile.badges.map((b) => <span key={b} className="rounded-full bg-sun/15 px-2 py-0.5 t-micro font-semibold">{BADGES[b]?.emoji} {BADGES[b]?.label}</span>)}
+            {profile.badges.map((b) => <span key={b} className="inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2 py-0.5 t-micro font-semibold"><Glyph e={BADGES[b]?.emoji} size={12} fallback={Award} /> {BADGES[b]?.label}</span>)}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -7,6 +7,7 @@ import { AREAS, countryName, findCountries, findPlaces, ideasPage, LENGTHS, plan
 import { flagOf } from "@/lib/trip";
 import { RouteSketch } from "./route-sketch";
 import { SharedTripsRail } from "./shared-trips";
+import { Glyph, isFlag } from "../glyph";
 
 /*
  * Trip ideas without end: routes round a theme, a region, a length or a place, in pages that
@@ -129,17 +130,17 @@ export function TripIdeasFeed({ seed: daily }: { seed: string }) {
       <div className="ideas-controls">
         <WherePicker where={where} onPick={setWhere} />
         <div className="ideas-chips" role="group" aria-label="Theme">
-          <button type="button" className="chip press" data-active={!f.theme || undefined} aria-pressed={!f.theme} onClick={() => set({ theme: undefined })}>✨ Anything</button>
+          <button type="button" className="chip press" data-active={!f.theme || undefined} aria-pressed={!f.theme} onClick={() => set({ theme: undefined })}>Anything</button>
           {THEMES.map((t) => (
             <button key={t.key} type="button" className="chip press" data-active={f.theme === t.key || undefined} aria-pressed={f.theme === t.key} onClick={() => set({ theme: f.theme === t.key ? undefined : t.key })}>
-              <span aria-hidden>{t.emoji}</span> {t.label}
+              <Glyph e={t.emoji} /> {t.label}
             </button>
           ))}
         </div>
         <div className="ideas-chips" role="group" aria-label="Where and how long">
           {AREAS.map((a) => (
             <button key={a.key} type="button" className="chip press" data-active={f.area === a.key || undefined} aria-pressed={f.area === a.key} onClick={() => set({ area: f.area === a.key ? undefined : a.key })}>
-              <span aria-hidden>{a.emoji}</span> {a.label}
+              {a.label}
             </button>
           ))}
           <span className="ideas-sep" aria-hidden />
@@ -193,10 +194,10 @@ function IdeaCard({ idea: i, n, onLikeThis }: { idea: TripIdea; n: number; onLik
     <li className="idea-card" style={{ "--h": HUE[i.theme], "--i": n } as React.CSSProperties}>
       <Link href={planHref(i)} className="idea-top" aria-label={`Plan this trip: ${i.title}`}>
         <RouteSketch stops={i.stops.map((s) => s.place)} />
-        <span className="idea-theme">{THEMES.find((t) => t.key === i.theme)?.emoji} {THEMES.find((t) => t.key === i.theme)?.label}</span>
+        <span className="idea-theme"><Glyph e={THEMES.find((t) => t.key === i.theme)?.emoji} size={13} /> {THEMES.find((t) => t.key === i.theme)?.label}</span>
       </Link>
       <div className="idea-body">
-        <h3 className="idea-title"><span aria-hidden>{i.emoji}</span> {i.title}</h3>
+        <h3 className="idea-title">{isFlag(i.emoji) && <span aria-hidden>{i.emoji}</span>} {i.title}</h3>
         <p className="idea-route">
           {i.stops.map((s, k) => (
             <span key={s.place.n}>

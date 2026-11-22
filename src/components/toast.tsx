@@ -2,7 +2,8 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { glyphFor } from "./glyph";
 
 /** Small notes that confirm what just happened ("Saved", "+5 points", a new badge). */
 
@@ -57,11 +58,11 @@ export function Toaster() {
   return (
     <div aria-live="polite" className="toaster pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem)] z-[60] flex flex-col items-center gap-2 px-4 sm:bottom-[calc(var(--tabbar-h)+1.5rem)]">
       {list.map((t) => (
-        <div key={t.id} role="status" className={`toast-in pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-[var(--radius-l)] px-4 py-3 shadow-[0_18px_40px_-16px_rgb(10_30_70_/_0.55)] ${t.celebrate ? "bg-gradient-to-r from-sun to-[#ffd55e] text-on-sun" : "bg-text text-on-ink"}`}>
-          {t.emoji && <span className={`${t.celebrate ? "text-3xl pop" : "text-xl"}`} aria-hidden>{t.emoji}</span>}
+        <div key={t.id} role="status" className={`toast-in pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-[var(--radius-l)] px-4 py-3 shadow-[0_18px_40px_-16px_rgb(10_30_70_/_0.55)] bg-text text-on-ink`}>
+          {t.emoji && <ToastIcon emoji={t.emoji} big={!!t.celebrate} />}
           <div className="min-w-0 flex-1">
             <p className="font-semibold leading-tight">{t.title}</p>
-            {t.body && <p className={`t-small leading-snug ${t.celebrate ? "text-text/80" : "text-on-ink/80"}`}>{t.body}</p>}
+            {t.body && <p className={`t-small leading-snug text-on-ink/80`}>{t.body}</p>}
           </div>
           {t.action && (
             <button type="button" className="toast-act shrink-0 t-small font-semibold underline-offset-2 hover:underline" onClick={() => (t.action!.run(), dismiss(t.id))}>
@@ -69,7 +70,7 @@ export function Toaster() {
             </button>
           )}
           {t.href && (
-            <Link href={t.href} className={`shrink-0 t-small font-semibold underline-offset-2 hover:underline ${t.celebrate ? "text-text" : "toast-act"}`} onClick={() => dismiss(t.id)}>
+            <Link href={t.href} className={`shrink-0 t-small font-semibold underline-offset-2 hover:underline toast-act`} onClick={() => dismiss(t.id)}>
               {t.linkLabel ?? "Open"}
             </Link>
           )}
@@ -79,5 +80,15 @@ export function Toaster() {
         </div>
       ))}
     </div>
+  );
+}
+
+/** A toast's line icon, in a small round well (a check when the note has no icon of its own). */
+function ToastIcon({ emoji, big }: { emoji: string; big: boolean }) {
+  const Icon = glyphFor(emoji) ?? Check;
+  return (
+    <span className={`toast-icon grid place-items-center shrink-0 rounded-full ${big ? "h-10 w-10 pop" : "h-8 w-8"}`} aria-hidden>
+      <Icon size={big ? 20 : 16} strokeWidth={2} />
+    </span>
   );
 }

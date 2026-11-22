@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { TripButton } from "../trips/trip-add";
-import { BookmarkPlus, CalendarPlus, Check, ChevronDown, Dices, Headphones, Lock, LockOpen, Minus, Play, Plus, Search, Share2, Shuffle, Square, Trash2, X } from "lucide-react";
+import { BookmarkPlus, CalendarPlus, Check, ChevronDown, Dices, Headphones, Lock, LockOpen, Minus, Play, Plus, Search, Share2, Shuffle, Square, Trash2, X, Umbrella, Footprints, CarTaxiFront } from "lucide-react";
 import { addTrack, BUDGET, DEFAULT_VIBE, ENERGY, fillTape, hop, localMinutes, MOODS, RANGE, rerollTrack, tapeDay, tapeHue, tapeName, tapeStats, type MixCandidate, type TapeContext, type Track, type Vibe } from "@/lib/mixtape/plan";
 import { tapeWindow, windowLabel, WHEN, addDays, type WhenKind } from "@/lib/mixtape/windows";
 import { parseTapeQuery, tapeIcs, tapeQuery, type TapeLink } from "@/lib/mixtape/share";
@@ -18,6 +18,7 @@ import { CategoryIcon, Poster } from "../ui";
 import { toast } from "../toast";
 import { Cassette } from "./cassette";
 import { RouteMap, type RouteStop } from "./route-map";
+import { Glyph } from "../glyph";
 
 export interface MixCity {
   id: string;
@@ -80,9 +81,9 @@ function gapNote(from: number, to: number, tz: string): string | null {
   const a = localMinutes(from, tz);
   const b = a + min;
   const spans = (x: number, y: number) => a <= x && b >= y;
-  if (min >= 75 && (spans(19 * 60 + 30, 20 * 60 + 45) || spans(20 * 60, 21 * 60 + 15))) return `🍽️ ${duration(min)} free: time for dinner`;
-  if (min >= 60 && spans(12 * 60 + 45, 13 * 60 + 45)) return `🥪 ${duration(min)} free: lunch break`;
-  return `☕ ${duration(min)} to spare`;
+  if (min >= 75 && (spans(19 * 60 + 30, 20 * 60 + 45) || spans(20 * 60, 21 * 60 + 15))) return `${duration(min)} free: time for dinner`;
+  if (min >= 60 && spans(12 * 60 + 45, 13 * 60 + 45)) return `${duration(min)} free: lunch break`;
+  return `${duration(min)} to spare`;
 }
 
 /**
@@ -552,16 +553,16 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
             </div>
             <div className="grid gap-4">
               <div className="grid gap-4 sm:grid-cols-3">
-                <Fader label="Energy" value={vibe.energy} max={4} onChange={(v) => setVibe({ ...vibe, energy: v })} text={`${ENERGY[vibe.energy].emoji} ${ENERGY[vibe.energy].label}`} ends={["Slow", "Loud"]} />
+                <Fader label="Energy" value={vibe.energy} max={4} onChange={(v) => setVibe({ ...vibe, energy: v })} text={ENERGY[vibe.energy].label} ends={["Slow", "Loud"]} />
                 <Fader
                   label="Budget"
                   value={vibe.budget}
                   max={3}
                   onChange={(v) => setVibe({ ...vibe, budget: v })}
-                  text={`${BUDGET[vibe.budget].emoji} ${BUDGET[vibe.budget].label}${vibe.budget === 1 || vibe.budget === 2 ? ` (≤ ${money(Math.round(caps[vibe.budget]))})` : ""}`}
+                  text={`${BUDGET[vibe.budget].label}${vibe.budget === 1 || vibe.budget === 2 ? ` (≤ ${money(Math.round(caps[vibe.budget]))})` : ""}`}
                   ends={["Free", "Treat"]}
                 />
-                <Fader label="Getting around" value={vibe.range} max={2} onChange={(v) => setVibe({ ...vibe, range: v })} text={`${RANGE[vibe.range].emoji} ${RANGE[vibe.range].label}`} ends={["Walk", "Whole city"]} />
+                <Fader label="Getting around" value={vibe.range} max={2} onChange={(v) => setVibe({ ...vibe, range: v })} text={RANGE[vibe.range].label} ends={["Walk", "Whole city"]} />
               </div>
               <div>
                 <p className="mx-label">Moods <span className="font-normal normal-case tracking-normal text-text-3">· none picked means anything goes</span></p>
@@ -570,7 +571,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                     const on = vibe.moods.includes(m.id);
                     return (
                       <button key={m.id} type="button" className="chip" aria-pressed={on} onClick={() => setVibe({ ...vibe, moods: on ? vibe.moods.filter((x) => x !== m.id) : [...vibe.moods, m.id] })}>
-                        <span aria-hidden>{m.emoji}</span> {m.label}
+                        <Glyph e={m.emoji} /> {m.label}
                       </button>
                     );
                   })}
@@ -599,7 +600,7 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
         <div className="min-w-0">
           {shared && tape.length > 0 && (
             <div className="mx-banner">
-              <span aria-hidden>🎧</span>
+              <Headphones size={18} aria-hidden className="shrink-0" />
               <p>
                 <strong>A tape shared with you.</strong> Lock the tracks you like and shuffle the rest to make it yours.
               </p>
@@ -648,8 +649,8 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                       const look = weatherLook(w.code);
                       return (
                         <span className="mx-wx" title={`${look.label}${w.rain != null ? `, ${w.rain}% chance of rain` : ""}`}>
-                          <span aria-hidden>{look.emoji}</span> {w.max}°<span className="sr-only">, {look.label}</span>
-                          {w.rain != null && w.rain >= 50 && <span className="mx-wx-rain">☂ {w.rain}%</span>}
+                          <Glyph e={look.emoji} /> {w.max}°<span className="sr-only">, {look.label}</span>
+                          {w.rain != null && w.rain >= 50 && <span className="mx-wx-rain inline-flex items-center gap-0.5"><Umbrella size={11} aria-hidden /> {w.rain}%</span>}
                         </span>
                       );
                     })()}
@@ -669,8 +670,8 @@ export function MixtapeStudio({ cities, link, here, when }: { cities: MixCity[];
                           {h && (
                             <div className="mx-hop t-micro">
                               <span className="mx-hop-line" aria-hidden />
-                              <span>
-                                {h.mode === "walk" ? "🚶" : "🚕"} {h.mode === "walk" ? `${h.minutes} min walk` : `~${h.minutes} min ride`} · {km(h.km)}
+                              <span className="inline-flex items-center gap-1 flex-wrap">
+                                {h.mode === "walk" ? <Footprints size={12} aria-hidden /> : <CarTaxiFront size={12} aria-hidden />} {h.mode === "walk" ? `${h.minutes} min walk` : `~${h.minutes} min ride`} · {km(h.km)}
                                 {gap ? <span className="text-text-3"> · {gap}</span> : null}
                               </span>
                             </div>

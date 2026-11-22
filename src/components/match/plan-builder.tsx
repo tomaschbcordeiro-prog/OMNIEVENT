@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Dices, LocateFixed, MapPin, Plus, Search, Sparkles, X } from "lucide-react";
+import { ArrowRight, Dices, LocateFixed, MapPin, Plus, Search, Sparkles, X, Ticket, Coins } from "lucide-react";
 import { filtersToParams } from "@/lib/search/params";
 import { parseInput, planSentence, planToFilters, suggest, WHEN_LABEL, type Plan, type PlaceChip, type When, type WhatChip, type WhenPreset } from "@/lib/match/plan";
 import { CategoryIcon } from "../ui";
@@ -93,7 +93,7 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
     if (t.length < 2) return [];
     const out: Suggestion[] = [];
     const parsed = parseInput(t, tz);
-    const parts = [...parsed.places.map((p) => `📍 ${p.label}`), ...parsed.what.map((w) => (w.cat ? w.label : `“${w.text}”`)), parsed.when ? `📅 ${typeof parsed.when === "object" ? parsed.when.label : WHEN_LABEL[parsed.when]}` : "", parsed.free ? "Free" : ""].filter(Boolean);
+    const parts = [...parsed.places.map((p) => p.label), ...parsed.what.map((w) => (w.cat ? w.label : `“${w.text}”`)), parsed.when ? `${typeof parsed.when === "object" ? parsed.when.label : WHEN_LABEL[parsed.when]}` : "", parsed.free ? "Free" : ""].filter(Boolean);
     if (parts.length > 1 || (parts.length === 1 && (parsed.when || parsed.free || parsed.maxPrice))) out.push({ key: "parsed", kind: "parsed", label: `Add ${parts.join(" + ")}`, apply: () => addTyped(t) });
     const s = suggest(t);
     for (const p of s.places) out.push({ key: `p:${p.id}`, kind: "place", label: p.label, sub: p.sub, apply: () => addPlace(p) });
@@ -189,8 +189,8 @@ export function PlanBuilder({ plan, onChange, onGo, places: popular }: { plan: P
             />
           ))}
           {plan.near && <Chip tone="place" label="Near me" icon={<LocateFixed size={13} aria-hidden />} onRemove={() => onChange({ ...plan, near: undefined })} />}
-          {plan.free && <Chip tone="free" label="Free" icon={<span aria-hidden>🆓</span>} onRemove={() => onChange({ ...plan, free: undefined })} />}
-          {plan.maxPrice && <Chip tone="free" label={`Under ${plan.maxPrice.amount}${plan.maxPrice.currency ? ` ${plan.maxPrice.currency}` : ""}`} icon={<span aria-hidden>💶</span>} onRemove={() => onChange({ ...plan, maxPrice: undefined })} />}
+          {plan.free && <Chip tone="free" label="Free" icon={<Ticket size={13} aria-hidden />} onRemove={() => onChange({ ...plan, free: undefined })} />}
+          {plan.maxPrice && <Chip tone="free" label={`Under ${plan.maxPrice.amount}${plan.maxPrice.currency ? ` ${plan.maxPrice.currency}` : ""}`} icon={<Coins size={13} aria-hidden />} onRemove={() => onChange({ ...plan, maxPrice: undefined })} />}
           <input
             ref={input}
             id="plan-input"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Pause, Play, Plane, Share2, SkipBack, SkipForward, X } from "lucide-react";
+import { Loader2, Pause, Play, Plane, Share2, SkipBack, SkipForward, X, Moon } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { haversineKm } from "@/lib/geo";
 import { getDestination } from "@/lib/destinations";
@@ -10,6 +10,7 @@ import type { EarthMapHandle } from "./earth-map";
 import { Poster, SaveButton } from "../ui";
 import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
+import { Glyph } from "../glyph";
 
 /**
  * Night Flight: a cinematic, self-flying tour of tonight round the planet. A route of real
@@ -460,7 +461,7 @@ export function NightFlight({
             <div role="group" aria-label="Vibe" className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
               {VIBES.map((v) => (
                 <button key={v.id} type="button" aria-pressed={vibe === v.id} disabled={phase === "loading"} onClick={() => choose(v.id)} className={`nf-chip press shrink-0 ${vibe === v.id ? "nf-chip--on" : ""}`}>
-                  <span aria-hidden>{v.emoji}</span> {v.label}
+                  <Glyph e={v.emoji} /> {v.label}
                 </button>
               ))}
             </div>
@@ -482,7 +483,7 @@ export function NightFlight({
               <span className="flex items-baseline gap-2">
                 <span className="nf-time tnum">{hmIn(Date.parse(stop.start), stop.timeZone)}</span>
                 <span className="text-[12px] font-semibold text-white/80">
-                  🌙 {dayIn(Date.parse(stop.start), stop.timeZone) === dayIn(now, stop.timeZone) ? "Tonight" : "Tomorrow night"} · {placeOf(stop)} time
+                  <Moon size={12} aria-hidden className="inline align-[-0.1em]" /> {dayIn(Date.parse(stop.start), stop.timeZone) === dayIn(now, stop.timeZone) ? "Tonight" : "Tomorrow night"} · {placeOf(stop)} time
                 </span>
               </span>
               <span className="mt-1 block text-[18px] font-bold leading-tight line-clamp-2">{stop.title}</span>

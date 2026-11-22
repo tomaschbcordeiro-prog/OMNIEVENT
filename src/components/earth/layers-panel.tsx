@@ -55,7 +55,7 @@ export function LayersPanel({
           <li className="border-b border-line pb-1.5 mb-1.5">
             <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
               <span>
-                <span className="block t-small font-medium">✨ Space view</span>
+                <span className="block t-small font-medium">Space view</span>
                 <span className="block t-micro text-text-3">A starry sky and the real night side</span>
               </span>
               <input type="checkbox" role="switch" className="h-4 w-4 accent-[var(--cyan)]" checked={!!space} onChange={(e) => onSpace(e.target.checked)} />

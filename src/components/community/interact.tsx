@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, SmilePlus } from "lucide-react";
+import { ExternalLink, SmilePlus, Check, Hand } from "lucide-react";
 import { REACTIONS, type Post, type PublicProfile, type ThreadHead } from "@/lib/community/types";
 import { communityGet, communityPost, CommunityRequestError } from "@/lib/community/client";
 import { Avatar, requireMember } from "./bits";
@@ -168,8 +168,8 @@ export function MeetupJoin({ post, profiles, me }: { post: Post; profiles: Recor
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-m)] bg-sun/10 border border-sun/40 px-3 py-2">
       {!mine && (
-        <button type="button" disabled={busy} onClick={() => void toggle()} aria-pressed={joined} className={`btn btn-sm press ${joined ? "bg-text text-on-ink" : "bg-sun text-on-sun hover:brightness-105"}`}>
-          {joined ? "✓ You're in" : "👋 I'm in"}
+        <button type="button" disabled={busy} onClick={() => void toggle()} aria-pressed={joined} className={`btn btn-sm press ${joined ? "btn-primary" : "btn-secondary"}`}>
+          {joined ? <><Check size={14} aria-hidden /> You&apos;re in</> : <><Hand size={14} aria-hidden /> I&apos;m in</>}
         </button>
       )}
       {people.length > 0 && (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Ban, CalendarHeart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
+import { Ban, CalendarHeart, MessageCircle, UserCheck, UserPlus, Award } from "lucide-react";
 import { BADGES, KIND_META, isFounding, type FeedItem, type PublicProfile, type TargetMeta } from "@/lib/community/types";
 import { ago, communityGet, communityPost, useMe } from "@/lib/community/client";
 import { formatEventDate } from "@/lib/format";
@@ -10,6 +10,7 @@ import { Poster } from "../ui";
 import { Avatar, Burst, requireMember, Stars } from "./bits";
 import { Reactions, RichText } from "./interact";
 import { toast } from "../toast";
+import { Glyph } from "../glyph";
 
 type Member = { profile: PublicProfile; posts: FeedItem[]; plans: TargetMeta[]; follow?: { followers: number; following: number; byViewer: boolean }; blockedByViewer?: boolean };
 
@@ -55,7 +56,7 @@ export function MemberPage({ id }: { id: string }) {
           {p.bio && <p className="t-body text-text-2 mt-1">{p.bio}</p>}
           <p className="t-small text-text-3 mt-1">Member since {new Date(p.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p>
           <div className="mt-3 flex flex-wrap gap-1">
-            {p.badges.map((b) => <span key={b} title={BADGES[b]?.hint} className="rounded-full bg-sun/15 px-2 py-0.5 t-micro font-semibold">{BADGES[b]?.emoji} {BADGES[b]?.label}</span>)}
+            {p.badges.map((b) => <span key={b} title={BADGES[b]?.hint} className="inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2 py-0.5 t-micro font-semibold"><Glyph e={BADGES[b]?.emoji} size={12} fallback={Award} /> {BADGES[b]?.label}</span>)}
           </div>
         </div>
         <MemberPass p={p} />
@@ -92,7 +93,7 @@ export function MemberPage({ id }: { id: string }) {
             {m.posts.map(({ post, meta }) => (
               <li key={post.id} className="surface rounded-[var(--radius-l)] p-4">
                 <p className="t-small text-text-3">
-                  {KIND_META[post.kind].emoji} {post.parent ? "Reply" : KIND_META[post.kind].label} on {meta ? <Link href={`${meta.href}#community`} className="font-semibold text-text hover:text-cyan">{meta.title}</Link> : "an event"} · {ago(post.createdAt)}
+                  <Glyph e={KIND_META[post.kind].emoji} size={13} /> {post.parent ? "Reply" : KIND_META[post.kind].label} on {meta ? <Link href={`${meta.href}#community`} className="font-semibold text-text hover:text-cyan">{meta.title}</Link> : "an event"} · {ago(post.createdAt)}
                 </p>
                 {post.rating && <Stars value={post.rating} size={14} className="mt-1.5" />}
                 {post.text && <RichText text={post.text} className="t-body mt-1" />}
@@ -174,7 +175,7 @@ function MemberPass({ p }: { p: PublicProfile }) {
             <span className="member-no tnum">{p.no ? `No. ${String(p.no).padStart(4, "0")}` : "Early"}</span>
           </p>
           <div className="min-w-0 t-small">
-            <p className="font-semibold">{founding ? "✨ Founding member" : "Member"}</p>
+            <p className="font-semibold">{founding ? "Founding member" : "Member"}</p>
             <p className="text-text-2">Since {since}</p>
           </div>
         </div>

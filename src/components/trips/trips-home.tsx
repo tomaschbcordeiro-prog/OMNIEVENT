@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront, Users, Wallet, ListChecks, MessageCircle } from "lucide-react";
+import { ArrowRight, BedDouble, CalendarDays, Check, Play, Plus, Sparkles, TrainFront, Users, Wallet, ListChecks, MessageCircle, Luggage } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { listProgress, moneySummary } from "@/lib/trip-share";
 import { useRefreshShared } from "@/lib/group-sync";
@@ -102,7 +102,7 @@ export function TripsHome({ ideas = [], from }: { ideas?: IdeaCardData[]; from?:
         </div>
         <aside className="trips-side" aria-label="Plan another trip">
           <Link href="/trips/ideas" className="trips-side-link press" data-kind="ideas">
-            <span className="trips-side-icon" aria-hidden>✨</span>
+            <span className="trips-side-icon" aria-hidden><Sparkles size={18} strokeWidth={1.9} /></span>
             <span className="min-w-0">
               <span className="block font-semibold">Trip ideas</span>
               <span className="block t-micro text-text-2">Endless routes: coasts, mountains, wine, islands…</span>
@@ -110,7 +110,7 @@ export function TripsHome({ ideas = [], from }: { ideas?: IdeaCardData[]; from?:
             <ArrowRight size={16} aria-hidden className="ml-auto shrink-0" />
           </Link>
           <Link href="/trips/shared" className="trips-side-link press mt-2 mb-5" data-kind="shared">
-            <span className="trips-side-icon" aria-hidden>🧳</span>
+            <span className="trips-side-icon" aria-hidden><Luggage size={18} strokeWidth={1.9} /></span>
             <span className="min-w-0">
               <span className="block font-semibold">From travellers</span>
               <span className="block t-micro text-text-2">Trips people shared. Share yours too.</span>
@@ -123,7 +123,7 @@ export function TripsHome({ ideas = [], from }: { ideas?: IdeaCardData[]; from?:
               <ul className="mt-3 mb-5 flex flex-wrap gap-2">
                 {REGIONS.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/trips/new?region=${r.id}`} className="chip chip-link press"><span aria-hidden>{r.emoji}</span> {r.name}</Link>
+                    <Link href={`/trips/new?region=${r.id}`} className="chip chip-link press">{r.name}</Link>
                   </li>
                 ))}
               </ul>
@@ -266,7 +266,7 @@ export function TripsList({ ideas = [], from }: { ideas?: IdeaCardData[]; from?:
         <ul className="mt-4 flex flex-wrap gap-2">
           {REGIONS.map((r) => (
             <li key={r.id}>
-              <Link href={`/trips/new?region=${r.id}`} className="chip chip-link press"><span aria-hidden>{r.emoji}</span> {r.name}</Link>
+              <Link href={`/trips/new?region=${r.id}`} className="chip chip-link press">{r.name}</Link>
             </li>
           ))}
         </ul>

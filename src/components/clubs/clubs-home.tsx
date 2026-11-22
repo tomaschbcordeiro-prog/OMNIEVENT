@@ -8,7 +8,8 @@ import type { ClubCard, ClubDirectory } from "@/lib/community/types";
 import { GROUPS } from "@/lib/categories";
 import { clubsGet, useMe } from "@/lib/community/client";
 import { requireMember } from "../community/bits";
-import { ClubTile, vibeEmoji, vibeLabel } from "./bits";
+import { ClubTile, VibeIcon, vibeLabel } from "./bits";
+import { Glyph } from "../glyph";
 
 /** Ideas to start from: each opens the founding form filled in. */
 const IDEAS = [
@@ -59,8 +60,8 @@ export function ClubsHome() {
       <section className="club-hero">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-12 sm:py-16 grid gap-10 lg:grid-cols-[1.2fr_1fr] items-center">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--gold)]/50 bg-white/10 px-3 py-1 t-small font-semibold text-[var(--gold-light)]">
-              <span className="nav-premium-star !text-[var(--gold-light)]" aria-hidden>✦</span> New · Clubs
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 t-small font-semibold text-white/85">
+              New · Clubs
             </p>
             <h1 className="t-display mt-4 text-balance">
               Find your people.<br />
@@ -84,7 +85,7 @@ export function ClubsHome() {
               ["💬", "A wall for members", "Chat, plan meet-ups and swap tips, just within the club."],
             ].map(([emoji, title, body]) => (
               <li key={title} className="rounded-[var(--radius-l)] border border-white/15 bg-white/[0.07] p-4 backdrop-blur">
-                <p className="font-semibold"><span aria-hidden className="mr-1.5">{emoji}</span>{title}</p>
+                <p className="font-semibold inline-flex items-center gap-2"><Glyph e={emoji} size={16} />{title}</p>
                 <p className="t-small text-white/75 mt-1">{body}</p>
               </li>
             ))}
@@ -107,7 +108,7 @@ export function ClubsHome() {
             <button type="button" aria-pressed={!vibe} className={`chip shrink-0 ${!vibe ? "!bg-text !text-on-ink !border-text" : ""}`} onClick={() => setVibe("")}>All</button>
             {VIBE_FILTERS.map((g) => (
               <button key={g} type="button" aria-pressed={vibe === g} className={`chip shrink-0 ${vibe === g ? "!bg-text !text-on-ink !border-text" : ""}`} onClick={() => setVibe(vibe === g ? "" : g)}>
-                <span aria-hidden>{vibeEmoji(g)}</span> {vibeLabel(g)}
+                <VibeIcon g={g} /> {vibeLabel(g)}
               </button>
             ))}
           </div>
@@ -125,7 +126,7 @@ export function ClubsHome() {
               {IDEAS.map((i) => (
                 <li key={i.name}>
                   <Link href={`/clubs/new?${new URLSearchParams(i).toString()}`} className="chip press hover:border-[var(--gold)]">
-                    <span aria-hidden>{i.emoji}</span> {i.name}
+                    <Glyph e={i.emoji} /> {i.name}
                   </Link>
                 </li>
               ))}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { IdeaCardData } from "@/lib/travel/idea-cards";
 import { RouteSketch } from "./route-sketch";
+import { Glyph, isFlag } from "../glyph";
 
 /**
  * A few ready-made trips (on a city's or a country's page, or the trips page before the first
@@ -20,10 +21,10 @@ export function IdeaRail({ cards, title, moreHref, moreLabel }: { cards: IdeaCar
           <li key={i.key} className="idea-card" style={{ "--h": i.hue, "--i": n } as React.CSSProperties}>
             <Link href={i.href} className="idea-top" aria-label={`Plan this trip: ${i.title}`}>
               <RouteSketch stops={i.stops} />
-              {i.theme && <span className="idea-theme">{i.theme.emoji} {i.theme.label}</span>}
+              {i.theme && <span className="idea-theme"><Glyph e={i.theme.emoji} size={13} /> {i.theme.label}</span>}
             </Link>
             <div className="idea-body">
-              <h3 className="idea-title"><span aria-hidden>{i.emoji}</span> {i.title}</h3>
+              <h3 className="idea-title">{isFlag(i.emoji) && <span aria-hidden>{i.emoji}</span>} {i.title}</h3>
               <p className="idea-route">
                 {i.stops.map((s, k) => (
                   <span key={`${s.name}-${k}`}>

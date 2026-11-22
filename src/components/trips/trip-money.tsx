@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Check, CornerDownLeft, Pencil, Plus, Send, SlidersHorizontal, Trash2, Wallet, X } from "lucide-react";
+import { ArrowRight, Check, CornerDownLeft, Pencil, Plus, Send, SlidersHorizontal, Trash2, Wallet, X, Coins } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
 import { categoryForKind, EXPENSE_CATEGORIES, guessCategory, moneySummary, moneyText, newId, parseExpense, perTraveller, settleUp, type Expense, type ExpenseCategory } from "@/lib/trip-share";
 import { convert, SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { kindLabel } from "@/lib/trip-plans";
 import { toast } from "../toast";
 import { PersonDot } from "./together";
+import { Glyph } from "../glyph";
 
 /*
  * The trip's money, all in one place: a budget and how much of it is spoken for, what each
@@ -102,7 +103,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
           <ul className="money-cats mt-2">
             {EXPENSE_CATEGORIES.filter((c) => sum.byCategory[c.id] > 0).sort((a, b) => sum.byCategory[b.id] - sum.byCategory[a.id]).map((c) => (
               <li key={c.id}>
-                <span aria-hidden>{c.emoji}</span>
+                <Glyph e={c.emoji} />
                 <span className="flex-1 min-w-0 truncate">{c.label}</span>
                 <span className="money-cat-bar" aria-hidden><i style={{ width: `${(sum.byCategory[c.id] / sum.total) * 100}%` }} /></span>
                 <span className="tnum font-semibold">{money(sum.byCategory[c.id], cur)}</span>
@@ -160,7 +161,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
               ))}
             </ul>
           ) : (
-            <p className="t-micro text-ok mt-2">Everyone is even. 🎉</p>
+            <p className="t-micro text-ok mt-2">Everyone is even.</p>
           )}
         </section>
       )}
@@ -221,7 +222,7 @@ export function TripMoney({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
               const v = e.currency !== cur ? convert(e.amount, e.currency, cur) : undefined;
               return (
                 <li key={e.id} className="expense-row">
-                  <span className="expense-cat" aria-hidden>{cat?.emoji}</span>
+                  <span className="expense-cat" aria-hidden><Glyph e={cat?.emoji} size={16} fallback={Coins} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block t-small font-semibold truncate">{e.title}{e.estimate && <span className="expense-est">estimate</span>}</span>
                     <span className="block t-micro text-text-2 truncate">
@@ -318,7 +319,7 @@ function ExpenseForm({ trip, start, onDone, isNew }: { trip: Trip; start: Expens
         <div className="flex flex-wrap gap-1.5">
           {EXPENSE_CATEGORIES.map((c) => (
             <button key={c.id} type="button" className="chip" aria-pressed={category === c.id} onClick={() => (setCategory(c.id), setTouchedCat(true))}>
-              <span aria-hidden>{c.emoji}</span> {c.label}
+              <Glyph e={c.emoji} /> {c.label}
             </button>
           ))}
         </div>
@@ -406,7 +407,7 @@ function QuickCost({ trip, onMore }: { trip: Trip; onMore: (draft: Expense) => v
       <p id="quick-cost-read" className="quick-cost-read" aria-live="polite">
         {text.trim() ? (
           <>
-            <span className="qc-chip"><span aria-hidden>{cat?.emoji}</span> {cat?.label}</span>
+            <span className="qc-chip"><Glyph e={cat?.emoji} size={13} /> {cat?.label}</span>
             {p.amount !== undefined ? <span className="qc-chip qc-amount tnum">{money(p.amount, p.currency)}</span> : <span className="qc-chip qc-missing">add an amount</span>}
             {(p.paidBy ?? me) && travellers.length > 1 && <span className="qc-chip">paid by {nameOf((p.paidBy ?? me)!)}</span>}
             {p.split && <span className="qc-chip">for {p.split.map(nameOf).join(", ")}</span>}

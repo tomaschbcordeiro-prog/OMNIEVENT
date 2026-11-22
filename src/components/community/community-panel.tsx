@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users } from "lucide-react";
+import { MessageCircle, MoreHorizontal, Send, ShieldAlert, Sparkles, Star, UserPlus, Users, Check, Ticket } from "lucide-react";
 import { KIND_META, REPORT_REASONS, STARTERS, type Post, type PostKind, type PublicProfile, type Thread } from "@/lib/community/types";
 import { safetyProblem } from "@/lib/community/safety";
 import { MeetupJoin, NewPostsPill, Reactions, RichText, useMentions, useNewPosts } from "./interact";
@@ -9,6 +9,7 @@ import { ago, communityGet, communityPost, CommunityRequestError, refreshMe, use
 import { Avatar, Burst, MemberName, requireMember, StarInput, Stars } from "./bits";
 import { BADGES } from "@/lib/community/types";
 import { toast } from "../toast";
+import { Glyph } from "../glyph";
 
 const DONE: Record<string, { title: string; emoji: string }> = {
   going: { title: "See you there!", emoji: "🎉" },
@@ -250,8 +251,8 @@ function PlanCard({ thread, past, onPlan }: { thread: Thread | null; past: boole
     <div className="surface rounded-[var(--radius-l)] p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
-          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.going} onClick={() => click("going")} className={`btn ${me?.going ? "bg-sun text-on-sun border-sun hover:brightness-105" : "btn-primary"} press`}>
-            <span key={me?.going ? "on" : "off"} className={me?.going ? "pop" : ""}>{me?.going ? "✓" : "🎟️"}</span>
+          <button type="button" disabled={busy || !thread} aria-pressed={!!me?.going} onClick={() => click("going")} className={`btn ${me?.going ? "btn-secondary" : "btn-primary"} press`}>
+            <span key={me?.going ? "on" : "off"} className={me?.going ? "pop inline-flex" : "inline-flex"}>{me?.going ? <Check size={16} aria-hidden /> : <Ticket size={16} aria-hidden />}</span>
             {past ? "I was there" : me?.going ? "You're going" : "I'm going"}
           </button>
           {burst > 0 && <Burst key={burst} />}
@@ -382,7 +383,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
         <div className="flex flex-wrap gap-1.5 mb-3" role="radiogroup" aria-label="What kind of post">
           {kinds.map((k) => (
             <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`chip press ${kind === k ? "!bg-text !text-on-ink !border-text" : ""}`}>
-              <span aria-hidden>{KIND_META[k].emoji}</span> {KIND_META[k].label}
+              <Glyph e={KIND_META[k].emoji} /> {KIND_META[k].label}
             </button>
           ))}
         </div>
@@ -451,7 +452,7 @@ function Composer({ mode, profile, onPost, parent, onDone, autoFocus, people = [
         </button>
       </div>
       {problem && <p id={`compose-warn-${parent ?? "top"}`} role="alert" className="t-small text-bad mt-2 flex items-start gap-1.5"><ShieldAlert size={15} className="shrink-0 mt-0.5" aria-hidden />{problem}</p>}
-      {!parent && kind === "meetup" && !problem && <p className="t-small text-text-2 mt-2">👋 Suggest a busy, public spot and a time. People tap “I&apos;m in”, and you agree on details in the replies.</p>}
+      {!parent && kind === "meetup" && !problem && <p className="t-small text-text-2 mt-2">Suggest a busy, public spot and a time. People tap “I&apos;m in”, and you agree on details in the replies.</p>}
       {!parent && text.length > 900 && <p className="t-micro text-text-3 mt-1 text-right tnum">{1200 - text.length} left</p>}
     </form>
   );
@@ -481,7 +482,7 @@ function PostItem({ post, profiles, me, fresh, act, reload, isReply, onModerate 
             <MemberName p={author} />
             {!isReply && post.kind !== "comment" && (
               <span className="rounded-full bg-panel-2 px-2 py-px text-[11px] font-semibold text-text-2">
-                {KIND_META[post.kind].emoji} {KIND_META[post.kind].label}
+                <Glyph e={KIND_META[post.kind].emoji} size={13} /> {KIND_META[post.kind].label}
               </span>
             )}
             {post.rating && <Stars value={post.rating} size={13} />}

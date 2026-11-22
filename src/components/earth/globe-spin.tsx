@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dices, Loader2, Share2, X } from "lucide-react";
+import { Dices, Loader2, Share2, X, MapPin, SearchX } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { cardWhen } from "@/lib/format";
 import { Poster, SaveButton } from "../ui";
 import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
 import { datePresets } from "../discover/filters";
+import { Glyph } from "../glyph";
 
 /**
  * "Spin the globe": the planet turns like a wheel of fortune, city names roll past, and it
@@ -86,7 +87,7 @@ export function GlobeSpin({
   const [vibe, setVibe] = useState<Vibe>("any");
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<EventCard | null>(null);
-  const [reel, setReel] = useState<{ text: string; n: number }>({ text: "🌍 Shuffling the planet…", n: 0 });
+  const [reel, setReel] = useState<{ text: string; n: number }>({ text: "Shuffling the planet…", n: 0 });
   const [trail, setTrail] = useState<EventCard[]>([]);
   const [burst, setBurst] = useState(0);
   const pool = useRef<{ key: string; items: EventCard[]; at: number }>({ key: "", items: [], at: 0 });
@@ -116,7 +117,7 @@ export function GlobeSpin({
       busy.current = true;
       setPhase("spinning");
       setResult(null);
-      setReel({ text: "🌍 Shuffling the planet…", n: 0 });
+      setReel({ text: "Shuffling the planet…", n: 0 });
       try {
         const key = spinQuery(w, v);
         if (pool.current.key !== key || pool.current.at >= pool.current.items.length) {
@@ -132,11 +133,11 @@ export function GlobeSpin({
         }
         const pick = items[pool.current.at++];
         // Names from all over the planet roll past; the winner's comes up last.
-        const names = [...items.filter((c) => c !== pick), ...items.filter((c) => c !== pick)].map((c) => `${emojiOf(c)} ${placeOf(c)}`);
+        const names = [...items.filter((c) => c !== pick), ...items.filter((c) => c !== pick)].map((c) => placeOf(c));
         roll(names);
         await spin(pick.lat, pick.lng);
         clearTimeout(reelTimer.current);
-        setReel({ text: `${emojiOf(pick)} ${placeOf(pick)}`, n: -1 });
+        setReel({ text: placeOf(pick), n: -1 });
         setResult(pick);
         setPhase("landed");
         setBurst((b) => b + 1);
@@ -195,7 +196,7 @@ export function GlobeSpin({
       className="absolute z-30 inset-x-3 bottom-3 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] lg:left-auto lg:translate-x-0 lg:right-6 lg:bottom-auto lg:top-[calc(var(--header-h)+0.5rem)] lg:w-[360px] surface-float rounded-[var(--radius-l)] panel-slide overflow-hidden"
     >
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <span className="spin-die text-xl" aria-hidden data-rolling={spinning || undefined}>🎲</span>
+        <span className="spin-die inline-flex" aria-hidden data-rolling={spinning || undefined}><Dices size={20} strokeWidth={1.9} /></span>
         <h2 className="t-h3 flex-1">Spin the globe</h2>
         <button ref={closeRef} type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Close" onClick={onClose}>
           <X size={16} aria-hidden />
@@ -213,7 +214,7 @@ export function GlobeSpin({
         <div role="group" aria-label="Vibe" className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
           {VIBES.map((v) => (
             <button key={v.id} type="button" aria-pressed={vibe === v.id} disabled={spinning} onClick={() => choose(when, v.id)} className={`chip press shrink-0 ${vibe === v.id ? "!bg-text !text-on-ink !border-text" : ""}`}>
-              <span aria-hidden>{v.emoji}</span> {v.label}
+              <Glyph e={v.emoji} /> {v.label}
             </button>
           ))}
         </div>
@@ -233,13 +234,13 @@ export function GlobeSpin({
 
         {phase === "landed" && result && (
           <div ref={cardRef} tabIndex={-1} className="duel-in outline-none">
-            <p className="t-micro font-semibold uppercase tracking-wide text-violet">🎯 The globe picked</p>
+            <p className="t-micro font-semibold uppercase tracking-wide text-text-2">The globe picked</p>
             <button type="button" onClick={() => onOpen(result)} className="group relative mt-1.5 block w-full overflow-hidden rounded-[var(--radius-m)] text-left">
               <Poster title={result.title} imageUrl={result.imageUrl} hue={result.posterHue} categorySlug={result.categorySlug} className="aspect-[16/9] w-full transition-transform duration-500 group-hover:scale-[1.03]" />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-3 pt-10 text-white">
-                <span className="block t-micro font-semibold opacity-90">{emojiOf(result)} {cardWhen(result)}</span>
+                <span className="t-micro font-semibold opacity-90 inline-flex items-center gap-1"><Glyph e={emojiOf(result)} size={12} /> {cardWhen(result)}</span>
                 <span className="block font-bold leading-tight line-clamp-2 text-lg">{result.title}</span>
-                <span className="block t-micro opacity-90 truncate">📍 {result.venueName}{result.city ? `, ${result.city}` : ""}{result.country ? ` · ${result.country}` : ""}</span>
+                <span className="flex items-center gap-1 t-micro opacity-90 truncate"><MapPin size={11} aria-hidden className="shrink-0" /> {result.venueName}{result.city ? `, ${result.city}` : ""}{result.country ? ` · ${result.country}` : ""}</span>
               </span>
               <span className="absolute left-1/2 top-1/3" aria-hidden>
                 <span key={burst} className="burst">
@@ -266,7 +267,7 @@ export function GlobeSpin({
 
         {phase === "empty" && (
           <div className="rounded-[var(--radius-m)] soft-panel p-4 text-center">
-            <p className="text-2xl" aria-hidden>🌵</p>
+            <p className="mx-auto grid place-items-center h-10 w-10 rounded-full bg-text/[0.06]" aria-hidden><SearchX size={20} strokeWidth={1.9} /></p>
             <p className="font-semibold mt-1">Nothing like that {when === "tonight" ? "tonight" : when === "weekend" ? "this weekend" : "this week"}</p>
             <p className="t-small text-text-2 mt-0.5">Try another vibe or a different day.</p>
             <button type="button" className="btn btn-primary btn-sm mt-3" onClick={() => choose("week", "any")}><Dices size={14} aria-hidden /> Spin for anything</button>
@@ -275,7 +276,7 @@ export function GlobeSpin({
 
         {phase === "error" && (
           <div className="rounded-[var(--radius-m)] border border-bad/30 bg-bad/5 p-4 text-center">
-            <p className="font-semibold">The globe got stuck 😅</p>
+            <p className="font-semibold">The globe got stuck</p>
             <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={() => void go()}>Try again</button>
           </div>
         )}
@@ -287,7 +288,7 @@ export function GlobeSpin({
               {trail.slice(1).map((c) => (
                 <li key={c.id} className="shrink-0">
                   <button type="button" disabled={spinning} className="chip press max-w-48" onClick={() => onOpen(c)} title={c.title}>
-                    <span aria-hidden>{emojiOf(c)}</span> <span className="truncate">{placeOf(c)}</span>
+                    <Glyph e={emojiOf(c)} /> <span className="truncate">{placeOf(c)}</span>
                   </button>
                 </li>
               ))}

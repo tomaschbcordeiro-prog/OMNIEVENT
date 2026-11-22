@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play, ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane, Ellipsis, ListMusic } from "lucide-react";
+import { Globe2, Map as MapIcon, List, SlidersHorizontal, RotateCcw, Plus, Minus, LocateFixed, X, Layers, Pause, Play, ChevronDown, ChevronUp, ChevronLeft, MapPin, Clock, Ticket, ExternalLink, Loader2, Maximize, Minimize, Compass, Mountain, Crosshair, Dices, Plane, Ellipsis, ListMusic, MessageCircle } from "lucide-react";
 import type { Cluster, EventCard, EventView, ParsedQuery, SearchFilters } from "@/lib/types";
 import type { Summary } from "@/lib/community/types";
 import { CommunityPulse } from "../community/pulse";
@@ -1292,8 +1292,8 @@ function SpotCard({ c, onPick, onHover }: { c: EventCard & { buzz?: Summary }; o
           {c.isDemo && <span className="absolute right-1.5 top-1.5"><DemoBadge /></span>}
           {buzz && (buzz.going > 0 || buzz.posts > 0) && (
             <span className="absolute left-1.5 bottom-1.5 inline-flex items-center gap-1.5 rounded-full bg-text/85 px-1.5 py-0.5 text-[11px] font-semibold tnum text-on-ink backdrop-blur">
-              {buzz.going > 0 && <span>🎟️ {buzz.going}</span>}
-              {buzz.posts > 0 && <span>💬 {buzz.posts}</span>}
+              {buzz.going > 0 && <span className="inline-flex items-center gap-0.5"><Ticket size={11} aria-hidden /> {buzz.going}</span>}
+              {buzz.posts > 0 && <span className="inline-flex items-center gap-0.5"><MessageCircle size={11} aria-hidden /> {buzz.posts}</span>}
             </span>
           )}
         </span>
@@ -1347,7 +1347,7 @@ function DiscoveryPanel({ filters, here, onHere, interests, onPick, onCity, onHo
     ...(forYou ? [{ id: "you", label: "For you", params: forYou.toString(), empty: "Nothing on sale matches your interests right now." }] : []),
     { id: "weekend", label: "This weekend", params: weekend.toString(), empty: "Nothing this weekend matches your filters." },
     { id: "new", label: "New", params: fresh.toString(), empty: "No recent announcements match your filters." },
-    { id: "buzz", label: "🔥 Buzzing", params: "buzz", empty: "Nothing yet. Say you're going to an event and it shows up here for everyone." },
+    { id: "buzz", label: "Buzzing", params: "buzz", empty: "Nothing yet. Say you're going to an event and it shows up here for everyone." },
   ];
   const [tab, setTab] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === tab) ?? tabs[0];

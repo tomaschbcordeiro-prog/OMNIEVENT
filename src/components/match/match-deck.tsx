@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Heart, MapPin, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowUpRight, Heart, MapPin, Pencil, RotateCcw, Sparkles, X, PartyPopper } from "lucide-react";
 import type { EventCard } from "@/lib/types";
 import { TripButton } from "../trips/trip-add";
 import { cardWhen } from "@/lib/format";
@@ -241,7 +241,7 @@ export function MatchDeck() {
               </div>
             ) : (
               <div>
-                <p className="text-4xl" aria-hidden>🎉</p>
+                <p className="mx-auto grid place-items-center h-14 w-14 rounded-full bg-text/[0.06]" aria-hidden><PartyPopper size={26} strokeWidth={1.9} /></p>
                 <p className="t-h3 mt-2">You&apos;ve seen everything here</p>
                 <p className="t-small text-text-2 mt-1">Widen the plan: other dates, more places or another vibe.</p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">

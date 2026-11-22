@@ -32,6 +32,7 @@ import type { EarthMapHandle, FlyRequest } from "../earth/earth-map";
 import { Poster } from "../ui";
 import { toast } from "../toast";
 import { bboxOf, CityPin, dayLabel, fanOut, longRange, MapIcons, routeOf, SheetGrab, shortRange, TripGlobe, tripSnapOf, usePanelPad, useSheet, useTripEvents, type MapIcon, type Pad, type TripEvent } from "./shared";
+import { Glyph } from "../glyph";
 
 const GROUP_EMOJI: Record<string, string> = {
   music: "🎶", sports: "⚽", theatre: "🎭", comedy: "😂", festivals: "🎉", cinema: "🎬", conferences: "🎤", technology: "💻",
@@ -699,7 +700,7 @@ function EventIcon({ e, saved, color, open, onToggle, onAdd, onRemove }: { e: Tr
         aria-expanded={open}
         onClick={(ev) => (ev.stopPropagation(), onToggle())}
       >
-        <span aria-hidden>{GROUP_EMOJI[e.groupSlug] ?? "✨"}</span>
+        <Glyph e={GROUP_EMOJI[e.groupSlug] ?? "✨"} size={14} />
         {!saved && <span className="event-icon-plus" aria-hidden><Plus size={10} strokeWidth={3} /></span>}
         {saved && <span className="event-icon-check" aria-hidden><Check size={10} strokeWidth={3} /></span>}
       </button>

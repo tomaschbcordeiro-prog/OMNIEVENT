@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarHeart, Check, Crown, Info, Lock, LogOut, MapPin, MessageCircle, MoreHorizontal, Search, Settings, Share2, Trash2, UserPlus, Users } from "lucide-react";
+import { CalendarHeart, Check, Crown, Info, Lock, LogOut, MapPin, MessageCircle, MoreHorizontal, Search, Settings, Share2, Trash2, UserPlus, Users, SearchX, Ticket, Trophy, Hand } from "lucide-react";
 import type { ClubPage, ClubPick, ClubRole, PublicProfile } from "@/lib/community/types";
 import type { EventCard } from "@/lib/types";
 import { ago, clubsGet, clubsPost, refreshMe, useMe } from "@/lib/community/client";
@@ -12,7 +12,7 @@ import { toast } from "../toast";
 import { Poster } from "../ui";
 import { Avatar, Burst, MemberName, requireMember } from "../community/bits";
 import { CommunityPanel } from "../community/community-panel";
-import { ClubCrest, RoleBadge, clubGradient, vibeEmoji, vibeLabel } from "./bits";
+import { ClubCrest, RoleBadge, clubGradient, VibeIcon, vibeLabel } from "./bits";
 import { ClubForm } from "./club-form";
 
 type Tab = "wall" | "picks" | "members" | "about" | "manage";
@@ -61,7 +61,7 @@ export function ClubView({ slug }: { slug: string }) {
   if (missing)
     return (
       <main id="main" className="mx-auto max-w-3xl px-4 sm:px-6 py-16 text-center">
-        <p className="text-5xl" aria-hidden>🫥</p>
+        <p className="mx-auto grid place-items-center h-14 w-14 rounded-full bg-text/[0.06]" aria-hidden><SearchX size={26} strokeWidth={1.9} /></p>
         <h1 className="t-h1 mt-3">This club isn&apos;t here</h1>
         <p className="t-body text-text-2 mt-2">It may have closed, or the link is mistyped.</p>
         <Link href="/clubs" className="btn btn-gold mt-6">See all clubs</Link>
@@ -124,7 +124,7 @@ export function ClubView({ slug }: { slug: string }) {
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {club.city && <Chip><MapPin size={12} aria-hidden /> {club.city}</Chip>}
                 <Chip>{club.privacy === "open" ? <><Users size={12} aria-hidden /> Open to all</> : <><Lock size={12} aria-hidden /> By request</>}</Chip>
-                {club.vibes.map((v) => <Chip key={v}>{vibeEmoji(v)} {vibeLabel(v)}</Chip>)}
+                {club.vibes.map((v) => <Chip key={v}><VibeIcon g={v} size={12} /> {vibeLabel(v)}</Chip>)}
                 {club.tags.map((t) => <Chip key={t}>#{t}</Chip>)}
               </div>
             </div>
@@ -213,7 +213,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 function MembersOnly({ requested, onAsk }: { requested: boolean; onAsk: () => void }) {
   return (
     <div className="mx-auto max-w-lg rounded-[var(--radius-l)] border border-line bg-panel p-8 text-center">
-      <p className="text-4xl" aria-hidden>🔒</p>
+      <p className="mx-auto grid place-items-center h-12 w-12 rounded-full bg-text/[0.06]" aria-hidden><Lock size={22} strokeWidth={1.9} /></p>
       <p className="t-h3 mt-2">For members only</p>
       <p className="t-small text-text-2 mt-1">This club&apos;s wall, members and shared events are private. Ask to join and an admin will let you in.</p>
       {requested ? <p className="mt-4 t-small font-semibold text-ok">✓ Your request is waiting for an admin</p> : <button type="button" className="btn btn-gold mt-4 press" onClick={onAsk}><Lock size={15} aria-hidden /> Ask to join</button>}
@@ -270,7 +270,7 @@ function Picks({ page, run, me }: { page: ClubPage; run: Run; me: PublicProfile 
         <p className="t-small text-text-2 mt-1">Events members shared. Vote for the ones you&apos;d go to: the most wanted rise to the top.</p>
         {page.picks.length === 0 ? (
           <div className="mt-4 rounded-[var(--radius-l)] soft-panel p-6 text-center">
-            <p className="text-3xl" aria-hidden>🎟️</p>
+            <p className="mx-auto grid place-items-center h-11 w-11 rounded-full bg-text/[0.06]" aria-hidden><Ticket size={20} strokeWidth={1.9} /></p>
             <p className="font-semibold mt-1">Nothing shared yet</p>
             <p className="t-small text-text-2 mt-0.5">{role ? "Find an event on the right, or use “Share with a club” on any event page." : "Members share events here."}</p>
           </div>
@@ -285,14 +285,14 @@ function Picks({ page, run, me }: { page: ClubPage; run: Run; me: PublicProfile 
                     <Poster title={p.title} imageUrl={p.imageUrl} hue={p.hue} categorySlug={p.categorySlug} size="sm" className="h-20 w-20 rounded-[var(--radius-m)]" />
                   </Link>
                   <div className="min-w-0 flex-1">
-                    {i === 0 && v.votes > 1 && <p className="t-micro font-bold text-[#8a5200]">🏆 Most wanted</p>}
+                    {i === 0 && v.votes > 1 && <p className="t-micro font-bold text-text-2 inline-flex items-center gap-1"><Trophy size={11} aria-hidden /> Most wanted</p>}
                     <Link href={`/events/${p.slug}`} className="block font-semibold leading-tight hover:text-cyan line-clamp-2">{p.title}</Link>
-                    <p className="t-micro text-text-3 mt-0.5 truncate">{vibeEmoji(p.groupSlug)} {cardWhen({ ...p, eventType: p.until ? "multi_day" : "single" })} · {p.venueName}{p.city ? `, ${p.city}` : ""}</p>
+                    <p className="t-micro text-text-3 mt-0.5 truncate"><VibeIcon g={p.groupSlug} size={11} /> {cardWhen({ ...p, eventType: p.until ? "multi_day" : "single" })} · {p.venueName}{p.city ? `, ${p.city}` : ""}</p>
                     <p className="t-micro text-text-3 mt-0.5">Shared by {by?.firstName ?? by?.name ?? "a member"} · {ago(p.at)}</p>
                   </div>
                   <div className="flex flex-col items-end justify-between gap-2">
-                    <button type="button" aria-pressed={v.voted} disabled={!role} onClick={() => void vote(p)} className={`btn btn-sm press ${v.voted ? "bg-sun text-on-sun border-sun" : "btn-secondary"}`} title={role ? undefined : "Join to vote"}>
-                      🙋 <span className="tnum">{v.votes}</span> <span className="max-sm:hidden">{v.voted ? "You'd go" : "I'd go"}</span>
+                    <button type="button" aria-pressed={v.voted} disabled={!role} onClick={() => void vote(p)} className={`btn btn-sm press ${v.voted ? "btn-primary" : "btn-secondary"}`} title={role ? undefined : "Join to vote"}>
+                      <Hand size={14} aria-hidden /> <span className="tnum">{v.votes}</span> <span className="max-sm:hidden">{v.voted ? "You'd go" : "I'd go"}</span>
                     </button>
                     {(p.by === me?.id || role === "owner" || role === "admin") && (
                       <button type="button" className="t-micro text-text-3 hover:text-bad" onClick={() => void run({ action: "unpick", event: p.id }, "Removed from picks", "🗑️")}>Remove</button>
@@ -419,7 +419,7 @@ function About({ page }: { page: ClubPage }) {
           <ul className="mt-3 grid gap-2.5">
             {page.taste.map((t) => (
               <li key={t.group}>
-                <div className="flex justify-between t-small"><span>{vibeEmoji(t.group)} {vibeLabel(t.group)}</span><span className="tnum text-text-3">{t.share}%</span></div>
+                <div className="flex justify-between t-small"><span className="inline-flex items-center gap-1.5"><VibeIcon g={t.group} /> {vibeLabel(t.group)}</span><span className="tnum text-text-3">{t.share}%</span></div>
                 <div className="mt-1 h-2 rounded-full bg-panel-2 overflow-hidden">
                   <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${t.share}%`, background: clubGradient(club.hue, 90) }} />
                 </div>

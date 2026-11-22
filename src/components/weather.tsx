@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Glyph } from "./glyph";
 import { weatherLook } from "@/lib/weather-look";
 
 /**
@@ -119,18 +120,18 @@ export function WeatherNow({ lat, lng, bare = false, line = false }: { lat: numb
   if (line)
     return (
       <span className="block t-small text-text-3 mt-1 tnum">
-        Right now: {look.emoji} {wx.now.temp}°, {look.label.toLowerCase()}
+        Right now: <Glyph e={look.emoji} /> {wx.now.temp}°, {look.label.toLowerCase()}
       </span>
     );
   if (bare)
     return (
       <span className="tnum" title={look.label}>
-        {look.emoji} {wx.now.temp}°
+        <Glyph e={look.emoji} /> {wx.now.temp}°
       </span>
     );
   return (
     <span className="text-text-3">
-      , {look.emoji} {wx.now.temp}° {look.label.toLowerCase()}
+      , <Glyph e={look.emoji} /> {wx.now.temp}° {look.label.toLowerCase()}
     </span>
   );
 }
@@ -148,7 +149,7 @@ export function WeatherWeek({ lat, lng, place }: { lat: number; lng: number; pla
           return (
             <li key={w.date} className="wx-day" title={`${look.label}${w.rain != null ? `, ${w.rain}% chance of rain` : ""}`}>
               <span className="t-micro text-text-3">{day}</span>
-              <span className="wx-emoji" aria-hidden>{look.emoji}</span>
+              <span className="wx-emoji" aria-hidden><Glyph e={look.emoji} size={18} /></span>
               <span className="sr-only">{look.label},</span>
               <span className="t-micro tnum">
                 <strong>{w.max}°</strong> <span className="text-text-3">{w.min}°</span>
@@ -175,7 +176,7 @@ export function DayForecast({ lat, lng, date }: { lat: number; lng: number; date
   const look = weatherLook(w.code);
   return (
     <span className="block t-small text-text-2 mt-1.5 panel-in">
-      <span aria-hidden>{look.emoji}</span> Forecast: {look.label.toLowerCase()}, {w.max}° / {w.min}°{w.rain != null && w.rain >= 20 ? `, ${w.rain}% chance of rain` : ""}
+      <Glyph e={look.emoji} /> Forecast: {look.label.toLowerCase()}, {w.max}° / {w.min}°{w.rain != null && w.rain >= 20 ? `, ${w.rain}% chance of rain` : ""}
     </span>
   );
 }

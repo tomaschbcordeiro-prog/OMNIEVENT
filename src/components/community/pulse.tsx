@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageCircle, Star, Ticket } from "lucide-react";
+import { MessageCircle, Star, Ticket, Hand } from "lucide-react";
 import type { Summary } from "@/lib/community/types";
 import { communityGet } from "@/lib/community/client";
 
@@ -27,7 +27,7 @@ export function CommunityPulse({ target, href = "#community" }: { target: string
         </>
       ) : (
         <>
-          <span aria-hidden>👋</span>
+          <Hand size={16} aria-hidden className="shrink-0 text-text-3" />
           <span className="text-text-2">Going? Tell the community and find people to go with.</span>
         </>
       )}

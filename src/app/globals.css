@@ -14849,3 +14849,193 @@ body::before {
     0 0 0 5.5px rgb(243 245 250 / 0.85),
     0 14px 28px -12px rgb(0 0 0 / 0.8);
 }
+
+/* ==== One calm system for every page ======================================================
+   The same restraint as the globe's page, everywhere: by day a cool, quiet light instead of
+   lilac and peach; one ink colour for what matters (the main button, the chosen chip, a date),
+   white for it at night; the italic words in titles all in one cobalt sweep; and the pages
+   with a stage of their own (community, clubs, mixtape, studio) on the same deep ink, not four
+   different purples, pinks and golds. */
+:root {
+  --ink-btn: #0e1424;
+  --ink-btn-hover: #232b3f;
+  --ink-btn-text: #ffffff;
+  --ink-btn-shadow: 0 1px 2px rgb(16 23 42 / 0.14), 0 10px 22px -14px rgb(16 23 42 / 0.6);
+}
+:root[data-look="night"] {
+  --ink-btn: #f3f5fa;
+  --ink-btn-hover: #ffffff;
+  --ink-btn-text: #0e1424;
+  --ink-btn-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 26px -14px rgb(0 0 0 / 0.8);
+}
+:root[data-look="day"] {
+  --bg: #edf1f7;
+  --aurora-1: rgb(120 150 230 / 0.2);
+  --aurora-2: rgb(150 150 230 / 0.12);
+  --aurora-3: rgb(190 205 235 / 0.22);
+  --aurora-4: rgb(150 190 225 / 0.12);
+}
+:root[data-look="day"] body::before {
+  background:
+    radial-gradient(52vmax 38vmax at 14% 8%, var(--aurora-1), transparent 64%),
+    radial-gradient(44vmax 34vmax at 88% 10%, var(--aurora-2), transparent 64%),
+    radial-gradient(46vmax 36vmax at 94% 70%, var(--aurora-3), transparent 64%),
+    radial-gradient(48vmax 38vmax at 8% 90%, var(--aurora-4), transparent 64%),
+    linear-gradient(180deg, #e8edf5 0%, #eef2f8 50%, #f1f3f7 100%);
+}
+:root[data-look="day"] body::after {
+  opacity: 0.6;
+}
+
+/* The main button: ink, a soft lift under the pointer. */
+.btn-primary,
+.btn-primary:hover:not(:disabled) {
+  background: var(--ink-btn);
+  color: var(--ink-btn-text);
+  filter: none;
+}
+.btn-primary {
+  border-color: var(--ink-btn);
+  box-shadow: var(--ink-btn-shadow);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--ink-btn-hover);
+  box-shadow: var(--ink-btn-shadow), 0 16px 28px -16px rgb(16 23 42 / 0.45);
+}
+.btn-primary:disabled {
+  opacity: 0.45;
+}
+/* The quieter button: plain glass with a hairline, no coloured edge. */
+:root[data-look="day"] .btn-secondary,
+:root[data-look="day"] .btn-secondary:hover:not(:disabled) {
+  border: 1px solid rgb(16 23 42 / 0.1);
+  background: rgb(255 255 255 / 0.86);
+}
+:root[data-look="day"] .btn-secondary {
+  box-shadow: 0 1px 2px rgb(16 23 42 / 0.05), 0 6px 16px -12px rgb(16 23 42 / 0.35);
+}
+:root[data-look="day"] .btn-secondary:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgb(16 23 42 / 0.16);
+}
+:root[data-look="night"] .btn-secondary,
+:root[data-look="night"] .btn-secondary:hover:not(:disabled) {
+  border: 1px solid rgb(255 255 255 / 0.14);
+  background: rgb(255 255 255 / 0.06);
+}
+:root[data-look="night"] .btn-secondary:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.22);
+}
+/* A chosen chip: ink, like the main button. */
+.chip[aria-pressed="true"],
+.chip[data-active="true"] {
+  color: var(--ink-btn-text);
+  background: var(--ink-btn);
+  border-color: var(--ink-btn);
+  box-shadow: 0 6px 14px -10px rgb(16 23 42 / 0.6);
+}
+.chip:hover {
+  border-color: color-mix(in srgb, var(--text) 24%, transparent);
+}
+/* The italic words in titles: one cobalt sweep by day, white into lavender at night. */
+.t-display em,
+.t-hero em,
+.t-h1 em {
+  background: linear-gradient(100deg, #2b3a8f 0%, #4b57e3 55%, #7a5cf0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root[data-look="night"] :is(.t-display, .t-hero, .t-h1) em,
+:is(.ink-hero, .club-hero, .mx-stage, .studio-stage) :is(.t-display, .t-hero, .t-h1) em,
+:is(.club-hero, .studio-stage) .gold-text {
+  background: linear-gradient(100deg, #ffffff 0%, #c4cfff 55%, #d5c4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: none;
+}
+/* The bars and footer: a plain hairline, not a coloured one. */
+.site-header:not([data-home])::after,
+.tabbar::before,
+.site-footer::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 12%, transparent) 20%, color-mix(in srgb, var(--text) 12%, transparent) 80%, transparent);
+}
+/* An event's date: ink on a quiet stub (the kind is already said by its icon and name). */
+.date-stub {
+  background: color-mix(in srgb, var(--text) 5%, var(--panel));
+}
+.date-stub::after {
+  background: radial-gradient(circle, color-mix(in srgb, var(--text) 30%, var(--panel)) 0.9px, transparent 1.3px) 0 0 / 2px 5px repeat-y;
+}
+.date-stub-day {
+  color: var(--text);
+}
+
+/* The pages with a stage of their own: the same deep ink, a cool light at the top. */
+.ink-hero,
+.club-hero,
+.studio-stage,
+.mx-stage {
+  background:
+    radial-gradient(70% 90% at 88% -25%, rgb(74 98 220 / 0.34), transparent 62%),
+    radial-gradient(60% 80% at -5% 115%, rgb(110 92 220 / 0.18), transparent 62%),
+    linear-gradient(180deg, #060912 0%, #0c1224 100%);
+}
+.club-hero::before {
+  opacity: 0.35;
+}
+.studio-stage::before,
+.studio-stage::after {
+  opacity: 0.5;
+}
+/* Their main buttons: white, like the main button at night. */
+.btn-gold,
+.studio-btn,
+.mx-btn-rec {
+  background: #f3f5fa;
+  color: #0e1424;
+  border: 0;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 26px -14px rgb(0 0 0 / 0.8);
+  filter: none;
+}
+.btn-gold:hover,
+.studio-btn:hover,
+.mx-btn-rec:hover:not(:disabled) {
+  background: #ffffff;
+  filter: none;
+}
+/* A toast's icon sits in a small well of the toast's own colour. */
+.toast-icon {
+  background: color-mix(in srgb, var(--on-ink) 14%, transparent);
+  color: var(--on-ink);
+}
+.glyph {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+/* The same light sweep for the stage pages' own coloured words, and the footer on the same ink. */
+.studio-text,
+.mx-text {
+  background: linear-gradient(100deg, #ffffff 0%, #c4cfff 55%, #d5c4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root[data-look="day"] .site-footer {
+  background:
+    radial-gradient(60% 140% at 92% 0%, rgb(74 98 220 / 0.24), transparent 60%),
+    linear-gradient(180deg, #0a0f1d, #060912);
+}
+/* Mixtape's faders: an ink fill, like the rest of the controls. */
+.mx-fader input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--text) var(--fill), var(--panel-2) var(--fill));
+}
+.mx-fader input[type="range"]::-moz-range-track {
+  background: linear-gradient(90deg, var(--text) var(--fill), var(--panel-2) var(--fill));
+}
+.mx-fader input[type="range"]::-webkit-slider-thumb {
+  box-shadow: 0 3px 8px rgb(13 27 51 / 0.25);
+}

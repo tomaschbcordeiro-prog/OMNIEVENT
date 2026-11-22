@@ -355,7 +355,7 @@ export function MapAddCard({ town, label, where, below, onAdd, onClose }: { town
     <div className="map-add" data-below={below || undefined} {...keep}>
       <div className="map-add-card" role="dialog" aria-label="Add this place to your route">
         <div className="flex items-start gap-2">
-          <span className="text-xl leading-none mt-0.5" aria-hidden>{town ? flagOf(town.countryCode) || "📍" : "📍"}</span>
+          <span className="text-xl leading-none mt-0.5" aria-hidden>{(town && flagOf(town.countryCode)) || <MapPin size={18} className="text-text-3" />}</span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold leading-tight truncate">{town ? label || town.name : "Finding the place…"}</p>
             <p className="t-micro text-text-3 truncate">{town ? [label && label !== town.name ? town.name : "", town.country].filter(Boolean).join(", ") || " " : " "}</p>

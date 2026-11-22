@@ -6,6 +6,7 @@ import { Bell } from "lucide-react";
 import type { Notices } from "@/lib/community/types";
 import { ago, communityGet, communityPost, refreshMe, setUnread, useMe } from "@/lib/community/client";
 import { Avatar } from "./bits";
+import { Glyph } from "../glyph";
 
 const NOTICE_TEXT: Record<string, (emoji?: string) => string> = {
   reply: () => "replied",
@@ -84,7 +85,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                         {n.meta && <> {n.type === "club" ? "" : "on "}<strong>{n.meta.title}</strong></>}
                       </span>
                       {n.text && n.type !== "club" && <span className="block text-text-2 truncate">“{n.text}”</span>}
-                      <span className="block t-micro text-text-3">{NOTICE_ICON[n.type] ?? n.emoji ?? "💬"} {ago(n.at)}</span>
+                      <span className="flex items-center gap-1 t-micro text-text-3"><Glyph e={NOTICE_ICON[n.type] ?? n.emoji ?? "💬"} size={11} fallback={Bell} /> {ago(n.at)}</span>
                     </span>
                   </Link>
                 </li>

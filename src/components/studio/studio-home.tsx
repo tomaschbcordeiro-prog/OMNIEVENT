@@ -15,6 +15,7 @@ import { CategoryIcon, Poster } from "../ui";
 import { toast } from "../toast";
 import { PASTE_KEY } from "@/lib/studio/keys";
 import { ScaledPoster } from "./scaled-poster";
+import { Glyph } from "../glyph";
 
 const SHOWCASE: { data: PosterData; style: PosterStyle }[] = [
   { style: "bold", data: { title: "Noite de Fado", tagline: "Three voices, two guitars, the river", date: "SAT 14 NOV", time: "21:30", venue: "Clube Ferroviário", city: "Lisboa", price: "€12", category: "Music", hue: 265 } },
@@ -163,7 +164,7 @@ export function StudioHome() {
                   <Link href={`/studio/new?template=${t.id}`} className="studio-tpl group block press">
                     <ScaledPoster data={{ title: t.name, date: w.date, time: w.time, venue: "Your venue", city: "Your city", price, category: getCategory(t.category ?? t.group)?.name, hue: t.hue }} styleId={t.posterStyle} className="w-full rounded-[12px] transition-transform duration-500 group-hover:scale-[1.02]" />
                     <span className="mt-2.5 flex items-center gap-2 font-semibold">
-                      <span aria-hidden>{t.emoji}</span> {t.name}
+                      <Glyph e={t.emoji} /> {t.name}
                     </span>
                     <span className="block t-small text-text-2 max-sm:hidden">{t.blurb}</span>
                   </Link>
@@ -198,7 +199,7 @@ export function StudioHome() {
             ["🎟️", "Free, and your tickets stay yours", "Link your own ticket page. We never sell tickets or take a cut."],
           ].map(([emoji, title, body]) => (
             <div key={title} className="rounded-[var(--radius-l)] border border-line p-5">
-              <p className="text-2xl" aria-hidden>{emoji}</p>
+              <p className="grid place-items-center h-10 w-10 rounded-full bg-text/[0.06]" aria-hidden><Glyph e={emoji} size={19} /></p>
               <p className="font-semibold mt-2">{title}</p>
               <p className="t-small text-text-2 mt-1">{body}</p>
             </div>

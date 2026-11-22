@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, Eye, EyeOff, LogOut, Star, X } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, LogOut, Star, X, Award } from "lucide-react";
 import { AVATARS, BADGES, USERNAME_RE, type Profile, type PublicProfile } from "@/lib/community/types";
 import { communityPost, deleteAccount, getMe, hasAccount, refreshMe, setMe, signIn, signOut, signUp, useMe } from "@/lib/community/client";
 import { toast } from "../toast";
 import { PASSWORD_MAX, PASSWORD_MIN, passwordLength, passwordProblem } from "@/lib/community/password-rules";
+import { Glyph } from "../glyph";
 
 export function Avatar({ p, size = 36, className = "" }: { p?: Pick<Profile, "avatar" | "hue" | "name"> | null; size?: number; className?: string }) {
   return (
@@ -24,8 +25,8 @@ export function MemberName({ p, className = "" }: { p?: PublicProfile; className
     <Link href={`/community/u/${p.username ?? p.id}`} className={`inline-block py-0.5 font-semibold hover:text-cyan ${className}`} title={p.username ? `@${p.username}` : undefined}>
       {p.name}
       {top && top !== "newcomer" && (
-        <span className="ml-1" title={BADGES[top]?.label}>
-          {BADGES[top]?.emoji}
+        <span className="ml-1 inline-flex align-[-0.1em] text-text-3" title={BADGES[top]?.label}>
+          <Glyph e={BADGES[top]?.emoji} size={13} fallback={Award} />
         </span>
       )}
     </Link>

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Share2, Swords, Trophy } from "lucide-react";
+import { ArrowRight, Share2, Swords, Trophy, Award, MapPin, Flame } from "lucide-react";
 import { BADGES, type Duel, type DuelPick, type DuelRound, type DuelSide } from "@/lib/community/types";
 import { communityGet, communityPost, refreshMe, useMe } from "@/lib/community/client";
 import { Poster, SaveButton } from "../ui";
 import { TripButton } from "../trips/trip-add";
 import { toast } from "../toast";
 import { Burst, requireMember } from "./bits";
+import { Glyph } from "../glyph";
 
 /**
  * The daily duel: three rounds of "this or that" between events in today's city. Pick one
@@ -36,12 +37,12 @@ const share = (r: DuelRound) => {
 function quip(r: DuelRound): string {
   const total = (r.votes?.a ?? 0) + (r.votes?.b ?? 0);
   const pct = share(r);
-  if (total <= 1) return "You're the first to pick! 🥇 Come back later to see who agrees.";
-  if (pct === 50) return "Dead heat! 🤝 Half the people agree with you.";
-  if (pct >= 75) return `Crowd favourite! 🙌 ${pct}% picked it too.`;
-  if (pct > 50) return `You're with the majority: ${pct}% agree. 👍`;
-  if (pct >= 30) return `Close call: ${pct}% agree with you. 🤏`;
-  return `Bold pick! 😎 Only ${pct}% went that way.`;
+  if (total <= 1) return "You're the first to pick! Come back later to see who agrees.";
+  if (pct === 50) return "Dead heat! Half the people agree with you.";
+  if (pct >= 75) return `Crowd favourite! ${pct}% picked it too.`;
+  if (pct > 50) return `You're with the majority: ${pct}% agree.`;
+  if (pct >= 30) return `Close call: ${pct}% agree with you.`;
+  return `Bold pick! Only ${pct}% went that way.`;
 }
 
 const votesIn = (r: DuelRound) => (r.votes?.a ?? 0) + (r.votes?.b ?? 0);
@@ -174,10 +175,10 @@ export function DailyDuel() {
     <section id="duel" aria-labelledby="duel-h" className="relative overflow-hidden rounded-[var(--radius-l)] border border-violet/25 bg-gradient-to-br from-violet/10 via-panel to-cyan/10 p-4 sm:p-5 scroll-mt-24">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 id="duel-h" className="t-h2 flex items-center gap-2"><Swords size={20} className="text-violet" aria-hidden /> Daily duel</h2>
-        <span className="rounded-full bg-text px-2.5 py-0.5 t-micro font-semibold text-on-ink">📍 {duel.city}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-text px-2.5 py-0.5 t-micro font-semibold text-on-ink"><MapPin size={11} aria-hidden /> {duel.city}</span>
         {duel.streak.days > 0 && (
-          <span className="rounded-full bg-sun/20 px-2.5 py-0.5 t-micro font-semibold" title={`Best: ${duel.streak.best} days`}>
-            <span className="flame" aria-hidden>🔥</span> {duel.streak.days}-day streak
+          <span className="inline-flex items-center gap-1 rounded-full bg-text/[0.06] px-2.5 py-0.5 t-micro font-semibold" title={`Best: ${duel.streak.best} days`}>
+            <Flame size={12} aria-hidden /> {duel.streak.days}-day streak
           </span>
         )}
         <span className="ml-auto t-micro text-text-3 tnum">{duel.players > 0 ? `${duel.players} ${duel.players === 1 ? "person" : "people"} played today` : "Be the first to play today"}</span>
@@ -187,7 +188,7 @@ export function DailyDuel() {
         <>
           <div className="mt-3 flex items-center justify-between gap-2">
             <p className="t-small text-text-2">
-              <span className="font-semibold text-text">Round {round + 1} of {duel.rounds.length}</span> · {emojiOf(r.a)} vs {emojiOf(r.b)} · which would you rather go to?
+              <span className="font-semibold text-text">Round {round + 1} of {duel.rounds.length}</span> · <Glyph e={emojiOf(r.a)} size={13} /> vs <Glyph e={emojiOf(r.b)} size={13} /> · which would you rather go to?
             </p>
             <ol className="flex gap-1.5" aria-hidden>
               {duel.rounds.map((x, i) => (
@@ -223,7 +224,7 @@ export function DailyDuel() {
                 >
                   <Poster title={s.title} imageUrl={s.imageUrl} hue={s.hue} categorySlug={s.categorySlug} className="aspect-[4/5] sm:aspect-[4/3] w-full" />
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-3 pt-12 text-white">
-                    <span className="t-micro font-semibold uppercase tracking-wide opacity-90">{emojiOf(s)} {s.isFree ? "Free · " : ""}{when(s)}</span>
+                    <span className="t-micro font-semibold uppercase tracking-wide opacity-90 inline-flex items-center gap-1"><Glyph e={emojiOf(s)} size={12} /> {s.isFree ? "Free · " : ""}{when(s)}</span>
                     <span className="mt-0.5 block font-bold leading-tight line-clamp-2 text-[0.95rem] sm:text-lg">{s.title}</span>
                     <span className="block t-micro opacity-85 truncate">{s.venueName}</span>
                   </span>
@@ -314,7 +315,7 @@ function Summary({ duel, countdown, onShare, member }: { duel: Duel; countdown: 
   return (
     <div className="duel-in mt-3">
       <div className="flex items-start gap-3">
-        <span className="text-4xl pop" aria-hidden>{v.emoji}</span>
+        <span className="pop grid place-items-center h-14 w-14 rounded-full bg-text/[0.06] text-text" aria-hidden><Glyph e={v.emoji} size={28} fallback={Award} /></span>
         <div>
           <p className="t-h3">{v.title}</p>
           <p className="t-small text-text-2">{v.body}</p>
@@ -339,7 +340,7 @@ function Summary({ duel, countdown, onShare, member }: { duel: Duel; countdown: 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button type="button" className="btn btn-primary press" onClick={onShare}><Share2 size={16} aria-hidden /> Challenge a friend</button>
         <span className="t-small text-text-2">
-          {duel.streak.days > 0 && <><span className="flame" aria-hidden>🔥</span> {duel.streak.days}-day streak{duel.streak.best > duel.streak.days ? ` (best ${duel.streak.best})` : ""} · </>}
+          {duel.streak.days > 0 && <><Flame size={13} aria-hidden className="inline align-[-0.15em]" /> {duel.streak.days}-day streak{duel.streak.best > duel.streak.days ? ` (best ${duel.streak.best})` : ""} · </>}
           New duel in <strong className="tnum">{countdown}</strong>
         </span>
       </div>

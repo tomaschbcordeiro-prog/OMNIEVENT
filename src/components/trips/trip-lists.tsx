@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2, ListChecks } from "lucide-react";
 import { userActions, type Trip } from "@/lib/user/store";
 import { LISTS, listIdeas, listProgress, newId, type CheckItem, type ListKind } from "@/lib/trip-share";
 import { toast } from "../toast";
+import { Glyph } from "../glyph";
 
 /*
  * The trip's lists: what to do before leaving, what to pack, which documents to bring. Each
@@ -42,7 +43,7 @@ export function TripLists({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
     <div className="lists">
       {all.all > 0 && (
         <p className="t-micro text-text-2 mb-2 tnum" aria-live="polite">
-          {all.done === all.all ? "Everything's ready. 🎉" : `${all.done} of ${all.all} done`}
+          {all.done === all.all ? "Everything's ready." : `${all.done} of ${all.all} done`}
         </p>
       )}
       <div className="list-tabs" role="tablist" aria-label="Lists">
@@ -50,7 +51,7 @@ export function TripLists({ trip, canEdit }: { trip: Trip; canEdit: boolean }) {
           const p = listProgress(items, l.id);
           return (
             <button key={l.id} type="button" role="tab" aria-selected={list === l.id} className="list-tab" onClick={() => setList(l.id)}>
-              <span aria-hidden>{l.emoji}</span>
+              <Glyph e={l.emoji} size={16} fallback={ListChecks} />
               <span className="min-w-0">
                 <span className="block font-semibold leading-tight">{l.label}</span>
                 <span className="block t-micro text-text-2 tnum">{p.all ? `${p.done}/${p.all}` : l.blurb}</span>

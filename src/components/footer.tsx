@@ -32,7 +32,7 @@ export function Footer() {
                 ["/match", "Event Match"],
                 ["/mixtape", "Mixtape: plan a weekend"],
                 ["/community", "Community"],
-                ["/clubs", "Clubs ✦"],
+                ["/clubs", "Clubs"],
                 ["/studio", "Studio: list your event"],
                 ["/my-world", "My World"],
               ].map(([href, label]) => (

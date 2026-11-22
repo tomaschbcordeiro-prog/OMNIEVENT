@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Clock, ExternalLink, ImageIcon, Loader2, MapPin, Minus, Pencil, Plus, Share2, Sparkles, Ticket, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, ExternalLink, ImageIcon, Loader2, MapPin, Minus, Pencil, Plus, Share2, Sparkles, Ticket, Trash2, X, PartyPopper } from "lucide-react";
 import { GROUPS, GROUP_HEX, childrenOf, getCategory } from "@/lib/categories";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { ACCESS_KINDS, ACCESSIBILITY_OPTIONS, AGE_OPTIONS, LIMITS, cleanUrl } from "@/lib/user-events-shared";
@@ -19,6 +19,7 @@ import { getTemplate } from "@/lib/studio/templates";
 import type { Extracted } from "@/lib/studio/magic";
 import { ScaledPoster } from "../studio/scaled-poster";
 import { PASTE_KEY } from "@/lib/studio/keys";
+import { Glyph } from "../glyph";
 
 const DRAFT_KEY = "omni:create-event:v1";
 
@@ -110,7 +111,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
     const tpl = getTemplate(template);
     if (tpl) {
       setD((x) => applyTemplate(x, tpl));
-      setOrigin({ kind: "template", text: `${tpl.emoji} Started from “${tpl.name}”: times, tickets, a programme and a description to adapt are filled in.` });
+      setOrigin({ kind: "template", text: `Started from “${tpl.name}”: times, tickets, a programme and a description to adapt are filled in.` });
       return;
     }
     if (fromPaste) {
@@ -118,7 +119,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
         const x = JSON.parse(localStorage.getItem(PASTE_KEY) ?? "null") as Extracted | null;
         if (x) {
           setD((dd) => applyExtracted(dd, x));
-          setOrigin({ kind: "paste", text: `✨ Filled from your text: ${x.found.join(", ") || "a few details"}. Check each step before publishing.` });
+          setOrigin({ kind: "paste", text: `Filled from your text: ${x.found.join(", ") || "a few details"}. Check each step before publishing.` });
         }
         localStorage.removeItem(PASTE_KEY);
       } catch {
@@ -131,7 +132,7 @@ export function CreateEvent({ editId, template, fromPaste, duplicateId }: { edit
       myEventsGet<{ event: Parameters<typeof fromInput>[0] }>(`id=${encodeURIComponent(duplicateId)}`)
         .then(({ event }) => {
           setD({ ...fromInput(event), date: "", endDate: "", dates: [] });
-          setOrigin({ kind: "copy", text: `📋 A copy of “${event.title}”. Choose the new date, change anything else, and publish.` });
+          setOrigin({ kind: "copy", text: `A copy of “${event.title}”. Choose the new date, change anything else, and publish.` });
           setReached(STEPS.length - 1);
           setAt(STEPS.findIndex((s) => s.id === "when"));
         })
@@ -627,7 +628,7 @@ function Tickets({ d, set, errs }: StepProps) {
         <div role="radiogroup" aria-label="Entry" className="grid gap-2 sm:grid-cols-3">
           {ACCESS_KINDS.map((k) => (
             <button key={k.id} type="button" role="radio" aria-checked={d.access === k.id} onClick={() => set("access", k.id)} className={`ce-choice press ${d.access === k.id ? "ce-choice--on" : ""}`}>
-              <span className="text-2xl" aria-hidden>{k.emoji}</span>
+              <span className="grid place-items-center h-10 w-10 rounded-full bg-text/[0.06]" aria-hidden><Glyph e={k.emoji} size={20} /></span>
               <span className="font-semibold">{k.label}</span>
               <span className="t-micro text-text-2">{k.hint}</span>
             </button>
@@ -914,7 +915,7 @@ function Done({ d, slug, updated, onAnother }: { d: Draft; slug: string; updated
       <section className="studio-stage">
         <div className="mx-auto max-w-[720px] px-4 sm:px-6 py-12 text-center relative">
           <span className="absolute left-1/2 top-16" aria-hidden><Burst colors={["#ffe29a", "#f5c451", "#ffffff", "#ff7aa8", "#8b5cf6"]} /></span>
-          <p className="text-5xl" aria-hidden>{updated ? "✅" : "🎉"}</p>
+          <p className="mx-auto grid place-items-center h-16 w-16 rounded-full bg-white/10 text-white" aria-hidden>{updated ? <Check size={30} strokeWidth={1.9} /> : <PartyPopper size={30} strokeWidth={1.9} />}</p>
           <h1 className="t-h1 mt-3 text-white">{updated ? "Changes saved" : <>Your event is <span className="studio-text">live</span></>}</h1>
           <p className="t-body text-white/80 mt-2">{updated ? "Everyone sees the new version within a minute." : "It's on the globe, in search and on its city's page. Share it so people know."}</p>
         </div>
