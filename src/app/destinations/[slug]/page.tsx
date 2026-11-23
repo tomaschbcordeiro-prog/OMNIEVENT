@@ -23,6 +23,7 @@ import { ContinueSearch } from "@/components/continue-search";
 import { Footer } from "@/components/footer";
 import { CommunityPanel } from "@/components/community/community-panel";
 import { WeatherNow, WeatherWeek } from "@/components/weather";
+import { RainPlan } from "@/components/rain-plan";
 import { IdeaRail } from "@/components/trips/idea-rail";
 import { ideasPage } from "@/lib/travel/ideas";
 import { ideaCards } from "@/lib/travel/idea-cards";
@@ -121,6 +122,7 @@ export default async function DestinationPage({ params, searchParams }: { params
               {result.total.toLocaleString()} upcoming events listed{d.currency ? `, prices usually in ${d.currency}` : ""}. {d.lat.toFixed(2)}°, {d.lng.toFixed(2)}°
             </p>
             {d.kind === "city" && <WeatherWeek lat={d.lat} lng={d.lng} place={d.name} />}
+            {d.kind === "city" && <RainPlan lat={d.lat} lng={d.lng} place={d.name} slug={d.slug} />}
             <div className="mt-4 flex flex-wrap gap-2">
               <FollowButton kind="destination" id={d.id} name={d.name} />
               {/* Cities open as a radius search; larger areas just open the map there. */}

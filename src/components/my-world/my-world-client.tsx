@@ -24,6 +24,7 @@ import { EmptyState, ErrorState, Notice, ShapeGlyph } from "../ui";
 import { MyCommunity } from "../community/my-community";
 import { AccountPanel } from "../community/account-panel";
 import { MyEvents } from "../create/my-events";
+import { YearRecap } from "./year-recap";
 
 type Tab = "overview" | "saved" | "searches" | "calendar" | "trips" | "events" | "following" | "community" | "alerts" | "account";
 const TABS: { id: Tab; label: string; icon: typeof Bookmark }[] = [
@@ -168,6 +169,7 @@ function Overview({ cards, loading, onTab }: { cards: Map<string, EventCard>; lo
           <div className="mt-3"><EmptyState title="Nothing saved yet" body="Save events from the globe or any event page and they'll appear here in date order." action={<Link href="/" className="btn btn-primary btn-sm">Explore the globe</Link>} /></div>
         )}
       </section>
+      <YearRecap />
 
       <section>
         <h2 className="t-h2">Recommended</h2>

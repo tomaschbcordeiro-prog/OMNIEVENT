@@ -8,12 +8,13 @@ import type { EventCard as Card } from "@/lib/types";
 import { cardWhen, formatEventTime, formatShortDate, formatDistance } from "@/lib/format";
 import { CategoryIcon, categoryLabel, DemoBadge, Poster, Price, SaveButton, StatusBadge } from "./ui";
 import { userActions, useUserSelect } from "@/lib/user/store";
-import { useRef, memo } from "react";
+import { useEffect, useRef, memo } from "react";
 import { toast } from "./toast";
 import { GROUP_HEX } from "@/lib/categories";
 import { snapOf } from "@/lib/after-event";
 import { Marked } from "./marked";
 import { dragEvent, TripButton, TripTag } from "./trips/trip-add";
+import { registerQuickLook, useHoldToLook } from "./quick-look";
 
 export { Marked };
 
@@ -147,6 +148,9 @@ export const EventRow = memo(function EventRow({
   const router = useRouter();
   const people = peopleLine(c);
   const swipe = useSwipeToSave(c, saved);
+  // Hold a row for a moment (phones) or press the space bar on it (computers): Quick Look.
+  const hold = useHoldToLook(c);
+  useEffect(() => registerQuickLook(swipe.ref.current, c), [c, swipe.ref]);
   const body = (
     <>
       <DateBlock c={c} />
@@ -192,11 +196,13 @@ export const EventRow = memo(function EventRow({
       data-venue={c.venueSlug}
       data-saved={saved || undefined}
       data-glide-item
-      onTouchStart={swipe.onTouchStart}
-      onTouchMove={swipe.onTouchMove}
-      onTouchEnd={swipe.onTouchEnd}
-      onTouchCancel={swipe.onTouchEnd}
-      onClickCapture={swipe.onClickCapture}
+      data-ql
+      onTouchStart={(e) => (swipe.onTouchStart(e), hold.start(e))}
+      onTouchMove={(e) => (hold.move(e), !hold.held() && swipe.onTouchMove(e))}
+      onTouchEnd={() => (hold.end(), swipe.onTouchEnd())}
+      onTouchCancel={() => (hold.end(), swipe.onTouchEnd())}
+      onContextMenu={hold.contextMenu}
+      onClickCapture={(e) => (hold.clickCapture(e), swipe.onClickCapture(e))}
       onMouseEnter={onHover ? () => onHover(c) : undefined}
       onMouseLeave={onHover ? () => onHover(null) : undefined}
       onFocusCapture={onHover ? () => onHover(c) : undefined}
@@ -223,8 +229,21 @@ export const EventTile = memo(function EventTile({ c, terms }: { c: Card; terms?
   const currency = useUserSelect((d) => d.prefs.currency);
   const router = useRouter();
   const people = peopleLine(c);
+  const hold = useHoldToLook(c);
+  const li = useRef<HTMLLIElement>(null);
+  useEffect(() => registerQuickLook(li.current, c), [c]);
   return (
-    <li className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel">
+    <li
+      ref={li}
+      data-ql
+      onTouchStart={hold.start}
+      onTouchMove={hold.move}
+      onTouchEnd={hold.end}
+      onTouchCancel={hold.end}
+      onContextMenu={hold.contextMenu}
+      onClickCapture={hold.clickCapture}
+      className="tile reveal group relative flex flex-col overflow-hidden rounded-[var(--radius-m)] border border-line bg-panel"
+    >
       <Link href={`/events/${c.slug}`} prefetch={false} className="flex flex-col flex-1" onClick={(e) => openWithMorph(e, router)} onDragStart={(e) => dragEvent(e, c)} onPointerEnter={() => warm(router, c.slug)} onTouchStart={() => warm(router, c.slug)}>
         <div className="relative overflow-hidden">
           <Poster title={c.title} imageUrl={c.imageUrl} hue={c.posterHue} categorySlug={c.categorySlug} className="tile-media aspect-[16/9] w-full" />

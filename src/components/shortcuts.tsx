@@ -102,6 +102,8 @@ export function Shortcuts() {
           <dd>Show or hide this list</dd>
           <dt><kbd className="kbd">j</kbd> <kbd className="kbd">k</kbd></dt>
           <dd>Next or previous event in a list (Enter opens it)</dd>
+          <dt><kbd className="kbd">Space</kbd></dt>
+          <dd>Quick Look: a preview of the event under the pointer or in focus (on a phone, hold it)</dd>
           <dt><kbd className="kbd">t</kbd></dt>
           <dd>Add the event to a trip (the one in focus, or this page&apos;s)</dd>
           {GO.map(([k, , label]) => (
